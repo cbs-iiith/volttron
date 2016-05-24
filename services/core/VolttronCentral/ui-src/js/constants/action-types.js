@@ -32,12 +32,14 @@ module.exports = keyMirror({
     RECEIVE_PLATFORM_STATUSES: null,
     TOGGLE_PLATFORMS_PANEL: null,
     CLOSE_PLATFORMS_PANEL: null,
+    RESET_PLATFORMS_PANEL: null,
 
     RECEIVE_AGENT_STATUSES: null,
     RECEIVE_DEVICE_STATUSES: null,
     RECEIVE_PERFORMANCE_STATS: null,
 
     START_LOADING_DATA: null,
+    END_LOADING_DATA: null,
 
     SHOW_CHARTS: null,
     ADD_TO_CHART: null,
@@ -46,6 +48,8 @@ module.exports = keyMirror({
     CHANGE_CHART_TYPE: null,
     CHANGE_CHART_REFRESH: null,
     REFRESH_CHART: null,
+    REMOVE_CHART: null,
+    LOAD_CHARTS: null,
 
     EXPAND_ALL: null,
     TOGGLE_ITEM: null,

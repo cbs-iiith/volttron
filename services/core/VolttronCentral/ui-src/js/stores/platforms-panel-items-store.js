@@ -3,6 +3,7 @@
 var ACTION_TYPES = require('../constants/action-types');
 var dispatcher = require('../dispatcher');
 var Store = require('../lib/store');
+var chartStore = require('../stores/platform-chart-store');
 
 var _pointsOrder = 0;
 var _devicesOrder = 1;
@@ -20,9 +21,113 @@ var _badLabel = "Unhealthy";
 var _goodLabel = "Healthy";
 var _unknownLabel = "Unknown Status";
 
-var _loadingDataComplete = true;
+var _loadingDataComplete = {};
 
 var platformsPanelItemsStore = new Store();
+
+platformsPanelItemsStore.findTopicInTree = function (topic)
+{
+    var path = [];
+
+    var topicParts = topic.split("/");
+
+    if (topic.indexOf("datalogger/platforms") > -1) // if a platform instance
+    {
+        for (var key in _items.platforms)
+        {
+            if (key === topicParts[2])
+            {
+                // path = ["platforms", uuid];
+
+                if (_items.platforms[key].hasOwnProperty("points"))
+                {
+                    _items.platforms[key].points.children.find(function (point) {
+
+                        var found = (point === topic);
+
+                        if (found)
+                        {
+                            path = _items.platforms[key].points[point].path;
+                        }
+
+                        return found;
+                    });
+                }
+
+                break;
+            }
+        }
+    }
+    else // else a device point
+    {        
+        var buildingName = topicParts[1];
+
+        for (var key in _items.platforms)
+        { //_items.platforms.children.find(function (platform) {
+
+            var platform = _items.platforms[key];       
+            var foundPlatform = false;
+
+            if (platform.hasOwnProperty("buildings"))
+            {
+                platform.buildings.children.find(function (buildingUuid) {
+
+                    var foundBuilding = (platform.buildings[buildingUuid].name === buildingName);
+
+                    if (foundBuilding)
+                    {
+                        var parent = platform.buildings[buildingUuid];
+
+                        for (var i = 2; i <= topicParts.length - 2; i++)
+                        {
+                            var deviceName = topicParts[i];
+
+                            if (parent.hasOwnProperty("devices"))
+                            {
+                                parent.devices.children.find(function (deviceUuid) {
+
+                                    var foundDevice = (parent.devices[deviceUuid].name === deviceName);
+
+                                    if (foundDevice) 
+                                    {
+                                        parent = parent.devices[deviceUuid];
+                                    }
+
+                                    return foundDevice;
+                                });
+                            }
+                        }
+                        
+                        if (parent.hasOwnProperty("points"))
+                        {
+                            parent.points.children.find(function (point) {
+                                var foundPoint = (parent.points[point].topic === topic);
+
+                                if (foundPoint)
+                                {
+                                    path = parent.points[point].path;
+
+                                    foundPlatform = true;
+                                }
+
+                                return foundPoint;
+                            });
+                        }                        
+                    }
+
+                    return foundBuilding;
+                });                
+            }
+
+            if (foundPlatform)
+            {
+                break;
+            }
+        }
+    }
+
+    return JSON.parse(JSON.stringify(path));
+} 
 
 platformsPanelItemsStore.getItem = function (itemPath)
 {
@@ -205,14 +310,29 @@ platformsPanelItemsStore.getExpanded = function () {
     return _expanded;
 };
 
-platformsPanelItemsStore.getLoadingComplete = function () {
-    return _loadingDataComplete;
+platformsPanelItemsStore.getLoadingComplete = function (panelItem) {
+
+    var loadingComplete = null;
+
+    if (_loadingDataComplete.hasOwnProperty(panelItem.uuid))
+    {
+        loadingComplete = _loadingDataComplete[panelItem.uuid];
+    }
+
+    return loadingComplete;
 };
 
 platformsPanelItemsStore.dispatchToken = dispatcher.register(function (action) {
 
     switch (action.type) {
 
+        case ACTION_TYPES.RESET_PLATFORMS_PANEL:
+
+            _items.platforms = {};
+            _loadingDataComplete = {};
+            _expanded = false;
+
+            break;
         case ACTION_TYPES.FILTER_ITEMS:
 
             var filterTerm = action.filterTerm;
@@ -254,7 +374,7 @@ platformsPanelItemsStore.dispatchToken = dispatcher.register(function (action) {
 
         case ACTION_TYPES.START_LOADING_DATA:
 
-            _loadingDataComplete = false;
+            _loadingDataComplete[action.panelItem.uuid] = false;
 
             break;
 
@@ -372,8 +492,10 @@ platformsPanelItemsStore.dispatchToken = dispatcher.register(function (action) {
                             pointProps.parentType = platform.type;
                             pointProps.parentUuid = platform.uuid;
 
-                            point.status = platform.status;
-                            point.statusLabel = getStatusLabel(platform.status);
+                            pointProps.checked = chartStore.getTopicInCharts(pointProps.topic, pointProps.name);
+
+                            pointProps.status = platform.status;
+                            pointProps.statusLabel = getStatusLabel(platform.status);
                             pointProps.children = [];
                             pointProps.type = "point";
                             pointProps.sortOrder = 0;
@@ -386,9 +508,17 @@ platformsPanelItemsStore.dispatchToken = dispatcher.register(function (action) {
                     break;
             }
 
-            _loadingDataComplete = true;
+            platformsPanelItemsStore.emitChange();
+            break;
+
+        case ACTION_TYPES.END_LOADING_DATA:
+
+            _loadingDataComplete[action.panelItem.uuid] = true;
+
+            updatePlatformStatus(action.panelItem.uuid);
 
             platformsPanelItemsStore.emitChange();
+
             break;
     }
 
@@ -435,21 +565,6 @@ platformsPanelItemsStore.dispatchToken = dispatcher.register(function (action) {
         platform.agents.status = agentsHealth;
         platform.agents.statusLabel = getStatusLabel(agentsHealth);
     }
-
-    // function loadAgents(platform)
-    // {
-    //     if (platform.agents)
-    //     {
-    //         if (platform.agents.length > 0)
-    //         {
-    //             insertAgents(platform, platform.agents);
-    //         }
-    //         else
-    //         {
-    //             delete platform.agents;
-    //         }
-    //     }
-    // }
 
     function insertBuilding(platform, uuid, name)
     {
@@ -614,7 +729,7 @@ platformsPanelItemsStore.dispatchToken = dispatcher.register(function (action) {
                 deviceProps.path = JSON.parse(JSON.stringify(building.devices.path));
                 deviceProps.path.push(deviceProps.uuid);
                 deviceProps.status = device.health.status.toUpperCase();
-                deviceProps.statusLabel = getStatusLabel(deviceProps.health);
+                deviceProps.statusLabel = getStatusLabel(deviceProps.status);
                 deviceProps.context = device.health.context;
                 deviceProps.children = [];
                 deviceProps.type = "device";
@@ -650,13 +765,39 @@ platformsPanelItemsStore.dispatchToken = dispatcher.register(function (action) {
 
                     while (currentLevel < subDeviceLevel)
                     {
+                        var parentDeviceUuid = deviceParts[0];
+
+                        for (var i = 1; i <= currentLevel; i++)
+                        {
+                            parentDeviceUuid = parentDeviceUuid + "_" + deviceParts[i];
+                        }
+
                         parentDevice = parentDevice.devices;
-                        parentDevice = parentDevice[deviceParts[currentLevel]];
+                        parentDevice = parentDevice[parentDeviceUuid];
                         ++currentLevel;
                     }
 
-                    //We're now at the parent device. If we haven't added any
-                    // subdevices to it yet, initialize its "devices" child
+                    var deviceProps = {};
+                    deviceProps.name = deviceParts[subDeviceLevel];
+                    deviceProps.uuid = device.path.replace(/ \/ /g, '_');
+                    deviceProps.expanded = false;
+                    deviceProps.visible = true;
+                    deviceProps.path = JSON.parse(JSON.stringify(parentDevice.path));
+                    deviceProps.path.push("devices");
+                    deviceProps.path.push(deviceProps.uuid);
+                    deviceProps.status = device.health.status.toUpperCase();
+                    deviceProps.statusLabel = getStatusLabel(deviceProps.status);
+                    deviceProps.context = device.health.context;
+                    deviceProps.children = [];
+                    deviceProps.type = "device";
+                    deviceProps.sortOrder = 0;
+
+                    deviceProps.legendInfo = parentDevice.legendInfo + " > " + deviceProps.name;
+
+                    checkForPoints(deviceProps, device);
+
+                    //If we haven't added any subdevices to the parent device 
+                    // yet, initialize its "devices" child
                     if (parentDevice.children.indexOf("devices") < 0)
                     {
                         parentDevice.children.push("devices");
@@ -670,29 +811,18 @@ platformsPanelItemsStore.dispatchToken = dispatcher.register(function (action) {
                         parentDevice.devices.children = [];
                         parentDevice.devices.type = "type";
                         parentDevice.devices.sortOrder = _devicesOrder;
-                    }
-
-                    var deviceProps = {};
-                    deviceProps.name = deviceParts[subDeviceLevel];
-                    deviceProps.uuid = device.path.replace(/ \/ /g, '_');
-                    deviceProps.expanded = false;
-                    deviceProps.visible = true;
-                    deviceProps.path = JSON.parse(JSON.stringify(parentDevice.devices.path));
-                    deviceProps.path.push(deviceProps.uuid);
-                    deviceProps.status = parentDevice.status;
-                    deviceProps.statusLabel = getStatusLabel(deviceProps.status);
-                    deviceProps.context = parentDevice.context;
-                    deviceProps.children = [];
-                    deviceProps.type = "device";
-                    deviceProps.sortOrder = 0;
-
-                    deviceProps.legendInfo = parentDevice.legendInfo + " > " + deviceProps.name;
-
-                    checkForPoints(deviceProps, device);
+                        parentDevice.devices.status = deviceProps.status;
+                        parentDevice.devices.statusLabel = getStatusLabel(deviceProps.status);
+                        parentDevice.devices.context = deviceProps.context;
+                    }                    
 
                     parentDevice.devices.children.push(deviceProps.uuid);
-                    parentDevice.devices[deviceProps.uuid] = deviceProps;  
+                    parentDevice.devices[deviceProps.uuid] = deviceProps; 
 
+                    if (parentDevice.devices.children.length > 1)
+                    {
+                        updateDeviceGroupStatus(parentDevice);
+                    }
                 }
               
                 break;
@@ -725,10 +855,12 @@ platformsPanelItemsStore.dispatchToken = dispatcher.register(function (action) {
                 var pointPath = data.path + "/" + pointName;                
                 var platformUuid = item.path[1];
 
+                var pattern = /[!@#$%^&*()+\-=\[\]{};':"\\|, .<>\/?]/g
+
                 var pointProps = {}; 
                 pointProps.topic = pointPath;  
                 pointProps.name = pointName;
-                pointProps.uuid = pointPath.replace(/\//g, '_');
+                pointProps.uuid = pointPath.replace(pattern, '_');
                 pointProps.expanded = false;
                 pointProps.visible = true;
                 pointProps.path = JSON.parse(JSON.stringify(item.points.path));
@@ -742,6 +874,7 @@ platformsPanelItemsStore.dispatchToken = dispatcher.register(function (action) {
                 pointProps.children = [];
                 pointProps.type = "point";
                 pointProps.sortOrder = 0;
+                pointProps.checked = chartStore.getTopicInCharts(pointProps.topic, pointProps.name);
 
                 item.points.children.push(pointProps.uuid);
                 item.points[pointProps.uuid] = pointProps;
@@ -749,59 +882,6 @@ platformsPanelItemsStore.dispatchToken = dispatcher.register(function (action) {
             });
         }
     }
-
-    // function loadDevices(platform)
-    // {
-    //     // var platform = _items["platforms"][action.platform.uuid];
-        
-    //     if (platform.devices)
-    //     {
-    //         if (platform.devices.length > 0)
-    //         {
-    //             // var agents = [];
-
-    //             // platform.agents.forEach(function (agent)) {
-    //             //     agents.push(agent);
-    //             // }
-
-    //             // platform.expanded = true;
-    //             // platform.agents = {};
-    //             // platform.agents.path = platform.path.slice(0);
-    //             // platform.agents.path.push("agents");
-    //             // platform.agents.name = "Agents";
-    //             // platform.agents.expanded = false;
-    //             // platform.agents.visible = true;
-    //             // platform.agents.children = [];
-    //             // platform.agents.type = "type";
-    //             // platform.agents.sortOrder = _agentsOrder;
-
-    //             // if (platform.children.indexOf("agents") < 0)
-    //             // {
-    //             //     platform.children.push("agents");
-    //             // }
-
-    //             // agents.forEach(function (agent)
-    //             // {
-    //             //     var agentProps = agent;
-    //             //     agentProps.expanded = false;
-    //             //     agentProps.visible = true;
-    //             //     agentProps.path = platform.agents.path.slice(0);
-    //             //     agentProps.path.push(agent.uuid);
-    //             //     // agent.status = "GOOD";
-    //             //     agentProps.children = [];
-    //             //     agentProps.type = "agent";
-    //             //     agentProps.sortOrder = 0;
-    //             //     platform.agents.children.push(agent.uuid); 
-    //             //     platform.agents[agent.uuid] = agentProps;
-    //             // });
-
-    //         }
-    //         else
-    //         {
-    //             delete platform.devices;
-    //         }
-    //     }
-    // }
 
     function getParentPath(parent)
     {
@@ -822,6 +902,71 @@ platformsPanelItemsStore.dispatchToken = dispatcher.register(function (action) {
         var pathStr = pathParts.join(" > ");
 
         return pathStr;
+    }
+
+    function updatePlatformStatus(uuid)
+    {
+        if (_items.platforms.hasOwnProperty(uuid))
+        {
+            var platform = JSON.parse(JSON.stringify(_items.platforms[uuid]));
+
+            if (_items.platforms[uuid].hasOwnProperty("agents"))
+            {
+                var agentsHealth = _items.platforms[uuid].agents.status; 
+                platform.status = checkStatuses(agentsHealth, platform);
+            }
+
+            if (platform.status === "GOOD" || platform.status === "UNKNOWN")
+            {
+                if (_items.platforms[uuid].hasOwnProperty("buildings"))
+                {
+                    var buildingsHealth = _items.platforms[uuid].buildings.status;
+                    platform.status = checkStatuses(buildingsHealth, platform);
+                }
+            }
+            
+            if (platform.status === "GOOD" || platform.status === "UNKNOWN")
+            {
+                if (_items.platforms[uuid].hasOwnProperty("points"))
+                {
+                    var pointsHealth = _items.platforms[uuid].points.status;  
+                    platform.status = checkStatuses(pointsHealth, platform);  
+                }
+            }
+
+            if (platform.status !== _items.platforms[uuid].status)
+            {
+                _items.platforms[uuid].status = platform.status;
+                _items.platforms[uuid].statusLabel = getStatusLabel(platform.status);
+                _items.platforms[uuid].context = "Status problems found."
+            }
+        }        
+    }
+
+    function updateDeviceGroupStatus(parent)
+    {        
+        var parentDevice = JSON.parse(JSON.stringify(parent));
+
+        if (parentDevice.hasOwnProperty("devices"))
+        {
+            parentDevice.devices.children.forEach(function (uuid) {
+                var subDeviceHealth = checkStatuses(parentDevice.devices[uuid].status, parentDevice.devices);
+
+                if (subDeviceHealth !== parent.devices.status)
+                {
+                    parent.devices.status = subDeviceHealth;
+                    parent.devices.statusLabel = getStatusLabel(subDeviceHealth);
+                }
+            });            
+        }    
+
+        var deviceGroupHealth = checkStatuses(parent.devices.status, parentDevice);
+        if (deviceGroupHealth !== parent.status)
+        {
+            parent.status = deviceGroupHealth;
+            parent.statusLabel = getStatusLabel(deviceGroupHealth);
+            parent.context = "Status problems found."
+        }
     }
 
     function checkStatuses(health, item)
