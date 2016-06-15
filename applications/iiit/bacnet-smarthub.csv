@@ -1,0 +1,6 @@
+Point Name,Volttron Point Name,Units,Unit Details,BACnet Object Type,Property,Writable,Index,Notes
+BINARY OUTPUT 1,LEDLight1,Enum,0-1 (default 0),binaryOutput,presentValue,TRUE,0,"BinaryPV: 0=inactive, 1=active"
+BINARY OUTPUT 2,LEDLight2,Enum,0-1 (default 0),binaryOutput,presentValue,TRUE,1,"BinaryPV: 0=inactive, 1=active"
+BINARY OUTPUT 3,LEDLight3,Enum,0-1 (default 0),binaryOutput,presentValue,TRUE,2,"BinaryPV: 0=inactive, 1=active"
+BINARY OUTPUT 4,LEDLight4,Enum,0-1 (default 0),binaryOutput,presentValue,TRUE,3,"BinaryPV: 0=inactive, 1=active"
+
