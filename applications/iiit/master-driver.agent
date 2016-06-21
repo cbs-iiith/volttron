@@ -1,6 +1,6 @@
 {
 	"agentid": "master_driver",
 	"driver_config_list": [
-				"/home/bsrc-sam/volttron/applications/iiit/bacnet_smarthub.config",
-				]
+							"/home/bsrc-sam/volttron/applications/iiit/bacnet-smarthub.config"
+							]
 }
