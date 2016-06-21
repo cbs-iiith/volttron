@@ -1,0 +1,12 @@
+{
+
+    "agentid": "SmartHubStatusSubscriber",
+    "message": "hello",
+    "led1_point": "devices/campus_iiit/building_cbs/bacnet_smarthub/LEDLight1",
+    "led2_point": "devices/campus_iiit/building_cbs/bacnet_smarthub/LEDLight2",
+	"led3_point": "devices/campus_iiit/building_cbs/bacnet_smarthub/LEDLight3",
+	"led4_point": "devices/campus_iiit/building_cbs/bacnet_smarthub/LEDLight4",
+    "all_topic": "devices/campus_iiit/building_cbs/bacnet_smarthub/all",
+    "query_point": "campus_iiit/building_cbs/bacnet_smarthub/LEDLight1"
+ 
+}

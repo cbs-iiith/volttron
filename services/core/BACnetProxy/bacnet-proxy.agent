@@ -19,5 +19,5 @@
 	#"vendor_id": 15,
 	
 	#Required, use this network interface for the virtual device.
-    "device_address": "10.0.2.15" 
+    "device_address": "192.168.1.250/24:47808" 
 }
