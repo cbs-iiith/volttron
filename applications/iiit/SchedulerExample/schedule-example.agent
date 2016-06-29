@@ -4,5 +4,5 @@
     },
     "agentid": "schedule_example",
     "message": "hello",
-	"period": 30
+	"period": 3
 }

@@ -96,6 +96,7 @@ def schedule_example(config_path, **kwargs):
         '''
     
         _taskID = 1
+        _present_value = 0
     
         def __init__(self, **kwargs):
             super(SchedulerExample, self).__init__(**kwargs)
@@ -119,7 +120,9 @@ def schedule_example(config_path, **kwargs):
                                              building='cbs',unit='smarthub'))
         def actuate(self, peer, sender, bus,  topic, headers, message):
             _log.debug('actuate()')
-            #_log.debug("response: " + topic + headers + message)
+            _log.debug("Task ID : " + headers.get('taskID'))
+	        #_log.debug("Message : "+message)
+            #print ("SAM response: ", topic, headers, message)
             if headers[headers_mod.REQUESTER_ID] != agent_id:
                 return
             '''Match the announce for our fake device with our ID
@@ -128,11 +131,28 @@ def schedule_example(config_path, **kwargs):
             headers = {
                         'requesterID': agent_id,
                        }
-            self.vip.pubsub.publish(
-            'pubsub', topics.ACTUATOR_SET(campus='iiit',
-                                             building='cbs',unit='smarthub',
-                                             point='LEDLight1'),
-                                     headers, 1)
+	      
+            switch_status = self.vip.rpc.call('platform.actuator','get_point','iiit/cbs/smarthub/LEDLight4').get(timeout=1)
+            _log.debug('Switch_Status : %d',switch_status)
+            
+            result = switch_status ^ self._present_value
+            
+            if(result):
+                _log.debug('Changing...')
+                #self.vip.pubsub.publish('pubsub', topics.ACTUATOR_SET(campus='iiit',
+                #    building='cbs',unit='smarthub',
+                #    point='LEDLight1'),
+                #    headers,switch_status)
+                result = self.vip.rpc.call(
+                                        'platform.actuator',
+                                        'set_point',
+                                        agent_id, 
+                                        'iiit/cbs/smarthub/LEDLight1',
+                                        switch_status).get(timeout=1)
+                _log.debug("Set result: %d", result)
+
+                self._present_value = switch_status
+
         #@Core.periodic(5)
         def publish_schedule(self):
             '''Periodically publish a schedule request'''
@@ -143,15 +163,15 @@ def schedule_example(config_path, **kwargs):
                         'AgentID': agent_id,
                         'type': 'NEW_SCHEDULE',
                         'requesterID': agent_id, #The name of the requesting agent.
-                        'taskID': agent_id + "-ExampleTask" + str(self._taskID), #The desired task ID for this task. It must be unique among all other scheduled tasks.
-                        'priority': 'LOW', #The desired task priority, must be 'HIGH', 'LOW', or 'LOW_PREEMPT'
+                        'taskID': agent_id + "-ExampleTask-" + str(self._taskID), #The desired task ID for this task. It must be unique among all other scheduled tasks.
+                        'priority': 'HIGH', #The desired task priority, must be 'HIGH', 'LOW', or 'LOW_PREEMPT'
                     }
             
             self._taskID = self._taskID + 1
-            _log.debug('taskID: %d', self._taskID)
+            #_log.debug('taskID: %d', self._taskID)
 					
             start = str(datetime.datetime.now())
-            end = str(datetime.datetime.now() + datetime.timedelta(minutes=1))
+            end = str(datetime.datetime.now() + datetime.timedelta(seconds=2))
     
     
             msg = [
