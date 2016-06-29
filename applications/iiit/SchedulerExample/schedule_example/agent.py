@@ -87,6 +87,7 @@ def schedule_example(config_path, **kwargs):
 
     config = utils.load_config(config_path)
     agent_id = config['agentid']
+	taskID = 1
 
     class SchedulerExample(Agent):
         '''This agent can be used to demonstrate scheduling and 
@@ -101,7 +102,9 @@ def schedule_example(config_path, **kwargs):
     
         @Core.receiver('onsetup')
         def setup(self, sender, **kwargs):
+			_log.info(self.config['message'])
             self._agent_id = config['agentid']
+			self._period = config.get('period', 5)
 
         @Core.receiver('onstart')            
         def startup(self, sender, **kwargs):
@@ -113,7 +116,8 @@ def schedule_example(config_path, **kwargs):
         @PubSub.subscribe('pubsub', topics.ACTUATOR_SCHEDULE_ANNOUNCE(campus='iiit',
                                              building='cbs',unit='smarthub'))
         def actuate(self, peer, sender, bus,  topic, headers, message):
-            print ("response:",topic,headers,message)
+			_log.debug('actuate()')
+            _log.debug("response:",topic,headers,message)
             if headers[headers_mod.REQUESTER_ID] != agent_id:
                 return
             '''Match the announce for our fake device with our ID
@@ -129,16 +133,23 @@ def schedule_example(config_path, **kwargs):
                                      headers, 1)
     
         
-        def publish_schedule(self):
+        @periodic(period)
+		def publish_schedule(self):
             '''Periodically publish a schedule request'''
+			_log.debug('publish_schedule()')
+			_log.debug('taskID: ' + taskID)
+
             headers = {
                         'AgentID': agent_id,
                         'type': 'NEW_SCHEDULE',
                         'requesterID': agent_id, #The name of the requesting agent.
-                        'taskID': agent_id + "-ExampleTask", #The desired task ID for this task. It must be unique among all other scheduled tasks.
+                        'taskID': agent_id + "-ExampleTask", + taskID #The desired task ID for this task. It must be unique among all other scheduled tasks.
                         'priority': 'LOW', #The desired task priority, must be 'HIGH', 'LOW', or 'LOW_PREEMPT'
                     } 
-            
+
+			taskID = taskID + 1
+            _log.debug('taskID: ' + taskID)
+					
             start = str(datetime.datetime.now())
             end = str(datetime.datetime.now() + datetime.timedelta(minutes=1))
     
@@ -162,6 +173,7 @@ def schedule_example(config_path, **kwargs):
             
             
         def use_rpc(self):
+			_log.debug('use_rpc(), taskID:', taskID)
             try: 
                 start = str(datetime.datetime.now())
                 end = str(datetime.datetime.now() + datetime.timedelta(minutes=1))
