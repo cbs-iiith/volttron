@@ -87,7 +87,6 @@ def schedule_example(config_path, **kwargs):
 
     config = utils.load_config(config_path)
     agent_id = config['agentid']
-	taskID = 1
 
     class SchedulerExample(Agent):
         '''This agent can be used to demonstrate scheduling and 
@@ -96,28 +95,31 @@ def schedule_example(config_path, **kwargs):
         will cause an error.
         '''
     
+        _taskID = 1
     
         def __init__(self, **kwargs):
             super(SchedulerExample, self).__init__(**kwargs)
     
         @Core.receiver('onsetup')
         def setup(self, sender, **kwargs):
-			_log.info(self.config['message'])
+            _log.info(config['message'])
             self._agent_id = config['agentid']
-			self._period = config.get('period', 5)
 
         @Core.receiver('onstart')            
         def startup(self, sender, **kwargs):
-#             self.publish_schedule()
-            self.use_rpc()
+            #self.publish_schedule()
+            #self.use_rpc()
+            period = config['period']
+            self.core.periodic(period, self.publish_schedule, wait=None)
+
     
     
     
         @PubSub.subscribe('pubsub', topics.ACTUATOR_SCHEDULE_ANNOUNCE(campus='iiit',
                                              building='cbs',unit='smarthub'))
         def actuate(self, peer, sender, bus,  topic, headers, message):
-			_log.debug('actuate()')
-            _log.debug("response:",topic,headers,message)
+            _log.debug('actuate()')
+            #_log.debug("response: " + topic + headers + message)
             if headers[headers_mod.REQUESTER_ID] != agent_id:
                 return
             '''Match the announce for our fake device with our ID
@@ -131,24 +133,22 @@ def schedule_example(config_path, **kwargs):
                                              building='cbs',unit='smarthub',
                                              point='LEDLight1'),
                                      headers, 1)
-    
-        
-        @periodic(period)
-		def publish_schedule(self):
+        #@Core.periodic(5)
+        def publish_schedule(self):
             '''Periodically publish a schedule request'''
-			_log.debug('publish_schedule()')
-			_log.debug('taskID: ' + taskID)
+            _log.debug('publish_schedule()')
+            _log.debug('taskID: %d', self._taskID)
 
             headers = {
                         'AgentID': agent_id,
                         'type': 'NEW_SCHEDULE',
                         'requesterID': agent_id, #The name of the requesting agent.
-                        'taskID': agent_id + "-ExampleTask", + taskID #The desired task ID for this task. It must be unique among all other scheduled tasks.
+                        'taskID': agent_id + "-ExampleTask" + str(self._taskID), #The desired task ID for this task. It must be unique among all other scheduled tasks.
                         'priority': 'LOW', #The desired task priority, must be 'HIGH', 'LOW', or 'LOW_PREEMPT'
-                    } 
-
-			taskID = taskID + 1
-            _log.debug('taskID: ' + taskID)
+                    }
+            
+            self._taskID = self._taskID + 1
+            _log.debug('taskID: %d', self._taskID)
 					
             start = str(datetime.datetime.now())
             end = str(datetime.datetime.now() + datetime.timedelta(minutes=1))
@@ -173,7 +173,7 @@ def schedule_example(config_path, **kwargs):
             
             
         def use_rpc(self):
-			_log.debug('use_rpc(), taskID:', taskID)
+            _log.debug('use_rpc(), taskID: %d', self._taskID)
             try: 
                 start = str(datetime.datetime.now())
                 end = str(datetime.datetime.now() + datetime.timedelta(minutes=1))
