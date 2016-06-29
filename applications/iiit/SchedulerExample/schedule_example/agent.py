@@ -132,7 +132,9 @@ def schedule_example(config_path, **kwargs):
                         'requesterID': agent_id,
                        }
 	      
-            switch_status = self.vip.rpc.call('platform.actuator','get_point','iiit/cbs/smarthub/LEDLight4').get(timeout=1)
+            switch_status = self.vip.rpc.call(
+                                            'platform.actuator','get_point',
+                                            'iiit/cbs/smarthub/LEDLight4').get(timeout=1)
             _log.debug('Switch_Status : %d',switch_status)
             
             result = switch_status ^ self._present_value
@@ -171,7 +173,7 @@ def schedule_example(config_path, **kwargs):
             #_log.debug('taskID: %d', self._taskID)
 					
             start = str(datetime.datetime.now())
-            end = str(datetime.datetime.now() + datetime.timedelta(seconds=2))
+            end = str(datetime.datetime.now() + datetime.timedelta(milliseconds=300))
     
     
             msg = [
