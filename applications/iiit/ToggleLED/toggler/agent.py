@@ -65,7 +65,7 @@ from volttron.platform.messaging import headers as headers_mod
 
 from volttron.platform.messaging import topics, headers as headers_mod
 
-#import settings
+import settings
 
 
 utils.setup_logging()
@@ -83,7 +83,7 @@ def DatetimeFromValue(ts):
         raise ValueError('Unknown timestamp value')
     return ts
 
-def toggle_led(config_path, **kwargs):
+def toggler(config_path, **kwargs):
 
     config = utils.load_config(config_path)
     agent_id = config['agentid']
@@ -241,7 +241,7 @@ def toggle_led(config_path, **kwargs):
 def main(argv=sys.argv):
     '''Main method called by the eggsecutable.'''
     try:
-        utils.vip_main(toggle_led)
+        utils.vip_main(toggler)
     except Exception as e:
         print e
         _log.exception('unhandled exception')

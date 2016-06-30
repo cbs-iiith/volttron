@@ -1,6 +1,6 @@
 {
     
-    "exec":"toggleragent-0.1-py2.7.egg --config \"%c\"--sub\"%s\"--pub \"%p\""  
+    "exec":"toggleragent-0.1-py2.7.egg --config \"%c\"--sub\"%s\"--pub \"%p\"",  
     "agentid": "Toggle_LED",
     "message": "hello",
 	"period": 1

@@ -141,19 +141,25 @@ def schedule_example(config_path, **kwargs):
             
             if(result):
                 _log.debug('Changing...')
-                #self.vip.pubsub.publish('pubsub', topics.ACTUATOR_SET(campus='iiit',
-                #    building='cbs',unit='smarthub',
-                #    point='LEDLight1'),
-                #    headers,switch_status)
-                result = self.vip.rpc.call(
-                                        'platform.actuator',
-                                        'set_point',
-                                        agent_id, 
-                                        'iiit/cbs/smarthub/LEDLight1',
-                                        switch_status).get(timeout=1)
-                _log.debug("Set result: %d", result)
+                try:
+                    #self.vip.pubsub.publish('pubsub', topics.ACTUATOR_SET(campus='iiit',
+                    #    building='cbs',unit='smarthub',
+                    #    point='LEDLight1'),
+                    #    headers,switch_status)
+                    result = self.vip.rpc.call(
+                                            'platform.actuator',
+                                            'set_point',
+                                            agent_id, 
+                                            'iiit/cbs/smarthub/LEDLight1',
+                                            switch_status).get(timeout=1)
+                    _log.debug("Set result: %d", result)
 
-                self._present_value = switch_status
+                    self._present_value = switch_status
+                except Exception as e:
+                    print ("Could not change. Maybe Schedule expired...")
+                    print(e)
+                    return
+ 
 
         #@Core.periodic(5)
         def publish_schedule(self):
