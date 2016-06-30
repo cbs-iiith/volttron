@@ -83,12 +83,12 @@ def DatetimeFromValue(ts):
         raise ValueError('Unknown timestamp value')
     return ts
 
-def schedule_example(config_path, **kwargs):
+def toggler(config_path, **kwargs):
 
     config = utils.load_config(config_path)
     agent_id = config['agentid']
 
-    class SchedulerExample(Agent):
+    class ToggleLED(Agent):
         '''This agent can be used to demonstrate scheduling and 
         acutation of devices. It reserves a non-existant device, then
         acts when its time comes up. Since there is no device, this 
@@ -99,7 +99,7 @@ def schedule_example(config_path, **kwargs):
         _present_value = 0
     
         def __init__(self, **kwargs):
-            super(SchedulerExample, self).__init__(**kwargs)
+            super(ToggleLED, self).__init__(**kwargs)
     
         @Core.receiver('onsetup')
         def setup(self, sender, **kwargs):
@@ -135,31 +135,26 @@ def schedule_example(config_path, **kwargs):
             switch_status = self.vip.rpc.call(
                                             'platform.actuator','get_point',
                                             'iiit/cbs/smarthub/LEDLight4').get(timeout=1)
+           
             _log.debug('Switch_Status : %d',switch_status)
             
             result = switch_status ^ self._present_value
             
             if(result):
                 _log.debug('Changing...')
-                try:
-                    #self.vip.pubsub.publish('pubsub', topics.ACTUATOR_SET(campus='iiit',
-                    #    building='cbs',unit='smarthub',
-                    #    point='LEDLight1'),
-                    #    headers,switch_status)
-                    result = self.vip.rpc.call(
-                                            'platform.actuator',
-                                            'set_point',
-                                            agent_id, 
-                                            'iiit/cbs/smarthub/LEDLight1',
-                                            switch_status).get(timeout=1)
-                    _log.debug("Set result: %d", result)
+                #self.vip.pubsub.publish('pubsub', topics.ACTUATOR_SET(campus='iiit',
+                #    building='cbs',unit='smarthub',
+                #    point='LEDLight1'),
+                #    headers,switch_status)
+                result = self.vip.rpc.call(
+                                        'platform.actuator',
+                                        'set_point',
+                                        agent_id, 
+                                        'iiit/cbs/smarthub/LEDLight1',
+                                        switch_status).get(timeout=1)
+                _log.debug("Set result: %d", result)
 
-                    self._present_value = switch_status
-                except Exception as e:
-                    print ("Could not change. Maybe Schedule expired...")
-                    print(e)
-                    return
- 
+                self._present_value = switch_status
 
         #@Core.periodic(5)
         def publish_schedule(self):
@@ -238,15 +233,15 @@ def schedule_example(config_path, **kwargs):
                 
             
             
-    Agent.__name__ = 'ScheduleExampleAgent'
-    return SchedulerExample(**kwargs)
+    Agent.__name__ = 'ToggleLED_Agent'
+    return ToggleLED(**kwargs)
             
     
     
 def main(argv=sys.argv):
     '''Main method called by the eggsecutable.'''
     try:
-        utils.vip_main(schedule_example)
+        utils.vip_main(toggler)
     except Exception as e:
         print e
         _log.exception('unhandled exception')
