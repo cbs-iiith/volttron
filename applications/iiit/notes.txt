@@ -1,1 +1,42 @@
 document to capture notes
+
+How to create a new agent <Prateek Vishal>
+	1. configuration file naming convection
+		a. service agent "<Agent-Name>.service"
+			actuator comes under service "<actuator-deploy>.service"
+		b. other agents loaded based on priority
+	2. name of the config file would be anything, preferable agent name "ToggleLED.agent"
+	3. configuration are in folder ""ToggleLED"
+		config file
+			agent_id an unique name --> "Toggle_LED"
+			"exec" --> why???
+				"exec":"toggleragent-0.1-py2.7.egg --config \"%c\"--sub\"%s\"--pub \"%p\"",
+		other configuration parameters
+	4. new agent folder "ToggleLED/toggler"
+		main function name should match folder name
+			"def toggler(config_path, **kwargs):"
+			"toggler"
+		class name should match root folder name "ToggleLED"
+			class ToggleLED(Agent):
+				.
+				.
+				.
+				def __init__(self, **kwargs):
+					super(ToggleLED, self).__init__(**kwargs)
+		
+				.
+				.
+				.
+			Agent.__name__ = 'ToggleLED_Agent'
+			return ToggleLED(**kwargs)
+			
+		def main(argv=sys.argv):
+			'''Main method called by the eggsecutable.'''
+			try:
+				utils.vip_main(toggler)
+			except Exception as e:
+				print e
+				_log.exception('unhandled exception')
+
+ 
+	
