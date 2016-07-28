@@ -18,3 +18,4 @@ parser.out
 /config/
 /docs/build/*
 /docs/source/apidocs
+*.out
