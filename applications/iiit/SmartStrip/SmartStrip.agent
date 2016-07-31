@@ -1,0 +1,33 @@
+{
+	"exec":"smartstrip-0.1-py2.7.egg --config \"%c\"--sub\"%s\"--pub \"%p\"",  
+		"agentid": "SmartStrip",
+		"message": "I am SmartStrip Agent",
+		"location": "loc1",
+		"campus": "iiit",
+		"building": "cbs",
+		"plugs": {
+			"plug_1":{
+				"id": 1,
+				"name":"plug 1",
+				"description": "plug 1 - 240V 3A",
+				"connected": "false",
+				"connected_tag_id": 0
+			},
+			"plug_2":{
+				"id": 2,
+				"name":"plug 2",
+				"description": "plug 2 - 240V 3A",
+				"connected": "false",
+				"connected_tag_id": 0
+			}
+		},
+		"tag_ids": [
+			"DAA131300029",
+			"DF6F212000E2",
+			"D61FC1200074",
+			"D40851400062",
+			"D736613000C4",
+			"0D703A1300000029"
+		],
+		"period": 10
+}
