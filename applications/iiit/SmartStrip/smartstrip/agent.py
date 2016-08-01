@@ -75,22 +75,21 @@ def smartstrip(config_path, **kwargs):
     RELAY_OFF = 0
     PLUG_ID_1 = 0
     PLUG_ID_2 = 1
+    DEFAULT_TAG_ID = '7FC000007FC00000'
 
     class SmartStrip(Agent):
         '''Smart Strip with 2 plug
         '''
-        #_taskID = 1
-        _present_value = 0
         _taskID_LedDebug = 1
         _taskID_Plug1Relay = 2
         _taskID_Plug2Relay = 3
         _taskID_ReadTagIDs = 4
-        _taskID_ReadMeterData = 100
+        _taskID_ReadMeterData = 5
+
         _ledDebugState = 0
-        _plug2RelayState = 0
         _plugRelayState = [0, 0]
         _plugConnected = [ 0, 0]
-        _plug_tag_id = ["7FC000007FC00000", "7FC000007FC00000"]
+        _plug_tag_id = [DEFAULT_TAG_ID, DEFAULT_TAG_ID]
 
         def __init__(self, **kwargs):
             super(SmartStrip, self).__init__(**kwargs)
@@ -102,22 +101,22 @@ def smartstrip(config_path, **kwargs):
 
         @Core.receiver('onstart')            
         def startup(self, sender, **kwargs):
-            #self.publish_schedule()
-            #self.use_rpc()
             period = config['period']
-            #self.core.periodic(period, self.publish_schedule, wait=None)
             self._tag_ids = config['tag_ids']
-            print (self._tag_ids[0])
-            print (self._tag_ids[1])
-            print (type (self._tag_ids[0]))
-
             #self.runSmartStripTest(self)
-
+            #self.readTagIDs()
             period_read_tag = config['period_read_tag']
             self.core.periodic(period_read_tag, self.readTagIDs, wait=None)
-            #self.readTagIDs()
+            time.sleep(10)
+            #self.meterData(PLUG_ID_1)
+            #self.meterData(PLUG_ID_2)
+            period_read_meterdata = config['period_read_meterdata']
+            self.core.periodic(period_read_meterdata, self.meterData, wait=None)
+
+            self.switchLedDebug(LED_ON)
 
         def runSmartStripTest(self):
+            _log.debug("Running : runSmartStripTest()...")
             _log.debug('switch on debug led')
             self.switchLedDebug(LED_ON)
             time.sleep(1)
@@ -140,11 +139,69 @@ def smartstrip(config_path, **kwargs):
             time.sleep(1)
             _log.debug('switch off relay 2')
             self.switchRelay(PLUG_ID_2, RELAY_OFF)
+            _log.debug("EOF Testing")
+
+        def meterData(self):
+            #_log.debug('meterData()')
+            if self._plugRelayState[PLUG_ID_1] == RELAY_ON:
+                self.readMeterData(PLUG_ID_1)
+            if self._plugRelayState[PLUG_ID_2] == RELAY_ON:
+                self.readMeterData(PLUG_ID_2)
+
+        def readMeterData(self, plugID):
+            #_log.debug('readMeterData(), plugID: ' + str(plugID))
+            if plugID == PLUG_ID_1:
+                pointVolatge = 'Plug1Voltage'
+                pointCurrent = 'Plug1Current'
+                pointActivePower = 'Plug1ActivePower'
+            elif plugID == PLUG_ID_2:
+                pointVolatge = 'Plug2Voltage'
+                pointCurrent = 'Plug1Current'
+                pointActivePower = 'Plug1ActivePower'
+
+            try: 
+                start = str(datetime.datetime.now())
+                end = str(datetime.datetime.now() 
+                        + datetime.timedelta(milliseconds=300))
+
+                msg = [
+                        ['iiit/cbs/smartstrip',start,end]
+                        ]
+                result = self.vip.rpc.call(
+                        'platform.actuator', 
+                        'request_new_schedule',
+                        agent_id, 
+                        str(self._taskID_ReadMeterData),
+                        'HIGH',
+                        msg).get(timeout=1)
+            except Exception as e:
+                print ("Could not contact actuator. Is it running?")
+                print(e)
+                return
+            #
+            try:
+                if result['result'] == 'SUCCESS':
+                    fVolatge = self.vip.rpc.call(
+                            'platform.actuator','get_point',
+                            'iiit/cbs/smartstrip/' + pointVolatge).get(timeout=1)
+                    fCurrent = self.vip.rpc.call(
+                            'platform.actuator','get_point',
+                            'iiit/cbs/smartstrip/' + pointCurrent).get(timeout=1)
+                    fActivePower = self.vip.rpc.call(
+                            'platform.actuator','get_point',
+                            'iiit/cbs/smartstrip/' + pointActivePower).get(timeout=1)
+
+                    _log.debug("Plug {%d}: Voltage - {0:.2f}, Current - {0:.2f}, ActivePower {0:.2f}"
+                            .format(plugID, fVolatge, fCurrent, fActivePower))
+
+            except Exception as e:
+                _log.debug("SAM Expection, unable to read voltage")
+                print(e)
 
         def readTagIDs(self):
-            _log.debug('readTagIDs()')
-            tempTagId1 = ''
-            tempTagId2 = ''
+            #_log.debug('readTagIDs()')
+            newTagId1 = ''
+            newTagId2 = ''
 
             try: 
                 start = str(datetime.datetime.now())
@@ -177,48 +234,52 @@ def smartstrip(config_path, **kwargs):
                             'platform.actuator','get_point',
                             'iiit/cbs/smartstrip/TagID1_1').get(timeout=1)
 
-                    if result['result'] == 'SUCCESS':
-                        fTagID1_2 = self.vip.rpc.call(
-                                'platform.actuator','get_point',
-                                'iiit/cbs/smartstrip/TagID1_2').get(timeout=1)
-                        newTagId1 = self.recoveryTagID(fTagID1_1, fTagID1_2)
-                    _log.debug('Tag 1: ' + newTagId1)
+                    fTagID1_2 = self.vip.rpc.call(
+                            'platform.actuator','get_point',
+                            'iiit/cbs/smartstrip/TagID1_2').get(timeout=1)
+                    newTagId1 = self.recoveryTagID(fTagID1_1, fTagID1_2)
+                    #_log.debug('Tag 1: ' + newTagId1)
 
-                #get second tag id
-                if result['result'] == 'SUCCESS':
+                    #get second tag id
                     fTagID2_1 = self.vip.rpc.call(
                             'platform.actuator','get_point',
                             'iiit/cbs/smartstrip/TagID2_1').get(timeout=1)
 
-                    if result['result'] == 'SUCCESS':
-                        fTagID2_2 = self.vip.rpc.call(
-                                'platform.actuator','get_point',
-                                'iiit/cbs/smartstrip/TagID2_2').get(timeout=1)
-                        newTagId2 = self.recoveryTagID(fTagID2_1, fTagID2_2)
-                    _log.debug('Tag 2: ' + newTagId2)
+                    fTagID2_2 = self.vip.rpc.call(
+                            'platform.actuator','get_point',
+                            'iiit/cbs/smartstrip/TagID2_2').get(timeout=1)
+                    newTagId2 = self.recoveryTagID(fTagID2_1, fTagID2_2)
+                    #_log.debug('Tag 2: ' + newTagId2)
+
+                    _log.debug('Tag 1: '+ newTagId1 +', Tag 2: ' + newTagId2)
 
             except Exception as e:
                 print(e)
-
             self.processNewTagId(PLUG_ID_1, newTagId1)
             self.processNewTagId(PLUG_ID_2, newTagId2)
 
-        def processNewTagId(self, plugID, newTagId):		
-            if newTagId != '7FC000007FC00000':
+        def processNewTagId(self, plugID, newTagId):
+            #empty string
+            if not newTagId:
+                #do nothing
+                return
+            if newTagId != DEFAULT_TAG_ID:
                 #device is connected condition
                 #check if current tag id is same as new, if so, do nothing
-                if newTagId != self._plug_tag_id[plugID] :
+                if newTagId == self._plug_tag_id[plugID] :
+                    return
+                else:
                     #update the tag id and change connected state
                     self._plug_tag_id[plugID] = newTagId
                     self._plugConnected[plugID] = 1
                     if self.tagAuthorised(newTagId) :
                         self.switchRelay(plugID, RELAY_ON)
             else:
-                #no device connected condition
+                #no device connected condition, new tag id is DEFAULT_TAG_ID
                 if self._plugConnected[plugID] == 0:
                     return
                 elif self._plugConnected[plugID] == 1 or newTagId != self._plug_tag_id[plugID] :
-                            #update the tag id and change connected state
+                    #update the tag id and change connected state
                     self._plug_tag_id[plugID] = newTagId
                     self._plugConnected[plugID] = 0
                     self.switchRelay(plugID, RELAY_OFF)
@@ -244,9 +305,9 @@ def smartstrip(config_path, **kwargs):
 
         @RPC.export
         def switchLedDebug(self, state):
-            _log.debug('switchLedDebug()')
+            #_log.debug('switchLedDebug()')
             if self._ledDebugState == state:
-                _log.debug('same state, do nothing')
+                #_log.debug('same state, do nothing')
                 return
 
             try: 
@@ -278,16 +339,16 @@ def smartstrip(config_path, **kwargs):
                             agent_id, 
                             'iiit/cbs/smartstrip/LEDDebug',
                             state).get(timeout=1)
-                    print("Set result", result)
+                    #print("Set result", result)
             except Exception as e:
                 print(e)
 
-            _log.debug('OK call updateLedDebugState()')
+            #_log.debug('OK call updateLedDebugState()')
             self.updateLedDebugState()
 
         @RPC.export
         def switchRelay(self, plugID, state):
-            _log.debug('switchRelay()')
+            #_log.debug('switchRelay()')
             if plugID == PLUG_ID_1:
                 self.switchPlug1Relay(state)
             elif plugID == PLUG_ID_2:
@@ -328,15 +389,15 @@ def smartstrip(config_path, **kwargs):
                             agent_id, 
                             'iiit/cbs/smartstrip/Plug1Relay',
                             state).get(timeout=10)
-                    print("Set result", result)
+                    #print("Set result", result)
             except Exception as e:
                 print(e) 
 
-            _log.debug('OK call updatePlug1RelayState()')
+            #_log.debug('OK call updatePlug1RelayState()')
             self.updatePlug1RelayState()
 
         def switchPlug2Relay(self, state):
-            _log.debug('switchPlug2Relay()')
+            #_log.debug('switchPlug2Relay()')
 
             if self._plugRelayState[PLUG_ID_2] == state:
                 _log.debug('same state, do nothing')
@@ -371,15 +432,15 @@ def smartstrip(config_path, **kwargs):
                             agent_id, 
                             'iiit/cbs/smartstrip/Plug2Relay',
                             state).get(timeout=1)
-                    print("Set result", result)
+                    #print("Set result", result)
             except Exception as e:
                 print(e) 
 
-            _log.debug('OK call updatePlug2RelayState()' )
+            #_log.debug('OK call updatePlug2RelayState()' )
             self.updatePlug2RelayState()
 
         def updateLedDebugState(self):
-            _log.debug('updateLedDebugState()')
+            #_log.debug('updateLedDebugState()')
             headers = { 'requesterID': agent_id, }
             ledDebug_status = self.vip.rpc.call(
                     'platform.actuator','get_point',
@@ -392,7 +453,7 @@ def smartstrip(config_path, **kwargs):
 
 
         def updatePlug1RelayState(self):
-            _log.debug('updatePlug1RelayState()')
+            #_log.debug('updatePlug1RelayState()')
             headers = { 'requesterID': agent_id, }
             relay_status = self.vip.rpc.call(
                     'platform.actuator','get_point',
@@ -405,7 +466,7 @@ def smartstrip(config_path, **kwargs):
 
 
         def updatePlug2RelayState(self):
-            _log.debug('updatePlug2RelayState()')
+            #_log.debug('updatePlug2RelayState()')
             headers = { 'requesterID': agent_id, }
             relay_status = self.vip.rpc.call(
                     'platform.actuator','get_point',
