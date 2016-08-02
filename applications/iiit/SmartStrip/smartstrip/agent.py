@@ -89,7 +89,7 @@ def smartstrip(config_path, **kwargs):
         _ledDebugState = 0
         _plugRelayState = [0, 0]
         _plugConnected = [ 0, 0]
-        _plug_tag_id = [DEFAULT_TAG_ID, DEFAULT_TAG_ID]
+        _plug_tag_id = ['7FC000007FC00000', '7FC000007FC00000']
 
         def __init__(self, **kwargs):
             super(SmartStrip, self).__init__(**kwargs)
@@ -149,20 +149,20 @@ def smartstrip(config_path, **kwargs):
                 self.readMeterData(PLUG_ID_2)
 
         def readMeterData(self, plugID):
-            #_log.debug('readMeterData(), plugID: ' + str(plugID))
+            #_log.info ('readMeterData(), plugID: ' + str(plugID))
             if plugID == PLUG_ID_1:
                 pointVolatge = 'Plug1Voltage'
                 pointCurrent = 'Plug1Current'
                 pointActivePower = 'Plug1ActivePower'
             elif plugID == PLUG_ID_2:
                 pointVolatge = 'Plug2Voltage'
-                pointCurrent = 'Plug1Current'
-                pointActivePower = 'Plug1ActivePower'
+                pointCurrent = 'Plug2Current'
+                pointActivePower = 'Plug2ActivePower'
 
             try: 
                 start = str(datetime.datetime.now())
                 end = str(datetime.datetime.now() 
-                        + datetime.timedelta(milliseconds=300))
+                        + datetime.timedelta(seconds=1))
 
                 msg = [
                         ['iiit/cbs/smartstrip',start,end]
@@ -175,7 +175,7 @@ def smartstrip(config_path, **kwargs):
                         'HIGH',
                         msg).get(timeout=1)
             except Exception as e:
-                print ("Could not contact actuator. Is it running?")
+                _log.error ("Could not contact actuator. Is it running?")
                 print(e)
                 return
             #
@@ -184,19 +184,26 @@ def smartstrip(config_path, **kwargs):
                     fVolatge = self.vip.rpc.call(
                             'platform.actuator','get_point',
                             'iiit/cbs/smartstrip/' + pointVolatge).get(timeout=1)
+                    #_log.debug('voltage: {0:.2f}'.format(fVolatge))
                     fCurrent = self.vip.rpc.call(
                             'platform.actuator','get_point',
                             'iiit/cbs/smartstrip/' + pointCurrent).get(timeout=1)
+                    #_log.debug('current: {0:.2f}'.format(fCurrent))
                     fActivePower = self.vip.rpc.call(
                             'platform.actuator','get_point',
                             'iiit/cbs/smartstrip/' + pointActivePower).get(timeout=1)
+                    #_log.debug('active: {0:.2f}'.format(fActivePower))
 
-                    _log.debug("Plug {%d}: Voltage - {0:.2f}, Current - {0:.2f}, ActivePower {0:.2f}"
-                            .format(plugID, fVolatge, fCurrent, fActivePower))
+                    _log.info('Plug {0:d}: '.format(plugID + 1)
+							+ 'voltage: {0:.2f}'.format(fVolatge) 
+							+ ', Current: {0:.2f}'.format(fCurrent)
+							+ ', ActivePower: {0:.2f}'.format(fActivePower)
+							)
 
             except Exception as e:
-                _log.debug("SAM Expection, unable to read voltage")
+                _log.error ("SAM Expection, exception in readMeterData()")
                 print(e)
+				return
 
         def readTagIDs(self):
             #_log.debug('readTagIDs()')
@@ -255,6 +262,7 @@ def smartstrip(config_path, **kwargs):
 
             except Exception as e:
                 print(e)
+				return
             self.processNewTagId(PLUG_ID_1, newTagId1)
             self.processNewTagId(PLUG_ID_2, newTagId2)
 
@@ -263,7 +271,7 @@ def smartstrip(config_path, **kwargs):
             if not newTagId:
                 #do nothing
                 return
-            if newTagId != DEFAULT_TAG_ID:
+            if newTagId != '7FC000007FC00000':
                 #device is connected condition
                 #check if current tag id is same as new, if so, do nothing
                 if newTagId == self._plug_tag_id[plugID] :
@@ -342,6 +350,7 @@ def smartstrip(config_path, **kwargs):
                     #print("Set result", result)
             except Exception as e:
                 print(e)
+				return
 
             #_log.debug('OK call updateLedDebugState()')
             self.updateLedDebugState()
@@ -391,7 +400,8 @@ def smartstrip(config_path, **kwargs):
                             state).get(timeout=10)
                     #print("Set result", result)
             except Exception as e:
-                print(e) 
+                print(e)
+				return
 
             #_log.debug('OK call updatePlug1RelayState()')
             self.updatePlug1RelayState()
@@ -434,7 +444,8 @@ def smartstrip(config_path, **kwargs):
                             state).get(timeout=1)
                     #print("Set result", result)
             except Exception as e:
-                print(e) 
+                print(e)
+				return
 
             #_log.debug('OK call updatePlug2RelayState()' )
             self.updatePlug2RelayState()
@@ -448,7 +459,7 @@ def smartstrip(config_path, **kwargs):
 
             _log.debug('plug 1 old self._ledDebugState : %d', 
                     self._ledDebugState)
-            _log.debug('plug 1 new ledDebug_status : %d', ledDebug_status)
+            _log.info('plug 1 new ledDebug_status : %d', ledDebug_status)
             self._ledDebugState = int(ledDebug_status)
 
 
@@ -461,7 +472,7 @@ def smartstrip(config_path, **kwargs):
 
             _log.debug('plug 1 old _plugRelayState : %d', 
                     self._plugRelayState[PLUG_ID_1])
-            _log.debug('plug 1 new relay_status : %d', relay_status)
+            _log.info('plug 1 new relay_status : %d', relay_status)
             self._plugRelayState[PLUG_ID_1] = int(relay_status)
 
 
@@ -474,7 +485,7 @@ def smartstrip(config_path, **kwargs):
 
             _log.debug('plug 2 old _plugRelayState : %d', 
                     self._plugRelayState[PLUG_ID_2])
-            _log.debug('plug 2 new relay_status : %d', relay_status)
+            _log.info('plug 2 new relay_status : %d', relay_status)
             self._plugRelayState[PLUG_ID_2] = int(relay_status)
 
 
