@@ -31,6 +31,6 @@
 			"0D88071300000092"
 		],
 		"period": 10,
-		"period_read_tag": 10,
+		"period_read_tag": 1,
 		"period_read_meterdata": 10
 }
