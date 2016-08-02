@@ -115,6 +115,22 @@ def smartstrip(config_path, **kwargs):
 
             self.switchLedDebug(LED_ON)
 
+        @Core.receiver('onstop')
+        def onstop(self, sender, **kwargs):
+            _log.debug('onstop()')
+            self.switchLedDebug(LED_OFF)
+            self.switchRelay(PLUG_ID_1, RELAY_OFF)
+            self.switchRelay(PLUG_ID_2, RELAY_OFF)
+            pass
+
+        @Core.receiver('onfinish')
+        def onfinish(self, sender, **kwargs):
+            _log.debug('onfinish()')
+            self.switchLedDebug(LED_OFF)
+            self.switchRelay(PLUG_ID_1, RELAY_OFF)
+            self.switchRelay(PLUG_ID_2, RELAY_OFF)
+            pass
+
         def runSmartStripTest(self):
             _log.debug("Running : runSmartStripTest()...")
             _log.debug('switch on debug led')
@@ -271,8 +287,8 @@ def smartstrip(config_path, **kwargs):
             self.processNewTagId(PLUG_ID_1, newTagId1)
             self.processNewTagId(PLUG_ID_2, newTagId2)
 
-		#TODO: should move the relay switch on/off functionality to a new agent
-		#to accommodate for more roboast control algorithms (incl price point changes)
+        #TODO: should move the relay switch on/off functionality to a new agent
+        #to accommodate for more roboast control algorithms (incl price point changes)
         def processNewTagId(self, plugID, newTagId):
             #empty string
             if not newTagId:
