@@ -271,6 +271,8 @@ def smartstrip(config_path, **kwargs):
             self.processNewTagId(PLUG_ID_1, newTagId1)
             self.processNewTagId(PLUG_ID_2, newTagId2)
 
+		#TODO: should move the relay switch on/off functionality to a new agent
+		#to accommodate for more roboast control algorithms (incl price point changes)
         def processNewTagId(self, plugID, newTagId):
             #empty string
             if not newTagId:
@@ -291,9 +293,7 @@ def smartstrip(config_path, **kwargs):
                 #no device connected condition, new tag id is DEFAULT_TAG_ID
                 if self._plugConnected[plugID] == 0:
                     return
-                elif self._plugConnected[plugID] == 1 or 
-						newTagId != self._plug_tag_id[plugID] or 
-						self._plugRelayState[plugID] == RELAY_ON :
+                elif self._plugConnected[plugID] == 1 or newTagId != self._plug_tag_id[plugID] or self._plugRelayState[plugID] == RELAY_ON :
                     #update the tag id and change connected state
                     self._plug_tag_id[plugID] = newTagId
                     self._plugConnected[plugID] = 0
@@ -376,7 +376,7 @@ def smartstrip(config_path, **kwargs):
                 self.switchPlug2Relay(state)
 
         def switchPlug1Relay(self, state):
-            _log.debug('switchPlug1Relay()')
+            #_log.debug('switchPlug1Relay()')
             if self._plugRelayState[PLUG_ID_1] == state:
                 _log.debug('same state, do nothing')
                 return
