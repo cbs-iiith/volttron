@@ -234,14 +234,14 @@ def smartstrip(config_path, **kwargs):
                 pass
 
         def readTagIDs(self):
-            _log.debug('readTagIDs()')
+            #_log.debug('readTagIDs()')
             newTagId1 = ''
             newTagId2 = ''
 
             try: 
                 start = str(datetime.datetime.now())
                 end = str(datetime.datetime.now() 
-                        + datetime.timedelta(milliseconds=2000))
+                        + datetime.timedelta(milliseconds=900))
 
                 msg = [
                         ['iiit/cbs/smartstrip',start,end]

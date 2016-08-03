@@ -55,12 +55,12 @@ def pricepoint(config_path, **kwargs):
 
         @Core.receiver('onstart')            
         def startup(self, sender, **kwargs):
-            self.core.periodic(period_read_price_point, self.update_fake_price_points, wait=None)
+            self.core.periodic(period_read_price_point, self.fake_price_points, wait=None)
             #self.core.periodic(period_read_price_point, self.update_price_point, wait=None)
 
-        def update_fake_price_points(self):
+        def fake_price_points(self):
             #Make a random price point
-            _log.debug('update_fake_price_points()')
+            _log.debug('fake_price_points()')
             new_price_reading = random.uniform(min_price, max_price)
             self.post_price(new_price_reading)
 
@@ -76,7 +76,7 @@ def pricepoint(config_path, **kwargs):
             _log.debug('price_from_net()')
             new_price_reading = default_base_price
             '''
-            need to somehow get the price point from net
+            need to somehow get the new price point from net
             '''
             return new_price_reading
 
@@ -91,7 +91,7 @@ def pricepoint(config_path, **kwargs):
                     headers_mod.DATE: now
                     }
 
-            #_log.debug('before pub')
+            _log.info('Publishing new price point: {0:.2f}'.format(new_price))
             #Publish messages            
             self.vip.pubsub.publish(
                     'pubsub', topic_price_point, headers, pricepoint_message)
