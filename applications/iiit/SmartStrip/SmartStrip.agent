@@ -32,5 +32,7 @@
 		],
 		"period": 10,
 		"period_read_tag": 2,
-		"period_read_meterdata": 10
+		"period_read_meterdata": 10,
+		"topic_price_point": "prices/PricePoint"
+		
 }

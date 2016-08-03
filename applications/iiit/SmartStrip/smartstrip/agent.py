@@ -69,6 +69,8 @@ def smartstrip(config_path, **kwargs):
 
     config = utils.load_config(config_path)
     agent_id = config['agentid']
+    topic_price_point= config.get('topic_price_point', 'prices/PricePoint')
+
     LED_ON = 1
     LED_OFF = 0
     RELAY_ON = 1
@@ -101,8 +103,8 @@ def smartstrip(config_path, **kwargs):
 
         @Core.receiver('onstart')            
         def startup(self, sender, **kwargs):
-            period = config['period']
             self._tag_ids = config['tag_ids']
+
             #self.runSmartStripTest(self)
             #self.readTagIDs()
             period_read_tag = config['period_read_tag']
@@ -161,6 +163,8 @@ def smartstrip(config_path, **kwargs):
             #_log.debug('meterData()')
             if self._plugRelayState[PLUG_ID_1] == RELAY_ON:
                 self.readMeterData(PLUG_ID_1)
+                time.sleep(1)
+
             if self._plugRelayState[PLUG_ID_2] == RELAY_ON:
                 self.readMeterData(PLUG_ID_2)
 
@@ -193,7 +197,7 @@ def smartstrip(config_path, **kwargs):
             except Exception as e:
                 _log.error ("Could not contact actuator. Is it running?")
                 print(e)
-                return
+                pass
             #
             try:
                 if result['result'] == 'SUCCESS':
@@ -219,14 +223,14 @@ def smartstrip(config_path, **kwargs):
                             + ', Current: {0:.2f}'.format(fCurrent)
                             + ', ActivePower: {0:.2f}'.format(fActivePower)
                             )
-
+                    #release the time schedule, if we finish early.
             except Exception as e:
                 _log.error ("Expection:, exception in readMeterData()")
                 print(e)
-                return
+                pass
 
         def readTagIDs(self):
-            #_log.debug('readTagIDs()')
+            _log.debug('readTagIDs()')
             newTagId1 = ''
             newTagId2 = ''
 
@@ -248,7 +252,7 @@ def smartstrip(config_path, **kwargs):
             except Exception as e:
                 _log.error ("Exception: Could not contact actuator. Is it running?")
                 print(e)
-                return
+                pass
             #
             try:
                 '''
@@ -283,9 +287,12 @@ def smartstrip(config_path, **kwargs):
             except Exception as e:
                 _log.error ('Exception: reading tag ids')
                 print(e)
-                return
+                pass
+            _log.debug('start processNewTagId()...')
             self.processNewTagId(PLUG_ID_1, newTagId1)
             self.processNewTagId(PLUG_ID_2, newTagId2)
+            _log.debug('...done processNewTagId()')
+
 
         #TODO: should move the relay switch on/off functionality to a new agent
         #to accommodate for more roboast control algorithms (incl price point changes)
@@ -315,8 +322,16 @@ def smartstrip(config_path, **kwargs):
                     self._plugConnected[plugID] = 0
                     self.switchRelay(plugID, RELAY_OFF)
 
-        def recoveryTagID(self, fTagIDPart1, fTagIDPart2):
-            buff = self.convertToByteArray(fTagIDPart1, fTagIDPart2)
+        @PubSub.subscribe('pubsub', topic_price_point)
+        def on_match(self, peer, sender, bus,  topic, headers, message):
+            if sender == 'pubsub.compat':
+                message = compat.unpack_legacy_message(headers, message)
+            _log.debug(
+                    "Peer: %r, Sender: %r:, Bus: %r, Topic: %r, Headers: %r, "
+                    "Message: %r", peer, sender, bus, topic, headers, message)
+
+            def recoveryTagID(self, fTagIDPart1, fTagIDPart2):
+                buff = self.convertToByteArray(fTagIDPart1, fTagIDPart2)
             tag = ''			
             for i in reversed(buff):
                 tag = tag + format(i, '02x')
@@ -364,7 +379,7 @@ def smartstrip(config_path, **kwargs):
             except Exception as e:
                 _log.error ("Exception: Could not contact actuator. Is it running?")
                 print(e)
-                return
+                pass
 
             try:
                 if result['result'] == 'SUCCESS':
@@ -378,7 +393,7 @@ def smartstrip(config_path, **kwargs):
             except Exception as e:
                 _log.error ("Expection: setting ledDebug")
                 print(e)
-                return
+                pass
 
             #_log.debug('OK call updateLedDebugState()')
             self.updateLedDebugState()
@@ -416,7 +431,7 @@ def smartstrip(config_path, **kwargs):
             except Exception as e:
                 _log.error ("Could not contact actuator. Is it running?")
                 print(e)
-                return
+                pass
 
             try:
                 if result['result'] == 'SUCCESS':
@@ -430,7 +445,7 @@ def smartstrip(config_path, **kwargs):
             except Exception as e:
                 _log.error ("Expection: setting plug 1 relay")
                 print(e)
-                return
+                pass
 
             #_log.debug('OK call updatePlug1RelayState()')
             self.updatePlug1RelayState()
@@ -461,7 +476,7 @@ def smartstrip(config_path, **kwargs):
             except Exception as e:
                 _log.error ("Could not contact actuator. Is it running?")
                 print(e)
-                return
+                pass
 
             try:
                 if result['result'] == 'SUCCESS':
@@ -475,7 +490,7 @@ def smartstrip(config_path, **kwargs):
             except Exception as e:
                 _log.error ("Expection: setting plug 1 relay")
                 print(e)
-                return
+                pass
 
             #_log.debug('OK call updatePlug2RelayState()' )
             self.updatePlug2RelayState()
