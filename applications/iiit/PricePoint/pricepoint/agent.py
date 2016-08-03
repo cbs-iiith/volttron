@@ -68,9 +68,17 @@ def pricepoint(config_path, **kwargs):
             '''
             read the new price from net and publish it to the bus
             '''
-            #new_price_reading = price_from_net()
-            #post_price(new_price_reading)
+            new_price_reading = price_from_net()
+            post_price(new_price_reading)
             _log.debug('update_price_point()')
+
+        def price_from_net(self):
+            _log.debug('price_from_net()')
+            new_price_reading = default_base_price
+            '''
+            need to somehow get the price point from net
+            '''
+            return new_price_reading
 
         def post_price(self, new_price):
             _log.debug('post_price()')
@@ -83,11 +91,11 @@ def pricepoint(config_path, **kwargs):
                     headers_mod.DATE: now
                     }
 
-            _log.debug('before pub')
+            #_log.debug('before pub')
             #Publish messages            
             self.vip.pubsub.publish(
                     'pubsub', topic_price_point, headers, pricepoint_message)
-            _log.debug('after pub')
+            #_log.debug('after pub')
 
     Agent.__name__ = 'PricePoint_Agent'
     return PricePoint(**kwargs)

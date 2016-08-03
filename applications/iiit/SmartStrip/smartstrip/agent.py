@@ -214,7 +214,11 @@ def smartstrip(config_path, **kwargs):
                             'iiit/cbs/smartstrip/' + pointActivePower).get(timeout=1)
                     #_log.debug('active: {0:.2f}'.format(fActivePower))
 
-                    #TODO: temp fix
+                    #TODO: temp fix, need to move this to backend code
+                    if fVolatge > 80000:
+                        fVolatge = 0.0
+                    if fCurrent > 80000:
+                        fCurrent = 0.0
                     if fActivePower > 80000:
                         fActivePower = 0.0
 
@@ -237,7 +241,7 @@ def smartstrip(config_path, **kwargs):
             try: 
                 start = str(datetime.datetime.now())
                 end = str(datetime.datetime.now() 
-                        + datetime.timedelta(milliseconds=300))
+                        + datetime.timedelta(milliseconds=2000))
 
                 msg = [
                         ['iiit/cbs/smartstrip',start,end]
@@ -288,10 +292,11 @@ def smartstrip(config_path, **kwargs):
                 _log.error ('Exception: reading tag ids')
                 print(e)
                 pass
-            _log.debug('start processNewTagId()...')
+
+            #_log.debug('start processNewTagId()...')
             self.processNewTagId(PLUG_ID_1, newTagId1)
             self.processNewTagId(PLUG_ID_2, newTagId2)
-            _log.debug('...done processNewTagId()')
+            #_log.debug('...done processNewTagId()')
 
 
         #TODO: should move the relay switch on/off functionality to a new agent
@@ -312,6 +317,12 @@ def smartstrip(config_path, **kwargs):
                     self._plugConnected[plugID] = 1
                     if self.tagAuthorised(newTagId) :
                         self.switchRelay(plugID, RELAY_ON)
+                    else:
+                        _log.info('Plug {0:d}: '.format(plugID + 1)
+                                + ' unauthorised device connected'
+                                + '(tag id: '
+                                + newTagId
+                                + ')')
             else:
                 #no device connected condition, new tag id is DEFAULT_TAG_ID
                 if self._plugConnected[plugID] == 0:
@@ -323,15 +334,17 @@ def smartstrip(config_path, **kwargs):
                     self.switchRelay(plugID, RELAY_OFF)
 
         @PubSub.subscribe('pubsub', topic_price_point)
-        def on_match(self, peer, sender, bus,  topic, headers, message):
+        def onNewPrice(self, peer, sender, bus,  topic, headers, message):
             if sender == 'pubsub.compat':
                 message = compat.unpack_legacy_message(headers, message)
-            _log.debug(
-                    "Peer: %r, Sender: %r:, Bus: %r, Topic: %r, Headers: %r, "
-                    "Message: %r", peer, sender, bus, topic, headers, message)
+            #_log.debug(
+            #        "Peer: %r, Sender: %r:, Bus: %r, Topic: %r, Headers: %r, "
+            #        "Message: %r", peer, sender, bus, topic, headers, message)
+            _log.debug ( "*** New Price Point: {0:.2f} ***".format(message[0]))
 
-            def recoveryTagID(self, fTagIDPart1, fTagIDPart2):
-                buff = self.convertToByteArray(fTagIDPart1, fTagIDPart2)
+            
+        def recoveryTagID(self, fTagIDPart1, fTagIDPart2):
+            buff = self.convertToByteArray(fTagIDPart1, fTagIDPart2)
             tag = ''			
             for i in reversed(buff):
                 tag = tag + format(i, '02x')
