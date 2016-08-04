@@ -13,3 +13,4 @@ ANALOG INPUT 6,Plug1ActivePower,watt,,analogInput,presentValue,FALSE,6,"Plug 1 A
 ANALOG INPUT 7,Plug2Voltage,volts,,analogInput,presentValue,FALSE,7,"Plug 2 Volatge"
 ANALOG INPUT 8,Plug2Current,amperes,,analogInput,presentValue,FALSE,8,"Plug 2 Current"
 ANALOG INPUT 9,Plug2ActivePower,watt,,analogInput,presentValue,FALSE,9,"Plug 2 Active Power"
+ANALOG OUTPUT 0,PricePoint,,(default 0.4),analogOutput,presentValue,TRUE,0,"Price Point"
