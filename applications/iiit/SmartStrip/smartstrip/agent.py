@@ -92,6 +92,9 @@ def smartstrip(config_path, **kwargs):
         _plugRelayState = [0, 0]
         _plugConnected = [ 0, 0]
         _plug_tag_id = ['7FC000007FC00000', '7FC000007FC00000']
+        _plug_pricepoint_th = [0.5, 0.75]
+        _price_point_previous = 0.4 
+        _price_point_current = 0.4 
 
         def __init__(self, **kwargs):
             super(SmartStrip, self).__init__(**kwargs)
@@ -114,6 +117,10 @@ def smartstrip(config_path, **kwargs):
             #self.meterData(PLUG_ID_2)
             period_read_meterdata = config['period_read_meterdata']
             self.core.periodic(period_read_meterdata, self.meterData, wait=None)
+
+            self._price_point_previous = config['default_base_price']
+            self._price_point_current = config['default_base_price']
+            self._plug_pricepoint_th = config['plug_pricepoint_th']
 
             self.switchLedDebug(LED_ON)
 
@@ -203,15 +210,18 @@ def smartstrip(config_path, **kwargs):
                 if result['result'] == 'SUCCESS':
                     fVolatge = self.vip.rpc.call(
                             'platform.actuator','get_point',
-                            'iiit/cbs/smartstrip/' + pointVolatge).get(timeout=1)
+                            'iiit/cbs/smartstrip/' + \
+                            pointVolatge).get(timeout=1)
                     #_log.debug('voltage: {0:.2f}'.format(fVolatge))
                     fCurrent = self.vip.rpc.call(
                             'platform.actuator','get_point',
-                            'iiit/cbs/smartstrip/' + pointCurrent).get(timeout=1)
+                            ('iiit/cbs/smartstrip/' + \
+                            pointCurrent)).get(timeout=1)
                     #_log.debug('current: {0:.2f}'.format(fCurrent))
                     fActivePower = self.vip.rpc.call(
                             'platform.actuator','get_point',
-                            'iiit/cbs/smartstrip/' + pointActivePower).get(timeout=1)
+                            'iiit/cbs/smartstrip/' + \
+                            pointActivePower).get(timeout=1)
                     #_log.debug('active: {0:.2f}'.format(fActivePower))
 
                     #TODO: temp fix, need to move this to backend code
@@ -222,11 +232,11 @@ def smartstrip(config_path, **kwargs):
                     if fActivePower > 80000:
                         fActivePower = 0.0
 
-                    _log.info('Plug {0:d}: '.format(plugID + 1)
+                    _log.info(('Plug {0:d}: '.format(plugID + 1)
                             + 'voltage: {0:.2f}'.format(fVolatge) 
                             + ', Current: {0:.2f}'.format(fCurrent)
                             + ', ActivePower: {0:.2f}'.format(fActivePower)
-                            )
+                            ))
                     #release the time schedule, if we finish early.
             except Exception as e:
                 _log.error ("Expection:, exception in readMeterData()")
@@ -254,7 +264,8 @@ def smartstrip(config_path, **kwargs):
                         'HIGH',
                         msg).get(timeout=1)
             except Exception as e:
-                _log.error ("Exception: Could not contact actuator. Is it running?")
+                _log.error ("Exception: Could not contact actuator.", 
+                        "Is it running?")
                 print(e)
                 pass
             #
@@ -262,7 +273,8 @@ def smartstrip(config_path, **kwargs):
                 '''
                 Smart Strip bacnet server splits the 64 bit tag id 
                 into two parts and sends them accros as two float values.
-                Hence need to get both the points (floats value) and recover the actual tag id
+                Hence need to get both the points (floats value)
+                and recover the actual tag id
                 '''
                 if result['result'] == 'SUCCESS':
                     fTagID1_1 = self.vip.rpc.call(
@@ -300,7 +312,9 @@ def smartstrip(config_path, **kwargs):
 
 
         #TODO: should move the relay switch on/off functionality to a new agent
-        #to accommodate for more roboast control algorithms (incl price point changes)
+        #to accommodate for more roboast control algorithms
+        #(incl price point changes)
+        #also might resolve some of the scheduling issues
         def processNewTagId(self, plugID, newTagId):
             #empty string
             if not newTagId:
@@ -315,19 +329,31 @@ def smartstrip(config_path, **kwargs):
                     #update the tag id and change connected state
                     self._plug_tag_id[plugID] = newTagId
                     self._plugConnected[plugID] = 1
-                    if self.tagAuthorised(newTagId) :
-                        self.switchRelay(plugID, RELAY_ON)
+                    if self.tagAuthorised(newTagId):
+                        plug_pp_th = self._plug_pricepoint_th[plugID]
+                        if self._price_point_current < plug_pp_th:
+                            _log.info(('Plug {0:d}: '.format(plugID + 1),
+                                    'Current price point < '
+                                    'threshold {0:.2f}, '.format(plug_pp_th),
+                                    'Switching-on power'))
+                            self.switchRelay(plugID, RELAY_ON)
+                        else:
+                            _log.info(('Plug {0:d}: '.format(plugID + 1),
+                                    'Current price point > threshold',
+                                    '({0:.2f}), '.format(plug_pp_th),
+                                    'No-power'))
                     else:
-                        _log.info('Plug {0:d}: '.format(plugID + 1)
-                                + ' unauthorised device connected'
-                                + '(tag id: '
-                                + newTagId
-                                + ')')
+                        _log.info(('Plug {0:d}: '.format(plugID + 1),
+                                'Unauthorised device connected',
+                                '(tag id: ',
+                                newTagId, ')'))
             else:
                 #no device connected condition, new tag id is DEFAULT_TAG_ID
                 if self._plugConnected[plugID] == 0:
                     return
-                elif self._plugConnected[plugID] == 1 or newTagId != self._plug_tag_id[plugID] or self._plugRelayState[plugID] == RELAY_ON :
+                elif self._plugConnected[plugID] == 1 or \
+                        newTagId != self._plug_tag_id[plugID] or \
+                        self._plugRelayState[plugID] == RELAY_ON :
                     #update the tag id and change connected state
                     self._plug_tag_id[plugID] = newTagId
                     self._plugConnected[plugID] = 0
@@ -337,15 +363,45 @@ def smartstrip(config_path, **kwargs):
         def onNewPrice(self, peer, sender, bus,  topic, headers, message):
             if sender == 'pubsub.compat':
                 message = compat.unpack_legacy_message(headers, message)
-            #_log.debug(
-            #        "Peer: %r, Sender: %r:, Bus: %r, Topic: %r, Headers: %r, "
-            #        "Message: %r", peer, sender, bus, topic, headers, message)
-            _log.debug ( "*** New Price Point: {0:.2f} ***".format(message[0]))
 
+            new_price_point = message[0]
+            _log.debug ( "*** New Price Point: {0:.2f} ***".format(new_price_point))
             
+            if self._price_point_current != new_price_point:
+                self.processNewPricePoint(new_price_point)
+
+        def processNewPricePoint(self, new_price_point):
+            self._price_point_previous = self._price_point_current
+            self._price_point_current = new_price_point
+
+            self.applyPricingPolicy(PLUG_ID_1)
+            self.applyPricingPolicy(PLUG_ID_2)
+
+        def applyPricingPolicy(self, plugID):
+            plug_pp_th = self._plug_pricepoint_th[plugID]
+            if self._price_point_current > plug_pp_th: 
+                if self._plugRelayState[plugID] == RELAY_ON:
+                    _log.info(('Plug {0:d}: '.format(plugID + 1),
+                            'Current price point > threshold',
+                            '({0:.2f}), '.format(plug_pp_th),
+                            'Switching-Off Power'))
+                    self.switchRelay(plugID, RELAY_OFF)
+                #else:
+                    #do nothing
+            else:
+                if self._plugConnected[plugID] == 1:
+                    _log.info(('Plug {0:d}: '.format(plugID + 1),
+                            'Current price point < threshold',
+                            '({0:.2f}), '.format(plug_pp_th),
+                            'Switching-On Power'))
+                    self.switchRelay(plugID, RELAY_ON)
+                #else:
+                    #do nothing
+
+
         def recoveryTagID(self, fTagIDPart1, fTagIDPart2):
             buff = self.convertToByteArray(fTagIDPart1, fTagIDPart2)
-            tag = ''			
+            tag = ''
             for i in reversed(buff):
                 tag = tag + format(i, '02x')
             return tag.upper()
@@ -361,8 +417,8 @@ def smartstrip(config_path, **kwargs):
 
 
         def tagAuthorised(self, tagID):
-            for id in self._tag_ids :
-                if tagID == id:
+            for authTagID in self._tag_ids :
+                if tagID == authTagID:
                     return True
             return False
 
@@ -386,11 +442,12 @@ def smartstrip(config_path, **kwargs):
                         'request_new_schedule',
                         agent_id, 
                         str(self._taskID_LedDebug),
-                        'LOW',
+                        'HIGH',
                         msg).get(timeout=1)
                 #print("schedule result", result)
             except Exception as e:
-                _log.error ("Exception: Could not contact actuator. Is it running?")
+                _log.error ("Exception: Could not contact actuator.", 
+                        "Is it running?")
                 print(e)
                 pass
 
@@ -438,8 +495,8 @@ def smartstrip(config_path, **kwargs):
                         'request_new_schedule',
                         agent_id, 
                         str(self._taskID_Plug1Relay),
-                        'LOW',
-                        msg).get(timeout=10)
+                        'HIGH',
+                        msg).get(timeout=1)
                 print("schedule result", result)
             except Exception as e:
                 _log.error ("Could not contact actuator. Is it running?")
@@ -483,8 +540,8 @@ def smartstrip(config_path, **kwargs):
                         'request_new_schedule',
                         agent_id, 
                         str(self._taskID_Plug2Relay),
-                        'LOW',
-                        msg).get(timeout=10)
+                        'HIGH',
+                        msg).get(timeout=1)
                 print("schedule result", result)
             except Exception as e:
                 _log.error ("Could not contact actuator. Is it running?")
