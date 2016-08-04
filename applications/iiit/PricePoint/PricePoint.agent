@@ -5,7 +5,7 @@
 	"default_base_price": 0.4,
 	"min_price": 0.01,
 	"max_price": 1.1,
-	"period_read_price_point": 10,
+	"period_read_price_point": 5,
 	"topic_price_point": "prices/PricePoint"
 
 }

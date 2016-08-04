@@ -99,8 +99,8 @@ def pricepoint(config_path, **kwargs):
                         'request_new_schedule',
                         agent_id, 
                         'TaskID_PricePoint',
-                        'HIGH',
-                        msg).get(timeout=10)
+                        'LOW_PREEMPT',
+                        msg).get(timeout=1)
             except Exception as e:
                 _log.error ("Could not contact actuator. Is it running?")
                 print(e)
