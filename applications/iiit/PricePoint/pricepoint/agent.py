@@ -2,12 +2,12 @@
 # vim: set fenc=utf-8 ft=python sw=4 ts=4 sts=4 et:
 
 
+import datetime
 import logging
 import sys
 import uuid
 import random
 
-from datetime import datetime
 from volttron.platform.vip.agent import Agent, Core, PubSub, compat, RPC
 from volttron.platform.agent import utils
 from volttron.platform.messaging import headers as headers_mod
@@ -45,6 +45,9 @@ def pricepoint(config_path, **kwargs):
     max_price = config.get("max_price", 1.1)
 
     class PricePoint(Agent):
+    
+        _price_point_previous = 0.4 
+
         def __init__(self, **kwargs):
             super(PricePoint, self).__init__(**kwargs)			
 
@@ -55,18 +58,16 @@ def pricepoint(config_path, **kwargs):
 
         @Core.receiver('onstart')            
         def startup(self, sender, **kwargs):
-            #self.core.periodic(period_read_price_point, self.fake_price_points, wait=None)
             self.core.periodic(period_read_price_point, self.update_price_point, wait=None)
 
         def update_price_point(self):
             '''
             read the new price and publish it to the bus
             '''
-            #new_price_reading = fake_price_points()
-            #new_price_reading = price_from_net()
-            new_price_reading = price_from_smartstrip_bacnet()
-            post_price(new_price_reading)
-            _log.debug('update_price_point()')
+            #_log.debug('update_price_point()')
+            #self.fake_price_points()
+            #self.price_from_net()
+            self.price_from_smartstrip_bacnet()
 
         def fake_price_points(self):
             #Make a random price point
@@ -80,11 +81,10 @@ def pricepoint(config_path, **kwargs):
             '''
             need to somehow get the new price point from net
             '''
-            return new_price_reading
+
 
         def price_from_smartstrip_bacnet(self):
-            _log.debug('price_from_net()')
-            new_price_reading = default_base_price
+            #_log.debug('price_from_smartstrip_bacnet()')
 
             try: 
                 start = str(datetime.datetime.now())
@@ -100,21 +100,31 @@ def pricepoint(config_path, **kwargs):
                         agent_id, 
                         'TaskID_PricePoint',
                         'HIGH',
-                        msg).get(timeout=1)
+                        msg).get(timeout=10)
             except Exception as e:
                 _log.error ("Could not contact actuator. Is it running?")
                 print(e)
                 pass
-            #
+        
             try:
                 if result['result'] == 'SUCCESS':
                     new_price_reading = self.vip.rpc.call(
                             'platform.actuator','get_point',
-                            'iiit/cbs/smartstrip/' + \
-                            'PricePoint').get(timeout=1)
-                    _log.debug('New Price Point: {0:.2f}'.format(new_price_reading))
+                            'iiit/cbs/smartstrip/PricePoint').get(timeout=1)
+
+                    #post the new price point the volttron bus
+                    if new_price_reading != self._price_point_previous :
+                        _log.debug('New Price Point: {0:.2f} !!!'.format(new_price_reading))
+                        self.post_price(new_price_reading)
+                        self._price_point_previous = new_price_reading
+                    else :
+                        _log.info('No change in price')
+                        
+            except Exception as e:
+                _log.error ('Exception: reading price point')
+                print(e)
+                pass
             
-            return new_price_reading
 
         def post_price(self, new_price):
             _log.debug('post_price()')
@@ -122,7 +132,8 @@ def pricepoint(config_path, **kwargs):
             pricepoint_message = [new_price,{'units': 'F', 'tz': 'UTC', 'type': 'float'}]
 
             #Create timestamp
-            now = datetime.utcnow().isoformat(' ') + 'Z'
+            #now = datetime.utcnow().isoformat(' ') + 'Z'
+            now = str(datetime.datetime.now())
             headers = {
                     headers_mod.DATE: now
                     }
@@ -132,6 +143,7 @@ def pricepoint(config_path, **kwargs):
             self.vip.pubsub.publish(
                     'pubsub', topic_price_point, headers, pricepoint_message)
             #_log.debug('after pub')
+            
 
     Agent.__name__ = 'PricePoint_Agent'
     return PricePoint(**kwargs)

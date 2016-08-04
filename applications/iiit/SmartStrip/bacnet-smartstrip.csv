@@ -2,15 +2,15 @@ Point Name,Volttron Point Name,Units,Unit Details,BACnet Object Type,Property,Wr
 BINARY OUTPUT 1,SmartStrip,Enum,0-1 (default 0),binaryOutput,presentValue,TRUE,0,"Smart Strip Init/Deinit  (0 - deinit, 1- init)"
 BINARY OUTPUT 2,Plug1Relay,On / Off,0-1 (default 0),binaryOutput,presentValue,TRUE,1,"Plug 1 Relay On/Off (0 - Off, 1- On)"
 BINARY OUTPUT 3,Plug2Relay,On / Off,0-1 (default 0),binaryOutput,presentValue,TRUE,2,"Plug 2 Relay On/Off (0 - Off, 1- On)"
-BINARY OUTPUT 4,LEDDebug,On / Off,0-1 (default 0),binaryOutput,presentValue,TRUE,3,"LED for Debug"
-ANALOG INPUT 0,TagID1_1,noUnits,No limits. (default 0.0),analogInput,presentValue,FALSE,0,"Plug 1 Tag ID 1_1"
-ANALOG INPUT 1,TagID1_2,noUnits,No limits. (default 0.0),analogInput,presentValue,FALSE,1,"Plug 1 Tag ID 1_2"
-ANALOG INPUT 2,TagID2_1,noUnits,No limits. (default 0.0),analogInput,presentValue,FALSE,2,"Plug 2 Tag ID 2_1"
-ANALOG INPUT 3,TagID2_2,noUnits,No limits. (default 0.0),analogInput,presentValue,FALSE,3,"Plug 2 Tag ID 2_2"
-ANALOG INPUT 4,Plug1Voltage,volts,,analogInput,presentValue,FALSE,4,"Plug 1 Volatge"
-ANALOG INPUT 5,Plug1Current,amperes,,analogInput,presentValue,FALSE,5,"Plug 1 Current"
-ANALOG INPUT 6,Plug1ActivePower,watt,,analogInput,presentValue,FALSE,6,"Plug 1 Active Power"
-ANALOG INPUT 7,Plug2Voltage,volts,,analogInput,presentValue,FALSE,7,"Plug 2 Volatge"
-ANALOG INPUT 8,Plug2Current,amperes,,analogInput,presentValue,FALSE,8,"Plug 2 Current"
-ANALOG INPUT 9,Plug2ActivePower,watt,,analogInput,presentValue,FALSE,9,"Plug 2 Active Power"
-ANALOG OUTPUT 0,PricePoint,,(default 0.4),analogOutput,presentValue,TRUE,0,"Price Point"
+BINARY OUTPUT 4,LEDDebug,On / Off,0-1 (default 0),binaryOutput,presentValue,TRUE,3,LED for Debug
+ANALOG INPUT 0,TagID1_1,noUnits,No limits. (default 0.0),analogInput,presentValue,FALSE,0,Plug 1 Tag ID 1_1
+ANALOG INPUT 1,TagID1_2,noUnits,No limits. (default 0.0),analogInput,presentValue,FALSE,1,Plug 1 Tag ID 1_2
+ANALOG INPUT 2,TagID2_1,noUnits,No limits. (default 0.0),analogInput,presentValue,FALSE,2,Plug 2 Tag ID 2_1
+ANALOG INPUT 3,TagID2_2,noUnits,No limits. (default 0.0),analogInput,presentValue,FALSE,3,Plug 2 Tag ID 2_2
+ANALOG INPUT 4,Plug1Voltage,volts,,analogInput,presentValue,FALSE,4,Plug 1 Volatge
+ANALOG INPUT 5,Plug1Current,amperes,,analogInput,presentValue,FALSE,5,Plug 1 Current
+ANALOG INPUT 6,Plug1ActivePower,watt,,analogInput,presentValue,FALSE,6,Plug 1 Active Power
+ANALOG INPUT 7,Plug2Voltage,volts,,analogInput,presentValue,FALSE,7,Plug 2 Volatge
+ANALOG INPUT 8,Plug2Current,amperes,,analogInput,presentValue,FALSE,8,Plug 2 Current
+ANALOG INPUT 9,Plug2ActivePower,watt,,analogInput,presentValue,FALSE,9,Plug 2 Active Power
+ANALOG OUTPUT 0,PricePoint,,(default 0.4),analogOutput,presentValue,TRUE,0,Price Point
