@@ -31,9 +31,9 @@
 			"0D88071300000092",
 			"0D365E13000000E0"
 		],
-		"period": 10,
-		"period_read_tag": 45,
-		"period_read_meterdata": 10,
+
+		"period_read_data": 10,
+
 		"topic_price_point": "prices/PricePoint",
 		"default_base_price": 0.4,
 		"plug_pricepoint_th": [0.5, 0.75],

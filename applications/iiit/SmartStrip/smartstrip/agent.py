@@ -78,6 +78,9 @@ def smartstrip(config_path, **kwargs):
     PLUG_ID_1 = 0
     PLUG_ID_2 = 1
     DEFAULT_TAG_ID = '7FC000007FC00000'
+    
+    SCHEDULE_AVLB = 1
+    SCHEDULE_NOT_AVLB = 0
 
     class SmartStrip(Agent):
         '''Smart Strip with 2 plug
@@ -111,14 +114,9 @@ def smartstrip(config_path, **kwargs):
         def startup(self, sender, **kwargs):
             self._tag_ids = config['tag_ids']
 
-            #self.runSmartStripTest(self)
-            #self.readTagIDs()
-            #period_read_tag = config['period_read_tag']
-            #self.core.periodic(period_read_tag, self.readTagIDs, wait=None)
-            #time.sleep(10)
-            #self.meterData(PLUG_ID_1)
-            #self.meterData(PLUG_ID_2)
-            period_read_data = config['period_read_meterdata']
+            self.runSmartStripTest()
+            
+            period_read_data = config['period_read_data']
             self.core.periodic(period_read_data, self.getData, wait=None)
 
             self._price_point_previous = config['default_base_price']
@@ -131,16 +129,16 @@ def smartstrip(config_path, **kwargs):
         def onstop(self, sender, **kwargs):
             _log.debug('onstop()')
             self.switchLedDebug(LED_OFF)
-            self.switchRelay(PLUG_ID_1, RELAY_OFF)
-            self.switchRelay(PLUG_ID_2, RELAY_OFF)
+            self.switchRelay(PLUG_ID_1, RELAY_OFF, SCHEDULE_NOT_AVLB)
+            self.switchRelay(PLUG_ID_2, RELAY_OFF, SCHEDULE_NOT_AVLB)
             pass
 
         @Core.receiver('onfinish')
         def onfinish(self, sender, **kwargs):
-            _log.debug('onfinish()')
-            self.switchLedDebug(LED_OFF)
-            self.switchRelay(PLUG_ID_1, RELAY_OFF)
-            self.switchRelay(PLUG_ID_2, RELAY_OFF)
+            #_log.debug('onfinish()')
+            #self.switchLedDebug(LED_OFF)
+            #self.switchRelay(PLUG_ID_1, RELAY_OFF, SCHEDULE_NOT_AVLB)
+            #self.switchRelay(PLUG_ID_2, RELAY_OFF, SCHEDULE_NOT_AVLB)
             pass
 
         def runSmartStripTest(self):
@@ -157,20 +155,21 @@ def smartstrip(config_path, **kwargs):
             self.switchLedDebug(LED_ON)
 
             _log.debug('switch on relay 1')
-            self.switchRelay(PLUG_ID_1, RELAY_ON)
+            self.switchRelay(PLUG_ID_1, RELAY_ON, SCHEDULE_NOT_AVLB)
             time.sleep(1)
             _log.debug('switch off relay 1')
-            self.switchRelay(PLUG_ID_1, RELAY_OFF)
+            self.switchRelay(PLUG_ID_1, RELAY_OFF, SCHEDULE_NOT_AVLB)
 
             _log.debug('switch on relay 2')
-            self.switchRelay(PLUG_ID_2, RELAY_ON)
+            self.switchRelay(PLUG_ID_2, RELAY_ON, SCHEDULE_NOT_AVLB)
             time.sleep(1)
             _log.debug('switch off relay 2')
-            self.switchRelay(PLUG_ID_2, RELAY_OFF)
+            self.switchRelay(PLUG_ID_2, RELAY_OFF, SCHEDULE_NOT_AVLB)
             _log.debug("EOF Testing")
 
         def getData(self):
-            _log.debug('getData()...')
+            #_log.debug('getData()...')
+            result = []
             
             #get schedule
             try: 
@@ -207,7 +206,7 @@ def smartstrip(config_path, **kwargs):
                 
                 #cancel the schedule
                 
-                _log.debug('...getData()')
+                #_log.debug('...getData()')
                 
                 #_log.debug('start processNewTagId()...')
                 self.processNewTagId(PLUG_ID_1, self._newTagId1)
@@ -274,6 +273,9 @@ def smartstrip(config_path, **kwargs):
                 Hence need to get both the points (floats value)
                 and recover the actual tag id
                 '''
+                newTagId1 = ''
+                newTagId2 = ''
+                
                 fTagID1_1 = self.vip.rpc.call(
                         'platform.actuator','get_point',
                         'iiit/cbs/smartstrip/TagID1_1').get(timeout=1)
@@ -329,7 +331,7 @@ def smartstrip(config_path, **kwargs):
                                     'Current price point < '
                                     'threshold {0:.2f}, '.format(plug_pp_th),
                                     'Switching-on power'))
-                            self.switchRelay(plugID, RELAY_ON)
+                            self.switchRelay(plugID, RELAY_ON, SCHEDULE_AVLB)
                         else:
                             _log.info(('Plug {0:d}: '.format(plugID + 1),
                                     'Current price point > threshold',
@@ -350,7 +352,7 @@ def smartstrip(config_path, **kwargs):
                     #update the tag id and change connected state
                     self._plug_tag_id[plugID] = newTagId
                     self._plugConnected[plugID] = 0
-                    self.switchRelay(plugID, RELAY_OFF)
+                    self.switchRelay(plugID, RELAY_OFF, SCHEDULE_AVLB)
 
         @PubSub.subscribe('pubsub', topic_price_point)
         def onNewPrice(self, peer, sender, bus,  topic, headers, message):
@@ -379,7 +381,7 @@ def smartstrip(config_path, **kwargs):
                             'Current price point > threshold',
                             '({0:.2f}), '.format(plug_pp_th),
                             'Switching-Off Power'))
-                    self.switchRelay(plugID, RELAY_OFF)
+                    self.switchRelay(plugID, RELAY_OFF, SCHEDULE_NOT_AVLB)
                 #else:
                     #do nothing
             else:
@@ -388,7 +390,7 @@ def smartstrip(config_path, **kwargs):
                             'Current price point < threshold',
                             '({0:.2f}), '.format(plug_pp_th),
                             'Switching-On Power'))
-                    self.switchRelay(plugID, RELAY_ON)
+                    self.switchRelay(plugID, RELAY_ON, SCHEDULE_NOT_AVLB)
                 #else:
                     #do nothing
 
@@ -419,6 +421,8 @@ def smartstrip(config_path, **kwargs):
         @RPC.export
         def switchLedDebug(self, state):
             #_log.debug('switchLedDebug()')
+            result = []
+
             if self._ledDebugState == state:
                 #_log.debug('same state, do nothing')
                 return
@@ -461,47 +465,60 @@ def smartstrip(config_path, **kwargs):
                 pass
 
         @RPC.export
-        def switchRelay(self, plugID, state):
+        def switchRelay(self, plugID, state, schdExist):
             #_log.debug('switchPlug1Relay()')
+
             if self._plugRelayState[plugID] == state:
                 _log.debug('same state, do nothing')
                 return
-            try: 
-                start = str(datetime.datetime.now())
-                end = str(datetime.datetime.now() 
-                        + datetime.timedelta(milliseconds=2000))
 
-                msg = [
-                        ['iiit/cbs/smartstrip',start,end]
-                        ]
-                result = self.vip.rpc.call(
-                        'platform.actuator', 
-                        'request_new_schedule',
-                        agent_id, 
-                        'taskID_Plug' + str(plugID+1) + 'Relay',
-                        'HIGH',
-                        msg).get(timeout=1)
-                print("schedule result", result)
-            except Exception as e:
-                _log.error ("Could not contact actuator. Is it running?")
-                print(e)
-                pass
+            if schdExist == SCHEDULE_AVLB: 
+                self.rpc_switchRelay(plugID, state);
+            elif schdExist == SCHEDULE_NOT_AVLB:
+                try: 
+                    start = str(datetime.datetime.now())
+                    end = str(datetime.datetime.now() 
+                            + datetime.timedelta(milliseconds=600))
 
-            try:
-                if result['result'] == 'SUCCESS':
+                    msg = [
+                            ['iiit/cbs/smartstrip',start,end]
+                            ]
                     result = self.vip.rpc.call(
                             'platform.actuator', 
-                            'set_point',
+                            'request_new_schedule',
                             agent_id, 
-                            'iiit/cbs/smartstrip/Plug' + str(plugID+1) + 'Relay',
-                            state).get(timeout=1)
-                    #print("Set result", result)
-                    #_log.debug('OK call updatePlug1RelayState()')
-                    self.updatePlugRelayState(plugID, state)
-            except Exception as e:
-                _log.error ("Expection: setting plug 1 relay")
-                print(e)
+                            'taskID_Plug' + str(plugID+1) + 'Relay',
+                            'HIGH',
+                            msg).get(timeout=1)
+                    #print("schedule result", result)
+                except Exception as e:
+                    _log.error ("Could not contact actuator. Is it running?")
+                    print(e)
+                    pass
+
+                try:
+                    if result['result'] == 'SUCCESS':
+                        self.rpc_switchRelay(plugID, state)
+                except Exception as e:
+                    _log.error ("Expection: setting plug 1 relay")
+                    print(e)
+                    pass
+            else :
+                #do notthing
                 pass
+            return
+
+        def rpc_switchRelay(self, plugID, state):
+            result = self.vip.rpc.call(
+                    'platform.actuator', 
+                    'set_point',
+                    agent_id, 
+                    'iiit/cbs/smartstrip/Plug' + str(plugID+1) + 'Relay',
+                    state).get(timeout=1)
+            #print("Set result", result)
+            #_log.debug('OK call updatePlug1RelayState()')
+            self.updatePlugRelayState(plugID, state)
+            return
 
         def updateLedDebugState(self, state):
             #_log.debug('updateLedDebugState()')

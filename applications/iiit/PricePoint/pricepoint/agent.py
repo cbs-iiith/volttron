@@ -44,6 +44,8 @@ def pricepoint(config_path, **kwargs):
     min_price = config.get("min_price", 0.01)
     max_price = config.get("max_price", 1.1)
 
+    pointPricePoint = 'iiit/cbs/smartstrip/PricePoint'
+
     class PricePoint(Agent):
     
         _price_point_previous = 0.4 
@@ -85,11 +87,12 @@ def pricepoint(config_path, **kwargs):
 
         def price_from_smartstrip_bacnet(self):
             #_log.debug('price_from_smartstrip_bacnet()')
+            result = []
 
             try: 
                 start = str(datetime.datetime.now())
                 end = str(datetime.datetime.now() 
-                        + datetime.timedelta(seconds=1))
+                        + datetime.timedelta(milliseconds=100))
 
                 msg = [
                         ['iiit/cbs/smartstrip',start,end]
@@ -99,18 +102,19 @@ def pricepoint(config_path, **kwargs):
                         'request_new_schedule',
                         agent_id, 
                         'TaskID_PricePoint',
-                        'LOW_PREEMPT',
+                        'LOW',
                         msg).get(timeout=1)
             except Exception as e:
                 _log.error ("Could not contact actuator. Is it running?")
                 print(e)
                 pass
-        
             try:
+                #_log.debug('time...')
                 if result['result'] == 'SUCCESS':
                     new_price_reading = self.vip.rpc.call(
                             'platform.actuator','get_point',
                             'iiit/cbs/smartstrip/PricePoint').get(timeout=1)
+                    #_log.debug('...time')
 
                     #post the new price point the volttron bus
                     if new_price_reading != self._price_point_previous :
