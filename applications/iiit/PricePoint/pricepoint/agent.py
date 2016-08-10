@@ -125,7 +125,7 @@ def pricepoint(config_path, **kwargs):
                         _log.info('No change in price')
                         
             except Exception as e:
-                _log.error ('Exception: reading price point')
+                _log.error ("Exception: reading price point")
                 print(e)
                 pass
             

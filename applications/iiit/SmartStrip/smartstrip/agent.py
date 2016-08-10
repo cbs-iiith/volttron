@@ -144,6 +144,7 @@ def smartstrip(config_path, **kwargs):
         def runSmartStripTest(self):
             _log.debug("Running : runSmartStripTest()...")
             _log.debug('switch on debug led')
+            time.sleep(1)
             self.switchLedDebug(LED_ON)
             time.sleep(1)
 
@@ -257,7 +258,7 @@ def smartstrip(config_path, **kwargs):
                         ))
                 #release the time schedule, if we finish early.
             except Exception as e:
-                _log.error ("Expection:, exception in readMeterData()")
+                _log.error ("Expection: exception in readMeterData()")
                 print(e)
                 pass
 
@@ -300,7 +301,7 @@ def smartstrip(config_path, **kwargs):
                 _log.debug('Tag 1: '+ self._newTagId1 +', Tag 2: ' + self._newTagId2)
 
             except Exception as e:
-                _log.error ('Exception: reading tag ids')
+                _log.error ("Exception: reading tag ids")
                 print(e)
                 pass
 
@@ -444,8 +445,7 @@ def smartstrip(config_path, **kwargs):
                         msg).get(timeout=1)
                 #print("schedule result", result)
             except Exception as e:
-                _log.error ("Exception: Could not contact actuator.", 
-                        "Is it running?")
+                _log.error ("Exception: Could not contact actuator. Is it running?")
                 print(e)
                 pass
 
