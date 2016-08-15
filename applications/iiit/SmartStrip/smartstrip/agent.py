@@ -250,7 +250,12 @@ def smartstrip(config_path, **kwargs):
                     fCurrent = 0.0
                 if fActivePower > 80000:
                     fActivePower = 0.0
+                msg = 'Plug {0:d}: '.format(plugID + 1) \
+                        + 'voltage: {0:.2f}'.format(fVolatge) \
+                        + ', Current: {0:.2f}'.format(fCurrent) \
+                        + ', ActivePower: {0:.2f}'.format(fActivePower)
 
+                self.vip.pubsub.publish(peer="pubsub", topic="powerinfo", headers={}, message=msg).get(timeout=5)
                 _log.info(('Plug {0:d}: '.format(plugID + 1)
                         + 'voltage: {0:.2f}'.format(fVolatge) 
                         + ', Current: {0:.2f}'.format(fCurrent)
