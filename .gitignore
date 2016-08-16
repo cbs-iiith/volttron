@@ -19,3 +19,4 @@ parser.out
 /docs/build/*
 /docs/source/apidocs
 *.out
+*.log

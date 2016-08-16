@@ -81,6 +81,24 @@ def smartstrip(config_path, **kwargs):
     
     SCHEDULE_AVLB = 1
     SCHEDULE_NOT_AVLB = 0
+    
+    plug1_meterData_all_point = config.get('plug1_meterData_all_point',
+                                        'smartstrip/plug1/meterdata/all')
+    plug2_meterData_all_point = config.get('plug2_meterData_all_point',
+                                        'smartstrip/plug2/meterdata/all')
+    plug1_relayState_point = config.get('plug1_relayState_point',
+                                        'smartstrip/plug1/relaystate')
+    plug2_relayState_point = config.get('plug2_relayState_point',
+                                        'smartstrip/plug2/relaystate')
+    plug1_thresholdPP_point = config.get('plug1_thresholdPP_point',
+                                        'smartstrip/plug1/threshold')
+    plug2_thresholdPP_point = config.get('plug2_thresholdPP_point',
+                                        'smartstrip/plug2/threshold')
+    plug1_tagId_point = config.get('plug1_tagId_point',
+                                        'smartstrip/plug1/tagid')
+    plug2_tagId_point = config.get('plug2_thresholdPP_point',
+                                        'smartstrip/plug2/tagid')
+
 
     class SmartStrip(Agent):
         '''Smart Strip with 2 plug
@@ -124,6 +142,8 @@ def smartstrip(config_path, **kwargs):
             self._plug_pricepoint_th = config['plug_pricepoint_th']
 
             self.switchLedDebug(LED_ON)
+            publishThresholdPP(PLUG_ID_1, self._plug_pricepoint_th[PLUG_ID_1])
+            publishThresholdPP(PLUG_ID_2, self._plug_pricepoint_th[PLUG_ID_2])
 
         @Core.receiver('onstop')
         def onstop(self, sender, **kwargs):
@@ -220,10 +240,14 @@ def smartstrip(config_path, **kwargs):
                 pointVolatge = 'Plug1Voltage'
                 pointCurrent = 'Plug1Current'
                 pointActivePower = 'Plug1ActivePower'
+                pubTopic = plug1_meterData_all_point
             elif plugID == PLUG_ID_2:
                 pointVolatge = 'Plug2Voltage'
                 pointCurrent = 'Plug2Current'
                 pointActivePower = 'Plug2ActivePower'
+                pubTopic = plug2_meterData_all_point
+            else:
+                return
 
             #
             try:
@@ -250,12 +274,10 @@ def smartstrip(config_path, **kwargs):
                     fCurrent = 0.0
                 if fActivePower > 80000:
                     fActivePower = 0.0
-                msg = 'Plug {0:d}: '.format(plugID + 1) \
-                        + 'voltage: {0:.2f}'.format(fVolatge) \
-                        + ', Current: {0:.2f}'.format(fCurrent) \
-                        + ', ActivePower: {0:.2f}'.format(fActivePower)
+                    
+                #publish data to volttron bus
+                publishMeterData(pubTopic, fVolatge, fCurrent, fActivePower)
 
-                self.vip.pubsub.publish(peer="pubsub", topic="powerinfo", headers={}, message=msg).get(timeout=5)
                 _log.info(('Plug {0:d}: '.format(plugID + 1)
                         + 'voltage: {0:.2f}'.format(fVolatge) 
                         + ', Current: {0:.2f}'.format(fCurrent)
@@ -329,6 +351,7 @@ def smartstrip(config_path, **kwargs):
                 else:
                     #update the tag id and change connected state
                     self._plug_tag_id[plugID] = newTagId
+                    publishTagId(plugID, newTagId)
                     self._plugConnected[plugID] = 1
                     if self.tagAuthorised(newTagId):
                         plug_pp_th = self._plug_pricepoint_th[plugID]
@@ -348,6 +371,8 @@ def smartstrip(config_path, **kwargs):
                                 'Unauthorised device connected',
                                 '(tag id: ',
                                 newTagId, ')'))
+                        publishTagId(plugID, newTagId)
+
             else:
                 #no device connected condition, new tag id is DEFAULT_TAG_ID
                 if self._plugConnected[plugID] == 0:
@@ -357,6 +382,7 @@ def smartstrip(config_path, **kwargs):
                         self._plugRelayState[plugID] == RELAY_ON :
                     #update the tag id and change connected state
                     self._plug_tag_id[plugID] = newTagId
+                    publishTagId(plugID, newTagId)
                     self._plugConnected[plugID] = 0
                     self.switchRelay(plugID, RELAY_OFF, SCHEDULE_AVLB)
 
@@ -540,7 +566,6 @@ def smartstrip(config_path, **kwargs):
             else:
                 _log.debug('Current State: LED Debug is OFF!!!')
 
-
         def updatePlugRelayState(self, plugID, state):
             #_log.debug('updatePlug1RelayState()')
             headers = { 'requesterID': agent_id, }
@@ -550,12 +575,56 @@ def smartstrip(config_path, **kwargs):
 
             if state == int(relay_status):
                 self._plugRelayState[plugID] = state
+                publishRelayState(plugID, state)
                 
             if self._plugRelayState[plugID] == RELAY_ON:
                 _log.debug('Current State: Plug ' + str(plugID+1) + ' Relay Switched ON!!!')
             else:
                 _log.debug('Current State: Plug ' + str(plugID+1) + ' Relay Switched OFF!!!')
 
+        def publishMeterData(self, pubTopic, fVolatge, fCurrent, fActivePower):
+            pubMsg = [{'voltage':fVolatge, 'current':fCurrent, 'active_power':fActivePower},
+                        {'voltage':{'units': 'V', 'tz': 'UTC', 'type': 'float'},
+                        'current':{'units': 'A', 'tz': 'UTC', 'type': 'float'},
+                        'active_power':{'units': 'mW', 'tz': 'UTC', 'type': 'float'}
+                        }]
+            publishToBus(pubTopic, pubMsg)
+
+        def publishTagId(self, plugID, newTagId):
+            if plugID == PLUG_ID_1:
+                pubTopic = plug1_tagId_point
+            elif plugID == PLUG_ID_2:
+                pubTopic = plug2_tagId_point
+            else:
+                return
+            pubMsg = [newTagId,{'units': '', 'tz': 'UTC', 'type': 'string'}]
+            publishToBus(pubTopic, pubMsg)
+                
+        def publishRelayState(self, plugID, state):
+            if plugID == PLUG_ID_1:
+                pubTopic = plug1_relayState_point
+            elif plugID == PLUG_ID_2:
+                pubTopic = plug2_relayState_point
+            else:
+                return
+            pubMsg = [state,{'units': 'On/Off', 'tz': 'UTC', 'type': 'int'}]
+            publishToBus(pubTopic, pubMsg)
+                
+        def publishThresholdPP(self, plugID, thresholdPP):
+            if plugID == PLUG_ID_1:
+                pubTopic = plug1_thresholdPP_point
+            elif plugID == PLUG_ID_2:
+                pubTopic = plug2_thresholdPP_point
+            else:
+                return
+            pubMsg = [thresholdPP,{'units': 'cents', 'tz': 'UTC', 'type': 'float'}]
+            publishToBus(pubTopic, pubMsg)
+                
+        def publishToBus(self, pubTopic, pubMsg):
+            now = datetime.utcnow().isoformat(' ') + 'Z'
+            headers = {headers_mod.DATE: now}          
+            #Publish messages
+            self.vip.pubsub.publish('pubsub', pubTopic, headers, pubMsg).get(timeout=5)
 
     Agent.__name__ = 'SmartStrip_Agent'
     return SmartStrip(**kwargs)
