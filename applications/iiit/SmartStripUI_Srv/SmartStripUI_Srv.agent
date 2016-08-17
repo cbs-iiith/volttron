@@ -1,0 +1,8 @@
+{
+    "exec":"smartstripui_srv-0.1-py2.7.egg --config \"%c\"--sub\"%s\"--pub \"%p\"",  
+    "agentid": "SmartStripUI_Srv",
+    "message": "I am Smart Strip UI Server Agent",
+    "server_address":  "192.168.1.61", 
+    "server_port": 7575,
+    "backlog": 10
+}

@@ -51,7 +51,7 @@ def pricepoint(config_path, **kwargs):
         _price_point_previous = 0.4 
 
         def __init__(self, **kwargs):
-            super(PricePoint, self).__init__(**kwargs)			
+            super(PricePoint, self).__init__(**kwargs)
 
         @Core.receiver('onsetup')
         def setup(self, sender, **kwargs):
