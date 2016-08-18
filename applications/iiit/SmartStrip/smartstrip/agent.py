@@ -138,7 +138,7 @@ class SmartStrip(Agent):
         self.switchLedDebug(LED_OFF)
         self.switchRelay(PLUG_ID_1, RELAY_OFF, SCHEDULE_NOT_AVLB)
         self.switchRelay(PLUG_ID_2, RELAY_OFF, SCHEDULE_NOT_AVLB)
-        pass
+        return
 
     @Core.receiver('onfinish')
     def onfinish(self, sender, **kwargs):
@@ -146,7 +146,7 @@ class SmartStrip(Agent):
         #self.switchLedDebug(LED_OFF)
         #self.switchRelay(PLUG_ID_1, RELAY_OFF, SCHEDULE_NOT_AVLB)
         #self.switchRelay(PLUG_ID_2, RELAY_OFF, SCHEDULE_NOT_AVLB)
-        pass
+        return
         
     def _configGetInitValues(self):
         self._tag_ids = self.config['tag_ids']
@@ -225,7 +225,7 @@ class SmartStrip(Agent):
         except Exception as e:
             _log.error ("Could not contact actuator. Is it running?")
             print(e)
-            pass
+            return
 
         #run the task
         if result['result'] == 'SUCCESS':
@@ -301,7 +301,7 @@ class SmartStrip(Agent):
         except Exception as e:
             _log.error ("Expection: exception in readMeterData()")
             print(e)
-            pass
+            return
 
     def readTagIDs(self):
         #_log.debug('readTagIDs()')
@@ -344,7 +344,7 @@ class SmartStrip(Agent):
         except Exception as e:
             _log.error ("Exception: reading tag ids")
             print(e)
-            pass
+            return
 
 
 
@@ -467,9 +467,11 @@ class SmartStrip(Agent):
 
     @RPC.export
     def setThresholdPP(self, plugID, thresholdPP):
-        self._plug_pricepoint_th[plugID] = thresholdPP
-        self.publishThresholdPP(plugID, thresholdPP)
-        
+        if self._plug_pricepoint_th[plugID] != thresholdPP:
+            _log.debug(('Changining Threshold: Plug ',
+                        str(plugID+1), ' : ', thresholdPP))
+            self._plug_pricepoint_th[plugID] = thresholdPP
+            self.publishThresholdPP(plugID, thresholdPP)
     
     def switchLedDebug(self, state):
         #_log.debug('switchLedDebug()')
@@ -498,7 +500,7 @@ class SmartStrip(Agent):
         except Exception as e:
             _log.error ("Exception: Could not contact actuator. Is it running?")
             print(e)
-            pass
+            return
 
         try:
             if result['result'] == 'SUCCESS':
@@ -513,7 +515,7 @@ class SmartStrip(Agent):
         except Exception as e:
             _log.error ("Expection: setting ledDebug")
             print(e)
-            pass
+            return
 
     def switchRelay(self, plugID, state, schdExist):
         #_log.debug('switchPlug1Relay()')
@@ -544,7 +546,7 @@ class SmartStrip(Agent):
             except Exception as e:
                 _log.error ("Could not contact actuator. Is it running?")
                 print(e)
-                pass
+                return
 
             try:
                 if result['result'] == 'SUCCESS':
@@ -552,10 +554,10 @@ class SmartStrip(Agent):
             except Exception as e:
                 _log.error ("Expection: setting plug 1 relay")
                 print(e)
-                pass
+                return
         else:
             #do notthing
-            pass
+            return
         return
 
     def rpc_switchRelay(self, plugID, state):
