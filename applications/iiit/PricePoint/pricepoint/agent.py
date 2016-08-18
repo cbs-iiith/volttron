@@ -37,7 +37,8 @@ def DatetimeFromValue(ts):
 def pricepoint(config_path, **kwargs):
 
     config = utils.load_config(config_path)
-    agent_id = config['agentid']
+    agentid = config['agentid']
+    message = config['message']
     topic_price_point= config.get('topic_price_point', 'prices/PricePoint')
     period_read_price_point = config['period_read_price_point']
     default_base_price = config['default_base_price']
@@ -46,111 +47,125 @@ def pricepoint(config_path, **kwargs):
 
     pointPricePoint = 'iiit/cbs/smartstrip/PricePoint'
 
-    class PricePoint(Agent):
+    vip_identity = config.get('vip_identity', 'iiit.pricepoint')
+    # This agent needs to be named platform.actuator. Pop the uuid id off the kwargs
+    kwargs.pop('identity', None)
     
-        _price_point_previous = 0.4 
-
-        def __init__(self, **kwargs):
-            super(PricePoint, self).__init__(**kwargs)
-
-        @Core.receiver('onsetup')
-        def setup(self, sender, **kwargs):
-            _log.info(config['message'])
-            self._agent_id = config['agentid']
-
-        @Core.receiver('onstart')            
-        def startup(self, sender, **kwargs):
-            self.core.periodic(period_read_price_point, self.update_price_point, wait=None)
-
-        def update_price_point(self):
-            '''
-            read the new price and publish it to the bus
-            '''
-            #_log.debug('update_price_point()')
-            #self.fake_price_points()
-            #self.price_from_net()
-            self.price_from_smartstrip_bacnet()
-
-        def fake_price_points(self):
-            #Make a random price point
-            _log.debug('fake_price_points()')
-            new_price_reading = random.uniform(min_price, max_price)
-            self.post_price(new_price_reading)
-
-        def price_from_net(self):
-            _log.debug('price_from_net()')
-            new_price_reading = default_base_price
-            '''
-            need to somehow get the new price point from net
-            '''
-
-
-        def price_from_smartstrip_bacnet(self):
-            #_log.debug('price_from_smartstrip_bacnet()')
-            result = []
-
-            try: 
-                start = str(datetime.datetime.now())
-                end = str(datetime.datetime.now() 
-                        + datetime.timedelta(milliseconds=100))
-
-                msg = [
-                        ['iiit/cbs/smartstrip',start,end]
-                        ]
-                result = self.vip.rpc.call(
-                        'platform.actuator', 
-                        'request_new_schedule',
-                        agent_id, 
-                        'TaskID_PricePoint',
-                        'LOW',
-                        msg).get(timeout=1)
-            except Exception as e:
-                _log.error ("Could not contact actuator. Is it running?")
-                print(e)
-                pass
-            try:
-                #_log.debug('time...')
-                if result['result'] == 'SUCCESS':
-                    new_price_reading = self.vip.rpc.call(
-                            'platform.actuator','get_point',
-                            'iiit/cbs/smartstrip/PricePoint').get(timeout=1)
-                    #_log.debug('...time')
-
-                    #post the new price point the volttron bus
-                    if new_price_reading != self._price_point_previous :
-                        _log.debug('New Price Point: {0:.2f} !!!'.format(new_price_reading))
-                        self.post_price(new_price_reading)
-                        self._price_point_previous = new_price_reading
-                    else :
-                        _log.info('No change in price')
-                        
-            except Exception as e:
-                _log.error ("Exception: reading price point")
-                print(e)
-                pass
-            
-
-        def post_price(self, new_price):
-            _log.debug('post_price()')
-            #Create messages for specific points
-            pricepoint_message = [new_price,{'units': 'F', 'tz': 'UTC', 'type': 'float'}]
-
-            #Create timestamp
-            #now = datetime.utcnow().isoformat(' ') + 'Z'
-            now = str(datetime.datetime.now())
-            headers = {
-                    headers_mod.DATE: now
-                    }
-
-            _log.info('Publishing new price point: {0:.2f}'.format(new_price))
-            #Publish messages            
-            self.vip.pubsub.publish(
-                    'pubsub', topic_price_point, headers, pricepoint_message)
-            #_log.debug('after pub')
-            
-
     Agent.__name__ = 'PricePoint_Agent'
-    return PricePoint(**kwargs)
+    return PricePoint(agentid, message, topic_price_point, period_read_price_point,
+                    default_base_price, min_price, max_price, pointPricePoint,
+                    identity=vip_identity, **kwargs)
+    
+class PricePoint(Agent):
+
+    _price_point_previous = 0.4 
+
+    def __init__(self, agentid, message, topic_price_point, period_read_price_point,
+                default_base_price, min_price, max_price, pointPricePoint,
+                **kwargs):
+        super(PricePoint, self).__init__(**kwargs)
+        _log.debug("vip_identity: " + self.core.identity)
+        
+        self._message = message
+        self._agent_id = agentid
+        self.topic_price_point = topic_price_point
+        self.period_read_price_point = period_read_price_point
+        self.default_base_price = default_base_price
+        self.min_price = min_price
+        self.max_price = max_price
+        self.pointPricePoint = pointPricePoint
+
+    @Core.receiver('onsetup')
+    def setup(self, sender, **kwargs):
+        _log.info(self._message)
+        self.vip.rpc.export(self.price_from_net, 'price_from_net')
+
+    @Core.receiver('onstart')            
+    def startup(self, sender, **kwargs):
+        #self.core.periodic(self.period_read_price_point, self.update_price_point, wait=None)
+        return
+
+    def update_price_point(self):
+        '''
+        read the new price and publish it to the bus
+        '''
+        #_log.debug('update_price_point()')
+        #self.fake_price_points()
+        #self.price_from_net()
+        self.price_from_smartstrip_bacnet()
+
+    def fake_price_points(self):
+        #Make a random price point
+        _log.debug('fake_price_points()')
+        new_price_reading = random.uniform(self.min_price, self.max_price)
+        self.updatePricePoint(newPricePoint)
+        
+    @RPC.export
+    def price_from_net(self, newPricePoint):
+        _log.debug('price_from_net()')
+        self.updatePricePoint(newPricePoint)
+        
+    def updatePricePoint(newPricePoint):
+        if newPricePoint != self._price_point_previous :
+            _log.debug('New Price Point: {0:.2f} !!!'.format(newPricePoint))
+            self.post_price(newPricePoint)
+            self._price_point_previous = newPricePoint
+        else :
+            _log.info('No change in price')
+
+    def price_from_smartstrip_bacnet(self):
+        #_log.debug('price_from_smartstrip_bacnet()')
+        result = []
+
+        try: 
+            start = str(datetime.datetime.now())
+            end = str(datetime.datetime.now() 
+                    + datetime.timedelta(milliseconds=100))
+
+            msg = [
+                    ['iiit/cbs/smartstrip',start,end]
+                    ]
+            result = self.vip.rpc.call(
+                    'platform.actuator', 
+                    'request_new_schedule',
+                    agent_id, 
+                    'TaskID_PricePoint',
+                    'LOW',
+                    msg).get(timeout=1)
+        except Exception as e:
+            _log.error ("Could not contact actuator. Is it running?")
+            print(e)
+            return
+        try:
+            #_log.debug('time...')
+            if result['result'] == 'SUCCESS':
+                new_price_reading = self.vip.rpc.call(
+                        'platform.actuator','get_point',
+                        'iiit/cbs/smartstrip/PricePoint').get(timeout=1)
+                #_log.debug('...time')
+                self.updatePricePoint(newPricePoint)
+        except Exception as e:
+            _log.error ("Exception: reading price point")
+            print(e)
+            return
+
+    def post_price(self, new_price):
+        _log.debug('post_price()')
+        #Create messages for specific points
+        pricepoint_message = [new_price,{'units': 'F', 'tz': 'UTC', 'type': 'float'}]
+
+        #Create timestamp
+        #now = datetime.utcnow().isoformat(' ') + 'Z'
+        now = str(datetime.datetime.now())
+        headers = {
+                headers_mod.DATE: now
+                }
+
+        _log.info('Publishing new price point: {0:.2f}'.format(new_price))
+        #Publish messages            
+        self.vip.pubsub.publish(
+                'pubsub', self.topic_price_point, headers, pricepoint_message)
+        #_log.debug('after pub')
 
 
 def main(argv=sys.argv):
