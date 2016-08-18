@@ -48,20 +48,20 @@ def smartstripui_srv(config_path, **kwargs):
     config = utils.load_config(config_path)
     
     vip_identity = config.get('vip_identity', 'iiit.ssui_srv')
-    # This agent needs to be named platform.actuator. Pop the uuid id off the kwargs
+    # This agent needs to be named iiit.ssui_srv. Pop the uuid id off the kwargs
     kwargs.pop('identity', None)
 
     Agent.__name__ = 'SmartStripUI_Srv_Agent'
     return SmartStripUI_Srv(config_path, identity=vip_identity, **kwargs)
     
-class SmartStripUI_Srv(PublishMixin, Agent):
+class SmartStripUI_Srv(PublishMixin, BaseAgent):
     '''
     Volttron Server - listens for connections from UI Layer/Apps 
     and publishes the request to Volttron Bus
     '''
     def __init__(self, config_path, **kwargs):
         _log.debug('__init__()')
-        super(SmartStripUI_Srv, self).__init__(**kwargs)
+        super(SmartStripUI_Srv, self).__init__(config_path, **kwargs)
         _log.debug("vip_identity: " + self.core.identity)
         
         self.config = utils.load_config(config_path)
@@ -72,8 +72,8 @@ class SmartStripUI_Srv(PublishMixin, Agent):
 
         self.ssui_socket = None
         self.state = None
-        
-    def setup(self):
+
+    def setup(self, sender, **kwargs):
         _log.debug('setup()')
         _log.info(self.config['message'])
         self._agent_id = self.config['agentid']
@@ -90,6 +90,11 @@ class SmartStripUI_Srv(PublishMixin, Agent):
         # Register a callback to accept new connections
         self.reactor.register(self.ssui_socket, self.handle_accept)
         
+  
+    @Core.receiver('onstop')
+    def onstop(self, sender, **kwargs):
+        _log.debug('onstop()')
+        return
     def handle_accept(self, ssui_sock):
         _log.debug('handle_accept()')
         '''Accept new connections.'''
@@ -128,11 +133,12 @@ class SmartStripUI_Srv(PublishMixin, Agent):
             if rpcdata.method == "rpc_changeThresholdPP":
                 args = {'plugID': rpcdata.params['plugID'],
                         'newThreshold': rpcdata.params['newThreshold']}
-                result = self.rpc_changeThresholdPP(**args)
+                #result = self.rpc_changeThresholdPP(**args)
+                result = self.pub_changeThresholdPP(**args)
             elif rpcdata.method == "rpc_changeCurrentPP":
                 _log.info('newPricePoint: {}'.format(rpcdata.params['newPricePoint']))
                 args = {'newPricePoint': rpcdata.params['newPricePoint']}
-                result = self.rpc_changeCurrentPP(**args)
+                #result = self.pub_changeCurrentPP(**args)
                 
             return jsonrpc.json_result(rpcdata.id, result)
                 
@@ -146,14 +152,6 @@ class SmartStripUI_Srv(PublishMixin, Agent):
                 'NA', UNHANDLED_EXCEPTION, e
             )
 
-        #rpcdict = data.json()
-        #print('RPCDICT', rpcdict)
-        #if response:
-            #parse response
-            #if cmd==postData
-                #post to volttron bus - topic UI/Requests
-                #file.write('OK')
-                
     def rpc_changeThresholdPP(self, plugID, newThreshold):
         try:
             result = self.vip.rpc.call('iiit.smartstrip', 'setThresholdPP',
@@ -172,8 +170,6 @@ class SmartStripUI_Srv(PublishMixin, Agent):
             print(e)
             return 'FAILED'
         return 'SUCCESS'
-        
-
 
 
 def main(argv=sys.argv):
