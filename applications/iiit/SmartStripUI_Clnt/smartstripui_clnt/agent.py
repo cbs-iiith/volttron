@@ -16,6 +16,8 @@ from volttron.platform.messaging import topics, headers as headers_mod
 
 import time
 
+import jsonrpc2
+
 utils.setup_logging()
 _log = logging.getLogger(__name__)
 __version__ = '0.1'
@@ -80,6 +82,10 @@ def smartstripui_clnt(config_path, **kwargs):
         @Core.receiver('onstart')            
         def startup(self, sender, **kwargs):
             #self.core.periodic(period_read_price_point, self.update_price_point, wait=None)
+            self._BLESmartStripSrv = jsonrpc.ServerProxy(jsonrpc.JsonRpc20(),
+                    jsonrpc.TransportTcpIp(addr=(ble_ui_server_address,
+                            ble_ui_server_port)))
+
             pass
 
         @Core.receiver('onstop')
@@ -128,18 +134,22 @@ def smartstripui_clnt(config_path, **kwargs):
         def uiPostCurrentPricePoint(self, headers, message):
             #json rpc to BLESmartStripSrv
             _log.debug('uiPostCurrentPricePoint()')
+            result = self._BLESmartStripSrv.currentPricePoint("hello world, currentPricePoint")
 
         def uiPostMeterData(self, plugId, headers, message):
             #json rpc to BLESmartStripSrv
             _log.debug('uiPostMeterData()')
+            result = self._BLESmartStripSrv.meterData("hello world, meterData ")
 
         def uiPostRelayState(self, plugId, headers, message):
             #json rpc to BLESmartStripSrv
             _log.debug('uiPostRelayState()')
+            result = self._BLESmartStripSrv.relayState("hello world, relayState")
 
         def uiPostThreshold(self, plugId, headers, message):
             #json rpc to BLESmartStripSrv
             _log.debug('uiPostThreshold()')
+            result = self._BLESmartStripSrv.thPricePoint("hello world, thPricePoint")
             
     Agent.__name__ = 'SmartStripUI_Clnt_Agent'
     return SmartStripUI_Clnt(**kwargs)
