@@ -78,20 +78,25 @@ def smartstripui_clnt(config_path, **kwargs):
             _log.debug('setup()')
             _log.info(config['message'])
             self._agent_id = config['agentid']
+            self._BLESmartStripSrv = None
 
         @Core.receiver('onstart')            
         def startup(self, sender, **kwargs):
             #self.core.periodic(period_read_price_point, self.update_price_point, wait=None)
-            self._BLESmartStripSrv = jsonrpc.ServerProxy(jsonrpc.JsonRpc20(),
-                    jsonrpc.TransportTcpIp(addr=(ble_ui_server_address,
-                            ble_ui_server_port)))
-
-            pass
+            
+            try: 
+                self._BLESmartStripSrv = jsonrpc.ServerProxy(jsonrpc.JsonRpc20(),
+                        jsonrpc.TransportTcpIp(addr=(ble_ui_server_address,
+                                ble_ui_server_port)))
+            except Exception as e:
+                _log.error ("Could not contact BLESmartStripSrv. Is it running?")
+                print(e)
+            return
 
         @Core.receiver('onstop')
         def onstop(self, sender, **kwargs):
             _log.debug('onstop()')
-            pass
+            return
 
         @PubSub.subscribe('pubsub', topic_price_point)
         def on_match_currentPP(self, peer, sender, bus,
@@ -129,27 +134,54 @@ def smartstripui_clnt(config_path, **kwargs):
         @PubSub.subscribe('pubsub', plug2_thresholdPP_point)
         def on_match_plug2Threshold(self, peer, sender, bus,
                 topic, headers, message):
-            self.uiPostThreshold(self, PLUG_ID_2, headers, message)
+            self.uiPostThreshold(PLUG_ID_2, headers, message)
+        
+        @PubSub.subscribe('pubsub', plug1_tagId_point)
+        def on_match_plug1TagID(self, peer, sender, bus,
+                topic, headers, message):
+            self.uiPostTagID(PLUG_ID_1, headers, message)
+        
+        @PubSub.subscribe('pubsub', plug2_tagId_point)
+        def on_match_plug2TagID(self, peer, sender, bus,
+                topic, headers, message):
+            self.uiPostTagID(PLUG_ID_2, headers, message)
 
         def uiPostCurrentPricePoint(self, headers, message):
             #json rpc to BLESmartStripSrv
             _log.debug('uiPostCurrentPricePoint()')
-            result = self._BLESmartStripSrv.currentPricePoint("hello world, currentPricePoint")
+            if self._BLESmartStripSrv != None:
+                pricePoint = message[0]
+                result = self._BLESmartStripSrv.currentPricePoint(pricePoint)
 
-        def uiPostMeterData(self, plugId, headers, message):
+        def uiPostMeterData(self, plugID, headers, message):
             #json rpc to BLESmartStripSrv
             _log.debug('uiPostMeterData()')
-            result = self._BLESmartStripSrv.meterData("hello world, meterData ")
+            if self._BLESmartStripSrv != None:
+                voltage = message[0]
+                current = message[1]
+                aPower = message[2]
+                result = self._BLESmartStripSrv.meterData(plugID, voltage, current, aPower)
 
-        def uiPostRelayState(self, plugId, headers, message):
+        def uiPostRelayState(self, plugID, headers, message):
             #json rpc to BLESmartStripSrv
             _log.debug('uiPostRelayState()')
-            result = self._BLESmartStripSrv.relayState("hello world, relayState")
+            if self._BLESmartStripSrv != None:
+                state = message[0]
+                result = self._BLESmartStripSrv.relayState(plugID, state)
 
-        def uiPostThreshold(self, plugId, headers, message):
+        def uiPostThreshold(self, plugID, headers, message):
             #json rpc to BLESmartStripSrv
             _log.debug('uiPostThreshold()')
-            result = self._BLESmartStripSrv.thPricePoint("hello world, thPricePoint")
+            if self._BLESmartStripSrv != None:
+                thresholdPP = message[0]
+                result = self._BLESmartStripSrv.thPricePoint(plugID, thresholdPP)
+                
+        def uiPostTagID(self, plugID, headers, message):
+            #json rpc to BLESmartStripSrv
+            _log.debug('uiPostTagID()')
+            if self._BLESmartStripSrv != None:
+                tagID = message[0]
+                result = self._BLESmartStripSrv.tagID(plugID, tagID)
             
     Agent.__name__ = 'SmartStripUI_Clnt_Agent'
     return SmartStripUI_Clnt(**kwargs)
