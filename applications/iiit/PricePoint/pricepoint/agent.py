@@ -13,7 +13,16 @@ from volttron.platform.agent import utils
 from volttron.platform.messaging import headers as headers_mod
 
 from volttron.platform.messaging import topics, headers as headers_mod
-
+from volttron.platform.agent.known_identities import (
+    MASTER_WEB, VOLTTRON_CENTRAL, VOLTTRON_CENTRAL_PLATFORM)
+from volttron.platform import jsonrpc
+from volttron.platform.jsonrpc import (
+        INVALID_REQUEST, METHOD_NOT_FOUND,
+        UNHANDLED_EXCEPTION, UNAUTHORIZED,
+        UNABLE_TO_REGISTER_INSTANCE, DISCOVERY_ERROR,
+        UNABLE_TO_UNREGISTER_INSTANCE, UNAVAILABLE_PLATFORM, INVALID_PARAMS,
+        UNAVAILABLE_AGENT)
+        
 import settings
 
 import time
@@ -78,11 +87,15 @@ class PricePoint(Agent):
     @Core.receiver('onsetup')
     def setup(self, sender, **kwargs):
         _log.info(self._message)
-        self.vip.rpc.export(self.price_from_net, 'price_from_net')
+        self.vip.rpc.export(self.rpc_from_net, 'rpc_from_net')
 
     @Core.receiver('onstart')            
     def startup(self, sender, **kwargs):
         #self.core.periodic(self.period_read_price_point, self.update_price_point, wait=None)
+        self.vip.rpc.call(MASTER_WEB, 'register_agent_route',
+                      r'^/PricePoint',
+                      self.core.identity,
+                      "rpc_from_net").get(timeout=30)    
         return
 
     def update_price_point(self):
@@ -101,17 +114,41 @@ class PricePoint(Agent):
         self.updatePricePoint(newPricePoint)
         
     @RPC.export
-    def price_from_net(self, newPricePoint):
-        _log.debug('price_from_net()')
-        self.updatePricePoint(newPricePoint)
+    def rpc_from_net(self, header, message):
+        return self.processMessage(message)
+
+    def processMessage(self, message):
+        _log.debug('processResponse()')
+        result = 'FAILED'
+        try:
+            rpcdata = jsonrpc.JsonRpcData.parse(message)
+            _log.info('rpc method: {}'.format(rpcdata.method))
+            
+            if rpcdata.method == "rpc_updatePricePoint":
+                args = {'newPricePoint': rpcdata.params['newPricePoint']}
+                result = self.updatePricePoint(**args)
+            else:
+                return jsonrpc.json_error('NA', METHOD_NOT_FOUND,
+                    'Invalid method {}'.format(rpcdata.method))
+                    
+            return jsonrpc.json_result(rpcdata.id, result)
+            
+        except AssertionError:
+            print('AssertionError')
+            return jsonrpc.json_error('NA', INVALID_REQUEST,
+                    'Invalid rpc data {}'.format(data))
+        except Exception as e:
+            print(e)
+            return jsonrpc.json_error('NA', UNHANDLED_EXCEPTION, e)
         
-    def updatePricePoint(newPricePoint):
+    def updatePricePoint(self, newPricePoint):
         if newPricePoint != self._price_point_previous :
             _log.debug('New Price Point: {0:.2f} !!!'.format(newPricePoint))
             self.post_price(newPricePoint)
             self._price_point_previous = newPricePoint
         else :
             _log.info('No change in price')
+        return 'success'
 
     def price_from_smartstrip_bacnet(self):
         #_log.debug('price_from_smartstrip_bacnet()')
@@ -133,8 +170,8 @@ class PricePoint(Agent):
                     'LOW',
                     msg).get(timeout=1)
         except Exception as e:
-            _log.error ("Could not contact actuator. Is it running?")
-            print(e)
+            _log.exception ("Could not contact actuator. Is it running?")
+            #print(e)
             return
         try:
             #_log.debug('time...')
@@ -145,8 +182,8 @@ class PricePoint(Agent):
                 #_log.debug('...time')
                 self.updatePricePoint(newPricePoint)
         except Exception as e:
-            _log.error ("Exception: reading price point")
-            print(e)
+            _log.exception ("Exception: reading price point")
+            #print(e)
             return
 
     def post_price(self, new_price):
