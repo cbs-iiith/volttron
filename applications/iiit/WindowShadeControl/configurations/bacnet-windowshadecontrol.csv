@@ -1,6 +1,0 @@
-Point Name,Volttron Point Name,Units,Unit Details,BACnet Object Type,Property,Writable,Index,Notes
-ANALOG INPUT 1,LuxSensorOutside,Enum,0-18800 (default 0),analogInput,presentValue,TRUE,0,"AnalogPV: 0=inactive, 1=active"
-ANALOG INPUT 2,LuxSensorInside,Enum,0-18800 (default 0),analogInput,presentValue,TRUE,1,"AnalogPV: 0=inactive, 1=active"
-BINARY OUTPUT 3,StepperMotor,Enum,0-1 (default 0),binaryOutput,presentValue,TRUE,2,"BinaryPV: 0=inactive, 1=active"
-
-

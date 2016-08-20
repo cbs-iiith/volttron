@@ -1,6 +1,0 @@
-{
-	"agentid": "master_driver",
-	"driver_config_list": [
-							"/home/bsrc-sam/volttron/applications/iiit/WindowShadeControl/configurations/bacnet-windowshadecontrol.config"
-							]
-}
