@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<!--HTML5 doctype-->
+<html>
+
+<head>
+
+    <title>PricePoint</title>
+    <meta http-equiv="Content-type" content="text/html; charset=utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=0, minimal-ui">
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <META HTTP-EQUIV="Pragma" CONTENT="no-cache">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+
+    <link rel="stylesheet" type="text/css" href="lib/appframework/icons.css" />
+    <link rel="stylesheet" type="text/css" href="lib/appframework/af.ui.css" />
+
+    <script type="text/javascript" charset="utf-8" src="lib/jquery.min.js"></script>
+    <script type="text/javascript" charset="utf-8" src="lib/fastclick.min.js"></script>
+    <script type="text/javascript" charset="utf-8" src="lib/appframework/appframework.ui.min.js"></script>
+    <script language="javascript" src="http://code.jquery.com/jquery-2.1.4.min.js"></script>
+
+</head>
+
+<body>
+
+    <div id="splashscreen" class='ui-loader heavy'>
+        App Framework - Single View
+        <br>
+        <br>
+        <span class='ui-icon ui-icon-loading spin'></span>
+        <h1>Starting app</h1>
+    </div>
+
+    <div class="view" >
+        <header>
+            <h1>Price Point</h1>
+        </header>
+
+        <div class="pages" >
+
+            <div class="panel" data-title="Publish New PricePoint" id="setPricePoint" >
+                <p>New Price Point</p>
+                <div class="row" >
+                    <div class="large-2 columns">
+                        &nbsp;
+                    </div>
+                    <div class="large-2 columns">
+                        <input id="slider" type="range" min="0.01" max="1.1" step="0.01" value="0.5" onchange="printValue('slider','newPricePoint')"/>
+                    </div>
+                    <div class="large-2 columns">
+                        <input id="newPricePoint" type="text" size="4"/>
+                    </div>
+                    
+                    <div class="large-2 columns">
+                        &nbsp;
+                    </div>
+                    <button id="publishPricePoint">Publish New PricePoint</button>
+                </div>
+            </div>
+        </div>    
+    </div>
+    <script>
+        $('#publishPricePoint').click(function(){
+            var newPricePoint = parseFloat($('#newPricePoint').val());
+            var pdata = {
+                     jsonrpc: '2.0',
+                     method:  "rpc_updatePricePoint",
+                     params: {
+                        newPricePoint: newPricePoint,
+                     },
+                     id: '72581-4'
+             };
+             $.ajax({
+                 type: 'POST',
+                 url: '/PricePoint',
+                 data: JSON.stringify(pdata),
+                 dataType: 'json',
+                 success: function(data){
+                     console.log('Result: '+data.result.toString());},
+                 failure: function(data){
+                     console.log('Result: '+data.result.toString());}
+
+             });
+        });
+    </script>
+    <script>
+        function printValue(sliderID, textbox) {
+            var x = document.getElementById(textbox);
+            var y = document.getElementById(sliderID);
+            x.value = y.value;
+        }
+
+        window.onload = function() { printValue('slider', 'newPricePoint'); }
+    </script>
+</body>
+</html>
