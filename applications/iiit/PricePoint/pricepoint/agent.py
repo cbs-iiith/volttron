@@ -87,7 +87,6 @@ class PricePoint(Agent):
     @Core.receiver('onsetup')
     def setup(self, sender, **kwargs):
         _log.info(self._message)
-        self.vip.rpc.export(self.rpc_from_net, 'rpc_from_net')
 
     @Core.receiver('onstart')            
     def startup(self, sender, **kwargs):
@@ -141,6 +140,7 @@ class PricePoint(Agent):
             print(e)
             return jsonrpc.json_error('NA', UNHANDLED_EXCEPTION, e)
         
+    @RPC.export
     def updatePricePoint(self, newPricePoint):
         if newPricePoint != self._price_point_previous :
             _log.debug('New Price Point: {0:.2f} !!!'.format(newPricePoint))
