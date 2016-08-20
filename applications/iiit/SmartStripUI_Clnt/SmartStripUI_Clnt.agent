@@ -2,6 +2,6 @@
     "exec":"smartstripui_clnt-0.1-py2.7.egg --config \"%c\"--sub\"%s\"--pub \"%p\"",  
     "agentid": "SmartStripUI_Clnt",
     "message": "I am Smart Strip UI Clnt Agent",
-    "ble_ui_server_address":  "192.168.1.61", 
-    "ble_ui_server_port": 5757
+    "ble_ui_server_address":  "192.168.1.50", 
+    "ble_ui_server_port": 8081
 }

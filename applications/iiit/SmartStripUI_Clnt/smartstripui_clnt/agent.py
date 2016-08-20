@@ -6,7 +6,6 @@ import datetime
 import logging
 import sys
 import uuid
-import socket
 
 from volttron.platform.vip.agent import Agent, Core, PubSub, compat, RPC
 from volttron.platform.agent import utils
@@ -16,7 +15,8 @@ from volttron.platform.messaging import topics, headers as headers_mod
 
 import time
 
-import jsonrpc2
+import requests
+import json
 
 utils.setup_logging()
 _log = logging.getLogger(__name__)
@@ -40,7 +40,7 @@ def smartstripui_clnt(config_path, **kwargs):
     agent_id = config['agentid']
     
     ble_ui_server_address = config.get('ble_ui_server_address', '127.0.0.1')
-    ble_ui_server_port = int(config.get('ble_ui_server_port', 5757))
+    ble_ui_server_port = int(config.get('ble_ui_server_port', 8081))
     
     PLUG_ID_1 = 0
     PLUG_ID_2 = 1
@@ -78,19 +78,13 @@ def smartstripui_clnt(config_path, **kwargs):
             _log.debug('setup()')
             _log.info(config['message'])
             self._agent_id = config['agentid']
-            self._BLESmartStripSrv = None
+            ble_ui_srv_address = config.get('ble_ui_server_address', '127.0.0.1')
+            ble_ui_srv_port = config.get('ble_ui_server_port', 8081)
+            self.url_root = 'http://' + ble_ui_srv_address + ':' + str(ble_ui_srv_port) + '/SmartStrip'
 
         @Core.receiver('onstart')            
         def startup(self, sender, **kwargs):
-            #self.core.periodic(period_read_price_point, self.update_price_point, wait=None)
-            
-            try: 
-                self._BLESmartStripSrv = jsonrpc.ServerProxy(jsonrpc.JsonRpc20(),
-                        jsonrpc.TransportTcpIp(addr=(ble_ui_server_address,
-                                ble_ui_server_port)))
-            except Exception as e:
-                _log.error ("Could not contact BLESmartStripSrv. Is it running?")
-                print(e)
+            _log.debug('startup()')
             return
 
         @Core.receiver('onstop')
@@ -149,40 +143,63 @@ def smartstripui_clnt(config_path, **kwargs):
         def uiPostCurrentPricePoint(self, headers, message):
             #json rpc to BLESmartStripSrv
             _log.debug('uiPostCurrentPricePoint()')
-            if self._BLESmartStripSrv != None:
-                pricePoint = message[0]
-                result = self._BLESmartStripSrv.currentPricePoint(pricePoint)
+            pricePoint = message[0]
+            self.do_rpc('currentPricePoint', {'pricePoint': pricePoint})
 
         def uiPostMeterData(self, plugID, headers, message):
             #json rpc to BLESmartStripSrv
             _log.debug('uiPostMeterData()')
-            if self._BLESmartStripSrv != None:
-                voltage = message[0]
-                current = message[1]
-                aPower = message[2]
-                result = self._BLESmartStripSrv.meterData(plugID, voltage, current, aPower)
+            volt = message[0]['voltage']
+            curr = message[0]['current']
+            aPwr = message[0]['active_power']
+            self.do_rpc('plugMeterData', {'plugID': plugID,
+                                            'volt': volt,
+                                            'curr': curr,
+                                            'aPwr': aPwr})
 
         def uiPostRelayState(self, plugID, headers, message):
             #json rpc to BLESmartStripSrv
             _log.debug('uiPostRelayState()')
-            if self._BLESmartStripSrv != None:
-                state = message[0]
-                result = self._BLESmartStripSrv.relayState(plugID, state)
+            state = message[0]
+            self.do_rpc('plugRelayState', {'plugID': plugID,
+                                            'state': state})
 
         def uiPostThreshold(self, plugID, headers, message):
             #json rpc to BLESmartStripSrv
             _log.debug('uiPostThreshold()')
-            if self._BLESmartStripSrv != None:
-                thresholdPP = message[0]
-                result = self._BLESmartStripSrv.thPricePoint(plugID, thresholdPP)
+            thresholdPP = message[0]
+            self.do_rpc('plugThPricePoint', {'plugID': plugID,
+                                                'thresholdPP': thresholdPP})
                 
         def uiPostTagID(self, plugID, headers, message):
             #json rpc to BLESmartStripSrv
             _log.debug('uiPostTagID()')
-            if self._BLESmartStripSrv != None:
-                tagID = message[0]
-                result = self._BLESmartStripSrv.tagID(plugID, tagID)
-            
+            tagID = message[0]
+            self.do_rpc('plugTagID', {'plugID': plugID, 'tagID': tagID})
+                
+        def do_rpc(self, method, params=None ):
+            json_package = {
+                'jsonrpc': '2.0',
+                'id': self._agent_id,
+                'method':method,
+            }
+
+            if params:
+                json_package['params'] = params
+
+            data = json.dumps(json_package)
+            try:
+                response = requests.post(self.url_root, data=json.dumps(json_package))
+                
+                if response.ok:
+                    log_debug('response - ok, {} result:{}'.format(method, response.json()['result']))
+                else:
+                    log_debug('respone - not ok, {}'.format(method))
+            except Exception as e:
+                #print (e)
+                _log.exception('do_rpc() unhandled exception, most likely server is down')
+                return
+                
     Agent.__name__ = 'SmartStripUI_Clnt_Agent'
     return SmartStripUI_Clnt(**kwargs)
 
