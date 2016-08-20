@@ -144,7 +144,8 @@ def smartstripui_clnt(config_path, **kwargs):
             #json rpc to BLESmartStripSrv
             _log.debug('uiPostCurrentPricePoint()')
             pricePoint = message[0]
-            self.do_rpc('currentPricePoint', {'pricePoint': pricePoint})
+            #nodejs jsonrpc-2 takes args as set and json cannot serialize sets - TypeError
+            self.do_rpc('currentPricePoint', {pricePoint})
 
         def uiPostMeterData(self, plugID, headers, message):
             #json rpc to BLESmartStripSrv
@@ -152,30 +153,29 @@ def smartstripui_clnt(config_path, **kwargs):
             volt = message[0]['voltage']
             curr = message[0]['current']
             aPwr = message[0]['active_power']
-            self.do_rpc('plugMeterData', {'plugID': plugID,
-                                            'volt': volt,
-                                            'curr': curr,
-                                            'aPwr': aPwr})
+            #nodejs jsonrpc-2 takes args as set and json cannot serialize sets - TypeError
+            self.do_rpc('plugMeterData', {plugID, volt, curr, aPwr})
 
         def uiPostRelayState(self, plugID, headers, message):
             #json rpc to BLESmartStripSrv
             _log.debug('uiPostRelayState()')
             state = message[0]
-            self.do_rpc('plugRelayState', {'plugID': plugID,
-                                            'state': state})
+            #nodejs jsonrpc-2 takes args as set and json cannot serialize sets - TypeError
+            self.do_rpc('plugRelayState', {plugID, state})
 
         def uiPostThreshold(self, plugID, headers, message):
             #json rpc to BLESmartStripSrv
             _log.debug('uiPostThreshold()')
             thresholdPP = message[0]
-            self.do_rpc('plugThPricePoint', {'plugID': plugID,
-                                                'thresholdPP': thresholdPP})
+            #nodejs jsonrpc-2 takes args as set and json cannot serialize sets - TypeError
+            self.do_rpc('plugThPricePoint', {plugID, thresholdPP})
                 
         def uiPostTagID(self, plugID, headers, message):
             #json rpc to BLESmartStripSrv
             _log.debug('uiPostTagID()')
             tagID = message[0]
-            self.do_rpc('plugTagID', {'plugID': plugID, 'tagID': tagID})
+            #nodejs jsonrpc-2 takes args as set and json cannot serialize sets - TypeError
+            self.do_rpc('plugTagID', {plugID, tagID})
                 
         def do_rpc(self, method, params=None ):
             json_package = {
@@ -185,7 +185,8 @@ def smartstripui_clnt(config_path, **kwargs):
             }
 
             if params:
-                json_package['params'] = params
+                #nodejs jsonrpc-2 takes args as set and json cannot serialize sets - TypeError
+                json_package['params'] = list(params)
 
             data = json.dumps(json_package)
             try:
