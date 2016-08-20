@@ -45,6 +45,15 @@ from volttron.platform.agent import utils
 from volttron.platform.messaging import headers as headers_mod
 
 from volttron.platform.messaging import topics, headers as headers_mod
+from volttron.platform.agent.known_identities import (
+    MASTER_WEB, VOLTTRON_CENTRAL, VOLTTRON_CENTRAL_PLATFORM)
+from volttron.platform import jsonrpc
+from volttron.platform.jsonrpc import (
+        INVALID_REQUEST, METHOD_NOT_FOUND,
+        UNHANDLED_EXCEPTION, UNAUTHORIZED,
+        UNABLE_TO_REGISTER_INSTANCE, DISCOVERY_ERROR,
+        UNABLE_TO_UNREGISTER_INSTANCE, UNAVAILABLE_PLATFORM, INVALID_PARAMS,
+        UNAVAILABLE_AGENT)
 
 import settings
 
@@ -117,7 +126,6 @@ class SmartStrip(Agent):
     def setup(self, sender, **kwargs):
         _log.info(self.config['message'])
         self._agent_id = self.config['agentid']
-        self.vip.rpc.export(self.setThresholdPP, 'setThresholdPP')
 
     @Core.receiver('onstart')            
     def startup(self, sender, **kwargs):
@@ -131,6 +139,11 @@ class SmartStrip(Agent):
                                 self._plug_pricepoint_th[PLUG_ID_1])
         self.publishThresholdPP(PLUG_ID_2,
                                 self._plug_pricepoint_th[PLUG_ID_2])
+        
+        self.vip.rpc.call(MASTER_WEB, 'register_agent_route',
+                      r'^/SmartStrip',
+                      self.core.identity,
+                      "rpc_from_net").get(timeout=30)   
 
     @Core.receiver('onstop')
     def onstop(self, sender, **kwargs):
@@ -178,7 +191,6 @@ class SmartStrip(Agent):
     def runSmartStripTest(self):
         _log.debug("Running : runSmartStripTest()...")
         _log.debug('switch on debug led')
-        time.sleep(1)
         self.switchLedDebug(LED_ON)
         time.sleep(1)
 
@@ -210,7 +222,7 @@ class SmartStrip(Agent):
         try: 
             start = str(datetime.datetime.now())
             end = str(datetime.datetime.now() 
-                    + datetime.timedelta(seconds=3))
+                    + datetime.timedelta(seconds=6))
 
             msg = [
                     ['iiit/cbs/smartstrip',start,end]
@@ -223,8 +235,8 @@ class SmartStrip(Agent):
                     'LOW_PREEMPT',
                     msg).get(timeout=1)
         except Exception as e:
-            _log.error ("Could not contact actuator. Is it running?")
-            print(e)
+            _log.exception ("Could not contact actuator. Is it running?")
+            #print(e)
             return
 
         #run the task
@@ -268,17 +280,17 @@ class SmartStrip(Agent):
             fVolatge = self.vip.rpc.call(
                     'platform.actuator','get_point',
                     'iiit/cbs/smartstrip/' + \
-                    pointVolatge).get(timeout=1)
+                    pointVolatge).get(timeout=2)
             #_log.debug('voltage: {0:.2f}'.format(fVolatge))
             fCurrent = self.vip.rpc.call(
                     'platform.actuator','get_point',
                     ('iiit/cbs/smartstrip/' + \
-                    pointCurrent)).get(timeout=1)
+                    pointCurrent)).get(timeout=2)
             #_log.debug('current: {0:.2f}'.format(fCurrent))
             fActivePower = self.vip.rpc.call(
                     'platform.actuator','get_point',
                     'iiit/cbs/smartstrip/' + \
-                    pointActivePower).get(timeout=1)
+                    pointActivePower).get(timeout=2)
             #_log.debug('active: {0:.2f}'.format(fActivePower))
 
             #TODO: temp fix, need to move this to backend code
@@ -299,8 +311,8 @@ class SmartStrip(Agent):
                     ))
             #release the time schedule, if we finish early.
         except Exception as e:
-            _log.error ("Expection: exception in readMeterData()")
-            print(e)
+            _log.exception ("Expection: exception in readMeterData()")
+            #print(e)
             return
 
     def readTagIDs(self):
@@ -320,30 +332,30 @@ class SmartStrip(Agent):
             
             fTagID1_1 = self.vip.rpc.call(
                     'platform.actuator','get_point',
-                    'iiit/cbs/smartstrip/TagID1_1').get(timeout=1)
+                    'iiit/cbs/smartstrip/TagID1_1').get(timeout=2)
 
             fTagID1_2 = self.vip.rpc.call(
                     'platform.actuator','get_point',
-                    'iiit/cbs/smartstrip/TagID1_2').get(timeout=1)
+                    'iiit/cbs/smartstrip/TagID1_2').get(timeout=2)
             self._newTagId1 = self.recoveryTagID(fTagID1_1, fTagID1_2)
             #_log.debug('Tag 1: ' + newTagId1)
 
             #get second tag id
             fTagID2_1 = self.vip.rpc.call(
                     'platform.actuator','get_point',
-                    'iiit/cbs/smartstrip/TagID2_1').get(timeout=1)
+                    'iiit/cbs/smartstrip/TagID2_1').get(timeout=2)
 
             fTagID2_2 = self.vip.rpc.call(
                     'platform.actuator','get_point',
-                    'iiit/cbs/smartstrip/TagID2_2').get(timeout=1)
+                    'iiit/cbs/smartstrip/TagID2_2').get(timeout=2)
             self._newTagId2 = self.recoveryTagID(fTagID2_1, fTagID2_2)
             #_log.debug('Tag 2: ' + newTagId2)
 
             _log.debug('Tag 1: '+ self._newTagId1 +', Tag 2: ' + self._newTagId2)
 
         except Exception as e:
-            _log.error ("Exception: reading tag ids")
-            print(e)
+            _log.exception ("Exception: reading tag ids")
+            #print(e)
             return
 
 
@@ -466,12 +478,14 @@ class SmartStrip(Agent):
         return False
 
     @RPC.export
-    def setThresholdPP(self, plugID, thresholdPP):
-        if self._plug_pricepoint_th[plugID] != thresholdPP:
+    def setThresholdPP(self, plugID, newThreshold):
+        _log.debug('setThresholdPP()')
+        if self._plug_pricepoint_th[plugID] != newThreshold:
             _log.debug(('Changining Threshold: Plug ',
-                        str(plugID+1), ' : ', thresholdPP))
-            self._plug_pricepoint_th[plugID] = thresholdPP
-            self.publishThresholdPP(plugID, thresholdPP)
+                        str(plugID+1), ' : ', newThreshold))
+            self._plug_pricepoint_th[plugID] = newThreshold
+            self.publishThresholdPP(plugID, newThreshold)
+        return 'success'
     
     def switchLedDebug(self, state):
         #_log.debug('switchLedDebug()')
@@ -495,11 +509,11 @@ class SmartStrip(Agent):
                     self._agent_id, 
                     str(self._taskID_LedDebug),
                     'HIGH',
-                    msg).get(timeout=1)
+                    msg).get(timeout=2)
             #print("schedule result", result)
         except Exception as e:
-            _log.error ("Exception: Could not contact actuator. Is it running?")
-            print(e)
+            _log.exception ("Exception: Could not contact actuator. Is it running?")
+            #print(e)
             return
 
         try:
@@ -513,8 +527,8 @@ class SmartStrip(Agent):
                 #print("Set result", result)
                 self.updateLedDebugState(state)
         except Exception as e:
-            _log.error ("Expection: setting ledDebug")
-            print(e)
+            _log.exception ("Expection: setting ledDebug")
+            #print(e)
             return
 
     def switchRelay(self, plugID, state, schdExist):
@@ -544,16 +558,16 @@ class SmartStrip(Agent):
                         msg).get(timeout=1)
                 #print("schedule result", result)
             except Exception as e:
-                _log.error ("Could not contact actuator. Is it running?")
-                print(e)
+                _log.exception ("Could not contact actuator. Is it running?")
+                #print(e)
                 return
 
             try:
                 if result['result'] == 'SUCCESS':
                     self.rpc_switchRelay(plugID, state)
             except Exception as e:
-                _log.error ("Expection: setting plug 1 relay")
-                print(e)
+                _log.exception ("Expection: setting plug 1 relay")
+                #print(e)
                 return
         else:
             #do notthing
@@ -648,7 +662,37 @@ class SmartStrip(Agent):
         headers = {headers_mod.DATE: now}          
         #Publish messages
         self.vip.pubsub.publish('pubsub', pubTopic, headers, pubMsg).get(timeout=5)
+        
+    @RPC.export
+    def rpc_from_net(self, header, message):
+        print(message)
+        return self.processMessage(message)
 
+    def processMessage(self, message):
+        _log.debug('processResponse()')
+        result = 'FAILED'
+        try:
+            rpcdata = jsonrpc.JsonRpcData.parse(message)
+            _log.info('rpc method: {}'.format(rpcdata.method))
+            
+            if rpcdata.method == "rpc_setPlugThPP":
+                args = {'plugID': rpcdata.params['plugID'], 
+                        'newThreshold': rpcdata.params['newThreshold']
+                        }
+                result = self.setThresholdPP(**args)
+            else:
+                return jsonrpc.json_error('NA', METHOD_NOT_FOUND,
+                    'Invalid method {}'.format(rpcdata.method))
+                    
+            return jsonrpc.json_result(rpcdata.id, result)
+            
+        except AssertionError:
+            print('AssertionError')
+            return jsonrpc.json_error('NA', INVALID_REQUEST,
+                    'Invalid rpc data {}'.format(data))
+        except Exception as e:
+            print(e)
+            return jsonrpc.json_error('NA', UNHANDLED_EXCEPTION, e)
 
 
 
