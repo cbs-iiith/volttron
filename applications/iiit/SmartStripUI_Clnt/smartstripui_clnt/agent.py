@@ -40,7 +40,7 @@ def smartstripui_clnt(config_path, **kwargs):
     agent_id = config['agentid']
     
     ble_ui_server_address = config.get('ble_ui_server_address', '127.0.0.1')
-    ble_ui_server_port = int(config.get('ble_ui_server_port', 8081))
+    ble_ui_server_port = int(config.get('ble_ui_server_port', 8082))
     
     PLUG_ID_1 = 0
     PLUG_ID_2 = 1
@@ -193,9 +193,9 @@ def smartstripui_clnt(config_path, **kwargs):
                 response = requests.post(self.url_root, data=json.dumps(json_package))
                 
                 if response.ok:
-                    log_debug('response - ok, {} result:{}'.format(method, response.json()['result']))
+                    _log_debug('response - ok, {} result:{}'.format(method, response.json()['result']))
                 else:
-                    log_debug('respone - not ok, {}'.format(method))
+                    _log_debug('respone - not ok, {}'.format(method))
             except Exception as e:
                 #print (e)
                 _log.exception('do_rpc() unhandled exception, most likely server is down')
