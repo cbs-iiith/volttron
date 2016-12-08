@@ -135,10 +135,8 @@ class SmartStrip(Agent):
         #perodically read the meter data & connected tag ids from h/w
         self.core.periodic(self._period_read_data, self.getData, wait=None)
         
-        self.publishThresholdPP(PLUG_ID_1,
-                                self._plug_pricepoint_th[PLUG_ID_1])
-        self.publishThresholdPP(PLUG_ID_2,
-                                self._plug_pricepoint_th[PLUG_ID_2])
+        #perodically publish plug threshold price point to volttron bus
+        self.core.periodic(self._period_read_data, self.publishPlugThPP, wait=None)
         
         self.vip.rpc.call(MASTER_WEB, 'register_agent_route',
                       r'^/SmartStrip',
@@ -214,6 +212,11 @@ class SmartStrip(Agent):
         self.switchRelay(PLUG_ID_2, RELAY_OFF, SCHEDULE_NOT_AVLB)
         _log.debug("EOF Testing")
 
+    def publishPlugThPP(self):
+        self.publishThresholdPP(PLUG_ID_1,
+                                self._plug_pricepoint_th[PLUG_ID_1])
+        self.publishThresholdPP(PLUG_ID_2,
+                                self._plug_pricepoint_th[PLUG_ID_2])    
     def getData(self):
         #_log.debug('getData()...')
         result = []
