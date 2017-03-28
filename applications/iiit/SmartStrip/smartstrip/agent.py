@@ -66,6 +66,8 @@ RELAY_ON = 1
 RELAY_OFF = 0
 PLUG_ID_1 = 0
 PLUG_ID_2 = 1
+PLUG_ID_3 = 2
+PLUG_ID_4 = 3
 DEFAULT_TAG_ID = '7FC000007FC00000'
 SCHEDULE_AVLB = 1
 SCHEDULE_NOT_AVLB = 0
@@ -107,12 +109,14 @@ class SmartStrip(Agent):
     _plugRelayState = [0, 0]
     _plugConnected = [ 0, 0]
     _plug_tag_id = ['7FC000007FC00000', '7FC000007FC00000']
-    _plug_pricepoint_th = [0.5, 0.75]
+    _plug_pricepoint_th = [0.25, 0.5, 0.6, 0.75]
     _price_point_previous = 0.4 
     _price_point_current = 0.4 
     
     _newTagId1 = ''
     _newTagId2 = ''
+    _newTagId3 = ''
+    _newTagId4 = ''
 
     def __init__(self, config_path, **kwargs):
         super(SmartStrip, self).__init__(**kwargs)
@@ -149,6 +153,9 @@ class SmartStrip(Agent):
         self.switchLedDebug(LED_OFF)
         self.switchRelay(PLUG_ID_1, RELAY_OFF, SCHEDULE_NOT_AVLB)
         self.switchRelay(PLUG_ID_2, RELAY_OFF, SCHEDULE_NOT_AVLB)
+        self.switchRelay(PLUG_ID_3, RELAY_OFF, SCHEDULE_NOT_AVLB)
+        self.switchRelay(PLUG_ID_4, RELAY_OFF, SCHEDULE_NOT_AVLB)
+
         return
 
     @Core.receiver('onfinish')
@@ -185,7 +192,25 @@ class SmartStrip(Agent):
                                             'smartstrip/plug1/tagid')
         self.plug2_tagId_point = self.config.get('plug2_thresholdPP_point',
                                             'smartstrip/plug2/tagid')
+                                            
+        self.plug3_meterData_all_point = self.config.get('plug3_meterData_all_point',
+                                            'smartstrip/plug3/meterdata/all')
+        self.plug4_meterData_all_point = self.config.get('plug4_meterData_all_point',
+                                            'smartstrip/plug4/meterdata/all')
+        self.plug3_relayState_point = self.config.get('plug3_relayState_point',
+                                            'smartstrip/plug3/relaystate')
+        self.plug4_relayState_point = self.config.get('plug4_relayState_point',
+                                            'smartstrip/plug4/relaystate')
+        self.plug3_thresholdPP_point = self.config.get('plug3_thresholdPP_point',
+                                            'smartstrip/plug3/threshold')
+        self.plug4_thresholdPP_point = self.config.get('plug4_thresholdPP_point',
+                                            'smartstrip/plug4/threshold')
+        self.plug3_tagId_point = self.config.get('plug3_tagId_point',
+                                            'smartstrip/plug3/tagid')
+        self.plug4_tagId_point = self.config.get('plug4_thresholdPP_point',
+                                            'smartstrip/plug4/tagid')
 
+                                            
     def runSmartStripTest(self):
         _log.debug("Running : runSmartStripTest()...")
         _log.debug('switch on debug led')
@@ -210,6 +235,19 @@ class SmartStrip(Agent):
         time.sleep(1)
         _log.debug('switch off relay 2')
         self.switchRelay(PLUG_ID_2, RELAY_OFF, SCHEDULE_NOT_AVLB)
+        
+        _log.debug('switch on relay 3')
+        self.switchRelay(PLUG_ID_3, RELAY_ON, SCHEDULE_NOT_AVLB)
+        time.sleep(1)
+        _log.debug('switch off relay 3')
+        self.switchRelay(PLUG_ID_3, RELAY_OFF, SCHEDULE_NOT_AVLB)
+
+        _log.debug('switch on relay 4')
+        self.switchRelay(PLUG_ID_4, RELAY_ON, SCHEDULE_NOT_AVLB)
+        time.sleep(1)
+        _log.debug('switch off relay 4')
+        self.switchRelay(PLUG_ID_4, RELAY_OFF, SCHEDULE_NOT_AVLB)
+
         _log.debug("EOF Testing")
 
     def publishPlugThPP(self):
@@ -217,6 +255,10 @@ class SmartStrip(Agent):
                                 self._plug_pricepoint_th[PLUG_ID_1])
         self.publishThresholdPP(PLUG_ID_2,
                                 self._plug_pricepoint_th[PLUG_ID_2])    
+        self.publishThresholdPP(PLUG_ID_3,
+                                self._plug_pricepoint_th[PLUG_ID_3])
+        self.publishThresholdPP(PLUG_ID_4,
+                                self._plug_pricepoint_th[PLUG_ID_4])    
     def getData(self):
         #_log.debug('getData()...')
         result = []
@@ -251,6 +293,12 @@ class SmartStrip(Agent):
 
             if self._plugRelayState[PLUG_ID_2] == RELAY_ON:
                 self.readMeterData(PLUG_ID_2)
+
+            if self._plugRelayState[PLUG_ID_3] == RELAY_ON:
+                self.readMeterData(PLUG_ID_3)
+
+            if self._plugRelayState[PLUG_ID_4] == RELAY_ON:
+                self.readMeterData(PLUG_ID_4)
                 
             self.readTagIDs()
             
@@ -261,6 +309,8 @@ class SmartStrip(Agent):
             #_log.debug('start processNewTagId()...')
             self.processNewTagId(PLUG_ID_1, self._newTagId1)
             self.processNewTagId(PLUG_ID_2, self._newTagId2)
+            self.processNewTagId(PLUG_ID_3, self._newTagId3)
+            self.processNewTagId(PLUG_ID_4, self._newTagId4)
             #_log.debug('...done processNewTagId()')
 
     def readMeterData(self, plugID):
@@ -275,6 +325,16 @@ class SmartStrip(Agent):
             pointCurrent = 'Plug2Current'
             pointActivePower = 'Plug2ActivePower'
             pubTopic = self.plug2_meterData_all_point
+        elif plugID == PLUG_ID_3:
+            pointVolatge = 'Plug3Voltage'
+            pointCurrent = 'Plug3Current'
+            pointActivePower = 'Plug3ActivePower'
+            pubTopic = self.plug3_meterData_all_point
+        elif plugID == PLUG_ID_4:
+            pointVolatge = 'Plug4Voltage'
+            pointCurrent = 'Plug4Current'
+            pointActivePower = 'Plug4ActivePower'
+            pubTopic = self.plug4_meterData_all_point
         else:
             return
 
@@ -322,6 +382,8 @@ class SmartStrip(Agent):
         #_log.debug('readTagIDs()')
         self._newTagId1 = ''
         self._newTagId2 = ''
+        self._newTagId3 = ''
+        self._newTagId4 = ''
 
         try:
             '''
@@ -332,6 +394,8 @@ class SmartStrip(Agent):
             '''
             newTagId1 = ''
             newTagId2 = ''
+            newTagId3 = ''
+            newTagId4 = ''
             
             fTagID1_1 = self.vip.rpc.call(
                     'platform.actuator','get_point',
@@ -354,7 +418,30 @@ class SmartStrip(Agent):
             self._newTagId2 = self.recoveryTagID(fTagID2_1, fTagID2_2)
             #_log.debug('Tag 2: ' + newTagId2)
 
+            #get third tag id
+            fTagID3_1 = self.vip.rpc.call(
+                    'platform.actuator','get_point',
+                    'iiit/cbs/smartstrip/TagID3_1').get(timeout=2)
+
+            fTagID3_2 = self.vip.rpc.call(
+                    'platform.actuator','get_point',
+                    'iiit/cbs/smartstrip/TagID3_2').get(timeout=2)
+            self._newTagId3 = self.recoveryTagID(fTagID3_1, fTagID3_2)
+            #_log.debug('Tag 3: ' + newTagId3)
+
+            #get fourth tag id
+            fTagID4_1 = self.vip.rpc.call(
+                    'platform.actuator','get_point',
+                    'iiit/cbs/smartstrip/TagID4_1').get(timeout=2)
+
+            fTagID4_2 = self.vip.rpc.call(
+                    'platform.actuator','get_point',
+                    'iiit/cbs/smartstrip/TagID4_2').get(timeout=2)
+            self._newTagId4 = self.recoveryTagID(fTagID4_1, fTagID4_2)
+            #_log.debug('Tag 4: ' + newTagId4)
+
             _log.debug('Tag 1: '+ self._newTagId1 +', Tag 2: ' + self._newTagId2)
+            _log.debug('Tag 3: '+ self._newTagId3 +', Tag 4: ' + self._newTagId4)
 
         except Exception as e:
             _log.exception ("Exception: reading tag ids")
@@ -432,8 +519,9 @@ class SmartStrip(Agent):
         self._price_point_current = new_price_point
 
         self.applyPricingPolicy(PLUG_ID_1)
-  
         self.applyPricingPolicy(PLUG_ID_2)
+        self.applyPricingPolicy(PLUG_ID_3)
+        self.applyPricingPolicy(PLUG_ID_4)
 
     def applyPricingPolicy(self, plugID):
         plug_pp_th = self._plug_pricepoint_th[plugID]
@@ -644,6 +732,10 @@ class SmartStrip(Agent):
             pubTopic = self.plug1_relayState_point
         elif plugID == PLUG_ID_2:
             pubTopic = self.plug2_relayState_point
+        elif plugID == PLUG_ID_3:
+            pubTopic = self.plug3_relayState_point
+        elif plugID == PLUG_ID_4:
+            pubTopic = self.plug4_relayState_point
         else:
             return
         pubMsg = [state,{'units': 'On/Off', 'tz': 'UTC', 'type': 'int'}]
@@ -654,6 +746,10 @@ class SmartStrip(Agent):
             pubTopic = self.plug1_thresholdPP_point
         elif plugID == PLUG_ID_2:
             pubTopic = self.plug2_thresholdPP_point
+        elif plugID == PLUG_ID_3:
+            pubTopic = self.plug3_thresholdPP_point
+        elif plugID == PLUG_ID_4:
+            pubTopic = self.plug4_thresholdPP_point
         else:
             return
         pubMsg = [thresholdPP,
