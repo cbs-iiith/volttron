@@ -210,7 +210,6 @@ class SmartStrip(Agent):
         self.plug4_tagId_point = self.config.get('plug4_thresholdPP_point',
                                             'smartstrip/plug4/tagid')
 
-                                            
     def runSmartStripTest(self):
         _log.debug("Running : runSmartStripTest()...")
         _log.debug('switch on debug led')
