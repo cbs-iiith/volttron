@@ -36,10 +36,12 @@ import settings
 import time
 import struct
 
-LED_ON = 1
-LED_OFF = 0
-FAN_ON = 1
-FAN_OFF = 0
+SH_DEVICE_STATE_ON = 1
+SH_DEVICE_STATE_OFF = 0
+
+SH_DEVICE_LED_DEBUG = 0
+SH_DEVICE_LED = 1
+SH_DEVICE_FAN = 2
 
 SCHEDULE_AVLB = 1
 SCHEDULE_NOT_AVLB = 0
@@ -75,6 +77,8 @@ class SmartHub(Agent):
     _ledDebugState = 0
     _ledState = 0
     _fanState = 0
+    
+    _shDevicesState = [0, 0, 0]
 
     def __init__(self, config_path, **kwargs):
         super(SmartHub, self).__init__(**kwargs)
@@ -96,21 +100,21 @@ class SmartHub(Agent):
     @Core.receiver('onstart')            
     def startup(self, sender, **kwargs):
         self.runSmartHubTest()
-        self.switchLedDebug(LED_ON)
+        self.switchShDevice(SH_DEVICE_LED_DEBUG, SH_DEVICE_STATE_ON, SCHEDULE_NOT_AVLB)
         
         return  
 
     @Core.receiver('onstop')
     def onstop(self, sender, **kwargs):
         _log.debug('onstop()')
-        self.switchLedDebug(LED_OFF)
+        self.switchShDevice(SH_DEVICE_LED_DEBUG, SH_DEVICE_STATE_OFF, SCHEDULE_NOT_AVLB)
         
         return
 
     @Core.receiver('onfinish')
     def onfinish(self, sender, **kwargs):
         _log.debug('onfinish()')
-        self.switchLedDebug(LED_OFF)
+        self.switchShDevice(SH_DEVICE_LED_DEBUG, SH_DEVICE_STATE_OFF, SCHEDULE_NOT_AVLB)
         
         return
         
@@ -119,107 +123,52 @@ class SmartHub(Agent):
         return
 
     def _configGetPoints(self):
+        self.ledDebugState_point = self.config.get('ledDebugState_point',
+                                            'smarthub/leddebugstate')    
         self.ledState_point = self.config.get('ledState_point',
                                             'smarthub/ledstate')    
+        self.fanState_point = self.config.get('fanState_point',
+                                            'smarthub/fanstate')    
         
         return
 
     def runSmartHubTest(self):
         _log.debug("Running : runSmartHubTest()...")
         _log.debug('switch on debug led')
-        self.switchLedDebug(LED_ON)
+        self.switchShDevice(SH_DEVICE_LED_DEBUG, SH_DEVICE_STATE_ON, SCHEDULE_NOT_AVLB)
         time.sleep(1)
 
         _log.debug('switch off debug led')
-        self.switchLedDebug(LED_OFF)
+        self.switchShDevice(SH_DEVICE_LED_DEBUG, SH_DEVICE_STATE_OFF, SCHEDULE_NOT_AVLB)
         time.sleep(1)
 
         _log.debug('switch on led')
-        self.switchLed(LED_ON, SCHEDULE_NOT_AVLB)
+        self.switchShDevice(SH_DEVICE_LED, SH_DEVICE_STATE_ON, SCHEDULE_NOT_AVLB)
         time.sleep(1)
         _log.debug('switch off led')
-        self.switchLed(LED_OFF, SCHEDULE_NOT_AVLB)
+        self.switchShDevice(SH_DEVICE_LED, SH_DEVICE_STATE_OFF, SCHEDULE_NOT_AVLB)
         time.sleep(1)
 
-        _log.debug('switch on debug led')
-        self.switchLedDebug(LED_ON)
+        _log.debug('switch on fan')
+        self.switchShDevice(SH_DEVICE_FAN, SH_DEVICE_STATE_ON, SCHEDULE_NOT_AVLB)
+        time.sleep(1)
+        _log.debug('switch off fan')
+        self.switchShDevice(SH_DEVICE_FAN, SH_DEVICE_STATE_OFF, SCHEDULE_NOT_AVLB)
+        time.sleep(1)
 
         _log.debug("EOF Testing")
         
         return
 
-    def switchLedDebug(self, state):
-        #_log.debug('switchLedDebug()')
-        result = []
+    def switchShDevice(self, deviceId, state, schdExist):
+        #_log.debug('switchShDevice()')
 
-        if self._ledDebugState == state:
-            #_log.debug('same state, do nothing')
-            return
-
-        try: 
-            start = str(datetime.datetime.now())
-            end = str(datetime.datetime.now() 
-                    + datetime.timedelta(milliseconds=500))
-
-            msg = [
-                    ['iiit/cbs/smarthub',start,end]
-                    ]
-            result = self.vip.rpc.call(
-                    'platform.actuator', 
-                    'request_new_schedule',
-                    self._agent_id, 
-                    str(self._taskID_LedDebug),
-                    'HIGH',
-                    msg).get(timeout=2)
-            #print("schedule result", result)
-        except Exception as e:
-            _log.exception ("Exception: Could not contact actuator. Is it running?")
-            #print(e)
-            return
-
-        try:
-            if result['result'] == 'SUCCESS':
-                result = self.vip.rpc.call(
-                        'platform.actuator', 
-                        'set_point',
-                        self._agent_id, 
-                        'iiit/cbs/smarthub/LEDDebug',
-                        state).get(timeout=1)
-                #print("Set result", result)
-                self.updateLedDebugState(state)
-        except Exception as e:
-            _log.exception ("Expection: setting ledDebug")
-            #print(e)
-            return
-        
-        return
-
-    def updateLedDebugState(self, state):
-        _log.debug('updateLedDebugState()')
-        headers = { 'requesterID': self._agent_id, }
-        ledDebug_status = self.vip.rpc.call(
-                'platform.actuator','get_point',
-                'iiit/cbs/smarthub/LEDDebug').get(timeout=1)
-        
-        if state == int(ledDebug_status):
-            self._ledDebugState = state
-        
-        if self._ledDebugState == LED_ON:
-            _log.debug('Current State: LED Debug is ON!!!')
-        else:
-            _log.debug('Current State: LED Debug is OFF!!!')
-
-        return
-
-    def switchLed(self, state, schdExist):
-        _log.debug('switchLed()')
-
-        if self._ledState == state:
+        if self._shDevicesState[deviceId] == state:
             _log.debug('same state, do nothing')
             return
 
         if schdExist == SCHEDULE_AVLB: 
-            self.rpc_switchLed(state);
+            self.rpc_switchShDevice(deviceId, state);
         elif schdExist == SCHEDULE_NOT_AVLB:
             try: 
                 start = str(datetime.datetime.now())
@@ -233,7 +182,7 @@ class SmartHub(Agent):
                         'platform.actuator', 
                         'request_new_schedule',
                         self._agent_id, 
-                        'taskID_Led',
+                        'taskID_ShDevice' + str(deviceId),
                         'HIGH',
                         msg).get(timeout=1)
                 #print("schedule result", result)
@@ -244,7 +193,7 @@ class SmartHub(Agent):
 
             try:
                 if result['result'] == 'SUCCESS':
-                    self.rpc_switchLed(state)
+                    self.rpc_switchShDevice(deviceId, state);
             except Exception as e:
                 _log.exception ("Expection: setting led")
                 #print(e)
@@ -254,36 +203,54 @@ class SmartHub(Agent):
             return
         return
         
-    def rpc_switchLed(self, state):
+    def rpc_switchShDevice(self, deviceId, state):
+        if deviceId == SH_DEVICE_LED_DEBUG:
+            endPoint = 'LEDDebug'
+        elif deviceId == SH_DEVICE_LED:
+            endPoint = 'LED'
+        elif deviceId == SH_DEVICE_FAN:
+            endPoint = 'Fan'
+        else :
+            _log.exception('not a valid deviceId')
+            return
         result = self.vip.rpc.call(
                 'platform.actuator', 
                 'set_point',
                 self._agent_id, 
-                'iiit/cbs/smarthub/LED',
+                'iiit/cbs/smarthub/' + endPoint,
                 state).get(timeout=1)
-        print("Set result", result)
-        _log.debug('OK call updateLedState()')
-        self.updateLedState(state)
+        #print("Set result", result)
+        #_log.debug('OK call updateShDeviceState()')
+        self.updateShDeviceState(deviceId, endPoint,state)
         return
 
-    def updateLedState(self, state):
-        _log.debug('updateLedState()')
+    def updateShDeviceState(self, deviceId, endPoint, state):
+        #_log.debug('updateShDeviceState()')
         headers = { 'requesterID': self._agent_id, }
-        led_status = self.vip.rpc.call(
+        device_status = self.vip.rpc.call(
                 'platform.actuator','get_point',
-                'iiit/cbs/smarthub/LED').get(timeout=1)
+                'iiit/cbs/smarthub/' + endPoint).get(timeout=1)
 
-        if state == int(led_status):
-            self._ledState = state
-            self.publishLedState(state)
+        if state == int(device_status):
+            self._shDevicesState[deviceId] = state
+            self.publishShDeviceState(deviceId, state)
             
-        if self._ledState == LED_ON:
-            _log.debug('Current State: Led Switched ON!!!')
+        if self._shDevicesState[deviceId] == SH_DEVICE_STATE_ON:
+            _log.debug('Current State: ' + endPoint + ' Switched ON!!!')
         else:
-            _log.debug('Current State: Led Switched OFF!!!')
+            _log.debug('Current State: ' + endPoint + ' Switched OFF!!!')
 
-    def publishLedState(self,state):
-        pubTopic = self.ledState_point
+    def publishShDeviceState(self, deviceId, state):
+        if deviceId == SH_DEVICE_LED_DEBUG:
+            pubTopic = self.ledDebugState_point
+        elif deviceId == SH_DEVICE_LED:
+            pubTopic = self.ledState_point
+        elif deviceId == SH_DEVICE_FAN:
+            pubTopic = self.fanState_point
+        else :
+            _log.exception('not a valid deviceId')
+            return
+
         pubMsg = [state,{'units': 'On/Off', 'tz': 'UTC', 'type': 'int'}]
         self.publishToBus(pubTopic, pubMsg)
         
