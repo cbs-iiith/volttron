@@ -106,9 +106,9 @@ class SmartStrip(Agent):
     _taskID_ReadMeterData = 5
 
     _ledDebugState = 0
-    _plugRelayState = [0, 0]
-    _plugConnected = [ 0, 0]
-    _plug_tag_id = ['7FC000007FC00000', '7FC000007FC00000']
+    _plugRelayState = [0, 0, 0, 0]
+    _plugConnected = [ 0, 0, 0, 0]
+    _plug_tag_id = ['7FC000007FC00000', '7FC000007FC00000', '7FC000007FC00000', '7FC000007FC00000']
     _plug_pricepoint_th = [0.25, 0.5, 0.6, 0.75]
     _price_point_previous = 0.4 
     _price_point_current = 0.4 
@@ -439,8 +439,7 @@ class SmartStrip(Agent):
             self._newTagId4 = self.recoveryTagID(fTagID4_1, fTagID4_2)
             #_log.debug('Tag 4: ' + newTagId4)
 
-            _log.debug('Tag 1: '+ self._newTagId1 +', Tag 2: ' + self._newTagId2)
-            _log.debug('Tag 3: '+ self._newTagId3 +', Tag 4: ' + self._newTagId4)
+            _log.debug('Tag 1: '+ self._newTagId1 +', Tag 2: ' + self._newTagId2 + ', Tag 3: '+ self._newTagId3 +', Tag 4: ' + self._newTagId4)
 
         except Exception as e:
             _log.exception ("Exception: reading tag ids")
