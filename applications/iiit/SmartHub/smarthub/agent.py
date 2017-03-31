@@ -73,6 +73,8 @@ class SmartHub(Agent):
     '''
     _taskID_LedDebug = 1
     _ledDebugState = 0
+    _ledState = 0
+    _fanState = 0
 
     def __init__(self, config_path, **kwargs):
         super(SmartHub, self).__init__(**kwargs)
@@ -117,6 +119,8 @@ class SmartHub(Agent):
         return
 
     def _configGetPoints(self):
+        self.ledState_point = self.config.get('ledState_point',
+                                            'smarthub/ledstate')    
         
         return
 
@@ -128,6 +132,13 @@ class SmartHub(Agent):
 
         _log.debug('switch off debug led')
         self.switchLedDebug(LED_OFF)
+        time.sleep(1)
+
+        _log.debug('switch on led')
+        self.switchLed(LED_ON, SCHEDULE_NOT_AVLB)
+        time.sleep(1)
+        _log.debug('switch off led')
+        self.switchLed(LED_OFF, SCHEDULE_NOT_AVLB)
         time.sleep(1)
 
         _log.debug('switch on debug led')
@@ -180,7 +191,8 @@ class SmartHub(Agent):
             _log.exception ("Expection: setting ledDebug")
             #print(e)
             return
-
+        
+        return
 
     def updateLedDebugState(self, state):
         _log.debug('updateLedDebugState()')
@@ -199,6 +211,91 @@ class SmartHub(Agent):
 
         return
 
+    def switchLed(self, state, schdExist):
+        _log.debug('switchLed()')
+
+        if self._ledState == state:
+            _log.debug('same state, do nothing')
+            return
+
+        if schdExist == SCHEDULE_AVLB: 
+            self.rpc_switchLed(state);
+        elif schdExist == SCHEDULE_NOT_AVLB:
+            try: 
+                start = str(datetime.datetime.now())
+                end = str(datetime.datetime.now() 
+                        + datetime.timedelta(milliseconds=600))
+
+                msg = [
+                        ['iiit/cbs/smarthub',start,end]
+                        ]
+                result = self.vip.rpc.call(
+                        'platform.actuator', 
+                        'request_new_schedule',
+                        self._agent_id, 
+                        'taskID_Led',
+                        'HIGH',
+                        msg).get(timeout=1)
+                #print("schedule result", result)
+            except Exception as e:
+                _log.exception ("Could not contact actuator. Is it running?")
+                #print(e)
+                return
+
+            try:
+                if result['result'] == 'SUCCESS':
+                    self.rpc_switchLed(state)
+            except Exception as e:
+                _log.exception ("Expection: setting led")
+                #print(e)
+                return
+        else:
+            #do notthing
+            return
+        return
+        
+    def rpc_switchLed(self, state):
+        result = self.vip.rpc.call(
+                'platform.actuator', 
+                'set_point',
+                self._agent_id, 
+                'iiit/cbs/smarthub/LED',
+                state).get(timeout=1)
+        print("Set result", result)
+        _log.debug('OK call updateLedState()')
+        self.updateLedState(state)
+        return
+
+    def updateLedState(self, state):
+        _log.debug('updateLedState()')
+        headers = { 'requesterID': self._agent_id, }
+        led_status = self.vip.rpc.call(
+                'platform.actuator','get_point',
+                'iiit/cbs/smarthub/LED').get(timeout=1)
+
+        if state == int(led_status):
+            self._ledState = state
+            self.publishLedState(state)
+            
+        if self._ledState == LED_ON:
+            _log.debug('Current State: Led Switched ON!!!')
+        else:
+            _log.debug('Current State: Led Switched OFF!!!')
+
+    def publishLedState(self,state):
+        pubTopic = self.ledState_point
+        pubMsg = [state,{'units': 'On/Off', 'tz': 'UTC', 'type': 'int'}]
+        self.publishToBus(pubTopic, pubMsg)
+        
+        return
+        
+    def publishToBus(self, pubTopic, pubMsg):
+        now = datetime.datetime.utcnow().isoformat(' ') + 'Z'
+        headers = {headers_mod.DATE: now}          
+        #Publish messages
+        self.vip.pubsub.publish('pubsub', pubTopic, headers, pubMsg).get(timeout=5)
+        
+        return
 
 def main(argv=sys.argv):
     '''Main method called by the eggsecutable.'''
