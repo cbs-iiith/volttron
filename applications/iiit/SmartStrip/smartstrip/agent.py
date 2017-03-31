@@ -160,10 +160,12 @@ class SmartStrip(Agent):
 
     @Core.receiver('onfinish')
     def onfinish(self, sender, **kwargs):
-        #_log.debug('onfinish()')
-        #self.switchLedDebug(LED_OFF)
-        #self.switchRelay(PLUG_ID_1, RELAY_OFF, SCHEDULE_NOT_AVLB)
-        #self.switchRelay(PLUG_ID_2, RELAY_OFF, SCHEDULE_NOT_AVLB)
+        _log.debug('onfinish()')
+        self.switchLedDebug(LED_OFF)
+        self.switchRelay(PLUG_ID_1, RELAY_OFF, SCHEDULE_NOT_AVLB)
+        self.switchRelay(PLUG_ID_2, RELAY_OFF, SCHEDULE_NOT_AVLB)
+        self.switchRelay(PLUG_ID_3, RELAY_OFF, SCHEDULE_NOT_AVLB)
+        self.switchRelay(PLUG_ID_4, RELAY_OFF, SCHEDULE_NOT_AVLB)
         return
         
     def _configGetInitValues(self):
