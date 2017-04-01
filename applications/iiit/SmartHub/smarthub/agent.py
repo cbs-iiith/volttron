@@ -170,38 +170,42 @@ class SmartHub(Agent):
         if schdExist == SCHEDULE_AVLB: 
             self.rpc_switchShDevice(deviceId, state);
         elif schdExist == SCHEDULE_NOT_AVLB:
-            try: 
-                start = str(datetime.datetime.now())
-                end = str(datetime.datetime.now() 
-                        + datetime.timedelta(milliseconds=600))
-
-                msg = [
-                        ['iiit/cbs/smarthub',start,end]
-                        ]
-                result = self.vip.rpc.call(
-                        'platform.actuator', 
-                        'request_new_schedule',
-                        self._agent_id, 
-                        'taskID_ShDevice' + str(deviceId),
-                        'HIGH',
-                        msg).get(timeout=1)
-                #print("schedule result", result)
-            except Exception as e:
-                _log.exception ("Could not contact actuator. Is it running?")
-                #print(e)
-                return
-
+            result = self.getTaskSchedule('taskID_ShDevice' + str(deviceId))
             try:
                 if result['result'] == 'SUCCESS':
                     self.rpc_switchShDevice(deviceId, state);
             except Exception as e:
-                _log.exception ("Expection: setting led")
+                _log.exception ("Expection: no task schdl for changing device state")
                 #print(e)
                 return
         else:
             #do notthing
+            _log.exception ("not a valid param - schdExist: " + schdExist)
             return
         return
+        
+    def getTaskSchedule(self, taskId):
+        try: 
+            start = str(datetime.datetime.now())
+            end = str(datetime.datetime.now() 
+                    + datetime.timedelta(milliseconds=600))
+
+            msg = [
+                    ['iiit/cbs/smarthub',start,end]
+                    ]
+            result = self.vip.rpc.call(
+                    'platform.actuator', 
+                    'request_new_schedule',
+                    self._agent_id, 
+                    taskId,
+                    'HIGH',
+                    msg).get(timeout=1)
+            #print("schedule result", result)
+        except Exception as e:
+            _log.exception ("Could not contact actuator. Is it running?")
+            #print(e)
+            return        
+        return result
         
     def rpc_switchShDevice(self, deviceId, state):
         if deviceId == SH_DEVICE_LED_DEBUG:
