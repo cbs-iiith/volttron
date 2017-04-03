@@ -252,10 +252,7 @@ class SmartHub(Agent):
         
     def getShDeviceState(self, deviceId, schdExist):
         state = E_UNKNOWN_STATE
-        if deviceId not in [SH_DEVICE_LED_DEBUG, \
-                            SH_DEVICE_LED, \
-                            SH_DEVICE_FAN \
-                            ] :
+        if not _validDeviceAction(deviceId, AT_GET_STATE) :
             _log.exception ("not a valid device to get state, deviceId: " + str(deviceId))
             return state
             
@@ -279,15 +276,9 @@ class SmartHub(Agent):
         
     def getShDeviceLevel(self, deviceId, schdExist):
         level = E_UNKNOWN_LEVEL
-        if deviceId not in [SH_DEVICE_LED, \
-                            SH_DEVICE_FAN, \
-                            SH_DEVICE_S_LUX, \
-                            SH_DEVICE_S_RH, \
-                            SH_DEVICE_S_TEMP, \
-                            SH_DEVICE_S_CO2, \
-                            ] :
+        if not self._validDeviceAction( deviceId, AT_GET_LEVEL) :
             _log.exception ("not a valid device to get level, deviceId: " + str(deviceId))
-            return level  
+            return level
             
         if schdExist == SCHEDULE_AVLB: 
             level = self.rpc_getShDeviceLevel(deviceId);
@@ -309,10 +300,7 @@ class SmartHub(Agent):
                 
     def setShDeviceState(self, deviceId, state, schdExist):
         #_log.debug('setShDeviceState()')
-        if deviceId not in [SH_DEVICE_LED_DEBUG, \
-                            SH_DEVICE_LED, \
-                            SH_DEVICE_FAN \
-                            ] :
+        if not self._validDeviceAction(deviceId, AT_SET_STATE) :
             _log.exception ("not a valid device to change state, deviceId: " + str(deviceId))
             return
 
@@ -339,10 +327,7 @@ class SmartHub(Agent):
         
     def setShDeviceLevel(self, deviceId, level, schdExist):
         #_log.debug('setShDeviceLevel()')
-        
-        if deviceId not in [SH_DEVICE_LED, \
-                            SH_DEVICE_FAN \
-                            ] :
+        if not self._validDeviceAction( deviceId, AT_SET_LEVEL):
             _log.exception ("not a valid device to change level, deviceId: " + str(deviceId))
             return
 
@@ -369,68 +354,40 @@ class SmartHub(Agent):
         return
         
     def publishShDeviceState(self, deviceId, state):
-        if deviceId == SH_DEVICE_LED_DEBUG:
-            pubTopic = self.ledDebugState_point
-        elif deviceId == SH_DEVICE_LED:
-            pubTopic = self.ledState_point
-        elif deviceId == SH_DEVICE_FAN:
-            pubTopic = self.fanState_point
-        else :
-            _log.exception('not a valid deviceId')
+        if not self._validDeviceAction(deviceId, AT_PUB_STATE):
+            _log.exception ("not a valid device to pub state, deviceId: " + str(deviceId))
             return
-
+        pubTopic = self._getPubTopic(deviceId, AT_PUB_STATE)
         pubMsg = [state,{'units': 'On/Off', 'tz': 'UTC', 'type': 'int'}]
         self._publishToBus(pubTopic, pubMsg)
-        
+
         return
         
     def publishShDeviceLevel(self, deviceId, level):
-        if deviceId == SH_DEVICE_LED:
-            pubTopic = self.ledLevel_point
-        elif deviceId == SH_DEVICE_FAN:
-            pubTopic = self.fanLevel_point
-        elif deviceId ==SH_DEVICE_S_LUX:
-            pubTopic = self.sensorLuxLevel_point
-        elif deviceId ==SH_DEVICE_S_RH:
-            pubTopic = self.sensorRhLevel_point
-        elif deviceId ==SH_DEVICE_S_TEMP:
-            pubTopic = self.sensorTempLevel_point
-        elif deviceId ==SH_DEVICE_S_CO2:
-            pubTopic = self.sensorCo2Level_point 
-        else :
-            _log.exception ("not a valid device to change level, deviceId: " + str(deviceId))
+        if not self._validDeviceAction(deviceId, AT_PUB_LEVEL):
+            _log.exception ("not a valid device to pub level, deviceId: " + str(deviceId))
             return
-
+        pubTopic = self._getPubTopic(deviceId, AT_PUB_LEVEL)
         pubMsg = [level,{'units': 'duty', 'tz': 'UTC', 'type': 'float'}]
         self._publishToBus(pubTopic, pubMsg)
         
         return
                
     def rpc_getShDeviceState(self, deviceId):
-        if deviceId == SH_DEVICE_LED_DEBUG:
-            endPoint = 'LEDDebug'
-        elif deviceId == SH_DEVICE_LED:
-            endPoint = 'LED'
-        elif deviceId == SH_DEVICE_FAN:
-            endPoint = 'Fan'
-        else :
+        if not self._validDeviceAction(deviceId,AT_GET_STATE):
             _log.exception ("not a valid device to get state, deviceId: " + str(deviceId))
             return
+        endPoint = self._getEndPoint(deviceId, AT_GET_STATE)
         device_level = self.vip.rpc.call(
                 'platform.actuator','get_point',
                 'iiit/cbs/smarthub/' + endPoint).get(timeout=1)
         return int(device_level)
 
     def rpc_setShDeviceState(self, deviceId, state):
-        if deviceId == SH_DEVICE_LED_DEBUG:
-            endPoint = 'LEDDebug'
-        elif deviceId == SH_DEVICE_LED:
-            endPoint = 'LED'
-        elif deviceId == SH_DEVICE_FAN:
-            endPoint = 'Fan'
-        else :
+        if not self._validDeviceAction(deviceId, AT_SET_STATE):
             _log.exception ("not a valid device to change state, deviceId: " + str(deviceId))
             return
+        endPoint = self._getEndPoint(deviceId, AT_SET_STATE)
         result = self.vip.rpc.call(
                 'platform.actuator', 
                 'set_point',
@@ -443,34 +400,21 @@ class SmartHub(Agent):
         return
         
     def rpc_getShDeviceLevel(self, deviceId):
-        if deviceId == SH_DEVICE_LED:
-            endPoint = 'LEDPwmDuty'
-        elif deviceId == SH_DEVICE_FAN:
-            endPoint = 'FanPwmDuty'
-        elif deviceId == SH_DEVICE_S_LUX:
-            endPoint = 'SensorLux'
-        elif deviceId == SH_DEVICE_S_RH:
-            endPoint = 'SensorRh'
-        elif deviceId == SH_DEVICE_S_TEMP:
-            endPoint = 'SensorTemp'
-        elif deviceId == SH_DEVICE_S_CO2:
-            endPoint = 'SensorCO2'
-        else :
+        if not self._validDeviceAction(deviceId, AT_GET_LEVEL):
             _log.exception ("not a valid device to get level, deviceId: " + str(deviceId))
             return
+        endPoint = self._getEndPoint(deviceId, AT_GET_LEVEL)
         device_level = self.vip.rpc.call(
                 'platform.actuator','get_point',
                 'iiit/cbs/smarthub/' + endPoint).get(timeout=1)
         return float(device_level)
         
     def rpc_setShDeviceLevel(self, deviceId, level):
-        if deviceId == SH_DEVICE_LED:
-            endPoint = 'LEDPwmDuty'
-        elif deviceId == SH_DEVICE_FAN:
-            endPoint = 'FanPwmDuty'
-        else :
+        if not self._validDeviceAction(deviceId, AT_SET_LEVEL):
             _log.exception ("not a valid device to change level, deviceId: " + str(deviceId))
             return
+        endPoint = self._getEndPoint(deviceId, AT_SET_LEVEL)
+        
         result = self.vip.rpc.call(
                 'platform.actuator', 
                 'set_point',
@@ -542,6 +486,31 @@ class SmartHub(Agent):
         self.vip.pubsub.publish('pubsub', pubTopic, headers, pubMsg).get(timeout=5)
         
         return
+    
+    def _getPubTopic(self, deviceId, actionType):
+        if actionType == AT_PUB_STATE:
+            if deviceId ==SH_DEVICE_LED_DEBUG:
+                return self.ledDebugState_point
+            elif deviceId ==SH_DEVICE_LED:
+                return self.ledState_point
+            elif deviceId ==SH_DEVICE_FAN:
+                return self.fanState_point
+        elif actionType == AT_PUB_LEVEL :    
+            if deviceId == SH_DEVICE_LED:
+                return self.ledLevel_point
+            elif deviceId == SH_DEVICE_FAN:
+                return self.fanLevel_point
+            elif deviceId ==SH_DEVICE_S_LUX:
+                return self.sensorLuxLevel_point
+            elif deviceId ==SH_DEVICE_S_RH:
+                return self.sensorRhLevel_point
+            elif deviceId ==SH_DEVICE_S_TEMP:
+                return self.sensorTempLevel_point
+            elif deviceId ==SH_DEVICE_S_CO2:
+                return self.sensorCo2Level_point
+            
+        _log.exception ("Expection: not a vaild device-action type for pubTopic")
+        return ""
         
     def _getEndPoint(self, deviceId, actionType):
         if  actionType == AT_SET_LEVEL :
@@ -573,7 +542,7 @@ class SmartHub(Agent):
             elif deviceId == SH_DEVICE_FAN :
                 return "Fan"
         
-        _log.exception ("Expection: not a vaild device-action type")
+        _log.exception ("Expection: not a vaild device-action type for endpoint")
         return ""
         
     def _validDeviceAction(self, deviceId, actionType):
