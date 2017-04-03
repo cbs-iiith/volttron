@@ -513,7 +513,7 @@ class SmartHub(Agent):
         #check if the state really updated at the h/w, only then proceed with new state
         if state == device_state:
             self._shDevicesState[deviceId] = state
-            self._publishShDeviceState(deviceId, state)
+            self.publishShDeviceState(deviceId, state)
             
         if self._shDevicesState[deviceId] == SH_DEVICE_STATE_ON:
             _log.debug('Current State: ' + endPoint + ' Switched ON!!!')
@@ -542,6 +542,39 @@ class SmartHub(Agent):
         self.vip.pubsub.publish('pubsub', pubTopic, headers, pubMsg).get(timeout=5)
         
         return
+        
+    def _getEndPoint(self, deviceId, actionType):
+        if  actionType == AT_SET_LEVEL :
+            if deviceId == SH_DEVICE_LED :
+                return "LEDPwmDuty"
+            elif deviceId == SH_DEVICE_FAN : 
+                return "FanPwmDuty"
+        elif actionType == AT_GET_LEVEL :
+            if deviceId == SH_DEVICE_LED :
+                return "LEDPwmDuty"
+            elif deviceId == SH_DEVICE_FAN :
+                return "FanPwmDuty"
+            elif deviceId == SH_DEVICE_S_LUX :
+                return "SensorLux"
+            elif deviceId == SH_DEVICE_S_RH :
+                return "SensorRh"
+            elif deviceId == SH_DEVICE_S_TEMP :
+                return "SensorTemp"
+            elif deviceId == SH_DEVICE_S_CO2 :
+                return "SensorCO2"
+        elif actionType in [ \
+                            AT_GET_STATE, \
+                            AT_SET_STATE \
+                            ]:
+            if deviceId == SH_DEVICE_LED_DEBUG:
+                return "LEDDebug"
+            elif deviceId == SH_DEVICE_LED :
+                return "LED"
+            elif deviceId == SH_DEVICE_FAN :
+                return "Fan"
+        
+        _log.exception ("Expection: not a vaild device-action type")
+        return ""
         
     def _validDeviceAction(self, deviceId, actionType):
         if actionType not in [ \
