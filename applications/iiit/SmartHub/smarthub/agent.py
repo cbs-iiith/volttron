@@ -106,21 +106,23 @@ class SmartHub(Agent):
     @Core.receiver('onstart')            
     def startup(self, sender, **kwargs):
         self.runSmartHubTest()
-        self.setShDevice(SH_DEVICE_LED_DEBUG, SH_DEVICE_STATE_ON, SCHEDULE_NOT_AVLB)
+        
+        _log.debug('switch on debug led')
+        self.setShDeviceState(SH_DEVICE_LED_DEBUG, SH_DEVICE_STATE_ON, SCHEDULE_NOT_AVLB)
         
         return  
 
     @Core.receiver('onstop')
     def onstop(self, sender, **kwargs):
         _log.debug('onstop()')
-        self.setShDevice(SH_DEVICE_LED_DEBUG, SH_DEVICE_STATE_OFF, SCHEDULE_NOT_AVLB)
+        self.setShDeviceState(SH_DEVICE_LED_DEBUG, SH_DEVICE_STATE_OFF, SCHEDULE_NOT_AVLB)
         
         return
 
     @Core.receiver('onfinish')
     def onfinish(self, sender, **kwargs):
         _log.debug('onfinish()')
-        self.setShDevice(SH_DEVICE_LED_DEBUG, SH_DEVICE_STATE_OFF, SCHEDULE_NOT_AVLB)
+        self.setShDeviceState(SH_DEVICE_LED_DEBUG, SH_DEVICE_STATE_OFF, SCHEDULE_NOT_AVLB)
         
         return
         
@@ -155,34 +157,34 @@ class SmartHub(Agent):
     
     def testLedDebug(self):
         _log.debug('switch on debug led')
-        self.setShDevice(SH_DEVICE_LED_DEBUG, SH_DEVICE_STATE_ON, SCHEDULE_NOT_AVLB)
+        self.setShDeviceState(SH_DEVICE_LED_DEBUG, SH_DEVICE_STATE_ON, SCHEDULE_NOT_AVLB)
         time.sleep(1)
 
         _log.debug('switch off debug led')
-        self.setShDevice(SH_DEVICE_LED_DEBUG, SH_DEVICE_STATE_OFF, SCHEDULE_NOT_AVLB)
+        self.setShDeviceState(SH_DEVICE_LED_DEBUG, SH_DEVICE_STATE_OFF, SCHEDULE_NOT_AVLB)
         time.sleep(1)
 
         _log.debug('switch on debug led')
-        self.setShDevice(SH_DEVICE_LED_DEBUG, SH_DEVICE_STATE_ON, SCHEDULE_NOT_AVLB)
+        self.setShDeviceState(SH_DEVICE_LED_DEBUG, SH_DEVICE_STATE_ON, SCHEDULE_NOT_AVLB)
         time.sleep(1)
 
         _log.debug('switch off debug led')
-        self.setShDevice(SH_DEVICE_LED_DEBUG, SH_DEVICE_STATE_OFF, SCHEDULE_NOT_AVLB)
+        self.setShDeviceState(SH_DEVICE_LED_DEBUG, SH_DEVICE_STATE_OFF, SCHEDULE_NOT_AVLB)
         time.sleep(1)
         
         _log.debug('switch on debug led')
-        self.setShDevice(SH_DEVICE_LED_DEBUG, SH_DEVICE_STATE_ON, SCHEDULE_NOT_AVLB)
+        self.setShDeviceState(SH_DEVICE_LED_DEBUG, SH_DEVICE_STATE_ON, SCHEDULE_NOT_AVLB)
         time.sleep(1)
 
         _log.debug('switch off debug led')
-        self.setShDevice(SH_DEVICE_LED_DEBUG, SH_DEVICE_STATE_OFF, SCHEDULE_NOT_AVLB)
+        self.setShDeviceState(SH_DEVICE_LED_DEBUG, SH_DEVICE_STATE_OFF, SCHEDULE_NOT_AVLB)
         time.sleep(1)
         
         return
 
     def testLed(self):
         _log.debug('switch on led')
-        self.setShDevice(SH_DEVICE_LED, SH_DEVICE_STATE_ON, SCHEDULE_NOT_AVLB)
+        self.setShDeviceState(SH_DEVICE_LED, SH_DEVICE_STATE_ON, SCHEDULE_NOT_AVLB)
         time.sleep(1)
 
         _log.debug('change led level 0.3')        
@@ -198,14 +200,14 @@ class SmartHub(Agent):
         time.sleep(1)
         
         _log.debug('switch off led')
-        self.setShDevice(SH_DEVICE_LED, SH_DEVICE_STATE_OFF, SCHEDULE_NOT_AVLB)
+        self.setShDeviceState(SH_DEVICE_LED, SH_DEVICE_STATE_OFF, SCHEDULE_NOT_AVLB)
         time.sleep(1)
         
         return
 
     def testFan(self):
         _log.debug('switch on fan')
-        self.setShDevice(SH_DEVICE_FAN, SH_DEVICE_STATE_ON, SCHEDULE_NOT_AVLB)
+        self.setShDeviceState(SH_DEVICE_FAN, SH_DEVICE_STATE_ON, SCHEDULE_NOT_AVLB)
         time.sleep(1)
         
         _log.debug('change fan level 0.3')        
@@ -221,25 +223,37 @@ class SmartHub(Agent):
         time.sleep(1)
         
         _log.debug('switch off fan')
-        self.setShDevice(SH_DEVICE_FAN, SH_DEVICE_STATE_OFF, SCHEDULE_NOT_AVLB)
+        self.setShDeviceState(SH_DEVICE_FAN, SH_DEVICE_STATE_OFF, SCHEDULE_NOT_AVLB)
         time.sleep(1)
 
         return
+
+    def getShDeviceState(self, deviceId, schdExist):
         
-    def setShDevice(self, deviceId, state, schdExist):
-        #_log.debug('setShDevice()')
+        return
+        
+    def getShDeviceLevel(self, deviceId, schdExist):
+        
+        return
+        
+    def getShSensorData(self, sensorId, schdExist):
+        
+        return
+        
+    def setShDeviceState(self, deviceId, state, schdExist):
+        #_log.debug('setShDeviceState()')
 
         if self._shDevicesState[deviceId] == state:
             _log.debug('same state, do nothing')
             return
 
         if schdExist == SCHEDULE_AVLB: 
-            self.rpc_setShDevice(deviceId, state);
+            self.rpc_setShDeviceState(deviceId, state);
         elif schdExist == SCHEDULE_NOT_AVLB:
-            result = self._getTaskSchedule('setShDevice_' + str(deviceId))
+            result = self._getTaskSchedule('setShDeviceState_' + str(deviceId))
             try:
                 if result['result'] == 'SUCCESS':
-                    self.rpc_setShDevice(deviceId, state);
+                    self.rpc_setShDeviceState(deviceId, state);
             except Exception as e:
                 _log.exception ("Expection: no task schdl for changing device state")
                 #print(e)
@@ -249,7 +263,38 @@ class SmartHub(Agent):
             _log.exception ("not a valid param - schdExist: " + schdExist)
             return
         return
-                
+        
+    def setShDeviceLevel(self, deviceId, level, schdExist):
+        #_log.debug('setShDeviceLevel()')
+        
+        if deviceId not in [SH_DEVICE_LED, \
+                            SH_DEVICE_FAN \
+                            ] :
+            _log.exception ("not a valid device to change level, deviceId: " + str(deviceId))
+            return
+
+        if self._shDevicesLevel[deviceId] == level:
+            _log.debug('same level, do nothing')
+            return
+
+        if schdExist == SCHEDULE_AVLB: 
+            self.rpc_setShDeviceLevel(deviceId, level);
+        elif schdExist == SCHEDULE_NOT_AVLB:
+            result = self._getTaskSchedule('setShDeviceLevel_' + str(deviceId))
+            try:
+                if result['result'] == 'SUCCESS':
+                    self.rpc_setShDeviceLevel(deviceId, level);
+            except Exception as e:
+                _log.exception ("Expection: no task schdl for changing device level")
+                #print(e)
+                return
+        else:
+            #do notthing
+            _log.exception ("not a valid param - schdExist: " + schdExist)
+            return
+        
+        return
+                        
     def _getTaskSchedule(self, taskId):
         try: 
             start = str(datetime.datetime.now())
@@ -273,7 +318,7 @@ class SmartHub(Agent):
             return        
         return result
         
-    def rpc_setShDevice(self, deviceId, state):
+    def rpc_setShDeviceState(self, deviceId, state):
         if deviceId == SH_DEVICE_LED_DEBUG:
             endPoint = 'LEDDebug'
         elif deviceId == SH_DEVICE_LED:
@@ -335,37 +380,6 @@ class SmartHub(Agent):
         
         return
 
-    def setShDeviceLevel(self, deviceId, level, schdExist):
-        #_log.debug('setShDeviceLevel()')
-        
-        if deviceId not in [SH_DEVICE_LED, \
-                            SH_DEVICE_FAN \
-                            ] :
-            _log.exception ("not a valid device to change level, deviceId: " + str(deviceId))
-            return
-
-        if self._shDevicesLevel[deviceId] == level:
-            _log.debug('same level, do nothing')
-            return
-
-        if schdExist == SCHEDULE_AVLB: 
-            self.rpc_setShDeviceLevel(deviceId, level);
-        elif schdExist == SCHEDULE_NOT_AVLB:
-            result = self._getTaskSchedule('setShDeviceLevel_' + str(deviceId))
-            try:
-                if result['result'] == 'SUCCESS':
-                    self.rpc_setShDeviceLevel(deviceId, level);
-            except Exception as e:
-                _log.exception ("Expection: no task schdl for changing device level")
-                #print(e)
-                return
-        else:
-            #do notthing
-            _log.exception ("not a valid param - schdExist: " + schdExist)
-            return
-        
-        return
-        
     def rpc_getShDeviceLevel(self, deviceId):
         if deviceId == SH_DEVICE_LED:
             endPoint = 'LEDPwmDuty'
