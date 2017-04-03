@@ -78,8 +78,14 @@ class SmartHub(Agent):
     _ledState = 0
     _fanState = 0
     
+    '''
+        SH_DEVICE_LED_DEBUG = 0 only state, no level
+        SH_DEVICE_LED = 1       both state and level
+        SH_DEVICE_FAN = 2       both satet and level
+    '''
     _shDevicesState = [0, 0, 0]
-
+    _shDevicesLevel = [0, 0, 0]
+    
     def __init__(self, config_path, **kwargs):
         super(SmartHub, self).__init__(**kwargs)
         _log.debug("vip_identity: " + self.core.identity)
@@ -129,11 +135,25 @@ class SmartHub(Agent):
                                             'smarthub/ledstate')    
         self.fanState_point = self.config.get('fanState_point',
                                             'smarthub/fanstate')    
+        self.ledLevel_point = self.config.get('ledState_point',
+                                            'smarthub/ledlevel')    
+        self.fanLevel_point = self.config.get('fanState_point',
+                                            'smarthub/fanlevel')    
         
         return
 
     def runSmartHubTest(self):
         _log.debug("Running : runSmartHubTest()...")
+        
+        self.testLedDebug()
+        self.testLed()
+        self.testFan()
+
+        _log.debug("EOF Testing")
+        
+        return
+    
+    def testLedDebug(self):
         _log.debug('switch on debug led')
         self.switchShDevice(SH_DEVICE_LED_DEBUG, SH_DEVICE_STATE_ON, SCHEDULE_NOT_AVLB)
         time.sleep(1)
@@ -142,24 +162,70 @@ class SmartHub(Agent):
         self.switchShDevice(SH_DEVICE_LED_DEBUG, SH_DEVICE_STATE_OFF, SCHEDULE_NOT_AVLB)
         time.sleep(1)
 
+        _log.debug('switch on debug led')
+        self.switchShDevice(SH_DEVICE_LED_DEBUG, SH_DEVICE_STATE_ON, SCHEDULE_NOT_AVLB)
+        time.sleep(1)
+
+        _log.debug('switch off debug led')
+        self.switchShDevice(SH_DEVICE_LED_DEBUG, SH_DEVICE_STATE_OFF, SCHEDULE_NOT_AVLB)
+        time.sleep(1)
+        
+        _log.debug('switch on debug led')
+        self.switchShDevice(SH_DEVICE_LED_DEBUG, SH_DEVICE_STATE_ON, SCHEDULE_NOT_AVLB)
+        time.sleep(1)
+
+        _log.debug('switch off debug led')
+        self.switchShDevice(SH_DEVICE_LED_DEBUG, SH_DEVICE_STATE_OFF, SCHEDULE_NOT_AVLB)
+        time.sleep(1)
+        
+        return
+
+    def testLed(self):
         _log.debug('switch on led')
         self.switchShDevice(SH_DEVICE_LED, SH_DEVICE_STATE_ON, SCHEDULE_NOT_AVLB)
         time.sleep(1)
+
+        _log.debug('change led level 0.3')        
+        self.setShDeviceLevel(SH_DEVICE_LED, 0.3, SCHEDULE_NOT_AVLB)
+        time.sleep(1)
+
+        _log.debug('change led level 0.6')        
+        self.setShDeviceLevel(SH_DEVICE_LED, 0.6, SCHEDULE_NOT_AVLB)
+        time.sleep(1)
+
+        _log.debug('change led level 0.9')        
+        self.setShDeviceLevel(SH_DEVICE_LED, 0.9, SCHEDULE_NOT_AVLB)
+        time.sleep(1)
+        
         _log.debug('switch off led')
         self.switchShDevice(SH_DEVICE_LED, SH_DEVICE_STATE_OFF, SCHEDULE_NOT_AVLB)
         time.sleep(1)
+        
+        return
 
+    def testFan(self):
         _log.debug('switch on fan')
         self.switchShDevice(SH_DEVICE_FAN, SH_DEVICE_STATE_ON, SCHEDULE_NOT_AVLB)
         time.sleep(1)
+        
+        _log.debug('change fan level 0.3')        
+        self.setShDeviceLevel(SH_DEVICE_FAN, 0.3, SCHEDULE_NOT_AVLB)
+        time.sleep(1)
+
+        _log.debug('change fan level 0.6')        
+        self.setShDeviceLevel(SH_DEVICE_FAN, 0.6, SCHEDULE_NOT_AVLB)
+        time.sleep(1)
+
+        _log.debug('change fan level 0.9')        
+        self.setShDeviceLevel(SH_DEVICE_FAN, 0.9, SCHEDULE_NOT_AVLB)
+        time.sleep(1)
+        
         _log.debug('switch off fan')
         self.switchShDevice(SH_DEVICE_FAN, SH_DEVICE_STATE_OFF, SCHEDULE_NOT_AVLB)
         time.sleep(1)
 
-        _log.debug("EOF Testing")
-        
         return
-
+        
     def switchShDevice(self, deviceId, state, schdExist):
         #_log.debug('switchShDevice()')
 
@@ -170,7 +236,7 @@ class SmartHub(Agent):
         if schdExist == SCHEDULE_AVLB: 
             self.rpc_switchShDevice(deviceId, state);
         elif schdExist == SCHEDULE_NOT_AVLB:
-            result = self.getTaskSchedule('taskID_ShDevice' + str(deviceId))
+            result = self.getTaskSchedule('switchShDevice_' + str(deviceId))
             try:
                 if result['result'] == 'SUCCESS':
                     self.rpc_switchShDevice(deviceId, state);
@@ -267,7 +333,96 @@ class SmartHub(Agent):
         self.vip.pubsub.publish('pubsub', pubTopic, headers, pubMsg).get(timeout=5)
         
         return
+        
+    def setShDeviceLevel(self, deviceId, level, schdExist):
+        #_log.debug('setShDeviceLevel()')
+        
+        if deviceId != SH_DEVICE_LED and \
+                deviceId != SH_DEVICE_FAN :
+            _log.exception ("not a valid device to change level, deviceId: " + str(deviceId))
+            return
 
+        if self._shDevicesLevel[deviceId] == level:
+            _log.debug('same level, do nothing')
+            return
+
+        if schdExist == SCHEDULE_AVLB: 
+            self.rpc_setShDeviceLevel(deviceId, level);
+        elif schdExist == SCHEDULE_NOT_AVLB:
+            result = self.getTaskSchedule('setShDeviceLevel_' + str(deviceId))
+            try:
+                if result['result'] == 'SUCCESS':
+                    self.rpc_setShDeviceLevel(deviceId, level);
+            except Exception as e:
+                _log.exception ("Expection: no task schdl for changing device level")
+                #print(e)
+                return
+        else:
+            #do notthing
+            _log.exception ("not a valid param - schdExist: " + schdExist)
+            return
+        
+        return
+        
+    def rpc_getShDeviceLevel(self, deviceId):
+        if deviceId == SH_DEVICE_LED:
+            endPoint = 'LEDPwmDuty'
+        elif deviceId == SH_DEVICE_FAN:
+            endPoint = 'FanPwmDuty'
+        else :
+            _log.exception ("not a valid device to change level, deviceId: " + str(deviceId))
+            return
+        device_level = self.vip.rpc.call(
+                'platform.actuator','get_point',
+                'iiit/cbs/smarthub/' + endPoint).get(timeout=1)
+        return float(device_level)
+        
+    def rpc_setShDeviceLevel(self, deviceId, level):
+        if deviceId == SH_DEVICE_LED:
+            endPoint = 'LEDPwmDuty'
+        elif deviceId == SH_DEVICE_FAN:
+            endPoint = 'FanPwmDuty'
+        else :
+            _log.exception ("not a valid device to change level, deviceId: " + str(deviceId))
+            return
+        result = self.vip.rpc.call(
+                'platform.actuator', 
+                'set_point',
+                self._agent_id, 
+                'iiit/cbs/smarthub/' + endPoint,
+                level).get(timeout=1)
+        #print("Set result", result)
+        #_log.debug('OK call updateShDeviceLevel()')
+        self.updateShDeviceLevel(deviceId, endPoint,level)
+        return
+
+    def updateShDeviceLevel(self, deviceId, endPoint, level):
+        #_log.debug('updateShDeviceLevel()')
+        
+        device_level = self.rpc_getShDeviceLevel(deviceId)
+        #check if the level really updated at the h/w, only then proceed with new level
+        if level == device_level:
+            self._shDevicesLevel[deviceId] = level
+            self.publishShDeviceLevel(deviceId, level)
+            
+        _log.debug('Current level, ' + endPoint + ': ' + "{0:0.4f}".format( device_level))
+            
+        return
+
+    def publishShDeviceLevel(self, deviceId, level):
+        if deviceId == SH_DEVICE_LED:
+            pubTopic = self.ledLevel_point
+        elif deviceId == SH_DEVICE_FAN:
+            pubTopic = self.fanLevel_point
+        else :
+            _log.exception ("not a valid device to change level, deviceId: " + str(deviceId))
+            return
+
+        pubMsg = [level,{'units': 'duty', 'tz': 'UTC', 'type': 'float'}]
+        self.publishToBus(pubTopic, pubMsg)
+        
+        return
+                
 def main(argv=sys.argv):
     '''Main method called by the eggsecutable.'''
     try:
