@@ -105,7 +105,10 @@ class SmartHub(Agent):
     '''
     _shDevicesState = [0, 0, 0, 0, 0, 0, 0]
     _shDevicesLevel = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
-    
+    _shDevicesPP_th = [ 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
+    _price_point_previous = 0.4 
+    _price_point_current = 0.4 
+
     def __init__(self, config_path, **kwargs):
         super(SmartHub, self).__init__(**kwargs)
         _log.debug("vip_identity: " + self.core.identity)
@@ -430,7 +433,47 @@ class SmartHub(Agent):
             return        
         
         return
+    
+    @PubSub.subscribe('pubsub','prices/PricePoint')
+    def onNewPrice(self, peer, sender, bus,  topic, headers, message):
+        if sender == 'pubsub.compat':
+            message = compat.unpack_legacy_message(headers, message)
+
+        new_price_point = message[0]
+        _log.debug ( "*** New Price Point: {0:.2f} ***".format(new_price_point))
         
+        if self._price_point_current != new_price_point:
+            self.processNewPricePoint(new_price_point)
+
+    def processNewPricePoint(self, new_price_point):
+        self._price_point_previous = self._price_point_current
+        self._price_point_current = new_price_point
+
+        self.applyPricingPolicy(SH_DEVICE_LED)
+        self.applyPricingPolicy(SH_DEVICE_FAN)
+
+    def applyPricingPolicy(self, deviceId):
+        shDevicesPP_th = self._shDevicesPP_th[deviceId]
+        if self._price_point_current > shDevicesPP_th: 
+            if self._shDevicesState[deviceId] == SH_DEVICE_STATE_ON:
+                _log.info(_getEndPoint(deviceId, AT_GET_STATE) \
+                            + 'Current price point < threshold' \
+                            + '({0:.2f}), '.format(plug_pp_th) \
+                            + 'Switching-Off Power' \
+                            )
+                self.setShDeviceState(deviceId, SH_DEVICE_STATE_OFF, SCHEDULE_NOT_AVLB)
+            #else:
+                #do nothing
+        else:
+            _log.info(_getEndPoint(deviceId, AT_GET_STATE) \
+                        + 'Current price point < threshold' \
+                        + '({0:.2f}), '.format(plug_pp_th) \
+                        + 'Switching-On Power' \
+                        )
+            self.setShDeviceState(deviceId, SH_DEVICE_STATE_ON, SCHEDULE_NOT_AVLB)
+            
+        return
+    
     def rpc_getShDeviceState(self, deviceId):
         if not self._validDeviceAction(deviceId,AT_GET_STATE):
             _log.exception ("not a valid device to get state, deviceId: " + str(deviceId))
