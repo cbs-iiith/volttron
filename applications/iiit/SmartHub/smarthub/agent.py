@@ -54,6 +54,14 @@ E_UNKNOWN_DEVICE = -1
 E_UNKNOWN_STATE = -2
 E_UNKNOWN_LEVEL = -3
 
+#action types
+AT_GET_STATE = 321
+AT_GET_LEVEL = 322
+AT_SET_STATE = 323
+AT_SET_LEVEL = 324
+AT_PUB_LEVEL = 325
+AT_PUB_STATE = 326
+
 utils.setup_logging()
 _log = logging.getLogger(__name__)
 __version__ = '0.1'
@@ -534,7 +542,67 @@ class SmartHub(Agent):
         self.vip.pubsub.publish('pubsub', pubTopic, headers, pubMsg).get(timeout=5)
         
         return
-                
+        
+    def _validDeviceAction(self, deviceId, actionType):
+        if actionType not in [ \
+                                AT_GET_STATE, \
+                                AT_GET_LEVEL, \
+                                AT_SET_STATE, \
+                                AT_SET_LEVEL, \
+                                AT_PUB_LEVEL, \
+                                AT_PUB_STATE
+                                ]:
+            return False
+        
+        if actionType == AT_GET_STATE :
+            if deviceId in [ \
+                            SH_DEVICE_LED_DEBUG, \
+                            SH_DEVICE_LED, \
+                            SH_DEVICE_FAN \
+                            ]:
+                return True
+        elif actionType ==  AT_GET_LEVEL :
+            if deviceId in [ \
+                            SH_DEVICE_LED, \
+                            SH_DEVICE_FAN, \
+                            SH_DEVICE_S_LUX, \
+                            SH_DEVICE_S_RH, \
+                            SH_DEVICE_S_TEMP, \
+                            SH_DEVICE_S_CO2 \
+                            ]:
+                return True
+        elif actionType == AT_SET_STATE :
+            if deviceId in [ \
+                            SH_DEVICE_LED_DEBUG, \
+                            SH_DEVICE_LED, \
+                            SH_DEVICE_FAN \
+                            ]:
+                return True
+        elif actionType == AT_SET_LEVEL :
+            if deviceId in [ \
+                            SH_DEVICE_LED, \
+                            SH_DEVICE_FAN \
+                            ]:
+                return True
+        elif actionType == AT_PUB_LEVEL :
+            if deviceId in [ \
+                            SH_DEVICE_LED, \
+                            SH_DEVICE_FAN, \
+                            SH_DEVICE_S_LUX, \
+                            SH_DEVICE_S_RH, \
+                            SH_DEVICE_S_TEMP, \
+                            SH_DEVICE_S_CO2 \
+                            ]:
+                return True
+        elif actionType == AT_PUB_STATE :
+            if deviceId in [ \
+                            SH_DEVICE_LED_DEBUG, \
+                            SH_DEVICE_LED, \
+                            SH_DEVICE_FAN \
+                            ]:
+                return True
+        return False
+        
 def main(argv=sys.argv):
     '''Main method called by the eggsecutable.'''
     try:
