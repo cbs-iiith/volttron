@@ -42,9 +42,17 @@ SH_DEVICE_STATE_OFF = 0
 SH_DEVICE_LED_DEBUG = 0
 SH_DEVICE_LED = 1
 SH_DEVICE_FAN = 2
+SH_DEVICE_S_LUX = 3
+SH_DEVICE_S_RH = 4
+SH_DEVICE_S_TEMP = 5
+SH_DEVICE_S_CO2 = 6
 
 SCHEDULE_AVLB = 1
 SCHEDULE_NOT_AVLB = 0
+
+E_UNKNOWN_DEVICE = -1
+E_UNKNOWN_STATE = -2
+E_UNKNOWN_LEVEL = -3
 
 utils.setup_logging()
 _log = logging.getLogger(__name__)
@@ -81,10 +89,14 @@ class SmartHub(Agent):
     '''
         SH_DEVICE_LED_DEBUG = 0 only state, no level
         SH_DEVICE_LED = 1       both state and level
-        SH_DEVICE_FAN = 2       both satet and level
+        SH_DEVICE_FAN = 2       both state and level
+        SH_DEVICE_S_LUX = 3     only level
+        SH_DEVICE_S_RH = 4      only level
+        SH_DEVICE_S_TEMP = 5    only level
+        SH_DEVICE_S_CO2 = 6     only level
     '''
-    _shDevicesState = [0, 0, 0]
-    _shDevicesLevel = [0, 0, 0]
+    _shDevicesState = [0, 0, 0, 0, 0, 0, 0]
+    _shDevicesLevel = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
     
     def __init__(self, config_path, **kwargs):
         super(SmartHub, self).__init__(**kwargs)
@@ -102,7 +114,6 @@ class SmartHub(Agent):
         self._agent_id = self.config['agentid']
         
         return
-
     @Core.receiver('onstart')            
     def startup(self, sender, **kwargs):
         self.runSmartHubTest()
@@ -111,25 +122,22 @@ class SmartHub(Agent):
         self.setShDeviceState(SH_DEVICE_LED_DEBUG, SH_DEVICE_STATE_ON, SCHEDULE_NOT_AVLB)
         
         return  
-
     @Core.receiver('onstop')
     def onstop(self, sender, **kwargs):
         _log.debug('onstop()')
         self.setShDeviceState(SH_DEVICE_LED_DEBUG, SH_DEVICE_STATE_OFF, SCHEDULE_NOT_AVLB)
         
         return
-
     @Core.receiver('onfinish')
     def onfinish(self, sender, **kwargs):
         _log.debug('onfinish()')
         self.setShDeviceState(SH_DEVICE_LED_DEBUG, SH_DEVICE_STATE_OFF, SCHEDULE_NOT_AVLB)
         
-        return
+        return 
         
     def _configGetInitValues(self):
         
         return
-
     def _configGetPoints(self):
         self.ledDebugState_point = self.config.get('ledDebugState_point',
                                             'smarthub/leddebugstate')    
@@ -137,24 +145,30 @@ class SmartHub(Agent):
                                             'smarthub/ledstate')    
         self.fanState_point = self.config.get('fanState_point',
                                             'smarthub/fanstate')    
-        self.ledLevel_point = self.config.get('ledState_point',
+        self.ledLevel_point = self.config.get('ledLevel_point',
                                             'smarthub/ledlevel')    
-        self.fanLevel_point = self.config.get('fanState_point',
+        self.fanLevel_point = self.config.get('fanLevel_point',
                                             'smarthub/fanlevel')    
-        
+        self.sensorLuxLevel_point = self.config.get('sensorLuxLevel_point',
+                                            'smarthub/sensors/luxlevel')    
+        self.sensorRhLevel_point = self.config.get('sensorRhLevel_point',
+                                            'smarthub/sensors/rhlevel')    
+        self.sensorTempLevel_point = self.config.get('sensorTempLevel_point',
+                                            'smarthub/sensors/templevel')    
+        self.sensorCo2Level_point = self.config.get('sensorCo2Level_point',
+                                            'smarthub/sensors/co2level')
+                                            
         return
-
     def runSmartHubTest(self):
         _log.debug("Running : runSmartHubTest()...")
         
         self.testLedDebug()
         self.testLed()
         self.testFan()
-
+        self.testSensors()
         _log.debug("EOF Testing")
         
-        return
-    
+        return   
     def testLedDebug(self):
         _log.debug('switch on debug led')
         self.setShDeviceState(SH_DEVICE_LED_DEBUG, SH_DEVICE_STATE_ON, SCHEDULE_NOT_AVLB)
@@ -181,7 +195,6 @@ class SmartHub(Agent):
         time.sleep(1)
         
         return
-
     def testLed(self):
         _log.debug('switch on led')
         self.setShDeviceState(SH_DEVICE_LED, SH_DEVICE_STATE_ON, SCHEDULE_NOT_AVLB)
@@ -204,7 +217,6 @@ class SmartHub(Agent):
         time.sleep(1)
         
         return
-
     def testFan(self):
         _log.debug('switch on fan')
         self.setShDeviceState(SH_DEVICE_FAN, SH_DEVICE_STATE_ON, SCHEDULE_NOT_AVLB)
@@ -227,21 +239,74 @@ class SmartHub(Agent):
         time.sleep(1)
 
         return
-
-    def getShDeviceState(self, deviceId, schdExist):
-        
+    def testSensors(self):
         return
+        
+    def getShDeviceState(self, deviceId, schdExist):
+        state = E_UNKNOWN_STATE
+        if deviceId not in [SH_DEVICE_LED_DEBUG, \
+                            SH_DEVICE_LED, \
+                            SH_DEVICE_FAN \
+                            ] :
+            _log.exception ("not a valid device to get state, deviceId: " + str(deviceId))
+            return state
+            
+        if schdExist == SCHEDULE_AVLB: 
+            state = self.rpc_getShDeviceState(deviceId);
+        elif schdExist == SCHEDULE_NOT_AVLB:
+            result = self._getTaskSchedule('getShDeviceState_' + str(deviceId))
+            try:
+                if result['result'] == 'SUCCESS':
+                    state = self.rpc_getShDeviceState(deviceId);
+            except Exception as e:
+                _log.exception ("Expection: no task schdl for getting device state")
+                #print(e)
+                return state
+        else:
+            #do notthing
+            _log.exception ("not a valid param - schdExist: " + schdExist)
+            return state
+        
+        return state
         
     def getShDeviceLevel(self, deviceId, schdExist):
+        level = E_UNKNOWN_LEVEL
+        if deviceId not in [SH_DEVICE_LED, \
+                            SH_DEVICE_FAN, \
+                            SH_DEVICE_S_LUX, \
+                            SH_DEVICE_S_RH, \
+                            SH_DEVICE_S_TEMP, \
+                            SH_DEVICE_S_CO2, \
+                            ] :
+            _log.exception ("not a valid device to get level, deviceId: " + str(deviceId))
+            return level  
+            
+        if schdExist == SCHEDULE_AVLB: 
+            level = self.rpc_getShDeviceLevel(deviceId);
+        elif schdExist == SCHEDULE_NOT_AVLB:
+            result = self._getTaskSchedule('getShDeviceLevel_' + str(deviceId))
+            try:
+                if result['result'] == 'SUCCESS':
+                    level = self.rpc_getShDeviceLevel(deviceId);
+            except Exception as e:
+                _log.exception ("Expection: no task schdl for getting device level")
+                #print(e)
+                return level
+        else:
+            #do notthing
+            _log.exception ("not a valid param - schdExist: " + schdExist)
+            return level
         
-        return
-        
-    def getShSensorData(self, sensorId, schdExist):
-        
-        return
-        
+        return level
+                
     def setShDeviceState(self, deviceId, state, schdExist):
         #_log.debug('setShDeviceState()')
+        if deviceId not in [SH_DEVICE_LED_DEBUG, \
+                            SH_DEVICE_LED, \
+                            SH_DEVICE_FAN \
+                            ] :
+            _log.exception ("not a valid device to change state, deviceId: " + str(deviceId))
+            return
 
         if self._shDevicesState[deviceId] == state:
             _log.debug('same state, do nothing')
@@ -294,69 +359,8 @@ class SmartHub(Agent):
             return
         
         return
-                        
-    def _getTaskSchedule(self, taskId):
-        try: 
-            start = str(datetime.datetime.now())
-            end = str(datetime.datetime.now() 
-                    + datetime.timedelta(milliseconds=600))
-
-            msg = [
-                    ['iiit/cbs/smarthub',start,end]
-                    ]
-            result = self.vip.rpc.call(
-                    'platform.actuator', 
-                    'request_new_schedule',
-                    self._agent_id, 
-                    taskId,
-                    'HIGH',
-                    msg).get(timeout=1)
-            #print("schedule result", result)
-        except Exception as e:
-            _log.exception ("Could not contact actuator. Is it running?")
-            #print(e)
-            return        
-        return result
         
-    def rpc_setShDeviceState(self, deviceId, state):
-        if deviceId == SH_DEVICE_LED_DEBUG:
-            endPoint = 'LEDDebug'
-        elif deviceId == SH_DEVICE_LED:
-            endPoint = 'LED'
-        elif deviceId == SH_DEVICE_FAN:
-            endPoint = 'Fan'
-        else :
-            _log.exception('not a valid deviceId')
-            return
-        result = self.vip.rpc.call(
-                'platform.actuator', 
-                'set_point',
-                self._agent_id, 
-                'iiit/cbs/smarthub/' + endPoint,
-                state).get(timeout=1)
-        #print("Set result", result)
-        #_log.debug('OK call _updateShDeviceState()')
-        self._updateShDeviceState(deviceId, endPoint,state)
-        return
-
-    def _updateShDeviceState(self, deviceId, endPoint, state):
-        #_log.debug('_updateShDeviceState()')
-        headers = { 'requesterID': self._agent_id, }
-        
-        device_status = self.vip.rpc.call(
-                'platform.actuator','get_point',
-                'iiit/cbs/smarthub/' + endPoint).get(timeout=1)
-                
-        if state == int(device_status):
-            self._shDevicesState[deviceId] = state
-            self._publishShDeviceState(deviceId, state)
-            
-        if self._shDevicesState[deviceId] == SH_DEVICE_STATE_ON:
-            _log.debug('Current State: ' + endPoint + ' Switched ON!!!')
-        else:
-            _log.debug('Current State: ' + endPoint + ' Switched OFF!!!')
-
-    def _publishShDeviceState(self, deviceId, state):
+    def publishShDeviceState(self, deviceId, state):
         if deviceId == SH_DEVICE_LED_DEBUG:
             pubTopic = self.ledDebugState_point
         elif deviceId == SH_DEVICE_LED:
@@ -372,21 +376,79 @@ class SmartHub(Agent):
         
         return
         
-    def _publishToBus(self, pubTopic, pubMsg):
-        now = datetime.datetime.utcnow().isoformat(' ') + 'Z'
-        headers = {headers_mod.DATE: now}          
-        #Publish messages
-        self.vip.pubsub.publish('pubsub', pubTopic, headers, pubMsg).get(timeout=5)
+    def publishShDeviceLevel(self, deviceId, level):
+        if deviceId == SH_DEVICE_LED:
+            pubTopic = self.ledLevel_point
+        elif deviceId == SH_DEVICE_FAN:
+            pubTopic = self.fanLevel_point
+        elif deviceId ==SH_DEVICE_S_LUX:
+            pubTopic = self.sensorLuxLevel_point
+        elif deviceId ==SH_DEVICE_S_RH:
+            pubTopic = self.sensorRhLevel_point
+        elif deviceId ==SH_DEVICE_S_TEMP:
+            pubTopic = self.sensorTempLevel_point
+        elif deviceId ==SH_DEVICE_S_CO2:
+            pubTopic = self.sensorCo2Level_point 
+        else :
+            _log.exception ("not a valid device to change level, deviceId: " + str(deviceId))
+            return
+
+        pubMsg = [level,{'units': 'duty', 'tz': 'UTC', 'type': 'float'}]
+        self._publishToBus(pubTopic, pubMsg)
         
         return
+               
+    def rpc_getShDeviceState(self, deviceId):
+        if deviceId == SH_DEVICE_LED_DEBUG:
+            endPoint = 'LEDDebug'
+        elif deviceId == SH_DEVICE_LED:
+            endPoint = 'LED'
+        elif deviceId == SH_DEVICE_FAN:
+            endPoint = 'Fan'
+        else :
+            _log.exception ("not a valid device to get state, deviceId: " + str(deviceId))
+            return
+        device_level = self.vip.rpc.call(
+                'platform.actuator','get_point',
+                'iiit/cbs/smarthub/' + endPoint).get(timeout=1)
+        return int(device_level)
 
+    def rpc_setShDeviceState(self, deviceId, state):
+        if deviceId == SH_DEVICE_LED_DEBUG:
+            endPoint = 'LEDDebug'
+        elif deviceId == SH_DEVICE_LED:
+            endPoint = 'LED'
+        elif deviceId == SH_DEVICE_FAN:
+            endPoint = 'Fan'
+        else :
+            _log.exception ("not a valid device to change state, deviceId: " + str(deviceId))
+            return
+        result = self.vip.rpc.call(
+                'platform.actuator', 
+                'set_point',
+                self._agent_id, 
+                'iiit/cbs/smarthub/' + endPoint,
+                state).get(timeout=1)
+        #print("Set result", result)
+        #_log.debug('OK call _updateShDeviceState()')
+        self._updateShDeviceState(deviceId, endPoint,state)
+        return
+        
     def rpc_getShDeviceLevel(self, deviceId):
         if deviceId == SH_DEVICE_LED:
             endPoint = 'LEDPwmDuty'
         elif deviceId == SH_DEVICE_FAN:
             endPoint = 'FanPwmDuty'
+        elif deviceId == SH_DEVICE_S_LUX:
+            endPoint = 'SensorLux'
+        elif deviceId == SH_DEVICE_S_RH:
+            endPoint = 'SensorRh'
+        elif deviceId == SH_DEVICE_S_TEMP:
+            endPoint = 'SensorTemp'
+        elif deviceId == SH_DEVICE_S_CO2:
+            endPoint = 'SensorCO2'
         else :
-            _log.exception ("not a valid device to change level, deviceId: " + str(deviceId))
+            _log.exception ("not a valid device to get level, deviceId: " + str(deviceId))
             return
         device_level = self.vip.rpc.call(
                 'platform.actuator','get_point',
@@ -411,7 +473,47 @@ class SmartHub(Agent):
         #_log.debug('OK call _updateShDeviceLevel()')
         self._updateShDeviceLevel(deviceId, endPoint,level)
         return
+        
+    def _getTaskSchedule(self, taskId):
+        try: 
+            start = str(datetime.datetime.now())
+            end = str(datetime.datetime.now() 
+                    + datetime.timedelta(milliseconds=600))
 
+            msg = [
+                    ['iiit/cbs/smarthub',start,end]
+                    ]
+            result = self.vip.rpc.call(
+                    'platform.actuator', 
+                    'request_new_schedule',
+                    self._agent_id, 
+                    taskId,
+                    'HIGH',
+                    msg).get(timeout=1)
+            #print("schedule result", result)
+        except Exception as e:
+            _log.exception ("Could not contact actuator. Is it running?")
+            #print(e)
+            return        
+        return result
+
+    def _updateShDeviceState(self, deviceId, endPoint, state):
+        #_log.debug('_updateShDeviceState()')
+        headers = { 'requesterID': self._agent_id, }
+        
+        device_state = self.rpc_getShDeviceState(deviceId)
+        #check if the state really updated at the h/w, only then proceed with new state
+        if state == device_state:
+            self._shDevicesState[deviceId] = state
+            self._publishShDeviceState(deviceId, state)
+            
+        if self._shDevicesState[deviceId] == SH_DEVICE_STATE_ON:
+            _log.debug('Current State: ' + endPoint + ' Switched ON!!!')
+        else:
+            _log.debug('Current State: ' + endPoint + ' Switched OFF!!!')
+            
+        return
+        
     def _updateShDeviceLevel(self, deviceId, endPoint, level):
         #_log.debug('_updateShDeviceLevel()')
         
@@ -424,18 +526,12 @@ class SmartHub(Agent):
         _log.debug('Current level, ' + endPoint + ': ' + "{0:0.4f}".format( device_level))
             
         return
-
-    def _publishShDeviceLevel(self, deviceId, level):
-        if deviceId == SH_DEVICE_LED:
-            pubTopic = self.ledLevel_point
-        elif deviceId == SH_DEVICE_FAN:
-            pubTopic = self.fanLevel_point
-        else :
-            _log.exception ("not a valid device to change level, deviceId: " + str(deviceId))
-            return
-
-        pubMsg = [level,{'units': 'duty', 'tz': 'UTC', 'type': 'float'}]
-        self._publishToBus(pubTopic, pubMsg)
+        
+    def _publishToBus(self, pubTopic, pubMsg):
+        now = datetime.datetime.utcnow().isoformat(' ') + 'Z'
+        headers = {headers_mod.DATE: now}          
+        #Publish messages
+        self.vip.pubsub.publish('pubsub', pubTopic, headers, pubMsg).get(timeout=5)
         
         return
                 
