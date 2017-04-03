@@ -129,6 +129,10 @@ class SmartHub(Agent):
         _log.debug('switch on debug led')
         self.setShDeviceState(SH_DEVICE_LED_DEBUG, SH_DEVICE_STATE_ON, SCHEDULE_NOT_AVLB)
         
+        #perodically publish plug threshold price point to volttron bus
+        self.core.periodic(self._period_read_data, self.publishSensorData, wait=None)
+
+        
         return  
     @Core.receiver('onstop')
     def onstop(self, sender, **kwargs):
@@ -144,6 +148,7 @@ class SmartHub(Agent):
         return 
         
     def _configGetInitValues(self):
+        self._period_read_data = self.config['period_read_data']
         
         return
     def _configGetPoints(self):
@@ -400,7 +405,7 @@ class SmartHub(Agent):
         
         return
         
-    def publishShDeviceState(self, deviceId, state):
+    def _publishShDeviceState(self, deviceId, state):
         if not self._validDeviceAction(deviceId, AT_PUB_STATE):
             _log.exception ("not a valid device to pub state, deviceId: " + str(deviceId))
             return
@@ -410,7 +415,7 @@ class SmartHub(Agent):
 
         return
         
-    def publishShDeviceLevel(self, deviceId, level):
+    def _publishShDeviceLevel(self, deviceId, level):
         if not self._validDeviceAction(deviceId, AT_PUB_LEVEL):
             _log.exception ("not a valid device to pub level, deviceId: " + str(deviceId))
             return
@@ -419,7 +424,33 @@ class SmartHub(Agent):
         self._publishToBus(pubTopic, pubMsg)
         
         return
-               
+        
+    def publishSensorData(self) :
+        result = self._getTaskSchedule('publishSensorData', 300)
+        try:
+            if result['result'] == 'SUCCESS':
+                lux_level = self.getShDeviceLevel(SH_DEVICE_S_LUX, SCHEDULE_AVLB)
+                rh_level = self.getShDeviceLevel(SH_DEVICE_S_RH, SCHEDULE_AVLB)
+                temp_level = self.getShDeviceLevel(SH_DEVICE_S_TEMP, SCHEDULE_AVLB)
+                co2_level = self.getShDeviceLevel(SH_DEVICE_S_CO2, SCHEDULE_AVLB)
+                
+                _log.debug("lux Level: " + "{0:0.4f}".format(lux_level) \
+                            + ", rh Level: " + "{0:0.4f}".format(rh_level) \
+                            + ", temp Level: " + "{0:0.4f}".format(temp_level) \
+                            + ", co2 Level: " + "{0:0.4f}".format(co2_level)
+                            )
+                
+                self._publishShDeviceLevel(SH_DEVICE_S_LUX, lux_level)
+                self._publishShDeviceLevel(SH_DEVICE_S_RH, rh_level)
+                self._publishShDeviceLevel(SH_DEVICE_S_TEMP, temp_level)
+                self._publishShDeviceLevel(SH_DEVICE_S_CO2, co2_level)
+        except Exception as e:
+            _log.exception ("Expection: no task schdl for publishSensorData()")
+            #print(e)
+            return        
+        
+        return
+        
     def rpc_getShDeviceState(self, deviceId):
         if not self._validDeviceAction(deviceId,AT_GET_STATE):
             _log.exception ("not a valid device to get state, deviceId: " + str(deviceId))
@@ -508,7 +539,7 @@ class SmartHub(Agent):
         #check if the state really updated at the h/w, only then proceed with new state
         if state == device_state:
             self._shDevicesState[deviceId] = state
-            self.publishShDeviceState(deviceId, state)
+            self._publishShDeviceState(deviceId, state)
             
         if self._shDevicesState[deviceId] == SH_DEVICE_STATE_ON:
             _log.debug('Current State: ' + endPoint + ' Switched ON!!!')
