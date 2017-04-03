@@ -174,6 +174,7 @@ class SmartHub(Agent):
         self.testLed()
         self.testFan()
         self.testSensors()
+        self.testSensors_2()
         _log.debug("EOF Testing")
         
         return   
@@ -248,6 +249,51 @@ class SmartHub(Agent):
 
         return
     def testSensors(self):
+        _log.debug('test lux sensor')
+        lux_level = self.getShDeviceLevel(SH_DEVICE_S_LUX, SCHEDULE_NOT_AVLB)
+        _log.debug("lux Level: " + "{0:0.4f}".format(lux_level))
+        time.sleep(1)
+        
+        _log.debug('test rh sensor')
+        rh_level = self.getShDeviceLevel(SH_DEVICE_S_RH, SCHEDULE_NOT_AVLB)
+        _log.debug("rh Level: " + "{0:0.4f}".format(rh_level))
+        time.sleep(1)
+        
+        _log.debug('test temp sensor')
+        temp_level = self.getShDeviceLevel(SH_DEVICE_S_TEMP, SCHEDULE_NOT_AVLB)
+        _log.debug("temp Level: " + "{0:0.4f}".format(temp_level))
+        time.sleep(1)
+        
+        _log.debug('test co2 sensor')
+        co2_level = self.getShDeviceLevel(SH_DEVICE_S_CO2, SCHEDULE_NOT_AVLB)
+        _log.debug("co2 Level: " + "{0:0.4f}".format(co2_level))
+        time.sleep(1)
+        
+        return
+    def testSensors_2(self):
+        result = self._getTaskSchedule('testSensors_2', 300)
+        try:
+            if result['result'] == 'SUCCESS':
+                _log.debug('test lux sensor')
+                lux_level = self.getShDeviceLevel(SH_DEVICE_S_LUX, SCHEDULE_AVLB)
+                _log.debug("lux Level: " + "{0:0.4f}".format(lux_level))
+                
+                _log.debug('test rh sensor')
+                rh_level = self.getShDeviceLevel(SH_DEVICE_S_RH, SCHEDULE_AVLB)
+                _log.debug("rh Level: " + "{0:0.4f}".format(rh_level))
+                
+                _log.debug('test temp sensor')
+                temp_level = self.getShDeviceLevel(SH_DEVICE_S_TEMP, SCHEDULE_AVLB)
+                _log.debug("temp Level: " + "{0:0.4f}".format(temp_level))
+                
+                _log.debug('test co2 sensor')
+                co2_level = self.getShDeviceLevel(SH_DEVICE_S_CO2, SCHEDULE_AVLB)
+                _log.debug("co2 Level: " + "{0:0.4f}".format(co2_level))
+        except Exception as e:
+            _log.exception ("Expection: no task schdl for testSensors_2()")
+            #print(e)
+            return
+        
         return
         
     def getShDeviceState(self, deviceId, schdExist):
@@ -275,6 +321,7 @@ class SmartHub(Agent):
         return state
         
     def getShDeviceLevel(self, deviceId, schdExist):
+        #_log.debug('getShDeviceLevel()')
         level = E_UNKNOWN_LEVEL
         if not self._validDeviceAction( deviceId, AT_GET_LEVEL) :
             _log.exception ("not a valid device to get level, deviceId: " + str(deviceId))
@@ -400,10 +447,12 @@ class SmartHub(Agent):
         return
         
     def rpc_getShDeviceLevel(self, deviceId):
+        #_log.debug("rpc_getShDeviceLevel()")
         if not self._validDeviceAction(deviceId, AT_GET_LEVEL):
             _log.exception ("not a valid device to get level, deviceId: " + str(deviceId))
             return
         endPoint = self._getEndPoint(deviceId, AT_GET_LEVEL)
+        #_log.debug("endPoint: " + endPoint)
         device_level = self.vip.rpc.call(
                 'platform.actuator','get_point',
                 'iiit/cbs/smarthub/' + endPoint).get(timeout=1)
@@ -426,11 +475,13 @@ class SmartHub(Agent):
         self._updateShDeviceLevel(deviceId, endPoint,level)
         return
         
-    def _getTaskSchedule(self, taskId):
+    def _getTaskSchedule(self, taskId, time_ms=None):
+        #_log.debug("_getTaskSchedule()")
+        self.time_ms = 600 if time_ms is None else time_ms
         try: 
             start = str(datetime.datetime.now())
             end = str(datetime.datetime.now() 
-                    + datetime.timedelta(milliseconds=600))
+                    + datetime.timedelta(milliseconds=self.time_ms))
 
             msg = [
                     ['iiit/cbs/smarthub',start,end]
@@ -513,6 +564,7 @@ class SmartHub(Agent):
         return ""
         
     def _getEndPoint(self, deviceId, actionType):
+        #_log.debug('_getEndPoint()')
         if  actionType == AT_SET_LEVEL :
             if deviceId == SH_DEVICE_LED :
                 return "LEDPwmDuty"
@@ -546,6 +598,7 @@ class SmartHub(Agent):
         return ""
         
     def _validDeviceAction(self, deviceId, actionType):
+        #_log.debug('_validDeviceAction()')
         if actionType not in [ \
                                 AT_GET_STATE, \
                                 AT_GET_LEVEL, \
