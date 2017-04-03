@@ -404,27 +404,7 @@ class SmartHub(Agent):
             return
         
         return
-        
-    def _publishShDeviceState(self, deviceId, state):
-        if not self._validDeviceAction(deviceId, AT_PUB_STATE):
-            _log.exception ("not a valid device to pub state, deviceId: " + str(deviceId))
-            return
-        pubTopic = self._getPubTopic(deviceId, AT_PUB_STATE)
-        pubMsg = [state,{'units': 'On/Off', 'tz': 'UTC', 'type': 'int'}]
-        self._publishToBus(pubTopic, pubMsg)
-
-        return
-        
-    def _publishShDeviceLevel(self, deviceId, level):
-        if not self._validDeviceAction(deviceId, AT_PUB_LEVEL):
-            _log.exception ("not a valid device to pub level, deviceId: " + str(deviceId))
-            return
-        pubTopic = self._getPubTopic(deviceId, AT_PUB_LEVEL)
-        pubMsg = [level,{'units': 'duty', 'tz': 'UTC', 'type': 'float'}]
-        self._publishToBus(pubTopic, pubMsg)
-        
-        return
-        
+              
     def publishSensorData(self) :
         result = self._getTaskSchedule('publishSensorData', 300)
         try:
@@ -559,6 +539,26 @@ class SmartHub(Agent):
             
         _log.debug('Current level, ' + endPoint + ': ' + "{0:0.4f}".format( device_level))
             
+        return
+        
+    def _publishShDeviceState(self, deviceId, state):
+        if not self._validDeviceAction(deviceId, AT_PUB_STATE):
+            _log.exception ("not a valid device to pub state, deviceId: " + str(deviceId))
+            return
+        pubTopic = self._getPubTopic(deviceId, AT_PUB_STATE)
+        pubMsg = [state,{'units': 'On/Off', 'tz': 'UTC', 'type': 'int'}]
+        self._publishToBus(pubTopic, pubMsg)
+
+        return
+        
+    def _publishShDeviceLevel(self, deviceId, level):
+        if not self._validDeviceAction(deviceId, AT_PUB_LEVEL):
+            _log.exception ("not a valid device to pub level, deviceId: " + str(deviceId))
+            return
+        pubTopic = self._getPubTopic(deviceId, AT_PUB_LEVEL)
+        pubMsg = [level,{'units': 'duty', 'tz': 'UTC', 'type': 'float'}]
+        self._publishToBus(pubTopic, pubMsg)
+        
         return
         
     def _publishToBus(self, pubTopic, pubMsg):
