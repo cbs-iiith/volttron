@@ -101,16 +101,18 @@ class SmartHub(Agent):
     
     '''
         SH_DEVICE_LED_DEBUG = 0 only state, no level
-        SH_DEVICE_LED = 1       both state and level
-        SH_DEVICE_FAN = 2       both state and level
-        SH_DEVICE_S_LUX = 3     only level
-        SH_DEVICE_S_RH = 4      only level
-        SH_DEVICE_S_TEMP = 5    only level
-        SH_DEVICE_S_CO2 = 6     only level
+        SH_DEVICE_LED       = 1 both state and level
+        SH_DEVICE_FAN       = 2 both state and level
+        SH_DEVICE_FAN_SWING = 3 state only
+        SH_DEVICE_S_LUX     = 4 only level
+        SH_DEVICE_S_RH      = 5 only level
+        SH_DEVICE_S_TEMP    = 6 only level
+        SH_DEVICE_S_CO2     = 7 only level
+        SH_DEVICE_S_PIR     = 8 only level (binary on/off)
     '''
-    _shDevicesState = [0, 0, 0, 0, 0, 0, 0]
-    _shDevicesLevel = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
-    _shDevicesPP_th = [ 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
+    _shDevicesState = [0, 0, 0, 0, 0, 0, 0, 0, 0]
+    _shDevicesLevel = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+    _shDevicesPP_th = [ 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
     _price_point_previous = 0.4 
     _price_point_current = 0.4 
 
@@ -294,6 +296,11 @@ class SmartHub(Agent):
         _log.debug("co2 Level: " + "{0:0.4f}".format(co2_level))
         time.sleep(1)
         
+        _log.debug('test PIR sensor')
+        pir_level = self.getShDeviceLevel(SH_DEVICE_S_PIR, SCHEDULE_NOT_AVLB)
+        _log.debug("PIR Level: " + "{0:0.4f}".format(pir_level))
+        time.sleep(1)
+        
         return
     def testSensors_2(self):
         result = self._getTaskSchedule('testSensors_2', 300)
@@ -314,6 +321,10 @@ class SmartHub(Agent):
                 _log.debug('test co2 sensor')
                 co2_level = self.getShDeviceLevel(SH_DEVICE_S_CO2, SCHEDULE_AVLB)
                 _log.debug("co2 Level: " + "{0:0.4f}".format(co2_level))
+                
+                _log.debug('test pir sensor')
+                pir_level = self.getShDeviceLevel(SH_DEVICE_S_PIR, SCHEDULE_AVLB)
+                _log.debug("pir Level: " + "{0:0.4f}".format(pir_level))
         except Exception as e:
             _log.exception ("Expection: no task schdl for testSensors_2()")
             #print(e)
@@ -433,17 +444,20 @@ class SmartHub(Agent):
                 rh_level = self.getShDeviceLevel(SH_DEVICE_S_RH, SCHEDULE_AVLB)
                 temp_level = self.getShDeviceLevel(SH_DEVICE_S_TEMP, SCHEDULE_AVLB)
                 co2_level = self.getShDeviceLevel(SH_DEVICE_S_CO2, SCHEDULE_AVLB)
+                pir_level = self.getShDeviceLevel(SH_DEVICE_S_PIR, SCHEDULE_AVLB)
                 
                 _log.debug("lux Level: " + "{0:0.4f}".format(lux_level) \
                             + ", rh Level: " + "{0:0.4f}".format(rh_level) \
                             + ", temp Level: " + "{0:0.4f}".format(temp_level) \
-                            + ", co2 Level: " + "{0:0.4f}".format(co2_level)
+                            + ", co2 Level: " + "{0:0.4f}".format(co2_level) \
+                            + ", pir Level: " + "{0:0.4f}".format(pir_level) \
                             )
                 
                 self._publishShDeviceLevel(SH_DEVICE_S_LUX, lux_level)
                 self._publishShDeviceLevel(SH_DEVICE_S_RH, rh_level)
                 self._publishShDeviceLevel(SH_DEVICE_S_TEMP, temp_level)
                 self._publishShDeviceLevel(SH_DEVICE_S_CO2, co2_level)
+                self._publishShDeviceLevel(SH_DEVICE_S_PIR, pir_level)
         except Exception as e:
             _log.exception ("Expection: no task schdl for publishSensorData()")
             #print(e)
@@ -688,6 +702,8 @@ class SmartHub(Agent):
                 return self.sensorTempLevel_point
             elif deviceId ==SH_DEVICE_S_CO2:
                 return self.sensorCo2Level_point
+            elif deviceId ==SH_DEVICE_S_PIR:
+                return self.sensorPirLevel_point
         elif actionType == AT_PUB_THPP:
             if deviceId == SH_DEVICE_LED:
                 return self.ledThPP_point
@@ -716,6 +732,8 @@ class SmartHub(Agent):
                 return "SensorTemp"
             elif deviceId == SH_DEVICE_S_CO2 :
                 return "SensorCO2"
+            elif deviceId == SH_DEVICE_S_PIR :
+                return "SensorOccupancy"
         elif actionType in [ \
                             AT_GET_STATE, \
                             AT_SET_STATE \
@@ -759,7 +777,8 @@ class SmartHub(Agent):
                             SH_DEVICE_S_LUX, \
                             SH_DEVICE_S_RH, \
                             SH_DEVICE_S_TEMP, \
-                            SH_DEVICE_S_CO2 \
+                            SH_DEVICE_S_CO2, \
+                            SH_DEVICE_S_PIR \
                             ]:
                 return True
         elif actionType == AT_SET_STATE :
@@ -782,7 +801,8 @@ class SmartHub(Agent):
                             SH_DEVICE_S_LUX, \
                             SH_DEVICE_S_RH, \
                             SH_DEVICE_S_TEMP, \
-                            SH_DEVICE_S_CO2 \
+                            SH_DEVICE_S_CO2, \
+                            SH_DEVICE_S_PIR \
                             ]:
                 return True
         elif actionType == AT_PUB_STATE :
