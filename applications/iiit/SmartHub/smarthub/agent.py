@@ -569,7 +569,9 @@ class SmartHub(Agent):
         try:
             device_level = self.vip.rpc.call(
                     'platform.actuator','get_point',
-                    'iiit/cbs/smarthub/' + endPoint).get(timeout=1)
+                    'iiit/cbs/smarthub/' + endPoint).get(timeout=1 )
+        except RemoteError as re:
+            print(re)
         except Exception as e:
             _log.exception ("Expection: Could not contact actuator. Is it running?")
             #print(e)
@@ -605,7 +607,7 @@ class SmartHub(Agent):
         try:
             device_level = self.vip.rpc.call(
                     'platform.actuator','get_point',
-                    'iiit/cbs/smarthub/' + endPoint).get(timeout=1)
+                    'iiit/cbs/smarthub/' + endPoint).get(timeout=2)
             return float(device_level)
         except Exception as e:
             _log.exception ("Expection: Could not contact actuator. Is it running?")
@@ -676,11 +678,12 @@ class SmartHub(Agent):
         return
         
     def _updateShDeviceLevel(self, deviceId, endPoint, level):
-        #_log.debug('_updateShDeviceLevel()')
+        _log.debug('_updateShDeviceLevel()')
         
+        _log.debug('level {0:0.4f}'.format( level))
         device_level = self.rpc_getShDeviceLevel(deviceId)
         #check if the level really updated at the h/w, only then proceed with new level
-        if level == device_level:
+        if self._isclose(level, device_level, 1e-03):
             self._shDevicesLevel[deviceId] = level
             self._publishShDeviceLevel(deviceId, level)
             
@@ -699,6 +702,7 @@ class SmartHub(Agent):
         return
         
     def _publishShDeviceLevel(self, deviceId, level):
+        _log.debug('_publishShDeviceLevel()')
         if not self._validDeviceAction(deviceId, AT_PUB_LEVEL):
             _log.exception ("Expection: not a valid device to pub level, deviceId: " + str(deviceId))
             return
@@ -914,7 +918,12 @@ class SmartHub(Agent):
         except Exception as e:
             print(e)
             return jsonrpc.json_error('NA', UNHANDLED_EXCEPTION, e)
-            
+    
+    #refer to http://stackoverflow.com/questions/5595425/what-is-the-best-way-to-compare-floats-for-almost-equality-in-python
+    #comparing floats is mess
+    def _isclose(self, a, b, rel_tol=1e-09, abs_tol=0.0):
+        return abs(a-b) <= max(rel_tol * max(abs(a), abs(b)), abs_tol)
+    
 def main(argv=sys.argv):
     '''Main method called by the eggsecutable.'''
     try:
