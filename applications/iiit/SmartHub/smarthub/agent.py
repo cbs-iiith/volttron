@@ -136,7 +136,7 @@ class SmartHub(Agent):
         return
     @Core.receiver('onstart')            
     def startup(self, sender, **kwargs):
-        self.runSmartHubTest()
+        #self.runSmartHubTest()
         
         _log.debug('switch on debug led')
         self.setShDeviceState(SH_DEVICE_LED_DEBUG, SH_DEVICE_STATE_ON, SCHEDULE_NOT_AVLB)
@@ -543,18 +543,18 @@ class SmartHub(Agent):
         shDevicesPP_th = self._shDevicesPP_th[deviceId]
         if self._price_point_current > shDevicesPP_th: 
             if self._shDevicesState[deviceId] == SH_DEVICE_STATE_ON:
-                _log.info(_getEndPoint(deviceId, AT_GET_STATE) \
-                            + 'Current price point < threshold' \
-                            + '({0:.2f}), '.format(plug_pp_th) \
+                _log.info(self._getEndPoint(deviceId, AT_GET_STATE) \
+                            + 'Current price point > threshold' \
+                            + '({0:.2f}), '.format(shDevicesPP_th) \
                             + 'Switching-Off Power' \
                             )
                 self.setShDeviceState(deviceId, SH_DEVICE_STATE_OFF, SCHEDULE_NOT_AVLB)
             #else:
                 #do nothing
         else:
-            _log.info(_getEndPoint(deviceId, AT_GET_STATE) \
-                        + 'Current price point < threshold' \
-                        + '({0:.2f}), '.format(plug_pp_th) \
+            _log.info(self._getEndPoint(deviceId, AT_GET_STATE) \
+                        + 'Current price point <= threshold' \
+                        + '({0:.2f}), '.format(shDevicesPP_th) \
                         + 'Switching-On Power' \
                         )
             self.setShDeviceState(deviceId, SH_DEVICE_STATE_ON, SCHEDULE_NOT_AVLB)
