@@ -42,12 +42,10 @@ SH_DEVICE_STATE_OFF = 0
 SH_DEVICE_LED_DEBUG = 0
 SH_DEVICE_LED = 1
 SH_DEVICE_FAN = 2
-SH_DEVICE_FAN_SWING = 3
-SH_DEVICE_S_LUX = 4
-SH_DEVICE_S_RH = 5
-SH_DEVICE_S_TEMP = 6
-SH_DEVICE_S_CO2 = 7
-SH_DEVICE_S_PIR = 8
+SH_DEVICE_S_LUX = 3
+SH_DEVICE_S_RH = 4
+SH_DEVICE_S_TEMP = 5
+SH_DEVICE_S_CO2 = 6
 
 SCHEDULE_AVLB = 1
 SCHEDULE_NOT_AVLB = 0
@@ -137,7 +135,11 @@ class SmartHub(Agent):
         #perodically publish plug threshold price point to volttron bus
         self.core.periodic(self._period_read_data, self.publishSensorData, wait=None)
 
-        
+        self.vip.rpc.call(MASTER_WEB, 'register_agent_route', \
+                            r'^/SmartHub', \
+                            self.core.identity, \
+                            "rpc_from_net").get(timeout=30)
+                            
         return  
     @Core.receiver('onstop')
     def onstop(self, sender, **kwargs):
@@ -481,9 +483,14 @@ class SmartHub(Agent):
             _log.exception ("not a valid device to get state, deviceId: " + str(deviceId))
             return
         endPoint = self._getEndPoint(deviceId, AT_GET_STATE)
-        device_level = self.vip.rpc.call(
-                'platform.actuator','get_point',
-                'iiit/cbs/smarthub/' + endPoint).get(timeout=1)
+        try:
+            device_level = self.vip.rpc.call(
+                    'platform.actuator','get_point',
+                    'iiit/cbs/smarthub/' + endPoint).get(timeout=1)
+        except Exception as e:
+            _log.exception ("Expection: no task schdl for getting device state")
+            #print(e)
+            return
         return int(device_level)
 
     def rpc_setShDeviceState(self, deviceId, state):
@@ -734,6 +741,47 @@ class SmartHub(Agent):
                 return True
         return False
         
+    @RPC.export
+    def rpc_from_net(self, header, message):
+        print(message)
+        return self.processMessage(message)
+
+    def processMessage(self, message):
+        _log.debug('processResponse()')
+        result = 'FAILED'
+        try:
+            rpcdata = jsonrpc.JsonRpcData.parse(message)
+            _log.info('rpc method: {}'.format(rpcdata.method))
+            
+            if rpcdata.method == "rpc_setShDeviceState":
+                args = {'deviceId': rpcdata.params['deviceId'], 
+                        'state': rpcdata.params['newState']
+                        }
+                result = self.rpc_setShDeviceState(**args)
+            elif rpcdata.method == "rpc_setShDeviceLevel":
+                args = {'deviceId': rpcdata.params['deviceId'], 
+                        'level': rpcdata.params['newLevel']
+                        }
+                result = self.rpc_setShDeviceLevel(**args)              
+            elif rpcdata.method == "rpc_setShDeviceThPP":
+                args = {'deviceId': rpcdata.params['deviceId'], 
+                        'thPP': rpcdata.params['newThPP']
+                        }
+                result = self.setThresholdPP(**args)                
+            else:
+                return jsonrpc.json_error('NA', METHOD_NOT_FOUND,
+                    'Invalid method {}'.format(rpcdata.method))
+                    
+            return jsonrpc.json_result(rpcdata.id, result)
+            
+        except AssertionError:
+            print('AssertionError')
+            return jsonrpc.json_error('NA', INVALID_REQUEST,
+                    'Invalid rpc data {}'.format(data))
+        except Exception as e:
+            print(e)
+            return jsonrpc.json_error('NA', UNHANDLED_EXCEPTION, e)
+            
 def main(argv=sys.argv):
     '''Main method called by the eggsecutable.'''
     try:
