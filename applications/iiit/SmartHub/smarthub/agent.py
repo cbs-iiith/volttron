@@ -452,6 +452,20 @@ class SmartHub(Agent):
             return
         
         return
+        
+    def setShDeviceThPP(self, deviceId, thPP):
+        if not self._validDeviceAction(deviceId, AT_SET_THPP):
+            _log.exception ("Expection: not a valid device to change thPP, deviceId: " + str(deviceId))
+            return
+         
+        if self._shDevicesPP_th[deviceId] == thPP:
+            _log.debug('same thPP, do nothing')
+            return
+        
+        self._shDevicesPP_th[deviceId] = thPP
+        self._publishShDeviceThPP(deviceId, thPP)
+        
+        return
               
     def publishSensorData(self) :
         #_log.debug('publishSensorData()')
@@ -618,14 +632,7 @@ class SmartHub(Agent):
             _log.exception ("Expection: Could not contact actuator. Is it running?")
             #print(e)
             return
-        
-    def rpc_setShDeviceThPP(self, deviceId, thPP):
-        if not self._validDeviceAction(deviceId, AT_SET_THPP):
-            _log.exception ("Expection: not a valid device to change thPP, deviceId: " + str(deviceId))
-            return
-        self._shDevicesPP_th[deviceId] = thPP
-        return
-        
+                
     def _getTaskSchedule(self, taskId, time_ms=None):
         #_log.debug("_getTaskSchedule()")
         self.time_ms = 600 if time_ms is None else time_ms
@@ -865,35 +872,39 @@ class SmartHub(Agent):
         
     @RPC.export
     def rpc_from_net(self, header, message):
-        print(message)
-        return self.processMessage(message)
+        #print(message)
+        return self._processMessage(message)
 
-    def processMessage(self, message):
-        _log.debug('processResponse()')
-        result = 'FAILED'
+    def _processMessage(self, message):
+        #_log.debug('processResponse()')
+        result = False
         try:
             rpcdata = jsonrpc.JsonRpcData.parse(message)
             _log.info('rpc method: {}'.format(rpcdata.method))
             
             if rpcdata.method == "rpc_setShDeviceState":
                 args = {'deviceId': rpcdata.params['deviceId'], 
-                        'state': rpcdata.params['newState']
+                        'state': rpcdata.params['newState'],
+                        'schdExist': SCHEDULE_NOT_AVLB
                         }
-                result = self.rpc_setShDeviceState(**args)
+                result = self.setShDeviceState(**args)
+                
             elif rpcdata.method == "rpc_setShDeviceLevel":
                 args = {'deviceId': rpcdata.params['deviceId'], 
-                        'level': rpcdata.params['newLevel']
+                        'level': rpcdata.params['newLevel'],
+                        'schdExist': SCHEDULE_NOT_AVLB
                         }
-                result = self.rpc_setShDeviceLevel(**args)              
+                result = self.setShDeviceLevel(**args)
+                
             elif rpcdata.method == "rpc_setShDeviceThPP":
                 args = {'deviceId': rpcdata.params['deviceId'], 
                         'thPP': rpcdata.params['newThPP']
                         }
-                result = self.setThresholdPP(**args)                
+                result = self.setShDeviceThPP(**args)                
             else:
                 return jsonrpc.json_error('NA', METHOD_NOT_FOUND,
                     'Invalid method {}'.format(rpcdata.method))
-                    
+            result = True        
             return jsonrpc.json_result(rpcdata.id, result)
             
         except AssertionError:
