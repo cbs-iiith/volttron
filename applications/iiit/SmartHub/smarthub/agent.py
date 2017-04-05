@@ -569,7 +569,7 @@ class SmartHub(Agent):
         try:
             device_level = self.vip.rpc.call(
                     'platform.actuator','get_point',
-                    'iiit/cbs/smarthub/' + endPoint).get(timeout=1 )
+                    'iiit/cbs/smarthub/' + endPoint).get(timeout=10 )
         except RemoteError as re:
             print(re)
         except Exception as e:
@@ -607,7 +607,7 @@ class SmartHub(Agent):
         try:
             device_level = self.vip.rpc.call(
                     'platform.actuator','get_point',
-                    'iiit/cbs/smarthub/' + endPoint).get(timeout=2)
+                    'iiit/cbs/smarthub/' + endPoint).get(timeout=10)
             return float(device_level)
         except Exception as e:
             _log.exception ("Expection: Could not contact actuator. Is it running?")
