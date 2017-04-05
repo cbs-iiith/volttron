@@ -517,8 +517,8 @@ class SmartHub(Agent):
         thpp_fan = self._shDevicesPP_th[SH_DEVICE_FAN]
         self._publishShDeviceThPP(SH_DEVICE_LED, thpp_led)
         self._publishShDeviceThPP(SH_DEVICE_FAN, thpp_fan)
-        _log.debug("led th pp: " + "{0:0.4f}".format(thpp_led) \
-                    + ", fan th pp: " + "{0:0.4f}".format(thpp_fan))
+        _log.debug("led th pp: " + "{0:0.4f}".format(float(thpp_led)) \
+                    + ", fan th pp: " + "{0:0.4f}".format(float(thpp_fan)))
         return
     
     @PubSub.subscribe('pubsub','prices/PricePoint')

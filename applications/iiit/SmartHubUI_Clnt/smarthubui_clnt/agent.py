@@ -27,6 +27,16 @@ import time
 import requests
 import json
 
+SH_DEVICE_LED_DEBUG = 0
+SH_DEVICE_LED = 1
+SH_DEVICE_FAN = 2
+SH_DEVICE_FAN_SWING = 3
+SH_DEVICE_S_LUX = 4
+SH_DEVICE_S_RH = 5
+SH_DEVICE_S_TEMP = 6
+SH_DEVICE_S_CO2 = 7
+SH_DEVICE_S_PIR = 8
+
 utils.setup_logging()
 _log = logging.getLogger(__name__)
 __version__ = '0.1'
@@ -51,8 +61,22 @@ def smarthubui_clnt(config_path, **kwargs):
     ble_ui_server_address = config.get('ble_ui_server_address', '127.0.0.1')
     ble_ui_server_port = int(config.get('ble_ui_server_port', 8082))
     
-    topic_price_point = config.get('topic_price_point',
-            'prices/PricePoint')
+    topic_price_point = config.get('topic_price_point', \
+                                    'prices/PricePoint')
+    topic_sensorsLevelAll_point = config.get('sensorsLevelAll_point', \
+                                            'smarthub/sensors/all')
+    topic_ledState_point = config.get('ledState_point', \
+                                            'smarthub/ledstate')    
+    topic_fanState_point = config.get('fanState_point', \
+                                            'smarthub/fanstate')    
+    topic_ledLevel_point = config.get('ledLevel_point', \
+                                            'smarthub/ledlevel')    
+    topic_fanLevel_point = config.get('fanLevel_point', \
+                                            'smarthub/fanlevel')
+    topic_ledThPP_point = config.get('ledThPP_point', \
+                                            'smarthub/ledthpp')    
+    topic_fanThPP_point = config.get('fanThPP_point', \
+                                            'smarthub/fanthpp')
 
     class SmartHubUI_Clnt(Agent):
         '''
@@ -87,13 +111,108 @@ def smarthubui_clnt(config_path, **kwargs):
                 topic, headers, message):
             _log.debug('on_match_currentPP()')
             self.uiPostCurrentPricePoint(headers, message)
+            
+        @PubSub.subscribe('pubsub', topic_sensorsLevelAll_point)
+        def on_match_sensorData(self, peer, sender, bus,
+                topic, headers, message):
+            _log.debug('on_match_sensorData()')
+            self.uiPostSensorData(headers, message)
+            
+        @PubSub.subscribe('pubsub', topic_ledState_point)
+        def on_match_ledState(self, peer, sender, bus,
+                topic, headers, message):
+            _log.debug('on_match_ledState()')
+            self.uiPostLedState(headers, message)
+            
+        @PubSub.subscribe('pubsub', topic_fanState_point)
+        def on_match_fanState(self, peer, sender, bus,
+                topic, headers, message):
+            _log.debug('on_match_fanState()')
+            self.uiPostFanState(headers, message)
+            
+        @PubSub.subscribe('pubsub', topic_ledLevel_point)
+        def on_match_ledLevel(self, peer, sender, bus,
+                topic, headers, message):
+            _log.debug('on_match_ledLevel()')
+            self.uiPostLedLevel(headers, message)
+            
+        @PubSub.subscribe('pubsub', topic_fanLevel_point)
+        def on_match_fanLevel(self, peer, sender, bus,
+                topic, headers, message):
+            _log.debug('on_match_fanLevel()')
+            self.uiPostFanLevel(headers, message)
+            
+        @PubSub.subscribe('pubsub', topic_ledThPP_point)
+        def on_match_ledThPP(self, peer, sender, bus,
+                topic, headers, message):
+            _log.debug('on_match_ledThPP()')
+            self.uiPostLedThPP(headers, message)
+            
+        @PubSub.subscribe('pubsub', topic_fanThPP_point)
+        def on_match_fanThPP(self, peer, sender, bus,
+                topic, headers, message):
+            _log.debug('on_match_fanThPP()')
+            self.uiPostFanThPP(headers, message)
 
         def uiPostCurrentPricePoint(self, headers, message):
             #json rpc to BLESmartHubSrv
             _log.debug('uiPostCurrentPricePoint()')
             pricePoint = message[0]
             self.do_rpc('currentPricePoint', {'pricePoint': pricePoint})
-                
+
+        def uiPostSensorData(self, headers, message) :
+            _log.debug('uiPostSensorData()')
+            luxLevel   = message[0]['luxlevel']
+            rhLevel    = message[0]['rhlevel']
+            tempLevel  = message[0]['templevel']
+            co2Level   = message[0]['co2level']
+            pirLevel   = message[0]['pirlevel']
+            self.do_rpc('shSensorsData', {\
+                                            'luxLevel': luxLevel, \
+                                            'rhLevel':  rhLevel, \
+                                            'tempLevel': tempLevel, \
+                                            'co2Level': co2Level, \
+                                            'pirLevel': pirLevel \
+                                            })
+            return
+            
+        def uiPostLedState(self, headers, message) :
+            _log.debug('uiPostLedState()')
+            state = message[0]
+            self.do_rpc('shDeviceState', {'deviceId': SH_DEVICE_LED,
+                                            'state': state})
+            return
+        def uiPostFanState(self, headers, message) :
+            _log.debug('uiPostFanState()')
+            state = message[0]
+            self.do_rpc('shDeviceState', {'deviceId': SH_DEVICE_FAN,
+                                            'state': state})
+            return
+        def uiPostLedLevel(self, headers, message) :
+            _log.debug('uiPostLedLevel()')
+            level = message[0]
+            self.do_rpc('shDeviceLevel', {'deviceId': SH_DEVICE_LED,
+                                            'level': level})
+            return
+        def uiPostFanLevel(self, headers, message) :
+            _log.debug('uiPostFanLevel()')
+            level = message[0]
+            self.do_rpc('shDeviceLevel', {'deviceId': SH_DEVICE_FAN,
+                                            'level': level})
+            return
+        def uiPostLedThPP(self, headers, message) :
+            _log.debug('uiPostLedThPP()')
+            thPP = message[0]
+            self.do_rpc('shDeviceThPP', {'deviceId': SH_DEVICE_LED,
+                                            'thPP': thPP})
+            return
+        def uiPostFanThPP(self, headers, message) :
+            _log.debug('uiPostFanThPP()')
+            thPP = message[0]
+            self.do_rpc('shDeviceThPP', {'deviceId': SH_DEVICE_FAN,
+                                            'thPP': thPP})
+            return
+            
         def do_rpc(self, method, params=None ):
             json_package = {
                 'jsonrpc': '2.0',
@@ -109,9 +228,13 @@ def smarthubui_clnt(config_path, **kwargs):
                 response = requests.post(self.url_root, data=json.dumps(json_package))
                 
                 if response.ok:
-                    _log.debug('response - ok, {} result:{}'.format(method, response.json()['result']))
-                else:
-                    _log.debug('respone - not ok, {}'.format(method))
+                    success = response.json()['result']
+                    if success:
+                        _log.debug('response - ok, {} result:{}'.format(method, success))
+                    else:
+                        _log.debug('respone - not ok, {} result:{}'.format(method, success))
+                else :
+                    _log.debug('no respone, {} result: {}'.format(method, response))
             except Exception as e:
                 #print (e)
                 _log.exception('do_rpc() unhandled exception, most likely server is down')
