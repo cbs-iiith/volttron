@@ -42,10 +42,12 @@ SH_DEVICE_STATE_OFF = 0
 SH_DEVICE_LED_DEBUG = 0
 SH_DEVICE_LED = 1
 SH_DEVICE_FAN = 2
-SH_DEVICE_S_LUX = 3
-SH_DEVICE_S_RH = 4
-SH_DEVICE_S_TEMP = 5
-SH_DEVICE_S_CO2 = 6
+SH_DEVICE_FAN_SWING = 3
+SH_DEVICE_S_LUX = 4
+SH_DEVICE_S_RH = 5
+SH_DEVICE_S_TEMP = 6
+SH_DEVICE_S_CO2 = 7
+SH_DEVICE_S_PIR = 8
 
 SCHEDULE_AVLB = 1
 SCHEDULE_NOT_AVLB = 0
@@ -55,12 +57,15 @@ E_UNKNOWN_STATE = -2
 E_UNKNOWN_LEVEL = -3
 
 #action types
-AT_GET_STATE = 321
-AT_GET_LEVEL = 322
-AT_SET_STATE = 323
-AT_SET_LEVEL = 324
-AT_PUB_LEVEL = 325
-AT_PUB_STATE = 326
+AT_GET_STATE    = 321
+AT_GET_LEVEL    = 322
+AT_SET_STATE    = 323
+AT_SET_LEVEL    = 324
+AT_PUB_LEVEL    = 325
+AT_PUB_STATE    = 326
+AT_GET_THPP     = 327
+AT_SET_THPP     = 328
+AT_PUB_THPP     = 329
 
 utils.setup_logging()
 _log = logging.getLogger(__name__)
@@ -132,7 +137,10 @@ class SmartHub(Agent):
         _log.debug('switch on debug led')
         self.setShDeviceState(SH_DEVICE_LED_DEBUG, SH_DEVICE_STATE_ON, SCHEDULE_NOT_AVLB)
         
-        #perodically publish plug threshold price point to volttron bus
+        #perodically publish device threshold price point to volttron bus
+        self.core.periodic(self._period_read_data, self.publishDeviceThPP, wait=None)
+        
+        #perodically publish sensor data to volttron bus
         self.core.periodic(self._period_read_data, self.publishSensorData, wait=None)
 
         self.vip.rpc.call(MASTER_WEB, 'register_agent_route', \
@@ -168,7 +176,12 @@ class SmartHub(Agent):
         self.ledLevel_point = self.config.get('ledLevel_point',
                                             'smarthub/ledlevel')    
         self.fanLevel_point = self.config.get('fanLevel_point',
-                                            'smarthub/fanlevel')    
+                                            'smarthub/fanlevel')
+        self.ledThPP_point = self.config.get('ledThPP_point',
+                                            'smarthub/ledthpp')    
+        self.fanThPP_point = self.config.get('fanThPP_point',
+                                            'smarthub/fanthpp')
+
         self.sensorLuxLevel_point = self.config.get('sensorLuxLevel_point',
                                             'smarthub/sensors/luxlevel')    
         self.sensorRhLevel_point = self.config.get('sensorRhLevel_point',
@@ -437,6 +450,22 @@ class SmartHub(Agent):
             return        
         
         return
+        
+    def publishDeviceThPP(self) :
+        result = self._getTaskSchedule('publishDeviceThPP', 300)
+        try:
+            if result['result'] == 'SUCCESS':
+                self._publishShDeviceThPP(SH_DEVICE_LED, \
+                                            self._shDevicesPP_th[SH_DEVICE_LED])
+                self._publishShDeviceThPP(SH_DEVICE_FAN, \
+                                            self._shDevicesPP_th[SH_DEVICE_FAN])
+                                            
+        except Exception as e:
+            _log.exception ("Expection: no task schdl for publishDeviceThPP()")
+            #print(e)
+            return        
+        
+        return
     
     @PubSub.subscribe('pubsub','prices/PricePoint')
     def onNewPrice(self, peer, sender, bus,  topic, headers, message):
@@ -538,6 +567,13 @@ class SmartHub(Agent):
         self._updateShDeviceLevel(deviceId, endPoint,level)
         return
         
+    def rpc_setShDeviceThPP(self, deviceId, thPP):
+        if not self._validDeviceAction(deviceId, AT_SET_THPP):
+            _log.exception ("not a valid device to change thPP, deviceId: " + str(deviceId))
+            return
+        self._shDevicesPP_th[deviceId] = thPP
+        return
+        
     def _getTaskSchedule(self, taskId, time_ms=None):
         #_log.debug("_getTaskSchedule()")
         self.time_ms = 600 if time_ms is None else time_ms
@@ -613,6 +649,16 @@ class SmartHub(Agent):
         
         return
         
+    def _publishShDeviceThPP(self, deviceId, thPP):
+        if not self._validDeviceAction(deviceId, AT_PUB_THPP):
+            _log.exception ("not a valid device to pub level, deviceId: " + str(deviceId))
+            return
+        pubTopic = self._getPubTopic(deviceId, AT_PUB_THPP)
+        pubMsg = [thPP,{'units': 'cent', 'tz': 'UTC', 'type': 'float'}]
+        self._publishToBus(pubTopic, pubMsg)
+        
+        return
+        
     def _publishToBus(self, pubTopic, pubMsg):
         now = datetime.datetime.utcnow().isoformat(' ') + 'Z'
         headers = {headers_mod.DATE: now}          
@@ -642,7 +688,11 @@ class SmartHub(Agent):
                 return self.sensorTempLevel_point
             elif deviceId ==SH_DEVICE_S_CO2:
                 return self.sensorCo2Level_point
-            
+        elif actionType == AT_PUB_THPP:
+            if deviceId == SH_DEVICE_LED:
+                return self.ledThPP_point
+            elif deviceId == SH_DEVICE_FAN:
+                return self.fanThPP_point
         _log.exception ("Expection: not a vaild device-action type for pubTopic")
         return ""
         
@@ -688,7 +738,10 @@ class SmartHub(Agent):
                                 AT_SET_STATE, \
                                 AT_SET_LEVEL, \
                                 AT_PUB_LEVEL, \
-                                AT_PUB_STATE
+                                AT_PUB_STATE, \
+                                AT_GET_THPP, \
+                                AT_SET_THPP, \
+                                AT_PUB_THPP \
                                 ]:
             return False
         
@@ -735,6 +788,16 @@ class SmartHub(Agent):
         elif actionType == AT_PUB_STATE :
             if deviceId in [ \
                             SH_DEVICE_LED_DEBUG, \
+                            SH_DEVICE_LED, \
+                            SH_DEVICE_FAN \
+                            ]:
+                return True
+        elif actionType in [ \
+                            AT_GET_THPP, \
+                            AT_SET_THPP, \
+                            AT_PUB_THPP
+                            ] :
+            if deviceId in [ \
                             SH_DEVICE_LED, \
                             SH_DEVICE_FAN \
                             ]:
