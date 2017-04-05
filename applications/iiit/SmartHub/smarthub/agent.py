@@ -198,6 +198,8 @@ class SmartHub(Agent):
         self.fanThPP_point = self.config.get('fanThPP_point',
                                             'smarthub/fanthpp')
 
+        self.sensorsLevelAll_point = self.config.get('sensorsLevelAll_point',
+                                            'smarthub/sensors/all')
         self.sensorLuxLevel_point = self.config.get('sensorLuxLevel_point',
                                             'smarthub/sensors/luxlevel')    
         self.sensorRhLevel_point = self.config.get('sensorRhLevel_point',
@@ -313,7 +315,7 @@ class SmartHub(Agent):
         
         _log.debug('test PIR sensor')
         pir_level = self.getShDeviceLevel(SH_DEVICE_S_PIR, SCHEDULE_NOT_AVLB)
-        _log.debug("PIR Level: " + "{0:0.4f}".format(pir_level))
+        _log.debug("PIR Level: " + "{0:d}".format(int(pir_level)))
         time.sleep(1)
         
         return
@@ -339,7 +341,7 @@ class SmartHub(Agent):
                 
                 _log.debug('test pir sensor')
                 pir_level = self.getShDeviceLevel(SH_DEVICE_S_PIR, SCHEDULE_AVLB)
-                _log.debug("pir Level: " + "{0:0.4f}".format(pir_level))
+                _log.debug("pir Level: " + "{0:d}".format(int(pir_level)))
         except Exception as e:
             _log.exception ("Expection: no task schdl for testSensors_2()")
             #print(e)
@@ -457,26 +459,39 @@ class SmartHub(Agent):
         #print(result)
         try:
             if result['result'] == 'SUCCESS':
+                pubTopic = self.sensorsLevelAll_point
                 lux_level = self.getShDeviceLevel(SH_DEVICE_S_LUX, SCHEDULE_AVLB)
                 rh_level = self.getShDeviceLevel(SH_DEVICE_S_RH, SCHEDULE_AVLB)
                 temp_level = self.getShDeviceLevel(SH_DEVICE_S_TEMP, SCHEDULE_AVLB)
                 co2_level = self.getShDeviceLevel(SH_DEVICE_S_CO2, SCHEDULE_AVLB)
                 pir_level = self.getShDeviceLevel(SH_DEVICE_S_PIR, SCHEDULE_AVLB)
+                time.sleep(1)  #yeild for a movement
                 
                 _log.debug("lux Level: " + "{0:0.4f}".format(lux_level) \
                             + ", rh Level: " + "{0:0.4f}".format(rh_level) \
                             + ", temp Level: " + "{0:0.4f}".format(temp_level) \
                             + ", co2 Level: " + "{0:0.4f}".format(co2_level) \
-                            + ", pir Level: " + "{0:0.4f}".format(pir_level) \
+                            + ", pir Level: " + "{0:d}".format(int(pir_level)) \
                             )
                 
-                self._publishShDeviceLevel(SH_DEVICE_S_LUX, lux_level)
-                self._publishShDeviceLevel(SH_DEVICE_S_RH, rh_level)
-                self._publishShDeviceLevel(SH_DEVICE_S_TEMP, temp_level)
-                self._publishShDeviceLevel(SH_DEVICE_S_CO2, co2_level)
-                self._publishShDeviceLevel(SH_DEVICE_S_PIR, pir_level)
+                pubMsg = [{'luxlevel':lux_level, \
+                            'rhlevel':rh_level, \
+                            'templevel':temp_level, \
+                            'co2level': co2_level, \
+                            'pirlevel': pir_level \
+                            }, \
+                            {'luxlevel':{'units': 'lux', 'tz': 'UTC', 'type': 'float'}, \
+                                'rhlevel':{'units': 'cent', 'tz': 'UTC', 'type': 'float'},
+                                'templevel':{'units': 'degree', 'tz': 'UTC', 'type': 'float'}, \
+                                'co2level':{'units': 'ppm', 'tz': 'UTC', 'type': 'float'}, \
+                                'pirlevel':{'units': 'bool', 'tz': 'UTC', 'type': 'int'} \
+                            } \
+                            ]
+                self._publishToBus(pubTopic, pubMsg)
+        
         except Exception as e:
             _log.exception ("Expection: no task schdl for publishSensorData()")
+            self.core.periodic(self._period_read_data, self.publishSensorData, wait=None)
             #print(e)
             return        
         
@@ -582,6 +597,7 @@ class SmartHub(Agent):
             _log.exception ("Expection: Could not contact actuator. Is it running?")
             #print(e)
             return
+        return 0
         
     def rpc_setShDeviceLevel(self, deviceId, level):
         if not self._validDeviceAction(deviceId, AT_SET_LEVEL):
