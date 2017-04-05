@@ -99,6 +99,8 @@ class SmartHub(Agent):
     _ledState = 0
     _fanState = 0
     
+    _voltState = 0
+    
     '''
         SH_DEVICE_LED_DEBUG = 0 only state, no level
         SH_DEVICE_LED       = 1 both state and level
@@ -138,6 +140,7 @@ class SmartHub(Agent):
         
         _log.debug('switch on debug led')
         self.setShDeviceState(SH_DEVICE_LED_DEBUG, SH_DEVICE_STATE_ON, SCHEDULE_NOT_AVLB)
+        time.sleep(1) #yeild for a movement
         
         #perodically publish device threshold price point to volttron bus
         self.core.periodic(self._period_read_data, self.publishDeviceThPP, wait=None)
@@ -149,21 +152,32 @@ class SmartHub(Agent):
                             r'^/SmartHub', \
                             self.core.identity, \
                             "rpc_from_net").get(timeout=30)
-                            
+        self._voltState = 1
+        
         return  
     @Core.receiver('onstop')
     def onstop(self, sender, **kwargs):
         _log.debug('onstop()')
-        self.setShDeviceState(SH_DEVICE_LED_DEBUG, SH_DEVICE_STATE_OFF, SCHEDULE_NOT_AVLB)
+        if self._voltState != 0:
+            self._stopVolt()
         
         return
     @Core.receiver('onfinish')
     def onfinish(self, sender, **kwargs):
         _log.debug('onfinish()')
-        self.setShDeviceState(SH_DEVICE_LED_DEBUG, SH_DEVICE_STATE_OFF, SCHEDULE_NOT_AVLB)
+        if self._voltState != 0:
+            self._stopVolt()
         
         return 
         
+    def _stopVolt(self):
+        _log.debug('_stopVolt()')
+        self.setShDeviceState(SH_DEVICE_LED_DEBUG, SH_DEVICE_STATE_OFF, SCHEDULE_NOT_AVLB)
+        self.setShDeviceState(SH_DEVICE_LED, SH_DEVICE_STATE_OFF, SCHEDULE_NOT_AVLB)
+        self.setShDeviceState(SH_DEVICE_FAN, SH_DEVICE_STATE_OFF, SCHEDULE_NOT_AVLB)
+        self._voltState = 0
+        return
+
     def _configGetInitValues(self):
         self._period_read_data = self.config['period_read_data']
         
@@ -192,7 +206,8 @@ class SmartHub(Agent):
                                             'smarthub/sensors/templevel')    
         self.sensorCo2Level_point = self.config.get('sensorCo2Level_point',
                                             'smarthub/sensors/co2level')
-                                            
+        self.sensorPirLevel_point = self.config.get('sensorPirLevel_point',
+                                            'smarthub/sensors/pirlevel')
         return
     def runSmartHubTest(self):
         _log.debug("Running : runSmartHubTest()...")
@@ -200,7 +215,7 @@ class SmartHub(Agent):
         self.testLedDebug()
         self.testLed()
         self.testFan()
-        self.testSensors()
+        #self.testSensors()
         self.testSensors_2()
         _log.debug("EOF Testing")
         
@@ -437,7 +452,9 @@ class SmartHub(Agent):
         return
               
     def publishSensorData(self) :
+        #_log.debug('publishSensorData()')
         result = self._getTaskSchedule('publishSensorData', 300)
+        #print(result)
         try:
             if result['result'] == 'SUCCESS':
                 lux_level = self.getShDeviceLevel(SH_DEVICE_S_LUX, SCHEDULE_AVLB)
@@ -466,19 +483,13 @@ class SmartHub(Agent):
         return
         
     def publishDeviceThPP(self) :
-        result = self._getTaskSchedule('publishDeviceThPP', 300)
-        try:
-            if result['result'] == 'SUCCESS':
-                self._publishShDeviceThPP(SH_DEVICE_LED, \
-                                            self._shDevicesPP_th[SH_DEVICE_LED])
-                self._publishShDeviceThPP(SH_DEVICE_FAN, \
-                                            self._shDevicesPP_th[SH_DEVICE_FAN])
-                                            
-        except Exception as e:
-            _log.exception ("Expection: no task schdl for publishDeviceThPP()")
-            #print(e)
-            return        
-        
+        #_log.debug('publishDeviceThPP()')
+        thpp_led = self._shDevicesPP_th[SH_DEVICE_LED]
+        thpp_fan = self._shDevicesPP_th[SH_DEVICE_FAN]
+        self._publishShDeviceThPP(SH_DEVICE_LED, thpp_led)
+        self._publishShDeviceThPP(SH_DEVICE_FAN, thpp_fan)
+        _log.debug("led th pp: " + "{0:0.4f}".format(thpp_led) \
+                    + ", fan th pp: " + "{0:0.4f}".format(thpp_fan))
         return
     
     @PubSub.subscribe('pubsub','prices/PricePoint')
