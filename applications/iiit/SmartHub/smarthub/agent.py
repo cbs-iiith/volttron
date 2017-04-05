@@ -350,7 +350,7 @@ class SmartHub(Agent):
     def getShDeviceState(self, deviceId, schdExist):
         state = E_UNKNOWN_STATE
         if not _validDeviceAction(deviceId, AT_GET_STATE) :
-            _log.exception ("not a valid device to get state, deviceId: " + str(deviceId))
+            _log.exception ("Expection: not a valid device to get state, deviceId: " + str(deviceId))
             return state
             
         if schdExist == SCHEDULE_AVLB: 
@@ -391,7 +391,7 @@ class SmartHub(Agent):
                 return level
         else:
             #do notthing
-            _log.exception ("not a valid param - schdExist: " + schdExist)
+            _log.exception ("Expection: not a valid param - schdExist: " + schdExist)
             return level
         
         return level
@@ -399,7 +399,7 @@ class SmartHub(Agent):
     def setShDeviceState(self, deviceId, state, schdExist):
         #_log.debug('setShDeviceState()')
         if not self._validDeviceAction(deviceId, AT_SET_STATE) :
-            _log.exception ("not a valid device to change state, deviceId: " + str(deviceId))
+            _log.exception ("Expection: not a valid device to change state, deviceId: " + str(deviceId))
             return
 
         if self._shDevicesState[deviceId] == state:
@@ -426,7 +426,7 @@ class SmartHub(Agent):
     def setShDeviceLevel(self, deviceId, level, schdExist):
         #_log.debug('setShDeviceLevel()')
         if not self._validDeviceAction( deviceId, AT_SET_LEVEL):
-            _log.exception ("not a valid device to change level, deviceId: " + str(deviceId))
+            _log.exception ("Expection: not a valid device to change level, deviceId: " + str(deviceId))
             return
 
         if self._shDevicesLevel[deviceId] == level:
@@ -446,7 +446,7 @@ class SmartHub(Agent):
                 return
         else:
             #do notthing
-            _log.exception ("not a valid param - schdExist: " + schdExist)
+            _log.exception ("Expection: not a valid param - schdExist: " + schdExist)
             return
         
         return
@@ -534,7 +534,7 @@ class SmartHub(Agent):
     
     def rpc_getShDeviceState(self, deviceId):
         if not self._validDeviceAction(deviceId,AT_GET_STATE):
-            _log.exception ("not a valid device to get state, deviceId: " + str(deviceId))
+            _log.exception ("Expection: not a valid device to get state, deviceId: " + str(deviceId))
             return
         endPoint = self._getEndPoint(deviceId, AT_GET_STATE)
         try:
@@ -542,59 +542,70 @@ class SmartHub(Agent):
                     'platform.actuator','get_point',
                     'iiit/cbs/smarthub/' + endPoint).get(timeout=1)
         except Exception as e:
-            _log.exception ("Expection: no task schdl for getting device state")
+            _log.exception ("Expection: Could not contact actuator. Is it running?")
             #print(e)
             return
         return int(device_level)
 
     def rpc_setShDeviceState(self, deviceId, state):
         if not self._validDeviceAction(deviceId, AT_SET_STATE):
-            _log.exception ("not a valid device to change state, deviceId: " + str(deviceId))
+            _log.exception ("Expection: not a valid device to change state, deviceId: " + str(deviceId))
             return
         endPoint = self._getEndPoint(deviceId, AT_SET_STATE)
-        result = self.vip.rpc.call(
-                'platform.actuator', 
-                'set_point',
-                self._agent_id, 
-                'iiit/cbs/smarthub/' + endPoint,
-                state).get(timeout=1)
-        #print("Set result", result)
-        #_log.debug('OK call _updateShDeviceState()')
+        try:
+            result = self.vip.rpc.call(
+                    'platform.actuator', 
+                    'set_point',
+                    self._agent_id, 
+                    'iiit/cbs/smarthub/' + endPoint,
+                    state).get(timeout=1)
+        except Exception as e:
+            _log.exception ("Expection: Could not contact actuator. Is it running?")
+            #print(e)
+            return
         self._updateShDeviceState(deviceId, endPoint,state)
         return
         
     def rpc_getShDeviceLevel(self, deviceId):
         #_log.debug("rpc_getShDeviceLevel()")
         if not self._validDeviceAction(deviceId, AT_GET_LEVEL):
-            _log.exception ("not a valid device to get level, deviceId: " + str(deviceId))
+            _log.exception ("Expection: not a valid device to get level, deviceId: " + str(deviceId))
             return
         endPoint = self._getEndPoint(deviceId, AT_GET_LEVEL)
         #_log.debug("endPoint: " + endPoint)
-        device_level = self.vip.rpc.call(
-                'platform.actuator','get_point',
-                'iiit/cbs/smarthub/' + endPoint).get(timeout=1)
-        return float(device_level)
+        try:
+            device_level = self.vip.rpc.call(
+                    'platform.actuator','get_point',
+                    'iiit/cbs/smarthub/' + endPoint).get(timeout=1)
+            return float(device_level)
+        except Exception as e:
+            _log.exception ("Expection: Could not contact actuator. Is it running?")
+            #print(e)
+            return
         
     def rpc_setShDeviceLevel(self, deviceId, level):
         if not self._validDeviceAction(deviceId, AT_SET_LEVEL):
-            _log.exception ("not a valid device to change level, deviceId: " + str(deviceId))
+            _log.exception ("Expection: not a valid device to change level, deviceId: " + str(deviceId))
             return
         endPoint = self._getEndPoint(deviceId, AT_SET_LEVEL)
-        
-        result = self.vip.rpc.call(
-                'platform.actuator', 
-                'set_point',
-                self._agent_id, 
-                'iiit/cbs/smarthub/' + endPoint,
-                level).get(timeout=1)
-        #print("Set result", result)
-        #_log.debug('OK call _updateShDeviceLevel()')
-        self._updateShDeviceLevel(deviceId, endPoint,level)
-        return
+       
+        try:
+            result = self.vip.rpc.call(
+                    'platform.actuator', 
+                    'set_point',
+                    self._agent_id, 
+                    'iiit/cbs/smarthub/' + endPoint,
+                    level).get(timeout=1)
+            self._updateShDeviceLevel(deviceId, endPoint,level)
+            return
+        except Exception as e:
+            _log.exception ("Expection: Could not contact actuator. Is it running?")
+            #print(e)
+            return
         
     def rpc_setShDeviceThPP(self, deviceId, thPP):
         if not self._validDeviceAction(deviceId, AT_SET_THPP):
-            _log.exception ("not a valid device to change thPP, deviceId: " + str(deviceId))
+            _log.exception ("Expection: not a valid device to change thPP, deviceId: " + str(deviceId))
             return
         self._shDevicesPP_th[deviceId] = thPP
         return
@@ -619,7 +630,7 @@ class SmartHub(Agent):
                     msg).get(timeout=1)
             #print("schedule result", result)
         except Exception as e:
-            _log.exception ("Could not contact actuator. Is it running?")
+            _log.exception ("Expection: Could not contact actuator. Is it running?")
             #print(e)
             return        
         return result
@@ -666,7 +677,7 @@ class SmartHub(Agent):
         
     def _publishShDeviceLevel(self, deviceId, level):
         if not self._validDeviceAction(deviceId, AT_PUB_LEVEL):
-            _log.exception ("not a valid device to pub level, deviceId: " + str(deviceId))
+            _log.exception ("Expection: not a valid device to pub level, deviceId: " + str(deviceId))
             return
         pubTopic = self._getPubTopic(deviceId, AT_PUB_LEVEL)
         pubMsg = [level,{'units': 'duty', 'tz': 'UTC', 'type': 'float'}]
@@ -676,7 +687,7 @@ class SmartHub(Agent):
         
     def _publishShDeviceThPP(self, deviceId, thPP):
         if not self._validDeviceAction(deviceId, AT_PUB_THPP):
-            _log.exception ("not a valid device to pub level, deviceId: " + str(deviceId))
+            _log.exception ("Expection: not a valid device to pub level, deviceId: " + str(deviceId))
             return
         pubTopic = self._getPubTopic(deviceId, AT_PUB_THPP)
         pubMsg = [thPP,{'units': 'cent', 'tz': 'UTC', 'type': 'float'}]
@@ -833,6 +844,7 @@ class SmartHub(Agent):
                             SH_DEVICE_FAN \
                             ]:
                 return True
+        log.exception ("Expection: not a vaild device-action")
         return False
         
     @RPC.export
