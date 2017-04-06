@@ -114,7 +114,7 @@ class SmartHub(Agent):
     '''
     _shDevicesState = [0, 0, 0, 0, 0, 0, 0, 0, 0]
     _shDevicesLevel = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
-    _shDevicesPP_th = [ 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
+    _shDevicesPP_th = [ 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25]
     _price_point_previous = 0.4 
     _price_point_current = 0.4 
 
@@ -430,8 +430,8 @@ class SmartHub(Agent):
         if not self._validDeviceAction( deviceId, AT_SET_LEVEL):
             _log.exception ("Expection: not a valid device to change level, deviceId: " + str(deviceId))
             return
-
-        if self._shDevicesLevel[deviceId] == level:
+            
+        if self._isclose(level, self._shDevicesLevel[deviceId], 1e-03):
             _log.debug('same level, do nothing')
             return
 
@@ -608,7 +608,7 @@ class SmartHub(Agent):
             device_level = self.vip.rpc.call(
                     'platform.actuator','get_point',
                     'iiit/cbs/smarthub/' + endPoint).get(timeout=10)
-            return float(device_level)
+            return device_level
         except Exception as e:
             _log.exception ("Expection: Could not contact actuator. Is it running?")
             #print(e)
@@ -885,6 +885,7 @@ class SmartHub(Agent):
         try:
             rpcdata = jsonrpc.JsonRpcData.parse(message)
             _log.info('rpc method: {}'.format(rpcdata.method))
+            _log.info('rpc params: {}'.format(rpcdata.params))
             
             if rpcdata.method == "rpc_setShDeviceState":
                 args = {'deviceId': rpcdata.params['deviceId'], 
