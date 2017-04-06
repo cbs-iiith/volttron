@@ -141,6 +141,12 @@ class SmartHub(Agent):
         _log.debug('switch on debug led')
         self.setShDeviceState(SH_DEVICE_LED_DEBUG, SH_DEVICE_STATE_ON, SCHEDULE_NOT_AVLB)
         time.sleep(1) #yeild for a movement
+
+        #perodically publish device state to volttron bus
+        self.core.periodic(self._period_read_data, self.publishDeviceState, wait=None)
+
+        #perodically publish device level to volttron bus
+        self.core.periodic(self._period_read_data, self.publishDeviceLevel, wait=None)
         
         #perodically publish device threshold price point to volttron bus
         self.core.periodic(self._period_read_data, self.publishDeviceThPP, wait=None)
@@ -509,6 +515,26 @@ class SmartHub(Agent):
             #print(e)
             return        
         
+        return
+        
+    def publishDeviceState(self) :
+        #_log.debug('publishDeviceState()')
+        state_led = self._shDevicesState[SH_DEVICE_LED]
+        state_fan = self._shDevicesState[SH_DEVICE_FAN]
+        self._publishShDeviceState(SH_DEVICE_LED, state_led)
+        self._publishShDeviceState(SH_DEVICE_FAN, state_fan)
+        _log.debug("led state: " + "{0:0.4f}".format(float(state_led)) \
+                    + ", fan state: " + "{0:0.4f}".format(float(state_fan)))
+        return
+        
+    def publishDeviceLevel(self) :
+        #_log.debug('publishDeviceLevel()')
+        level_led = self._shDevicesLevel[SH_DEVICE_LED]
+        level_fan = self._shDevicesLevel[SH_DEVICE_FAN]
+        self._publishShDeviceLevel(SH_DEVICE_LED, level_led)
+        self._publishShDeviceLevel(SH_DEVICE_FAN, level_fan)
+        _log.debug("led level: " + "{0:0.4f}".format(float(level_led)) \
+                    + ", fan level: " + "{0:0.4f}".format(float(level_fan)))
         return
         
     def publishDeviceThPP(self) :
