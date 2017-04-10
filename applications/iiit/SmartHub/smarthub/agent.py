@@ -142,6 +142,21 @@ class SmartHub(Agent):
         self.setShDeviceState(SH_DEVICE_LED_DEBUG, SH_DEVICE_STATE_ON, SCHEDULE_NOT_AVLB)
         time.sleep(1) #yeild for a movement
 
+        #get the latest values (states/levels) from h/w
+        self.getInitialHwState()
+        time.sleep(1) #yeild for a movement
+
+        #apply pricing policy for default values
+        self.applyPricingPolicy(SH_DEVICE_LED)
+        self.applyPricingPolicy(SH_DEVICE_FAN)
+        
+        #publish initial data to volttron bus
+        self.publishDeviceState();
+        self.publishDeviceLevel();
+        self.publishDeviceThPP();
+        self.publishSensorData();
+        self.publishCurrentPP();
+        
         #perodically publish device state to volttron bus
         self.core.periodic(self._period_read_data, self.publishDeviceState, wait=None)
 
@@ -189,6 +204,8 @@ class SmartHub(Agent):
         
         return
     def _configGetPoints(self):
+        self.topic_price_point = self.config.get('topic_price_point', \
+                                        'prices/PricePoint')
         self.ledDebugState_point = self.config.get('ledDebugState_point',
                                             'smarthub/leddebugstate')    
         self.ledState_point = self.config.get('ledState_point',
@@ -354,10 +371,26 @@ class SmartHub(Agent):
             return
         
         return
-        
+    
+    def getInitialHwState(self):
+        #_log.debug("getInitialHwState()")
+        result = self._getTaskSchedule('getInitialHwState', 300)
+        try:
+            if result['result'] == 'SUCCESS':
+                self._shDevicesState[SH_DEVICE_LED] = self.getShDeviceState(SH_DEVICE_LED, SCHEDULE_AVLB)
+                self._shDevicesState[SH_DEVICE_FAN] = self.getShDeviceState(SH_DEVICE_FAN, SCHEDULE_AVLB)
+                self._shDevicesLevel[SH_DEVICE_LED] = self.getShDeviceLevel(SH_DEVICE_LED, SCHEDULE_AVLB)
+                self._shDevicesLevel[SH_DEVICE_FAN] = self.getShDeviceLevel(SH_DEVICE_FAN, SCHEDULE_AVLB)
+        except Exception as e:
+            _log.exception ("Expection: no task schdl for getInitialHwState()")
+            #print(e)
+            return
+
+        return
+            
     def getShDeviceState(self, deviceId, schdExist):
         state = E_UNKNOWN_STATE
-        if not _validDeviceAction(deviceId, AT_GET_STATE) :
+        if not self._validDeviceAction(deviceId, AT_GET_STATE) :
             _log.exception ("Expection: not a valid device to get state, deviceId: " + str(deviceId))
             return state
             
@@ -470,6 +503,7 @@ class SmartHub(Agent):
         
         self._shDevicesPP_th[deviceId] = thPP
         self._publishShDeviceThPP(deviceId, thPP)
+        self.applyPricingPolicy(deviceId)
         
         return
               
@@ -547,6 +581,14 @@ class SmartHub(Agent):
                     + ", fan th pp: " + "{0:0.4f}".format(float(thpp_fan)))
         return
     
+    def publishCurrentPP(self) :
+        #_log.debug('publishCurrentPP()')
+        _log.debug("current price point: " + "{0:0.4f}".format(float(self._price_point_current)))
+                    
+        pubMsg = [self._price_point_current,{'units': 'cent', 'tz': 'UTC', 'type': 'float'}]
+        self._publishToBus(self.topic_price_point, pubMsg)
+        
+    
     @PubSub.subscribe('pubsub','prices/PricePoint')
     def onNewPrice(self, peer, sender, bus,  topic, headers, message):
         if sender == 'pubsub.compat':
@@ -566,6 +608,7 @@ class SmartHub(Agent):
         self.applyPricingPolicy(SH_DEVICE_FAN)
 
     def applyPricingPolicy(self, deviceId):
+        _log.debug("applyPricingPolicy()")
         shDevicesPP_th = self._shDevicesPP_th[deviceId]
         if self._price_point_current > shDevicesPP_th: 
             if self._shDevicesState[deviceId] == SH_DEVICE_STATE_ON:
@@ -728,7 +771,7 @@ class SmartHub(Agent):
         return
         
     def _publishShDeviceLevel(self, deviceId, level):
-        _log.debug('_publishShDeviceLevel()')
+        #_log.debug('_publishShDeviceLevel()')
         if not self._validDeviceAction(deviceId, AT_PUB_LEVEL):
             _log.exception ("Expection: not a valid device to pub level, deviceId: " + str(deviceId))
             return
