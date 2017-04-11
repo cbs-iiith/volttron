@@ -639,7 +639,10 @@ class SmartHub(Agent):
             device_level = self.vip.rpc.call(
                     'platform.actuator','get_point',
                     'iiit/cbs/smarthub/' + endPoint).get(timeout=10 )
-        except RemoteError as re:
+        except gevent.Timeout:
+			_log.exception("Expection: gevent.Timeout in rpc_getShDeviceState()")
+            return
+		except RemoteError as re:
             print(re)
         except Exception as e:
             _log.exception ("Expection: Could not contact actuator. Is it running?")
@@ -659,6 +662,9 @@ class SmartHub(Agent):
                     self._agent_id, 
                     'iiit/cbs/smarthub/' + endPoint,
                     state).get(timeout=10)
+        except gevent.Timeout:
+			_log.exception("Expection: gevent.Timeout in rpc_setShDeviceState()")
+            return
         except Exception as e:
             _log.exception ("Expection: Could not contact actuator. Is it running?")
             #print(e)
@@ -678,6 +684,9 @@ class SmartHub(Agent):
                     'platform.actuator','get_point',
                     'iiit/cbs/smarthub/' + endPoint).get(timeout=10)
             return device_level
+        except gevent.Timeout:
+			_log.exception("Expection: gevent.Timeout in rpc_getShDeviceLevel()")
+            return
         except Exception as e:
             _log.exception ("Expection: Could not contact actuator. Is it running?")
             #print(e)
@@ -698,6 +707,9 @@ class SmartHub(Agent):
                     'iiit/cbs/smarthub/' + endPoint,
                     level).get(timeout=10)
             self._updateShDeviceLevel(deviceId, endPoint,level)
+            return
+        except gevent.Timeout:
+			_log.exception("Expection: gevent.Timeout in rpc_setShDeviceLevel()")
             return
         except Exception as e:
             _log.exception ("Expection: Could not contact actuator. Is it running?")
@@ -723,6 +735,9 @@ class SmartHub(Agent):
                     'HIGH',
                     msg).get(timeout=10)
             #print("schedule result", result)
+        except gevent.Timeout:
+			_log.exception("Expection: gevent.Timeout in _getTaskSchedule()")
+            return
         except Exception as e:
             _log.exception ("Expection: Could not contact actuator. Is it running?")
             #print(e)
