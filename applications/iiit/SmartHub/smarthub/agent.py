@@ -658,7 +658,7 @@ class SmartHub(Agent):
                     'set_point',
                     self._agent_id, 
                     'iiit/cbs/smarthub/' + endPoint,
-                    state).get(timeout=1)
+                    state).get(timeout=10)
         except Exception as e:
             _log.exception ("Expection: Could not contact actuator. Is it running?")
             #print(e)
@@ -696,7 +696,7 @@ class SmartHub(Agent):
                     'set_point',
                     self._agent_id, 
                     'iiit/cbs/smarthub/' + endPoint,
-                    level).get(timeout=1)
+                    level).get(timeout=10)
             self._updateShDeviceLevel(deviceId, endPoint,level)
             return
         except Exception as e:
@@ -721,7 +721,7 @@ class SmartHub(Agent):
                     self._agent_id, 
                     taskId,
                     'HIGH',
-                    msg).get(timeout=1)
+                    msg).get(timeout=10)
             #print("schedule result", result)
         except Exception as e:
             _log.exception ("Expection: Could not contact actuator. Is it running?")
