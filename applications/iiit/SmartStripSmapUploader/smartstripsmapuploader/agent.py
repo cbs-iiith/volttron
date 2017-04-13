@@ -1,7 +1,15 @@
 # -*- coding: utf-8 -*- {{{
 # vim: set fenc=utf-8 ft=python sw=4 ts=4 sts=4 et:
+#
+# Copyright (c) 2017, IIIT-Hyderabad
+# All rights reserved.
+#
+#
+# IIIT Hyderabad
 
+#}}}
 
+#Sam
 import datetime
 import logging
 import sys
@@ -38,8 +46,11 @@ SS_PRICEPOINT   = "prices/PricePoint"
 # But this seems easier to show for an example.
 SMAP_ROOT = "http://chomp.lbl.gov/"
 API_KEY = "u606HlEFHTeVLfpBQZkNF232wChljnLHCKBY"
-SOURCE_NAME = "LPDM CBERD Flexlab Data"
-TIME_ZONE = "US/Pacific"
+SOURCE_NAME = "SmartStrip CBERD Flexlab Data"
+TIME_ZONE = "UTC"
+
+SENDER_SS = 'iiit.smartstrip'
+SENDER_PP = 'iiit.pricepoint'
 
 def DatetimeFromValue(ts):
     ''' Utility for dealing with time
@@ -65,109 +76,117 @@ def smartstripsmapuploader(config_path, **kwargs):
     ss_main_topic           = config.get('ss_main_topic', SS_MAIN_TOPIC)
     ss_price_point_topic    = config.get('ss_price_point_topic', SS_PRICEPOINT)
     
-    Agent.__name__ = 'SmartStripSmapUploader_Agent'
-    return SmartStripSmapUploader(**kwargs)
     
-class SmartStripSmapUploader(Agent):
-    '''
-    retrive the data from volttron and pushes it to the BLE UI Server
-    '''
-    
-    def __init__(self, **kwargs):
-        _log.debug('__init__()')
-        super(SmartStripSmapUploader, self).__init__(**kwargs)
+    class SmartStripSmapUploader(Agent):
+        '''
+        retrive the data from volttron and pushes it to the BLE UI Server
+        '''
         
-    @Core.receiver('onsetup')
-    def setup(self, sender, **kwargs):
-        _log.debug('setup()')
-        _log.info(config['message'])
-        self._agent_id = config['agentid']
-        
-        self.smap_root      = config.get('smap_root', SMAP_ROOT)
-        self.api_key        = config.get('api_key', API_KEY)
-        self.source_data    = config.get('source_data', SOURCE_NAME)
-        self.time_zone      = config.get('time_zone', TIME_ZONE)
-        return
-        
-    @Core.receiver('onstart')            
-    def startup(self, sender, **kwargs):
-        _log.debug('startup()')
-        return
-        
-    @Core.receiver('onstop')
-    def onstop(self, sender, **kwargs):
-        _log.debug('onstop()')
-        return
-        
-    @PubSub.subscribe('pubsub', ss_main_topic)
-    def on_match_ssData(self, peer, sender, bus, topic, headers, message):
-        _log.debug('on_match_ssData()')
-        self.ssSmapPostData(self, peer, sender, bus, topic, headers, message)
-        return
-        
-    @PubSub.subscribe('pubsub', ss_price_point_topic)
-    def on_match_ssCurrentPP(self, peer, sender, bus, topic, headers, message):
-        _log.debug('on_match_ssCurrentPP()')
-        _log.debug("topic: " + topic)
-        self.ssSmapPostData(peer, sender, bus, topic, headers, message)
-        return
-        
-    def ssSmapPostData(self, peer, sender, bus, topic, headers, message):
-        _log.debug('smapPostSSData()')
-        # Just check for it or any other messages you don't want to log here
-        # and return without doing anything.            
-        keywords_to_skip = ["subscriptions", "init", "finished_processing"]
-        for keyword in keywords_to_skip:
-            if keyword in topic:
+        def __init__(self, **kwargs):
+            _log.debug('__init__()')
+            super(SmartStripSmapUploader, self).__init__(**kwargs)
+            
+        @Core.receiver('onsetup')
+        def setup(self, sender, **kwargs):
+            _log.debug('setup()')
+            _log.info(config['message'])
+            self._agent_id = config['agentid']
+            
+            self.ss_id          = config.get('ss_id', 'SmartStrip-61')
+            self.smap_root      = config.get('smap_root', SMAP_ROOT)
+            self.api_key        = config.get('api_key', API_KEY)
+            self.source_data    = config.get('source_data', SOURCE_NAME)
+            self.time_zone      = config.get('time_zone', TIME_ZONE)
+            
+            self.sender_ss      = config.get('sender_ss', SENDER_SS)
+            self.sender_pp      = config.get('sender_ss', SENDER_PP)
+            
+            return
+            
+        @Core.receiver('onstart')            
+        def startup(self, sender, **kwargs):
+            _log.debug('startup()')
+            return
+            
+        @Core.receiver('onstop')
+        def onstop(self, sender, **kwargs):
+            _log.debug('onstop()')
+            return
+            
+        @PubSub.subscribe('pubsub', ss_main_topic)
+        def on_match_ssData(self, peer, sender, bus, topic, headers, message):
+            _log.debug('on_match_ssData()')
+            self.ssSmapPostData(peer, sender, bus, topic, headers, message)
+            return
+            
+        @PubSub.subscribe('pubsub', ss_price_point_topic)
+        def on_match_ssCurrentPP(self, peer, sender, bus, topic, headers, message):
+            _log.debug('on_match_ssCurrentPP()')
+            self.ssSmapPostData(peer, sender, bus, topic, headers, message)
+            return
+            
+        def ssSmapPostData(self, peer, sender, bus, topic, headers, message):
+            _log.debug('smapPostSSData()')
+            
+            #we don't want to post messages other than those published 
+            #by 'iiit.smartstrip' or 'iiit.pricepoint'
+            if sender != self.sender_ss or sender != self.sender_pp:
                 return
                 
-        _log.debug("topic: " + topic)
-        topic = "/" + topic
-        
-        print "header: " + headers
-        print "message: " + message
-        
-        # this is where you have to take the message and convert it to a smap stream.
-        # This currently just uses the VOLTTRON topic as the stream path
-        # Extracting the contents of the message depends on what the message looks like
-        # In our case I am pickling/unpickling objects that are being generated by a lower
-        # level module
-        message_time = None
-        message_value = None
-        
-        try:
-            message = cPickle.loads(message)
-            message_time = max(message_time, message.time)
-            if message_time is None:
-                message_time = time()
-            message_value = message.value
-        except Exception as e:
-            # there are a few messages that are not objects, assuming their contents
-            # are a dict with a value param and an optional timestamp param
-            # if there is no timestamp param just use current system time
-            message_time = message.get("timestamp", time())
-            message_value = message.get("value", None)
+            # Just check for it or any other messages you don't want to log here
+            # and return without doing anything.            
+            keywords_to_skip = ["subscriptions", "init", "finished_processing"]
+            for keyword in keywords_to_skip:
+                if keyword in topic:
+                    return
+                    
+            topic = "/" + self.ss_id + "/" + topic
             
-        # in our case times are being expressed as seconds since the epoch.  However smap
-        # expects ms since the epoch so I am multipling by 1000 here.  If you are passing around
-        # datetimes you can give those directly to the smap posting code.  It can deal with them
-        if type(message_time) is float:
-            message_time *= 1000
+            _log.debug("Peer: %r, Sender: %r, Bus: %r, Topic: %r, Headers: %r, Message: %r", peer, sender, bus, topic, headers, message)
             
-        # I am not sure at the moment how to derive units from a topic in a general sense and we are not
-        # passing any unit information in messages.  So absent hard-coding some mapping I'm just leaving
-        # the units blank for now.  They can always be filled in later
-        units = ""
-        reading_type = "double"
-        
-        #All the message objects we are sending have a time and a value member
-        readings = [[message_time, message_value]]
-        
-        #smap_post(self.smap_root, self.api_key, topic, units, reading_type, readings, self.source_data, self.time_zone)
-        return
-        
-    return
-
+            msg_time = headers[headers_mod.DATE]
+            msg_value = message[0]
+            units = message[1]['units']
+            reading_type = message[1]['type']
+            readings = [[msg_time, msg_value]]      
+            
+            if 'meterdata' in topic:
+                #strip 'all' from the topic, don't know how to post all (volt, current & apwr) to the smap
+                #so posting individually
+                topic = (topic.split('all', 1))[0]
+                
+                self.smapPostMeterData('voltage', topic, headers, message, msg_time)
+                self.smapPostMeterData('current', topic, headers, message, msg_time)
+                self.smapPostMeterData('active_power', topic, headers, message, msg_time)
+                return
+            elif 'threshold' in topic:
+                smap_post(self.smap_root, self.api_key, topic, units, reading_type, readings, self.source_data, self.time_zone)
+                return
+            elif 'PricePoint' in topic:
+                smap_post(self.smap_root, self.api_key, topic, units, reading_type, readings, self.source_data, self.time_zone)
+                return
+            elif 'tagid' in topic:
+                units = 'n/a'
+                smap_post(self.smap_root, self.api_key, topic, units, reading_type, readings, self.source_data, self.time_zone)
+                return
+            elif 'relaystate' in topic:
+                smap_post(self.smap_root, self.api_key, topic, units, reading_type, readings, self.source_data, self.time_zone)
+                return
+            else:
+                _log.Exception("Exception: unhandled topic")
+                return
+                        
+        def smapPostMeterData(self, field, topic, headers, message, msg_time):
+            msg_value = message[0][field]
+            units = message[1][field]['units']
+            type = message[1][field]['type']
+            
+            readings = [[msg_time, msg_value]]      
+            smap_post(self.smap_root, self.api_key, topic+field, units, reading_type, readings, self.source_data, self.time_zone)
+            return
+            
+    Agent.__name__ = 'SmartStripSmapUploader_Agent'
+    return SmartStripSmapUploader(**kwargs)
 
 def main(argv=sys.argv):
     '''Main method called by the eggsecutable.'''
