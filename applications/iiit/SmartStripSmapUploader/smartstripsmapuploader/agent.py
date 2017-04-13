@@ -169,7 +169,6 @@ class SmartStripSmapUploader(Agent):
     return
 
 
-
 def main(argv=sys.argv):
     '''Main method called by the eggsecutable.'''
     try:
