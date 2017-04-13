@@ -1,0 +1,10 @@
+{
+	"exec":"smarthub-0.1-py2.7.egg --config \"%c\"--sub\"%s\"--pub \"%p\"",  
+		"agentid": "SmartHub",
+		"message": "I am SmartHub Agent",
+		"location": "loc1",
+		"campus": "iiit",
+		"building": "cbs",
+		"period_read_data": 10		
+		
+}
