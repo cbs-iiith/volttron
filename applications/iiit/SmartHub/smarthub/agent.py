@@ -138,6 +138,8 @@ class SmartHub(Agent):
     def startup(self, sender, **kwargs):
         #self.runSmartHubTest()
         
+        time.sleep(10) #yeild for a movement
+        
         _log.debug('switch on debug led')
         self.setShDeviceState(SH_DEVICE_LED_DEBUG, SH_DEVICE_STATE_ON, SCHEDULE_NOT_AVLB)
         time.sleep(1) #yeild for a movement
@@ -369,9 +371,9 @@ class SmartHub(Agent):
             _log.exception ("Expection: no task schdl for testSensors_2()")
             #print(e)
             return
-        
+            
         return
-    
+        
     def getInitialHwState(self):
         #_log.debug("getInitialHwState()")
         result = self._getTaskSchedule('getInitialHwState', 300)
@@ -385,9 +387,9 @@ class SmartHub(Agent):
             _log.exception ("Expection: no task schdl for getInitialHwState()")
             #print(e)
             return
-
-        return
             
+        return
+        
     def getShDeviceState(self, deviceId, schdExist):
         state = E_UNKNOWN_STATE
         if not self._validDeviceAction(deviceId, AT_GET_STATE) :
@@ -409,7 +411,7 @@ class SmartHub(Agent):
             #do notthing
             _log.exception ("not a valid param - schdExist: " + schdExist)
             return state
-        
+            
         return state
         
     def getShDeviceLevel(self, deviceId, schdExist):
@@ -434,7 +436,7 @@ class SmartHub(Agent):
             #do notthing
             _log.exception ("Expection: not a valid param - schdExist: " + schdExist)
             return level
-        
+            
         return level
                 
     def setShDeviceState(self, deviceId, state, schdExist):
@@ -506,7 +508,7 @@ class SmartHub(Agent):
         self.applyPricingPolicy(deviceId)
         
         return
-              
+        
     def publishSensorData(self) :
         #_log.debug('publishSensorData()')
         result = self._getTaskSchedule('publishSensorData', 300)
@@ -580,7 +582,7 @@ class SmartHub(Agent):
         _log.debug("led th pp: " + "{0:0.4f}".format(float(thpp_led)) \
                     + ", fan th pp: " + "{0:0.4f}".format(float(thpp_fan)))
         return
-    
+        
     def publishCurrentPP(self) :
         #_log.debug('publishCurrentPP()')
         _log.debug("current price point: " + "{0:0.4f}".format(float(self._price_point_current)))
@@ -588,25 +590,25 @@ class SmartHub(Agent):
         pubMsg = [self._price_point_current,{'units': 'cent', 'tz': 'UTC', 'type': 'float'}]
         self._publishToBus(self.topic_price_point, pubMsg)
         
-    
+        
     @PubSub.subscribe('pubsub','prices/PricePoint')
     def onNewPrice(self, peer, sender, bus,  topic, headers, message):
         if sender == 'pubsub.compat':
             message = compat.unpack_legacy_message(headers, message)
-
+            
         new_price_point = message[0]
         _log.debug ( "*** New Price Point: {0:.2f} ***".format(new_price_point))
         
         if self._price_point_current != new_price_point:
             self.processNewPricePoint(new_price_point)
-
+            
     def processNewPricePoint(self, new_price_point):
         self._price_point_previous = self._price_point_current
         self._price_point_current = new_price_point
-
+        
         self.applyPricingPolicy(SH_DEVICE_LED)
         self.applyPricingPolicy(SH_DEVICE_FAN)
-
+        
     def applyPricingPolicy(self, deviceId):
         _log.debug("applyPricingPolicy()")
         shDevicesPP_th = self._shDevicesPP_th[deviceId]
@@ -629,27 +631,28 @@ class SmartHub(Agent):
             self.setShDeviceState(deviceId, SH_DEVICE_STATE_ON, SCHEDULE_NOT_AVLB)
             
         return
-    
+        
     def rpc_getShDeviceState(self, deviceId):
         if not self._validDeviceAction(deviceId,AT_GET_STATE):
             _log.exception ("Expection: not a valid device to get state, deviceId: " + str(deviceId))
-            return
+            return E_UNKNOWN_STATE
         endPoint = self._getEndPoint(deviceId, AT_GET_STATE)
         try:
             device_level = self.vip.rpc.call(
                     'platform.actuator','get_point',
                     'iiit/cbs/smarthub/' + endPoint).get(timeout=10 )
         except gevent.Timeout:
-			_log.exception("Expection: gevent.Timeout in rpc_getShDeviceState()")
-            return
-		except RemoteError as re:
+            _log.exception("Expection: gevent.Timeout in rpc_getShDeviceState()")
+            return E_UNKNOWN_STATE
+        except RemoteError as re:
             print(re)
+            return E_UNKNOWN_STATE
         except Exception as e:
             _log.exception ("Expection: Could not contact actuator. Is it running?")
             #print(e)
-            return
+            return E_UNKNOWN_STATE
         return int(device_level)
-
+        
     def rpc_setShDeviceState(self, deviceId, state):
         if not self._validDeviceAction(deviceId, AT_SET_STATE):
             _log.exception ("Expection: not a valid device to change state, deviceId: " + str(deviceId))
@@ -663,7 +666,7 @@ class SmartHub(Agent):
                     'iiit/cbs/smarthub/' + endPoint,
                     state).get(timeout=10)
         except gevent.Timeout:
-			_log.exception("Expection: gevent.Timeout in rpc_setShDeviceState()")
+            _log.exception("Expection: gevent.Timeout in rpc_setShDeviceState()")
             return
         except Exception as e:
             _log.exception ("Expection: Could not contact actuator. Is it running?")
@@ -676,7 +679,7 @@ class SmartHub(Agent):
         #_log.debug("rpc_getShDeviceLevel()")
         if not self._validDeviceAction(deviceId, AT_GET_LEVEL):
             _log.exception ("Expection: not a valid device to get level, deviceId: " + str(deviceId))
-            return
+            return E_UNKNOWN_LEVEL
         endPoint = self._getEndPoint(deviceId, AT_GET_LEVEL)
         #_log.debug("endPoint: " + endPoint)
         try:
@@ -685,20 +688,20 @@ class SmartHub(Agent):
                     'iiit/cbs/smarthub/' + endPoint).get(timeout=10)
             return device_level
         except gevent.Timeout:
-			_log.exception("Expection: gevent.Timeout in rpc_getShDeviceLevel()")
-            return
+            _log.exception("Expection: gevent.Timeout in rpc_getShDeviceLevel()")
+            return E_UNKNOWN_LEVEL
         except Exception as e:
             _log.exception ("Expection: Could not contact actuator. Is it running?")
             #print(e)
-            return
-        return 0
+            return E_UNKNOWN_LEVEL
+        return E_UNKNOWN_LEVEL
         
     def rpc_setShDeviceLevel(self, deviceId, level):
         if not self._validDeviceAction(deviceId, AT_SET_LEVEL):
             _log.exception ("Expection: not a valid device to change level, deviceId: " + str(deviceId))
             return
         endPoint = self._getEndPoint(deviceId, AT_SET_LEVEL)
-       
+        
         try:
             result = self.vip.rpc.call(
                     'platform.actuator', 
@@ -709,13 +712,13 @@ class SmartHub(Agent):
             self._updateShDeviceLevel(deviceId, endPoint,level)
             return
         except gevent.Timeout:
-			_log.exception("Expection: gevent.Timeout in rpc_setShDeviceLevel()")
+            _log.exception("Expection: gevent.Timeout in rpc_setShDeviceLevel()")
             return
         except Exception as e:
             _log.exception ("Expection: Could not contact actuator. Is it running?")
             #print(e)
             return
-                
+            
     def _getTaskSchedule(self, taskId, time_ms=None):
         #_log.debug("_getTaskSchedule()")
         self.time_ms = 600 if time_ms is None else time_ms
@@ -723,7 +726,7 @@ class SmartHub(Agent):
             start = str(datetime.datetime.now())
             end = str(datetime.datetime.now() 
                     + datetime.timedelta(milliseconds=self.time_ms))
-
+                    
             msg = [
                     ['iiit/cbs/smarthub',start,end]
                     ]
@@ -736,14 +739,14 @@ class SmartHub(Agent):
                     msg).get(timeout=10)
             #print("schedule result", result)
         except gevent.Timeout:
-			_log.exception("Expection: gevent.Timeout in _getTaskSchedule()")
+            _log.exception("Expection: gevent.Timeout in _getTaskSchedule()")
             return
         except Exception as e:
             _log.exception ("Expection: Could not contact actuator. Is it running?")
             #print(e)
             return        
         return result
-
+        
     def _updateShDeviceState(self, deviceId, endPoint, state):
         #_log.debug('_updateShDeviceState()')
         headers = { 'requesterID': self._agent_id, }
@@ -782,7 +785,7 @@ class SmartHub(Agent):
         pubTopic = self._getPubTopic(deviceId, AT_PUB_STATE)
         pubMsg = [state,{'units': 'On/Off', 'tz': 'UTC', 'type': 'int'}]
         self._publishToBus(pubTopic, pubMsg)
-
+        
         return
         
     def _publishShDeviceLevel(self, deviceId, level):
@@ -813,7 +816,7 @@ class SmartHub(Agent):
         self.vip.pubsub.publish('pubsub', pubTopic, headers, pubMsg).get(timeout=5)
         
         return
-    
+        
     def _getPubTopic(self, deviceId, actionType):
         if actionType == AT_PUB_STATE:
             if deviceId ==SH_DEVICE_LED_DEBUG:
@@ -962,7 +965,7 @@ class SmartHub(Agent):
     def rpc_from_net(self, header, message):
         #print(message)
         return self._processMessage(message)
-
+        
     def _processMessage(self, message):
         #_log.debug('processResponse()')
         result = False
@@ -1003,12 +1006,12 @@ class SmartHub(Agent):
         except Exception as e:
             print(e)
             return jsonrpc.json_error('NA', UNHANDLED_EXCEPTION, e)
-    
+            
     #refer to http://stackoverflow.com/questions/5595425/what-is-the-best-way-to-compare-floats-for-almost-equality-in-python
     #comparing floats is mess
     def _isclose(self, a, b, rel_tol=1e-09, abs_tol=0.0):
         return abs(a-b) <= max(rel_tol * max(abs(a), abs(b)), abs_tol)
-    
+        
 def main(argv=sys.argv):
     '''Main method called by the eggsecutable.'''
     try:
@@ -1016,11 +1019,12 @@ def main(argv=sys.argv):
     except Exception as e:
         print e
         _log.exception('unhandled exception')
-
-
+        
+        
 if __name__ == '__main__':
     # Entry point for script
     try:
         sys.exit(main())
     except KeyboardInterrupt:
         pass
+        
