@@ -1,0 +1,11 @@
+{
+    "exec":"smartstripsmapuploader-0.1-py2.7.egg --config \"%c\"--sub\"%s\"--pub \"%p\"",  
+    "agentid": "SmartStripSmapUploader",
+    "message": "I am Smart Strip Smap Uploader Agent",
+	"ss_main_topic" : "smartstrip" ,
+	"ss_price_point_topic": "prices/PricePoint", 
+	"smap_root" = "http://chomp.lbl.gov/",
+	"api_key" = "u606HlEFHTeVLfpBQZkNF232wChljnLHCKBY",
+	"source_data" = "LPDM CBERD Flexlab Data",
+	"time_zone" = "US/Pacific"
+}
