@@ -29,6 +29,7 @@ import json
 import cPickle
 
 from smap_tools import smap_post
+import dateutil
 
 utils.setup_logging()
 _log = logging.getLogger(__name__)
@@ -49,19 +50,9 @@ API_KEY = "u606HlEFHTeVLfpBQZkNF232wChljnLHCKBY"
 SOURCE_NAME = "SmartStrip CBERD Flexlab Data"
 TIME_ZONE = "UTC"
 
+#agents whose published data to volttron bus we are interested in uploading to smap
 SENDER_SS = 'iiit.smartstrip'
 SENDER_PP = 'iiit.pricepoint'
-
-def DatetimeFromValue(ts):
-    ''' Utility for dealing with time
-    '''
-    if isinstance(ts, (int, long)):
-        return datetime.utcfromtimestamp(ts)
-    elif isinstance(ts, float):
-        return datetime.utcfromtimestamp(ts)
-    elif not isinstance(ts, datetime):
-        raise ValueError('Unknown timestamp value')
-    return ts
     
 def smartstripsmapuploader(config_path, **kwargs):
     
@@ -79,7 +70,7 @@ def smartstripsmapuploader(config_path, **kwargs):
     
     class SmartStripSmapUploader(Agent):
         '''
-        retrive the data from volttron and pushes it to the BLE UI Server
+        retrive the data from volttron and post it the smap Server
         '''
         
         def __init__(self, **kwargs):
@@ -130,7 +121,8 @@ def smartstripsmapuploader(config_path, **kwargs):
             
             #we don't want to post messages other than those published 
             #by 'iiit.smartstrip' or 'iiit.pricepoint'
-            if sender != self.sender_ss or sender != self.sender_pp:
+            if sender != self.sender_ss and sender != self.sender_pp:
+                _log.debug('not valid sender')
                 return
                 
             # Just check for it or any other messages you don't want to log here
@@ -144,13 +136,15 @@ def smartstripsmapuploader(config_path, **kwargs):
             
             _log.debug("Peer: %r, Sender: %r, Bus: %r, Topic: %r, Headers: %r, Message: %r", peer, sender, bus, topic, headers, message)
             
-            msg_time = headers[headers_mod.DATE]
+            str_time = headers[headers_mod.DATE]
+            msg_time = dateutil.parser.parse(str_time)
             msg_value = message[0]
             units = message[1]['units']
             reading_type = message[1]['type']
             readings = [[msg_time, msg_value]]      
             
             if 'meterdata' in topic:
+                _log.debug('smapPostSSData() - meterdata')
                 #strip 'all' from the topic, don't know how to post all (volt, current & apwr) to the smap
                 #so posting individually
                 topic = (topic.split('all', 1))[0]
@@ -160,16 +154,20 @@ def smartstripsmapuploader(config_path, **kwargs):
                 self.smapPostMeterData('active_power', topic, headers, message, msg_time)
                 return
             elif 'threshold' in topic:
+                _log.debug('smapPostSSData() - threshold')
                 smap_post(self.smap_root, self.api_key, topic, units, reading_type, readings, self.source_data, self.time_zone)
                 return
             elif 'PricePoint' in topic:
+                _log.debug('smapPostSSData() - PricePoint')
                 smap_post(self.smap_root, self.api_key, topic, units, reading_type, readings, self.source_data, self.time_zone)
                 return
             elif 'tagid' in topic:
+                _log.debug('smapPostSSData() - tagid')
                 units = 'n/a'
                 smap_post(self.smap_root, self.api_key, topic, units, reading_type, readings, self.source_data, self.time_zone)
                 return
             elif 'relaystate' in topic:
+                _log.debug('smapPostSSData() - relaystate')
                 smap_post(self.smap_root, self.api_key, topic, units, reading_type, readings, self.source_data, self.time_zone)
                 return
             else:
@@ -179,7 +177,7 @@ def smartstripsmapuploader(config_path, **kwargs):
         def smapPostMeterData(self, field, topic, headers, message, msg_time):
             msg_value = message[0][field]
             units = message[1][field]['units']
-            type = message[1][field]['type']
+            reading_type = message[1][field]['type']
             
             readings = [[msg_time, msg_value]]      
             smap_post(self.smap_root, self.api_key, topic+field, units, reading_type, readings, self.source_data, self.time_zone)
