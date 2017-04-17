@@ -116,7 +116,7 @@ def smarthubsmapuploader(config_path, **kwargs):
             
             #we don't want to post messages other than those published 
             #by 'iiit.smarthub' or 'iiit.pricepoint'
-            if sender != self.sender_ss and sender != self.sender_pp:
+            if sender != self.sender_sh and sender != self.sender_pp:
                 _log.debug('not valid sender')
                 return
                 
@@ -127,7 +127,7 @@ def smarthubsmapuploader(config_path, **kwargs):
                 if keyword in topic:
                     return
                     
-            topic = "/" + self.ss_id + "/" + topic
+            topic = "/" + self.sh_id + "/" + topic
             
             _log.debug("Peer: %r, Sender: %r, Bus: %r, Topic: %r, Headers: %r, Message: %r", peer, sender, bus, topic, headers, message)
             
