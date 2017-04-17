@@ -1,0 +1,13 @@
+{
+    "exec":"volttronbridge-0.1-py2.7.egg --config \"%c\"--sub\"%s\"--pub \"%p\"",  
+    "agentid": "VolttronBridge",
+    "message": "I am Volttron Bridge Agent",
+	"bridge_mode": "ZONE",
+    "zone_ip_addrs":  "192.168.1.250", 
+    "zone_port": 8082,
+    "sh_ip_addrs":  "192.168.1.61", 
+    "sh_port": 8082,
+    "ss_ip_addrs":  "192.168.1.71", 
+    "ss_port": 8082,
+
+}
