@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*- {{{
 # vim: set fenc=utf-8 ft=python sw=4 ts=4 sts=4 et:
 
-# Copyright (c) 2015, Battelle Memorial Institute
+# Copyright (c) 2016, Battelle Memorial Institute
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -60,37 +60,48 @@ import os
 
 import gevent
 
+from volttron.platform import get_address
 from volttron.platform.agent import utils
+from volttron.platform.keystore import KeyStore
 from volttron.platform.vip.agent import Agent
-from volttron.platform.web import build_vip_address_string
+from volttron.platform.vip.agent.connection import Connection
 
 utils.setup_logging()
 _log = logging.getLogger(__name__)
 
+ks = KeyStore()
 
-def build_agent(address=None, identity=None, publickey=None, secretkey=None,
-                timeout=10, serverkey=None, **kwargs):
+
+def build_connection(identity, peer='', address=get_address(),
+                     publickey=ks.public, secretkey=ks.secret, **kwargs):
+    cn = Connection(address=address, identity=identity, peer=peer,
+                    publickey=publickey, secretkey=secretkey, **kwargs)
+    return cn
+
+
+def build_agent(address=get_address(), identity=None, publickey=ks.public,
+                secretkey=ks.secret, timeout=10, serverkey=None,
+                agent_class=Agent, **kwargs):
     """ Builds a dynamic agent connected to the specifiedd address.
 
-    :param address:
-    :param identity:
-    :param publickey:
-    :param secretkey:
-    :param timeout:
-    :param kwargs:
-    :return:
-    """
-    if not address:
-        address = os.environ['VOLTTRON_HOME']
+    All key parameters should have been encoded with
+    :py:meth:`volttron.platform.vip.socket.encode_key`
 
-    _log.debug('BUILDING AGENT VIP: {}'.format(address))
-    vip_address = build_vip_address_string(
-        vip_root=address, publickey=publickey, secretkey=secretkey,
-        serverkey=serverkey)
-    agent = Agent(address=vip_address, identity=identity)
+    :param str address: VIP address to connect to
+    :param str identity: Agent's identity
+    :param str publickey: Agent's Base64-encoded CURVE public key
+    :param str secretkey: Agent's Base64-encoded CURVE secret key
+    :param str serverkey: Server's Base64-encoded CURVE public key
+    :param class agent_class: Class to use for creating the instance
+    :param int timeout: Seconds to wait for agent to start
+    :param kwargs: Any Agent specific parameters
+    :return: an agent based upon agent_class that has been started
+    :rtype: agent_class
+    """
+    agent = agent_class(address=address, identity=identity, publickey=publickey,
+                        secretkey=secretkey, serverkey=serverkey, **kwargs)
     event = gevent.event.Event()
     gevent.spawn(agent.core.run, event)
-    event.wait(timeout=timeout)
-    _log.debug('RETURNING AGENT')
-
+    with gevent.Timeout(timeout):
+        event.wait()
     return agent

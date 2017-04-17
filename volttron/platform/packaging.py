@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*- {{{
 # vim: set fenc=utf-8 ft=python sw=4 ts=4 sts=4 et:
 
-# Copyright (c) 2015, Battelle Memorial Institute
+# Copyright (c) 2016, Battelle Memorial Institute
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -103,7 +103,9 @@ class AgentPackageError(Exception):
 
 def extract_package(wheel_file, install_dir,
                     include_uuid=False, specific_uuid=None):
-    '''Extract a wheel file to the specified location.
+
+    """
+    Extract a wheel file to the specified location.
 
     If include_uuid is True then a uuid will be generated under the
     passed location directory.
@@ -111,29 +113,29 @@ def extract_package(wheel_file, install_dir,
     The agent final directory will be based upon the wheel's data
     directory name in the following formats:
 
+    .. code-block:: python
+
         if include_uuid == True
-            install_dir/datadir_name/uuid
+            install_dir/uuid/datadir_name
         else
             install_dir/datadir_name
 
-    Arguments
-        wheel_file     - The wheel file to extract.
-        install_dir    - The root directory where to extract the wheel
-        include_uuid   - Auto-generates a uuuid under install_dir to
-                         place the wheel file data
-        specific_uuid  - A specific uuid to use for extracting the agent.
+    :param wheel_file: The wheel file to extract.
+    :param install_dir: The root directory where to extract the wheel
+    :param include_uuid: Auto-generates a uuuid under install_dir to place the
+                         wheel file data
+    :param specific_uuid: A specific uuid to use for extracting the agent.
+    :return: The folder where the wheel was extracted.
 
-    Returns
-        The folder where the wheel was extracted.
-    '''
+    """
     real_dir = install_dir
 
     # Only include the uuid if the caller wants it.
     if include_uuid:
-        if uuid == None:
-            real_dir = os.path.join(real_dir, uuid.uuid4())
+        if specific_uuid == None:
+            real_dir = os.path.join(real_dir, str(uuid.uuid4()))
         else:
-            real_dir = os.path.join(real_dir, uuid)
+            real_dir = os.path.join(real_dir, specific_uuid)
 
     if not os.path.isdir(real_dir):
         os.makedirs(real_dir)
@@ -154,6 +156,17 @@ def repackage(directory, dest=None):
     written in the current working directory if dest is None or in the
     directory given by dest otherwise.
     '''
+    if dest is not None:
+        try:
+            if not os.path.isdir(dest):
+                os.makedirs(dest)
+        except Exception as e:
+            raise AgentPackageError("Unable to create destination directory "
+                                    "{}. Exception {}".format(
+                                    dest, e.message))
+    if not os.path.exists(directory):
+        raise AgentPackageError("Agent directory {} does not "
+                                "exist".format(directory))
     try:
         pkg = UnpackedPackage(directory)
     except ValueError as exc:
@@ -162,7 +175,7 @@ def repackage(directory, dest=None):
 
 
 #default_wheel_dir = os.environ['VOLTTRON_HOME']+'/packaged'
-def create_package(agent_package_dir, wheelhouse):
+def create_package(agent_package_dir, wheelhouse, identity=None):
     '''Creates a packaged whl file from the passed agent_package_dir.
 
     If the passed directory doesn't exist or there isn't a setup.py file
@@ -179,14 +192,14 @@ def create_package(agent_package_dir, wheelhouse):
         raise AgentPackageError("Invalid agent package directory specified")
     setup_file_path = os.path.join(agent_package_dir, 'setup.py')
     if os.path.exists(setup_file_path):
-        wheel_path = _create_initial_package(agent_package_dir, wheelhouse)
+        wheel_path = _create_initial_package(agent_package_dir, wheelhouse, identity)
     else:
         raise NotImplementedError("Packaging extracted wheels not available currently")
         wheel_path = None
     return wheel_path
 
 
-def _create_initial_package(agent_dir_to_package, wheelhouse):
+def _create_initial_package(agent_dir_to_package, wheelhouse, identity=None):
     '''Create an initial whl file from the passed agent_dir_to_package.
 
     The function produces a wheel from the setup.py file located in
@@ -204,9 +217,23 @@ def _create_initial_package(agent_dir_to_package, wheelhouse):
         distdir = os.path.join(builddir, 'dist')
         shutil.copytree(agent_dir_to_package, builddir)
         subprocess.check_call([sys.executable, 'setup.py', '--no-user-cfg',
-                               '--quiet', 'bdist_wheel'], cwd=builddir)
+                               'bdist_wheel', '-q'], cwd=builddir,
+                              stderr=subprocess.PIPE, stdout=subprocess.PIPE)
+
         wheel_name = os.listdir(distdir)[0]
         wheel_path = os.path.join(distdir, wheel_name)
+
+        if identity is not None:
+            tmp_identity_file_fd, identity_template_filename = tempfile.mkstemp(dir=builddir)
+            tmp_identity_file = os.fdopen(tmp_identity_file_fd, "w")
+            tmp_identity_file.write(identity)
+            tmp_identity_file.close()
+        else:
+            identity_template_filename = os.path.join(builddir, "IDENTITY")
+
+        if os.path.exists(identity_template_filename):
+            add_files_to_package(wheel_path, {'identity_file': identity_template_filename})
+
         if not os.path.exists(wheelhouse):
             os.makedirs(wheelhouse, 0o750)
         wheel_dest = os.path.join(wheelhouse, wheel_name)
@@ -342,6 +369,7 @@ def _create_cert_ui(cn):
                   'CN': 'Common Name'}
     output_items = {}
     sys.stdout.write("Please enter the following for certificate creation:\n")
+    # TODO Add country code verification. cryptography package doesn't do it
     for item in input_order:
         cmd = '\t{} - {}({}): '.format(item, input_help[item],
                                               input_defaults[item])
@@ -393,13 +421,18 @@ def main(argv=sys.argv):
                                        help = 'additional help',
                                        dest='subparser_name')
     package_parser = subparsers.add_parser('package',
-        help="Create agent package (whl) from a directory or installed agent name.")
+        help="Create agent package (whl) from a directory")
 
     package_parser.add_argument('agent_directory',
         help='Directory for packaging an agent for the first time (requires setup.py file).')
     package_parser.add_argument('--dest',
         help='Directory to place the wheel file')
     package_parser.set_defaults(dest=default_wheelhouse)
+    package_parser.add_argument('--vip-identity',
+        help='Override the Agents desired VIP IDENTITY (if any). '
+             'Takes precedent over default VIP IDENTITY generated by '
+             'the platform and the preferred identity of the agent (if any).')
+    package_parser.set_defaults(identity=None)
 
     repackage_parser = subparsers.add_parser('repackage',
                                            help="Creates agent package from a currently installed agent.")
@@ -507,7 +540,7 @@ def main(argv=sys.argv):
     try:
 
         if opts.subparser_name == 'package':
-            whl_path = create_package(opts.agent_directory, wheelhouse=opts.dest)
+            whl_path = create_package(opts.agent_directory, wheelhouse=opts.dest, identity=opts.vip_identity)
         elif opts.subparser_name == 'repackage':
             whl_path = repackage(opts.directory, dest=opts.dest)
         elif opts.subparser_name == 'configure' :

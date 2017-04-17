@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*- {{{
 # vim: set fenc=utf-8 ft=python sw=4 ts=4 sts=4 et:
 
-# Copyright (c) 2015, Battelle Memorial Institute
+# Copyright (c) 2016, Battelle Memorial Institute
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -57,10 +57,11 @@
 #}}}
 
 
-'''Module for storing local public and secret keys and remote public keys'''
+"""Module for storing local public and secret keys and remote public keys"""
 
 
 import json
+import logging
 import os
 import urlparse
 
@@ -70,18 +71,21 @@ from .agent.utils import create_file_if_missing
 from .vip.socket import encode_key
 from volttron.platform import get_home
 
+_log = logging.getLogger(__name__)
+
 
 class BaseJSONStore(object):
-    '''JSON-file-backed store for dictionaries'''
+    """JSON-file-backed store for dictionaries"""
 
-    def __init__(self, filename, permissions=0o660):
+    def __init__(self, filename, permissions=0o600):
         self.filename = filename
         self.permissions = permissions
-        create_file_if_missing(filename)
+        create_file_if_missing(filename, contents='{}')
         os.chmod(filename, permissions)
 
     def store(self, data):
-        fd = os.open(self.filename, os.O_CREAT | os.O_WRONLY, self.permissions)
+        fd = os.open(self.filename, os.O_CREAT | os.O_WRONLY | os.O_TRUNC,
+                     self.permissions)
         try:
             os.write(fd, json.dumps(data, indent=4))
         finally:
@@ -91,10 +95,19 @@ class BaseJSONStore(object):
         try:
             with open(self.filename, 'r') as json_file:
                 return json.load(json_file)
-        except IOError:
-            return {}
         except ValueError:
+            # If the file is empty json.load will raise ValueError
             return {}
+
+    def remove(self, key):
+        data = self.load()
+        try:
+            del data[key]
+        except KeyError as e:
+            msg = 'Key "{}" is not present in {}'.format(key, self.filename)
+            raise KeyError(msg)
+        else:
+            self.store(data)
 
     def update(self, new_data):
         data = self.load()
@@ -103,32 +116,79 @@ class BaseJSONStore(object):
 
 
 class KeyStore(BaseJSONStore):
-    '''Handle generation, storage, and retrival of keys'''
+    """Handle generation, storage, and retrival of CURVE key pairs"""
 
     def __init__(self, filename=None):
         if filename is None:
-            filename = os.path.join(get_home(), 'keystore')
+            filename = self.get_default_path()
         super(KeyStore, self).__init__(filename)
         if not self.isvalid():
             self.generate()
 
-    def generate(self):
+    @staticmethod
+    def get_default_path():
+        return os.path.join(get_home(), 'keystore')
+
+    @staticmethod
+    def generate_keypair_dict():
+        """Generate and return new keypair as dictionary"""
         public, secret = curve_keypair()
-        self.store({'public': encode_key(public),
-                    'secret': encode_key(secret)})
+        return {'public': encode_key(public),
+                'secret': encode_key(secret)}
 
+    def generate(self):
+        """Generate and store new key pair"""
+        self.store(self.generate_keypair_dict())
+
+    def _get_key(self, keyname):
+        """Get key and make sure it's type is str (not unicode)
+
+        The json module returns all strings as unicode type, but base64
+        decode expects str type as input. The conversion from unicode
+        type to str type is safe in this case, because encode_key
+        returns str type (ASCII characters only).
+        """
+        key = self.load().get(keyname, None)
+        if key:
+            try:
+                key = str(key)
+            except UnicodeEncodeError:
+                _log.warning(
+                    'Non-ASCII character found for key {} in {}'
+                    .format(keyname, self.filename))
+                key = None
+        return key
+
+    @property
     def public(self):
-        return self.load().get('public', None)
+        """Return encoded public key"""
+        return self._get_key('public')
 
+    @public.setter
+    def public(self, encoded_public_key):
+        self.update({'public': encoded_public_key, 'secret': self.secret})
+
+    @property
     def secret(self):
-        return self.load().get('secret', None)
+        """Return encoded secret key"""
+        return self._get_key('secret')
+
+    @secret.setter
+    def secret(self, encoded_secret_key):
+        self.update({'public': self.public, 'secret': encoded_secret_key})
 
     def isvalid(self):
-        return self.public() and self.secret()
+        """Check if key pair is valid"""
+        return self.public and self.secret
 
 
 class KnownHostsStore(BaseJSONStore):
-    '''Handle storage and retrival of known hosts'''
+    """Handle storage and retrival of known hosts"""
+
+    def __init__(self, filename=None):
+        if filename is None:
+            filename = os.path.join(get_home(), 'known_hosts')
+        super(KnownHostsStore, self).__init__(filename)
 
     def add(self, addr, server_key):
         self.update({self._parse_addr(addr): server_key})

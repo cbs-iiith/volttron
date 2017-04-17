@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*- {{{
 # vim: set fenc=utf-8 ft=python sw=4 ts=4 sts=4 et:
 
-# Copyright (c) 2015, Battelle Memorial Institute
+# Copyright (c) 2016, Battelle Memorial Institute
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -207,6 +207,7 @@ class Dispatcher(jsonrpc.Dispatcher):
 class RPC(SubsystemBase):
     def __init__(self, core, owner):
         self.core = weakref.ref(core)
+        self._owner = owner
         self.context = None
         self._exports = {}
         self._dispatcher = None
@@ -242,7 +243,7 @@ class RPC(SubsystemBase):
         '''
         def checked_method(*args, **kwargs):
             user = str(self.context.vip_message.user)
-            caps = self.call('auth', 'get_capabilities', user_id=user).get(timeout=5)
+            caps = self._owner.vip.auth.get_capabilities(user)
             if not required_caps <= set(caps):
                 msg = ('method "{}" requires capabilities {},'
                       ' but capability list {} was'
@@ -322,18 +323,24 @@ class RPC(SubsystemBase):
 
     @allow.classmethod
     def allow(cls, capabilities):
-        '''Decorator specifies required agent capabilities to call a method.
-     
+        """
+        Decorator specifies required agent capabilities to call a method.
+
         This is designed to be used with the export decorator:
 
-        @RPC.export
-        @RPC.allow('can_read_status')
-        def get_status():
-            ...
+        .. code-block:: python
+
+            @RPC.export
+            @RPC.allow('can_read_status')
+            def get_status():
+                ...
 
         Multiple capabilies can be provided in a list:
-        @RPC.allow(['can_read_status', 'can_call_my_methods'])
-        '''
+        .. code-block:: python
+
+            @RPC.allow(['can_read_status', 'can_call_my_methods'])
+
+        """
         def decorate(method):
             if isinstance(capabilities, basestring):
                 annotate(method, set, 'rpc.allow_capabilities', capabilities)

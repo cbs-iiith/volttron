@@ -4,20 +4,25 @@ var ACTION_TYPES = require('../constants/action-types');
 var authorizationStore = require('../stores/authorization-store');
 var dispatcher = require('../dispatcher');
 var Store = require('../lib/store');
+var platformsStore = require('./platforms-store.js')
 
 
 var _chartData = {};
 var _showCharts = false;
-var _chartTopics = {};
+var _chartTopics = {
+    platforms: []
+};
 
 var chartStore = new Store();
 
 chartStore.getPinnedCharts = function () {
     var pinnedCharts = [];
 
+    var user = authorizationStore.getUsername();
+
     for (var key in _chartData)
     {
-        if (_chartData[key].hasOwnProperty("pinned") && (_chartData[key].pinned === true) && (_chartData[key].data.length > 0))
+        if (_chartData[key].hasOwnProperty("pinned") && (_chartData[key].pinned === true) && (_chartData[key].series.length > 0))
         {
             pinnedCharts.push(_chartData[key]);
         }
@@ -35,7 +40,7 @@ chartStore.getPinned = function (chartKey) {
 }
 
 chartStore.getType = function (chartKey) {
-    var type = "line";
+    var type = "lineChart";
 
     if (_chartData.hasOwnProperty(chartKey))
     {
@@ -52,6 +57,10 @@ chartStore.getRefreshRate = function (chartKey) {
     return (_chartData.hasOwnProperty(chartKey) ? _chartData[chartKey].refreshInterval : null);
 }
 
+chartStore.getDataLength = function (chartKey) {
+    return (_chartData.hasOwnProperty(chartKey) ? _chartData[chartKey].dataLength : null);
+}
+
 chartStore.showCharts = function () {
 
     var showCharts = _showCharts;
@@ -61,13 +70,13 @@ chartStore.showCharts = function () {
     return showCharts;
 }
 
-chartStore.getChartTopics = function (parentUuid) {
+chartStore.getChartTopics = function () {
     
     var topics = [];
 
-    if (_chartTopics.hasOwnProperty(parentUuid))
+    if (_chartTopics.hasOwnProperty("platforms"))
     {
-        topics = JSON.parse(JSON.stringify(_chartTopics[parentUuid]));
+        topics = JSON.parse(JSON.stringify(_chartTopics.platforms));
 
         if (topics.length)
         {    
@@ -81,7 +90,7 @@ chartStore.getChartTopics = function (parentUuid) {
                     if (_chartData.hasOwnProperty(topic.name))
                     {
                         var path = _chartData[topic.name].series.find(function (item) {
-                            return item.topic === topic.path;
+                            return item.topic === topic.value;
                         });
 
                         topicInChart = (path ? true : false);
@@ -90,6 +99,22 @@ chartStore.getChartTopics = function (parentUuid) {
                     return !topicInChart;
                 });
             }
+
+            // Filter out any orphan chart topics not associated with registered platforms
+            var platformUuids = platformsStore.getPlatforms().map(function (platform) {
+                return platform.uuid;
+            });
+
+            topics = topics.filter(function (topic) {
+                
+                // This filter will keep platform topics of known platforms and any topic that
+                // looks like a device topic
+                var platformTopic = platformUuids.filter(function (uuid) {
+                    return ((topic.value.indexOf(uuid) > -1) || (topic.value.indexOf("datalogger/platform") < 0));
+                });
+
+                return (platformTopic.length ? true : false);
+            });
         }
     }
 
@@ -127,15 +152,13 @@ chartStore.dispatchToken = dispatcher.register(function (action) {
             {
                 if (action.panelItem.hasOwnProperty("data"))
                 {
-                    // _chartData[action.panelItem.name] = JSON.parse(JSON.stringify(action.panelItem.data));
-                    
                     var chartObj = {
                         refreshInterval: (action.panelItem.hasOwnProperty("refreshInterval") ? action.panelItem.refreshInterval :15000),
+                        dataLength: (action.panelItem.hasOwnProperty("dataLength") ? action.panelItem.dataLength : 20),
                         pinned: (action.panelItem.hasOwnProperty("pinned") ? action.panelItem.pinned : false),
-                        type: (action.panelItem.hasOwnProperty("chartType") ? action.panelItem.chartType : "line"),
-                        data: convertTimeToSeconds(action.panelItem.data),
+                        type: (action.panelItem.hasOwnProperty("chartType") ? action.panelItem.chartType : "lineChart"),
                         chartKey: action.panelItem.name,
-                        series: [ setChartItem(action.panelItem) ]
+                        series: [ setChartSeries(action.panelItem, convertTimeToSeconds(action.panelItem.data)) ]
                     };
 
                     _chartData[action.panelItem.name] = chartObj;
@@ -195,6 +218,17 @@ chartStore.dispatchToken = dispatcher.register(function (action) {
 
             break;
 
+        case ACTION_TYPES.CHANGE_CHART_LENGTH:
+
+            if (_chartData[action.chartKey].hasOwnProperty("dataLength"))
+            {
+                _chartData[action.chartKey].dataLength = action.length;
+            }
+
+            chartStore.emitChange();
+
+            break;
+
         case ACTION_TYPES.PIN_CHART:
 
             if (_chartData[action.chartKey].hasOwnProperty("pinned"))
@@ -236,7 +270,7 @@ chartStore.dispatchToken = dispatcher.register(function (action) {
 
             var chartTopics = JSON.parse(JSON.stringify(action.topics));
 
-            _chartTopics[action.platform.uuid] = chartTopics;            
+            _chartTopics.platforms = chartTopics;            
 
             chartStore.emitChange();
             break;
@@ -254,9 +288,48 @@ chartStore.dispatchToken = dispatcher.register(function (action) {
             }
 
             break;
+
+        case ACTION_TYPES.REMOVE_PLATFORM_CHARTS:
+
+            var seriesToCut = [];
+
+            for (var name in _chartData)
+            {
+                _chartData[name].series.forEach(function (series) {
+
+                    if (series.path.indexOf(this.uuid) > -1)
+                    {
+                        seriesToCut.push({name: series.name, uuid: series.uuid});
+                    }
+
+                }, action.platform);
+            }
+
+            seriesToCut.forEach(function (series) {
+                removeSeries(series.name, series.uuid);
+
+                if (_chartData[series.name].series.length === 0)
+                {
+                    delete _chartData[series.name];
+                }
+
+            }, action.platform);
+
+            if (seriesToCut.length)
+            {
+                chartStore.emitChange();
+            }
+
+            break;
+
+        case ACTION_TYPES.CLEAR_AUTHORIZATION: 
+
+            _chartData = {};
+
+            break;
     }
 
-    function setChartItem(item) {
+    function setChartSeries(item, data) {
 
         var chartItem = {
             name: item.name,
@@ -265,7 +338,8 @@ chartStore.dispatchToken = dispatcher.register(function (action) {
             parentUuid: item.parentUuid,
             parentType: item.parentType,
             parentPath: item.parentPath,
-            topic: item.topic
+            topic: item.topic,
+            data: data
         }
 
         return chartItem;
@@ -273,41 +347,22 @@ chartStore.dispatchToken = dispatcher.register(function (action) {
 
     function insertSeries(item) {
 
-        var chartItems = _chartData[item.name].data.filter(function (datum) {
-            return datum.uuid === item.uuid
-        });
-
-        if (chartItems.length === 0)
-        {
-            if (item.hasOwnProperty("data"))
-            {
-                _chartData[item.name].data = _chartData[item.name].data.concat(convertTimeToSeconds(item.data));
-                _chartData[item.name].series.push(setChartItem(item));
-            }
+        if (item.hasOwnProperty("data"))
+        {   
+            _chartData[item.name].series.push(setChartSeries(item, convertTimeToSeconds(item.data)));
         }
 
     }
 
     function removeSeries(name, uuid) {
 
-        if (_chartData[name].data.length > 0)
+        for (var i = 0; i < _chartData[name].series.length; i++)
         {
-            for (var i = _chartData[name].data.length - 1; i >= 0; i--)
+            if (_chartData[name].series[i].uuid === uuid)
             {
-                if (_chartData[name].data[i].uuid === uuid)
-                {
-                    _chartData[name].data.splice(i, 1);
-                }                    
-            }
+                _chartData[name].series.splice(i, 1);
 
-            for (var i = 0; i < _chartData[name].series.length; i++)
-            {
-                if (_chartData[name].series[i].uuid === uuid)
-                {
-                    _chartData[name].series.splice(i, 1);
-
-                    break;
-                }
+                break;
             }
         }
     }
@@ -331,7 +386,6 @@ chartStore.dispatchToken = dispatcher.register(function (action) {
                 if (skey === "0" && typeof value === 'string' &&
                     Date.parse(value + 'Z')) {
                     value = Date.parse(value + 'Z');
-                    // initialState.xDates = true;
                 }
 
                 newItem[skey] = value;    

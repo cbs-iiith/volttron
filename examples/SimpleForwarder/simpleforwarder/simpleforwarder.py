@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*- {{{
 # vim: set fenc=utf-8 ft=python sw=4 ts=4 sts=4 et:
 #
-# Copyright (c) 2015, Battelle Memorial Institute
+# Copyright (c) 2016, Battelle Memorial Institute
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -187,11 +187,7 @@ def simpleforwarder(config_path, **kwargs):
 def main(argv=sys.argv):
     '''Main method called by the eggsecutable.'''
     try:
-        utils.vip_main(simpleforwarder)
-        #utils.default_main(historian,
-        #                   description='Historian agent that saves a history to a sqlite db.',
-        #                   argv=argv,
-        #                   no_pub_sub_socket=True)
+        utils.vip_main(simpleforwarder, version=__version__)
     except Exception as e:
         print(e)
         _log.exception('unhandled exception')

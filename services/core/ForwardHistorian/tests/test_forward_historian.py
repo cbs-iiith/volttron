@@ -8,8 +8,6 @@ import pytest
 from zmq.utils import jsonapi
 
 from volttron.platform.messaging import headers as headers_mod
-from volttron.platform.auth import AuthEntry, AuthFile
-from volttron.platform.keystore import KeyStore
 
 from volttrontesting.utils.platformwrapper import build_vip_address
 
@@ -30,7 +28,7 @@ FORWARDER_CONFIG = {
 }
 
 # Module level variables
-ALL_TOPIC = "devices/Building/LAB/Device/all"
+DEVICES_ALL_TOPIC = "devices/Building/LAB/Device/all"
 query_points = {
     "oat_point": "Building/LAB/Device/OutsideAirTemperature",
     "mixed_point": "Building/LAB/Device/MixedAirTemperature",
@@ -72,10 +70,10 @@ def do_publish(agent1):
     }
     print("Published time in header: " + now)
 
-    print('ALL TOPIC IS: {}'.format(ALL_TOPIC))
+    print('ALL TOPIC IS: {}'.format(DEVICES_ALL_TOPIC))
     # Publish messages
     agent1.vip.pubsub.publish(
-        'pubsub', ALL_TOPIC, headers, all_message).get(timeout=10)
+        'pubsub', DEVICES_ALL_TOPIC, headers, all_message).get(timeout=10)
     publishedmessages.append(all_message)
     gevent.sleep(1)
 
@@ -91,14 +89,12 @@ def onmessage(peer, sender, bus, topic, headers, message):
 
 @pytest.mark.historian
 @pytest.mark.xfail(reason='need to see about auth stuff for this to work')
-def test_reconnect_forwarder(volttron_instance1_encrypt,
-                             volttron_instance2_encrypt):
-    from_instance = volttron_instance1_encrypt
-    to_instance = volttron_instance2_encrypt
+def test_reconnect_forwarder(get_volttron_instances):
+    from_instance, to_instance = get_volttron_instances(2, True)
     to_instance.allow_all_connections()
 
-    publisher = from_instance.build_agent(generatekeys=True)
-    receiver = to_instance.build_agent(generatekeys=True)
+    publisher = from_instance.build_agent()
+    receiver = to_instance.build_agent()
 
     forwarder_config = deepcopy(BASE_FORWARD_CONFIG)
     forwardtoaddr = build_vip_address(to_instance, receiver)
@@ -120,70 +116,3 @@ def test_reconnect_forwarder(volttron_instance1_encrypt,
 
     for i in range(len(publishedmessages)):
         assert allforwardedmessage[i] == publishedmessages[i]
-
-
-
-
-@pytest.mark.historian
-def test_forwarding(volttron_instance1_encrypt, volttron_instance2_encrypt):
-    global FORWARDER_CONFIG
-    tf = tempfile.NamedTemporaryFile()
-    tf2 = tempfile.NamedTemporaryFile()
-    tf3 = tempfile.NamedTemporaryFile()
-    ks = KeyStore(tf.name)
-    ks.generate()
-    ks2 = KeyStore(tf2.name)
-    ks2.generate()
-    ks3 = KeyStore(tf2.name)
-    ks3.generate()
-
-    wrap1 = volttron_instance1_encrypt
-    wrap2 = volttron_instance2_encrypt
-
-    authfile1 = AuthFile(wrap1.volttron_home+"/auth.json")
-    entry1 = AuthEntry(
-        credentials="CURVE:{}".format(ks3.public())
-    )
-    authfile1.add(entry1)
-
-    authfile = AuthFile(wrap2.volttron_home+"/auth.json")
-    entry = AuthEntry(
-        credentials="CURVE:{}".format(ks.public()))
-    authfile.add(entry)
-    entry = AuthEntry(
-        credentials="CURVE:{}".format(ks2.public()))
-    authfile.add(entry)
-
-    forward_to_vip = "{}?serverkey={}&publickey={}&secretkey={}".format(
-        wrap2.vip_address, wrap2.publickey, ks.public(), ks.secret()
-    )
-
-    FORWARDER_CONFIG["destination-vip"] = forward_to_vip
-    forwarder_config = FORWARDER_CONFIG
-    print("THE CONFIG = {}".format(forwarder_config))
-
-    wrap1.install_agent(
-        agent_dir="services/core/ForwardHistorian",
-        config_file=forwarder_config
-    )
-
-    connect_to_wrap2 = "{}?serverkey={}&publickey={}&secretkey={}".format(
-        wrap2.vip_address, wrap2.publickey, ks2.public(), ks2.secret()
-    )
-
-    connect_to_wrap1 = "{}?serverkey={}&publickey={}&secretkey={}".format(
-        wrap1.vip_address, wrap1.publickey, ks3.public(), ks3.secret()
-    )
-
-    agent_connected1 = wrap1.build_agent(address=connect_to_wrap1)
-    agent_connected2 = wrap2.build_agent(address=connect_to_wrap2)
-
-    message = ''
-    agent_connected2.vip.pubsub.subscribe('pubsub', '', callback=onmessage)
-    gevent.sleep(0.2)
-
-    do_publish(agent1=agent_connected1)
-    gevent.sleep(1)
-    assert allforwardedmessage
-
-

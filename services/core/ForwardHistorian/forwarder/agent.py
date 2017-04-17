@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*- {{{
 # vim: set fenc=utf-8 ft=python sw=4 ts=4 sts=4 et:
 
-# Copyright (c) 2015, Battelle Memorial Institute
+# Copyright (c) 2016, Battelle Memorial Institute
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -60,22 +60,25 @@ import datetime
 import logging
 import sys
 import time
+import traceback
 from urlparse import urlparse
 
 import gevent
-from zmq.utils import jsonapi
 
-from volttron.platform.vip.agent import Agent, Core, compat
-from volttron.platform.agent.base_historian import BaseHistorian
+from volttron.platform.vip.agent import Agent, Core, compat, Unreachable
+from volttron.platform.vip.agent.utils import build_agent
+from volttron.platform.agent.base_historian import BaseHistorian, add_timing_data_to_header
 from volttron.platform.agent import utils
+from volttron.platform.keystore import KnownHostsStore
 from volttron.platform.messaging import topics, headers as headers_mod
 from volttron.platform.messaging.health import (STATUS_BAD,
                                                 STATUS_GOOD, Status)
+from volttron.utils.docs import doc_inherit
 
 FORWARD_TIMEOUT_KEY = 'FORWARD_TIMEOUT_KEY'
 utils.setup_logging()
 _log = logging.getLogger(__name__)
-__version__ = '3.5'
+__version__ = '3.7'
 
 
 def historian(config_path, **kwargs):
@@ -84,36 +87,40 @@ def historian(config_path, **kwargs):
     custom_topic_list = config.get('custom_topic_list', [])
     topic_replace_list = config.get('topic_replace_list', [])
     destination_vip = config.get('destination-vip')
-    identity = config.get('identity', kwargs.pop('identity', None))
-    include_destination_in_header = config.get(
-        'include_destination_in_header',
-        False)
 
+    gather_timing_data = config.get('gather_timing_data', False)
+
+    hosts = KnownHostsStore()
+    destination_serverkey = hosts.serverkey(destination_vip)
+    if destination_serverkey is None:
+        _log.info("Destination serverkey not found in known hosts file, using config")
+        destination_serverkey = config['destination-serverkey']
+
+    required_target_agents = config.get('required_target_agents', [])
     backup_storage_limit_gb = config.get('backup_storage_limit_gb', None)
-    origin = config.get('origin', None)
-    overwrite_origin = config.get('overwrite_origin', False)
-    include_origin_in_header = config.get('include_origin_in_header', False)
     if 'all' in services_topic_list:
         services_topic_list = [topics.DRIVER_TOPIC_BASE, topics.LOGGER_BASE,
                                topics.ACTUATOR, topics.ANALYSIS_TOPIC_BASE]
 
     class ForwardHistorian(BaseHistorian):
-        '''This historian forwards data to another platform.
-        '''
+        """
+        This historian forwards data to another platform.
+        """
 
         def __init__(self, **kwargs):
             # will be available in both threads.
             self._topic_replace_map = {}
             self._num_failures = 0
             self._last_timeout = 0
+            self._target_platform = None
             super(ForwardHistorian, self).__init__(**kwargs)
 
         @Core.receiver("onstart")
         def starting_base(self, sender, **kwargs):
-            '''
+            """
             Subscribes to the platform message bus on the actuator, record,
             datalogger, and device topics to capture data.
-            '''
+            """
 
             def subscriber(subscription, callback_method):
                 _log.debug("subscribing to {}".format(subscription))
@@ -180,15 +187,16 @@ def historian(config_path, **kwargs):
                         self._topic_replace_map[k] = v
                     topic = self._topic_replace_map[topic]
 
+            if gather_timing_data:
+                add_timing_data_to_header(headers, self.core.agent_uuid or self.core.identity, "collected")
+
             payload = {'headers': headers, 'message': data}
 
             self._event_queue.put({'source': "forwarded",
                                    'topic': topic,
                                    'readings': [(timestamp_string, payload)]})
 
-        def __platform(self, peer, sender, bus, topic, headers, message):
-            _log.debug('Platform is now: {}'.format(message))
-
+        @doc_inherit
         def publish_to_historian(self, to_publish_list):
             handled_records = []
 
@@ -211,6 +219,25 @@ def historian(config_path, **kwargs):
             if not self._target_platform:
                 _log.debug('Could not connect to target')
                 return
+
+            for vip_id in required_target_agents:
+                try:
+                    self._target_platform.vip.ping(vip_id).get()
+                except Unreachable:
+                    skip = "Skipping publish: Target platform not running " \
+                           "required agent {}".format(vip_id)
+                    _log.warn(skip)
+                    self.vip.health.set_status(
+                        STATUS_BAD, skip)
+                    return
+                except Exception as e:
+                    err = "Unhandled error publishing to target platform."
+                    _log.error(err)
+                    _log.error(traceback.format_exc())
+                    self.vip.health.set_status(
+                        STATUS_BAD, err)
+                    return
+
             for x in to_publish_list:
                 topic = x['topic']
                 value = x['value']
@@ -226,25 +253,13 @@ def historian(config_path, **kwargs):
                     del headers['Destination']
                 except KeyError:
                     pass
-                # if not headers.get('Origin', None)
-                #     if overwrite_origin:
-                #         if not include_origin_in_header:
-                #             try:
-                #                 del headers['Origin']
-                #             except KeyError:
-                #                 pass
-                #         else:
-                #             headers['Origin'] = origin
-                #     else:
-                #     headers['Origin'] = parsed.hostname
-                #     headers['Destination'] = [next_dest.scheme +
-                #                               '://'+
-                #                               next_dest.hostname]
-                # else:
-                #    headers['Destination'].append(next_dest.hostname)
+
+                if gather_timing_data:
+                    add_timing_data_to_header(headers, self.core.agent_uuid or self.core.identity,"forwarded")
+
                 if timeout_occurred:
                     _log.error(
-                        'A timeout has occured so breaking out of publishing')
+                        'A timeout has occurred so breaking out of publishing')
                     break
                 with gevent.Timeout(30):
                     try:
@@ -257,7 +272,7 @@ def historian(config_path, **kwargs):
                             headers=headers,
                             message=payload['message']).get()
                     except gevent.Timeout:
-                        _log.debug("Timout occurred email should send!")
+                        _log.debug("Timeout occurred email should send!")
                         timeout_occurred = True
                         self._last_timeout = self.timestamp()
                         self._num_failures += 1
@@ -266,9 +281,17 @@ def historian(config_path, **kwargs):
                         self._target_platform.core.stop()
                         self._target_platform = None
                         self.vip.health.set_status(
-                            STATUS_BAD, "Timout occured")
+                            STATUS_BAD, "Timeout occured")
                     except Exception as e:
-                        _log.error(e)
+                        err = "Unhandled error publishing to target platfom."
+                        _log.error(err)
+                        _log.error(traceback.format_exc())
+                        self.vip.health.set_status(
+                            STATUS_BAD, err)
+                        # Before returning lets mark any that weren't errors
+                        # as sent.
+                        self.report_handled(handled_records)
+                        return
                     else:
                         handled_records.append(x)
 
@@ -281,35 +304,39 @@ def historian(config_path, **kwargs):
                 status = Status.from_json(self.vip.health.get_status())
                 self.vip.health.send_alert(FORWARD_TIMEOUT_KEY,
                                            status)
+            else:
+                self.vip.health.set_status(
+                    STATUS_GOOD,"published {} items".format(
+                        len(to_publish_list)))
 
+        @doc_inherit
         def historian_setup(self):
+            _log.debug("Setting up to forward to {}".format(destination_vip))
             try:
-                _log.debug(
-                    "Setting up to forward to {}".format(destination_vip))
-                event = gevent.event.Event()
-                agent = Agent(address=destination_vip)
-                agent.core.onstart.connect(lambda *a, **kw: event.set(),
-                                           event)
-                gevent.spawn(agent.core.run)
-                event.wait(timeout=10)
-                self._target_platform = agent
+                agent = build_agent(address=destination_vip,
+                                    serverkey=destination_serverkey,
+                                    publickey=self.core.publickey,
+                                    secretkey=self.core.secretkey,
+                                    enable_store=False)
+
             except gevent.Timeout:
                 self.vip.health.set_status(
                     STATUS_BAD, "Timeout in setup of agent")
-                status = Status.from_json(self.vip.health.get_status())
+                status = Status.from_json(self.vip.health.get_status_json())
                 self.vip.health.send_alert(FORWARD_TIMEOUT_KEY,
                                            status)
+            else:
+                self._target_platform = agent
 
-    ForwardHistorian.__name__ = 'ForwardHistorian'
-    return ForwardHistorian(identity=identity,
-                            backup_storage_limit_gb=backup_storage_limit_gb,
+
+    return ForwardHistorian(backup_storage_limit_gb=backup_storage_limit_gb,
                             **kwargs)
 
 
 def main(argv=sys.argv):
-    '''Main method called by the aip.'''
+    """Main method called by the aip."""
     try:
-        utils.vip_main(historian)
+        utils.vip_main(historian, version=__version__)
     except Exception as e:
         print(e)
         _log.exception('unhandled exception')

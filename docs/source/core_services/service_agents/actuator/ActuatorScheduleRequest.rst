@@ -1,3 +1,4 @@
+.. _ActuatorScheduleRequest:
 Requesting Schedule Changes
 ---------------------------
 
@@ -22,7 +23,7 @@ An agent can request a task schedule by publishing to the
     #python
     {
         'type': 'NEW_SCHEDULE',
-        'requesterID': <Agent ID>, #The name of the requesting agent.
+        'requesterID': <Ignored, VIP Identity used internally>
         'taskID': <unique task ID>, #The desired task ID for this task. It must be unique among all other scheduled tasks.
         'priority': <task priority>, #The desired task priority, must be 'HIGH', 'LOW', or 'LOW_PREEMPT'
     }
@@ -44,6 +45,12 @@ with the following message:
          "2013-12-06 16:20:00"],    #End of time slot.
         #etc...
     ]
+
+.. warning::
+
+   If time zones are not included in schedule requests then the Actuator will
+   interpret them as being in local time. This may cause remote interaction
+   with the actuator to malfunction.
 
 Points on Task Scheduling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -91,7 +98,7 @@ A task may be canceled by publishing to the
     #python
     {
         'type': 'CANCEL_SCHEDULE',
-        'requesterID': <Agent ID>, #The name of the requesting agent.
+        'requesterID': <Ignored, VIP Identity used internally>
         'taskID': <unique task ID>, #The desired task ID for this task. It must be unique among all other scheduled tasks.
     }
 
