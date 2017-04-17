@@ -16,11 +16,12 @@ var Navigation = React.createClass({
         authorizationStore.removeChangeListener(this._onStoreChange);
     },
     _onStoreChange: function () {
-        this.setState(getStateFromStores());
+        if (this.componentDom)
+        {
+            this.setState(getStateFromStores());
+        }
     },
     _onLogOutClick: function () {
-        // platformsPanelActionCreators.closePanel();
-        // platformsPanelActionCreators.resetPanel();
         platformManagerActionCreators.clearAuthorization();
     },
     render: function () {
@@ -55,7 +56,10 @@ var Navigation = React.createClass({
         }
 
         return (
-            <nav className="navigation">
+            <nav className="navigation"
+                ref={function(nav) {
+                        this.componentDom = nav;
+                    }.bind(this)}>
                 <h1 className="logo">
                     <span className="logo__name">VOLTTRON</span>
                     <span className="logo__tm">&trade;</span>

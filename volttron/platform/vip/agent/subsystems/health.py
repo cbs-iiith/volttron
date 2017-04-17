@@ -1,4 +1,4 @@
-# Copyright (c) 2015, Battelle Memorial Institute
+# Copyright (c) 2016, Battelle Memorial Institute
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -61,13 +61,14 @@ from volttron.platform.messaging import topics
 from volttron.platform.messaging.health import *
 from .base import SubsystemBase
 
-__docformat__ = 'reStructuredText'
-__version__ = '1.0'
-
 """
 The health subsystem allows an agent to store it's health in a non-intrusive
 way.
 """
+
+__docformat__ = 'reStructuredText'
+__version__ = '1.1'
+
 _log = logging.getLogger(__name__)
 
 
@@ -78,7 +79,7 @@ class Health(SubsystemBase):
         self._rpc = weakref.ref(rpc)
         self._statusobj = Status.build(
             STATUS_GOOD, status_changed_callback=self._status_changed)
-
+        self._status_callbacks = set()
         def onsetup(sender, **kwargs):
             rpc.export(self.set_status, 'health.set_status')
             rpc.export(self.get_status, 'health.get_status')
@@ -111,10 +112,33 @@ class Health(SubsystemBase):
                                        headers=headers,
                                        message=statusobj.as_json())
 
+    def add_status_callback(self, fn):
+        """
+        Add callbacks to the passed function.  The function must have the
+        following interface
+
+        .. code::python
+
+            def status_callback(status, context):
+
+        :param fn: The method to be executed when status is changed.
+        :param fn: callable
+        """
+        self._status_callbacks.add(fn)
+
     def _status_changed(self):
         """ Internal function that happens when the status changes state.
         :return:
         """
+        remove = set()
+        for fn in self._status_callbacks:
+            try:
+                fn(self._statusobj.status, self._statusobj.context)
+            except NameError:
+                remove.add(fn)
+        # Removes the items that are in remove from the callbacks.
+        self._status_callbacks.difference_update(remove)
+
         self._owner.vip.heartbeat.restart()
 
     def set_status(self, status, context=None):
@@ -129,6 +153,22 @@ class Health(SubsystemBase):
         self._statusobj.update_status(status, context)
 
     def get_status(self):
+        """"RPC method
+
+        Returns the last updated status from the object with the context.
+
+        The minimum output from the status would be:
+
+            {
+                "status": "GOOD",
+                "context": None,
+                "utc_last_update": "2016-03-31T15:40:32.685138+0000"
+            }
+
+        """
+        return self._statusobj.as_dict() #.as_json()
+
+    def get_status_json(self):
         """"RPC method
 
         Returns the last updated status from the object with the context.

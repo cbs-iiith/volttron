@@ -1,3 +1,4 @@
+tzlocal
 mock
 gevent
 greenlet
@@ -5,3 +6,4 @@ zmq
 ply
 psutil
 pymongo
+mysql-connector-python-rf

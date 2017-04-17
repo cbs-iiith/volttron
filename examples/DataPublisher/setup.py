@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*- {{{
 # vim: set fenc=utf-8 ft=python sw=4 ts=4 sts=4 et:
 
-# Copyright (c) 2015, Battelle Memorial Institute
+# Copyright (c) 2016, Battelle Memorial Institute
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -59,7 +59,7 @@
 from os import path
 from setuptools import setup, find_packages
 
-MAIN_MODULE = 'publisher3'
+MAIN_MODULE = 'agent'
 
 # Find the agent package that contains the main module
 packages = find_packages('.')

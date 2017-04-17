@@ -1,6 +1,8 @@
-============
-Installation
-============
+.. _install:
+
+=================
+Installing Volttron
+=================
 
 VOLTTRON requires the following dependencies in order to bootstrap the
 development environment.
@@ -18,6 +20,15 @@ command:
    sudo apt-get update
    sudo apt-get install build-essential python-dev openssl libssl-dev libevent-dev git
 
+
+On **Redhat or CENTOS systems**, these can all be installed with the following
+command:
+
+.. code-block:: bash
+
+   sudo yum update
+   sudo yum install make automake gcc gcc-c++ kernel-devel python-devel openssl openssl-devel libevent-devel git
+
 On **Arch Linux**, the following command will install the dependencies:
 
 .. code-block:: bash
@@ -27,12 +38,6 @@ On **Arch Linux**, the following command will install the dependencies:
 Source Code
 -----------
 
-To work with the latest devlopment code clone from the develop branch by using
-the following git command.
-
-.. code-block:: bash
-
-    git clone https://github.com/VOLTTRON/volttron/ -b develop
 
 To work with the latest stable code clone the master branch using the following
 git command.
@@ -40,6 +45,16 @@ git command.
 .. code-block:: bash
 
     git clone https://github.com/VOLTTRON/volttron/
+
+
+You may use the following command to work with the latest code from the develop
+branch. It must be run within the VOLLTRON source directory.
+
+.. code-block:: bash
+
+    git checkout develop
+
+
 
 Bootstrap
 ---------
@@ -83,7 +98,7 @@ root directory using an activated command prompt:
 
 .. code-block:: bash
 
-    py.test
+    ./ci-integration/run-tests.sh
 
 
 Execution
@@ -103,7 +118,15 @@ volttron.log execute the following.
 
     volttron -vv -l volttron.log&
 
+Acquiring Third Party Agent Code
+---------------------------------
+
+Third party agents are available under volttron-applications repository. In order to use those agents, add
+volttron-applications repository under the volttron/applications directory by using following command:
+
+    git subtree add --prefix applications https://github.com/VOLTTRON/volttron-applications.git develop --squash
+
 Next Steps
 ----------
 
-* :doc:`agent-development`  
+* :doc:`Agent-Development`
