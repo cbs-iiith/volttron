@@ -59,11 +59,6 @@ def smartstripsmapuploader(config_path, **kwargs):
     config = utils.load_config(config_path)
     agent_id = config['agentid']
     
-    PLUG_ID_1 = 0
-    PLUG_ID_2 = 1
-    PLUG_ID_3 = 2
-    PLUG_ID_4 = 3
-    
     ss_main_topic           = config.get('ss_main_topic', SS_MAIN_TOPIC)
     ss_price_point_topic    = config.get('ss_price_point_topic', SS_PRICEPOINT)
     
@@ -90,7 +85,7 @@ def smartstripsmapuploader(config_path, **kwargs):
             self.time_zone      = config.get('time_zone', TIME_ZONE)
             
             self.sender_ss      = config.get('sender_ss', SENDER_SS)
-            self.sender_pp      = config.get('sender_ss', SENDER_PP)
+            self.sender_pp      = config.get('sender_pp', SENDER_PP)
             
             return
             
@@ -117,7 +112,7 @@ def smartstripsmapuploader(config_path, **kwargs):
             return
             
         def ssSmapPostData(self, peer, sender, bus, topic, headers, message):
-            _log.debug('smapPostSSData()')
+            _log.debug('ssSmapPostData()')
             
             #we don't want to post messages other than those published 
             #by 'iiit.smartstrip' or 'iiit.pricepoint'
