@@ -3,10 +3,13 @@ import logging
 import requests
 import time
 import pytz
-import uuid 
+import uuid
 
-logging.basicConfig()
-logger = logging.getLogger()
+from volttron.platform.agent import utils 
+
+utils.setup_logging()
+_log = logging.getLogger(__name__)
+__version__ = '0.1'
 
 def get_stream_UUIDs_and_metadata(smap_root, stream):
     """
@@ -51,7 +54,7 @@ def download_most_recent_point(smap_root, stream):
         response = response.json()
         readings = response[0]["Readings"]
         if not readings:
-            logger.debug("Did not find any readings")
+            _log.debug("Did not find any readings")
             continue
         ts = readings[0][0]
         val = readings[0][1]
@@ -61,7 +64,7 @@ def download_most_recent_point(smap_root, stream):
         tz = pytz.timezone(timezone)
         ts = tz.localize(ts)
         
-        logger.debug("ts=\t{ts}\nval=\t{val}".format(ts=ts, val=val))        
+        _log.debug("ts=\t{ts}\nval=\t{val}".format(ts=ts, val=val))        
         if val is None:
             val = float("NaN")
          
@@ -70,7 +73,7 @@ def download_most_recent_point(smap_root, stream):
             newest_val = val
             newest_uuid = uuid            
             
-    logger.debug("Latest info:\tuuid:\t{uuid}\tts:\t{ts}\tval:\t{val}".format(uuid = newest_uuid, ts = newest_ts, val = newest_val))
+    _log.debug("Latest info:\tuuid:\t{uuid}\tts:\t{ts}\tval:\t{val}".format(uuid = newest_uuid, ts = newest_ts, val = newest_val))
     return newest_uuid, newest_ts, newest_val
 
 
@@ -118,8 +121,8 @@ def chunk_list(lst, num_elements_in_sublist):
 
 def _upload(readings, url, api_key, source_name, path, obj_uuid, units="kW", additional_metadata={},
            doRobustUpload=True):
-    logger.debug("Starting smap upload sourcename: {sn} path: {p} ".format(sn = source_name, p = path))
-    logger.debug("Trying to upload:\nfirst_point:\t{d_start}\nlast_point:\t{d_end}".format(d_start=readings[0],
+    _log.debug("Starting smap upload sourcename: {sn} path: {p} ".format(sn = source_name, p = path))
+    _log.debug("Trying to upload:\nfirst_point:\t{d_start}\nlast_point:\t{d_end}".format(d_start=readings[0],
                                                                                            d_end=readings[-1]))
     to_smap_time = lambda x: 1000 * time.mktime(x.timetuple())
     # try parsing to smap time.  If it fails assume the timestamps are already in the expect time (unix time in ms)
@@ -139,10 +142,10 @@ def _upload(readings, url, api_key, source_name, path, obj_uuid, units="kW", add
     success = res.status_code == requests.codes.ok
 
     if success or not doRobustUpload:
-        logger.debug("Successfully uploaded data")
+        _log.debug("Successfully uploaded data")
         return success
 
-    logger.debug(
+    _log.debug(
         "Posting data to smap in one file failed.  Attempting to split the file into smaller pieces and post individually.")
 
     # if we are here than the upload failed.  Try breaking it into smaller chunks and post those with repetition in case of failure
@@ -151,7 +154,7 @@ def _upload(readings, url, api_key, source_name, path, obj_uuid, units="kW", add
     maxAttempts = 10
 
     for chunk in chunks:
-        logger.debug("Posting file with %i points to smap path %s." % (len(chunk), path))
+        _log.debug("Posting file with %i points to smap path %s." % (len(chunk), path))
         attempt = 1
         success = False
         while not success:
@@ -160,10 +163,10 @@ def _upload(readings, url, api_key, source_name, path, obj_uuid, units="kW", add
             success = res.status_code == requests.codes.ok
 
             if not success:
-                logger.debug(
+                _log.debug(
                     "Posting file with {ct} points to smap failed.  Attempt: {t}".format(ct=len(chunk), t=attempt))
                 if attempt > maxAttempts:
-                    logger.debug("Posting file with {ct} points to smap failed on all {t} attempts.  Aborting.".format(
+                    _log.debug("Posting file with {ct} points to smap failed on all {t} attempts.  Aborting.".format(
                         ct=len(chunk), t=attempt))
                     return False
                 else:
@@ -196,18 +199,18 @@ def smap_post(smap_root, smap_api_key, stream, units, reading_type, readings, so
         smap_post.cached_uuids[(smap_root, source_name, stream)] = stream_uuid
 
         try:
-            logger.debug("trying to upload {stream}".format(stream=stream))
+            _log.debug("trying to upload {stream}".format(stream=stream))
             res = _upload(readings, smap_root, smap_api_key, source_name, stream, stream_uuid, units,
                          additional_metadata=additional_metadata)
             return res
         except Exception as e:
-            logger.warning("Error posting to smap: {e}".format(e=e))
-            logger.warning(stream)
-            logger.warning(units)
-            logger.warning(reading_type)
-            logger.warning(readings)
+            _log.warning("Error posting to smap: {e}".format(e=e))
+            _log.warning(stream)
+            _log.warning(units)
+            _log.warning(reading_type)
+            _log.warning(readings)
     except Exception as e:
-        logger.warning("Outer loop error posting to smap: {e}".format(e=e))
-        logger.warning(units)
-        logger.warning(reading_type)
-        logger.warning(readings)
+        _log.warning("Outer loop error posting to smap: {e}".format(e=e))
+        _log.warning(units)
+        _log.warning(reading_type)
+        _log.warning(readings)
