@@ -7,6 +7,6 @@
 	"sh_price_point_topic": "prices/PricePoint", 
 	"smap_root": "http://chomp.lbl.gov/",
 	"api_key": "u606HlEFHTeVLfpBQZkNF232wChljnLHCKBY",
-	"source_data": "SmartHub CBERD Flexlab Data",
+	"source_data": "CBERD Flexlab Data",
 	"time_zone": "UTC"
 }
