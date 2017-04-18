@@ -5,9 +5,9 @@
 	"bridge_host": "STRIP",
 	"deviceId": "SmartStrip-71"
     "sh_ip_addr":  "192.168.1.50",
-    "sh_port": 8082,
+    "sh_port": 8080,
 	"ss_ip_addr":  "192.168.1.71", 
-    "ss_port": 8082,
+    "ss_port": 8080,
 	"energyDemand_topic": "smartstrip/energydemand",
 	"pricePoint_topic": "smartstrip/pricepoint"
 }

@@ -1,6 +1,7 @@
 import requests
 import sys
 import json
+import time
 authentication=None
 
 def do_rpc(method, params=None ):
@@ -23,27 +24,53 @@ def do_rpc(method, params=None ):
 
     return requests.post(url_root, data=json.dumps(json_package))
 
-if __name__ == '__main__':
-    try:
-        response = do_rpc("rpc_registerDsBridge", \
-                            {'discovery_address': '192.168.1.61:8080', \
-                                'deviceId': 'SmartHub-61'\
-                            })
-        print('response: ' + str(response))
-        if response.ok:
-            success = response.json()['result']
-            print(success)
-            if success:
-                print('registered')
-            else:
-                print("not registered")
+def test_register():
+    response = do_rpc("rpc_registerDsBridge", \
+                {'discovery_address': '192.168.1.61:8080', \
+                    'deviceId': 'SmartHub-61'\
+                })
+    print('response: ' + str(response))
+    if response.ok:
+        success = response.json()['result']
+        print(success)
+        if success:
+            print('registered')
         else:
-            print('do_rpc register response not ok')
+            print("not registered")
+    else:
+        print('do_rpc register response not ok')
+        
+    return True
+        
+def test_unregister():
+    response = do_rpc("rpc_unregisterDsBridge", \
+                {'discovery_address': '192.168.1.61:8080', \
+                    'deviceId': 'SmartHub-61'\
+                })
+    print('response: ' + str(response))
+    if response.ok:
+        success = response.json()['result']
+        print(success)
+        if success:
+            print('unregistered')
+        else:
+            print("not registered")
+    else:
+        print('do_rpc register response not ok')
+        
+    return True
+
+if __name__ == '__main__':
+    
+    try:
+        test_register()
+        time.sleep(5)
+        test_unregister()
     except KeyError:
         error = response.json()['error']
         print (error)
     except Exception as e:
-        #print (e)
+        print (e)
         print('do_rpc() unhandled exception, most likely server is down')
 
     sys.exit(0)
