@@ -143,30 +143,15 @@ def volttronbridge(config_path, **kwargs):
 
             if self._bridge_host == 'ZONE':
                 _log.debug('ZONE')
-                #downstream volttron instances (SmartHubs)
                 #do nothing
                 
-            elif self._bridge_host == 'HUB':
-                _log.debug('HUB')
-                #upstream volttron instance (Zone) - register with zone VolttronBridge
+            elif self._bridge_host == 'HUB' or self._bridge_host == 'STRIP' :
+                _log.debug('HUB/STRIP')
+                _log.debug("registering with upstream VolttronBridge")
                 url_root = 'http://' + self._up_ip_addr + ':' + str(self._up_port) + '/VolttronBridge'
                 result = self.do_rpc(url_root, 'rpc_registerDsBridge', \
                                     {'discovery_address': self._discovery_address, \
                                         'deviceId': self._deviceId \
-                                    })
-                if result:
-                    self._usConnected = True
-                    
-                #downstream volttron instances (SmartStrips)
-                # do nothing
-                
-            elif self._bridge_host == 'STRIP':
-                _log.debug('STRIP')
-                #upstream volttron instance (SmartHub) - register with smarthub VolttronBridge
-                url_root = 'http://' + self._up_ip_addr + ':' + str(self._up_port) + '/VolttronBridge'
-                result = self.do_rpc(url_root, 'rpc_registerDsBridge', 
-                                    {'discovery_address': self._discovery_address, 
-                                        'deviceId': self._deviceId
                                     })
                 if result:
                     self._usConnected = True
@@ -176,10 +161,26 @@ def volttronbridge(config_path, **kwargs):
         @Core.receiver('onstop')
         def onstop(self, sender, **kwargs):
             _log.debug('onstop()')
+            if self._bridge_host == 'ZONE':
+                _log.debug('ZONE')
+                #do nothing
+                
+            elif self._bridge_host == 'HUB' or self._bridge_host == 'STRIP':
+                _log.debug('HUB/STRIP')
+                if self._usConnected == False:
+                    return
+                    
+                _log.debug("unregistering with upstream VolttronBridge")
+                url_root = 'http://' + self._up_ip_addr + ':' + str(self._up_port) + '/VolttronBridge'
+                result = self.do_rpc(url_root, 'rpc_unregisterDsBridge', \
+                                    {'discovery_address': self._discovery_address, \
+                                        'deviceId': self._deviceId \
+                                    })
             return
 
         @PubSub.subscribe('pubsub', pricePoint_topic)
         def onNewPrice(self, peer, sender, bus,  topic, headers, message):
+            _log.debug('onNewPrice()')
             if sender == 'pubsub.compat':
                 message = compat.unpack_legacy_message(headers, message)
                 
@@ -192,6 +193,7 @@ def volttronbridge(config_path, **kwargs):
             
         @RPC.export
         def rpc_from_net(self, header, message):
+            _log.debug('rpc_from_net()')
             result = False
             try:
                 rpcdata = jsonrpc.JsonRpcData.parse(message)
@@ -203,6 +205,11 @@ def volttronbridge(config_path, **kwargs):
                             'deviceId':rpcdata.params['deviceId']
                             }
                     result = self._registerDsBridge(**args)
+                elif rpcdata.method == "rpc_unregisterDsBridge":
+                    args = {'discovery_address': rpcdata.params['discovery_address'],
+                            'deviceId':rpcdata.params['deviceId']
+                            }
+                    result = self._unregisterDsBridge(**args)
                 elif rpcdata.method == "rpc_postEnergyDemand":
                     args = {'discovery_address': rpcdata.params['discovery_address'],
                             'deviceId':rpcdata.params['deviceId'],
@@ -232,13 +239,15 @@ def volttronbridge(config_path, **kwargs):
         
         #price point on local bus changed post it to ds
         def _processNewPricePoint(self, new_price_point):
+            _log.debug('_processNewPricePoint()')
             self._price_point_previous = self._price_point_current
             self._price_point_current = new_price_point
             
-            for discovery_address in _ds_voltBr:
+            for discovery_address in self._ds_voltBr:
                 self._postDsNewPricePoint(discovery_address, new_price_point)
             
         def _postDsNewPricePoint(discovery_address, newPricePoint):
+            _log.debug('_postDsNewPricePoint()')
             url_root = 'http://' + discovery_address + '/VolttronBridge'
             result = self.do_rpc(url_root, 'rpc_postPricePoint', \
                                     {'discovery_address': self._discovery_address, \
@@ -250,17 +259,32 @@ def volttronbridge(config_path, **kwargs):
             return
             
         def _registerDsBridge(self, discovery_address, deviceId):
-            if discovery_address in ds_voltBr:
+            _log.debug('_registerDsBridge()')
+            if discovery_address in self._ds_voltBr:
                 _log.debug('already registered')
                 return True
                 
-            ds_voltBr.append(discovery_address)
-            index = ds_voltBr.index(discovery_address)
-            ds_deviceId.insert(index, deviceId)
+            #TODO: potential bug in this method, not atomic
+            self._ds_voltBr.append(discovery_address)
+            index = self._ds_voltBr.index(discovery_address)
+            self._ds_deviceId.insert(index, deviceId)
+            return True
+            
+        def _unregisterDsBridge(self, discovery_address, deviceId):
+            _log.debug('_unregisterDsBridge()')
+            if discovery_address not in self._ds_voltBr:
+                _log.debug('already unregistered')
+                return True
+                
+            #TODO: potential bug in this method, not atomic
+            index = self._ds_voltBr.index(discovery_address)
+            self._ds_voltBr.remove(discovery_address)
+            del self._ds_deviceId[index]
             return True
             
         #post the new new price point from us to the local bus        
         def _postPricePoint(self, newPricePoint):
+            _log.debug('_postPricePoint()')
             #we want to post to bus only if there is change in price point
             if self._price_point_current != new_price_point:
                 self._price_point_previous = self._price_point_current
@@ -275,9 +299,10 @@ def volttronbridge(config_path, **kwargs):
                 
         #post the new energy demand from ds to the local bus
         def _postEnergyDemand(self, discovery_address, deviceId, newEnergyDemand):
-            if discovery_address in ds_voltBr:
-                index = ds_voltBr.index(discovery_address)
-                if ds_deviceId(index) == deviceId:
+            _log.debug('_postEnergyDemand()')
+            if discovery_address in self._ds_voltBr:
+                index = self._ds_voltBr.index(discovery_address)
+                if self._ds_deviceId(index) == deviceId:
                     #post to bus
                     pubTopic = energyDemand_topic + "/" + deviceId
                     pubMsg = [newEnergyDemand,{'units': 'mW', 'tz': 'UTC', 'type': 'float'}]
@@ -286,6 +311,7 @@ def volttronbridge(config_path, **kwargs):
             return False
             
         def _publishToBus(self, pubTopic, pubMsg):
+            _log.debug('_publishToBus()')
             now = datetime.datetime.utcnow().isoformat(' ') + 'Z'
             headers = {headers_mod.DATE: now}          
             #Publish messages
@@ -293,6 +319,7 @@ def volttronbridge(config_path, **kwargs):
             return
         
         def do_rpc(self, url_root, method, params=None ):
+            _log.debug('do_rpc()')
             result = False
             json_package = {
                 'jsonrpc': '2.0',
