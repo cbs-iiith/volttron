@@ -24,16 +24,24 @@ def do_rpc(method, params=None ):
     return requests.post(url_root, data=json.dumps(json_package))
 
 if __name__ == '__main__':
-    response = do_rpc("rpc_updatePricePoint", {'newPricePoint': 0.5})
-    print('response: ' +str(response))
-    if response.ok:
-        success = response.json()['result']
-        if success:
-            print('new price updated')
+    try:
+        response = do_rpc("rpc_updatePricePoint1", {'newPricePoint1': 'temp'})
+        print('response: ' +str(response))
+        if response.ok:
+            success = response.json()['result']
+            print(success)
+            if success:
+                print('new price updated')
+            else:
+                print("new price notupdated")
         else:
-            print("new price notupdated")
-    else:
-        print('do_rpc pricepoint response not ok')
+            print('do_rpc pricepoint response not ok')
+    except KeyError:
+        error = response.json()['error']
+        print (error)
+    except Exception as e:
+        #print (e)
+        print('do_rpc() unhandled exception, most likely server is down')
 
     sys.exit(0)
 

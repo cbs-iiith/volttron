@@ -118,7 +118,7 @@ class PricePoint(Agent):
 
     def processMessage(self, message):
         _log.debug('processResponse()')
-        result = 'FAILED'
+        result = False
         try:
             rpcdata = jsonrpc.JsonRpcData.parse(message)
             _log.info('rpc method: {}'.format(rpcdata.method))
@@ -127,15 +127,15 @@ class PricePoint(Agent):
                 args = {'newPricePoint': rpcdata.params['newPricePoint']}
                 result = self.updatePricePoint(**args)
             else:
-                return jsonrpc.json_error('NA', METHOD_NOT_FOUND,
+                return jsonrpc.json_error(rpcdata.id, METHOD_NOT_FOUND,
                     'Invalid method {}'.format(rpcdata.method))
                     
             return jsonrpc.json_result(rpcdata.id, result)
             
-        except AssertionError:
-            print('AssertionError')
-            return jsonrpc.json_error('NA', INVALID_REQUEST,
-                    'Invalid rpc data {}'.format(data))
+        except KeyError:
+            print('KeyError')
+            return jsonrpc.json_error('NA', INVALID_PARAMS,
+                    'Invalid params {}'.format(rpcdata.params))
         except Exception as e:
             print(e)
             return jsonrpc.json_error('NA', UNHANDLED_EXCEPTION, e)
@@ -146,9 +146,10 @@ class PricePoint(Agent):
             _log.debug('New Price Point: {0:.2f} !!!'.format(newPricePoint))
             self.post_price(newPricePoint)
             self._price_point_previous = newPricePoint
+            return True
         else :
             _log.info('No change in price')
-        return 'success'
+            return False
 
     def price_from_smartstrip_bacnet(self):
         #_log.debug('price_from_smartstrip_bacnet()')
