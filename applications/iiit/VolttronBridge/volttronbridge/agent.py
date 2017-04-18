@@ -62,8 +62,12 @@ def volttronbridge(config_path, **kwargs):
     pricePoint_topic = self.config.get('pricePoint_topic', \
                                             'zone/pricepoint')
     '''
-    the assumption is that for UpStream (us) the bridge communicates with only one instance and 
-    for the DownStream (ds) the bridge would be posting to multiple devices
+    Retrive the data from volttron bus and pushes it to upstream or downstream volttron instance
+    if posting to downstream, then the data is pricepoint
+    and if posting to upstream then the data is energydemand
+
+    The assumption is that for UpStream (us), the bridge communicates with only one instance and 
+    for the DownStream (ds), the bridge would be posting to multiple devices
 
     for pricepoint one-to-many communication
         energydemand one-to-one communication
@@ -75,14 +79,7 @@ def volttronbridge(config_path, **kwargs):
     whereas the the bridge does not upfront know the downstream devices. 
     As and when the downstram bridges register to the bridge, the bridge starts posting the messages (pricepoint) to them
     '''
-        
     class VolttronBridge(Agent):
-        '''
-        retrive the data from volttron bus and pushes it to upstream or downstream volttron instance
-        if posting to downstream, then the data is pricepoint
-        and if posting to upstream then the data is energydemand
-        '''
-
         def __init__(self, **kwargs):
             _log.debug('__init__()')
             super(VolttronBridge, self).__init__(**kwargs)
@@ -96,6 +93,10 @@ def volttronbridge(config_path, **kwargs):
             self._usConnected = False
             self._bridge_host = config.get('bridge_host', 'ZONE')
             self._deviceId    = config.get('deviceId', 'Zone-1')
+            
+            #we want to post only if there is change in price point
+            self._price_point_current   = 0
+            self._price_point_previous  = 0
             
             if self._bridge_host == 'ZONE':
                 
@@ -166,7 +167,7 @@ def volttronbridge(config_path, **kwargs):
                                     })
                 if result == 'SUCCESS':
                     self._usConnected = True
-                
+                    
             return
             
         @Core.receiver('onstop')
@@ -174,6 +175,18 @@ def volttronbridge(config_path, **kwargs):
             _log.debug('onstop()')
             return
 
+        @PubSub.subscribe('pubsub', pricePoint_topic)
+        def onNewPrice(self, peer, sender, bus,  topic, headers, message):
+            if sender == 'pubsub.compat':
+                message = compat.unpack_legacy_message(headers, message)
+                
+            new_price_point = message[0]
+            _log.debug ( "*** New Price Point: {0:.2f} ***".format(new_price_point))
+            
+            #we want to post to ds only if there is change in price point
+            if self._price_point_current != new_price_point:
+                self._processNewPricePoint(new_price_point)
+            
         @RPC.export
         def rpc_from_net(self, header, message):
             result = False
@@ -192,15 +205,46 @@ def volttronbridge(config_path, **kwargs):
                             'deviceId':rpcdata.params['deviceId'],
                             'newEnergyDemand': rpcdata.params['newEnergyDemand']
                             }
+                    #post the new energy demand from ds to the local bus
                     result = self._postEnergyDemand(**args)    
+                elif rpcdata.method == "rpc_postPricePoint":
+                    args = {'discovery_address': rpcdata.params['discovery_address'],
+                            'deviceId':rpcdata.params['deviceId'],
+                            'newPricePoint': rpcdata.params['newPricePoint']
+                            }
+                    #post the new new price point from us to the local bus
+                    result = self._postPricePoint(**args)
+                else
+                    return jsonrpc.json_error(rpcdata.id, METHOD_NOT_FOUND, \
+                                                'Invalid method {}'.format(rpcdata.method))
                 return jsonrpc.json_result(rpcdata.id, result)
-            except AssertionError:
-                print('AssertionError')
-                return jsonrpc.json_error('NA', INVALID_REQUEST,
-                        'Invalid rpc data {}'.format(data))
+                
+            except KeyError as ke:
+                print(ke)
+                return jsonrpc.json_error('NA', INVALID_PARAMS,
+                        'Invalid params {}'.format(rpcdata.params))
             except Exception as e:
                 print(e)
                 return jsonrpc.json_error('NA', UNHANDLED_EXCEPTION, e)
+        
+        #price point on local bus changed post it to ds
+        def _processNewPricePoint(self, new_price_point):
+            self._price_point_previous = self._price_point_current
+            self._price_point_current = new_price_point
+            
+            for discovery_address in _ds_voltBr
+                self._postDsNewPricePoint(discovery_address, new_price_point)
+            
+        def _postDsNewPricePoint(discovery_address, newPricePoint):
+            url_root = 'http://' + discovery_address + '/VolttronBridge'
+                result = self.do_rpc(url_root, 'rpc_postPricePoint', 
+                                    {'discovery_address': self._discovery_address, 
+                                        'deviceId': self._deviceId,
+                                        'newPricePoint':newPricePoint
+                                    })
+                if result == 'SUCCESS':
+                    self._usConnected = True            
+            return
             
         def _registerDsBridge(self, discovery_address, deviceId):
             if discovery_address in ds_voltBr:
@@ -212,6 +256,21 @@ def volttronbridge(config_path, **kwargs):
             ds_deviceId.insert(index, deviceId)
             return True
             
+        #post the new new price point from us to the local bus        
+        def _postPricePoint(self, newPricePoint):
+            #we want to post to bus only if there is change in price point
+            if self._price_point_current != new_price_point:
+                self._price_point_previous = self._price_point_current
+                self._price_point_current = newPricePoint
+                #post to bus
+                pubTopic =  pricePoint_topic
+                pubMsg = [newPricePoint,{'units': 'cents', 'tz': 'UTC', 'type': 'float'}]
+                self._publishToBus(pubTopic, pubMsg)
+                return True
+            else:
+                return False
+                
+        #post the new energy demand from ds to the local bus
         def _postEnergyDemand(self, discovery_address, deviceId, newEnergyDemand):
             if discovery_address in ds_voltBr:
                 index = ds_voltBr.index(discovery_address)
@@ -228,11 +287,10 @@ def volttronbridge(config_path, **kwargs):
             headers = {headers_mod.DATE: now}          
             #Publish messages
             self.vip.pubsub.publish('pubsub', pubTopic, headers, pubMsg).get(timeout=5)
-        
         return
         
         def do_rpc(self, url_root, method, params=None ):
-            result = 'FAILED'
+            result = False
             json_package = {
                 'jsonrpc': '2.0',
                 'id': self._agent_id,
@@ -250,15 +308,19 @@ def volttronbridge(config_path, **kwargs):
                     success = response.json()['result']
                     if success:
                         _log.debug('response - ok, {} result:{}'.format(method, success))
-                        result = 'SUCCESS'
+                        result = True
                     else:
                         _log.debug('respone - not ok, {} result:{}'.format(method, success))
                 else :
                     _log.debug('no respone, {} result: {}'.format(method, response))
+            except KeyError:
+                error = response.json()['error']
+                print (error)
+                return False
             except Exception as e:
                 #print (e)
                 _log.exception('do_rpc() unhandled exception, most likely server is down')
-                return
+                return False
                 
     Agent.__name__ = 'VolttronBridge_Agent'
     return VolttronBridge(**kwargs)
