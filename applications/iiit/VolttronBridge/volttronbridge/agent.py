@@ -313,7 +313,7 @@ def volttronbridge(config_path, **kwargs):
                 
             return
             
-        def _postDsNewPricePoint(discovery_address, newPricePoint):
+        def _postDsNewPricePoint(self, discovery_address, newPricePoint):
             _log.debug('_postDsNewPricePoint() to : ' + discovery_address)
             
             url_root = 'http://' + discovery_address + '/VolttronBridge'
@@ -351,7 +351,7 @@ def volttronbridge(config_path, **kwargs):
             return True
             
         #post the new new price point from us to the local bus        
-        def _postPricePoint(self, newPricePoint):
+        def _postPricePoint(self, discovery_address, deviceId, newPricePoint):
             _log.debug('_postPricePoint()')
             _log.debug ( "*** New Price Point: {0:.2f} ***".format(newPricePoint))
             #we want to post to bus only if there is change in price point
