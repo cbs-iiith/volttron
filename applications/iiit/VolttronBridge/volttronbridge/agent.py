@@ -94,9 +94,13 @@ def volttronbridge(config_path, **kwargs):
             self._bridge_host = config.get('bridge_host', 'ZONE')
             self._deviceId    = config.get('deviceId', 'Zone-1')
             
-            #we want to post only if there is change in price point
+            #we want to post ds only if there is change in price point
             self._price_point_current   = 0
             self._price_point_previous  = 0
+            
+            #we want to post to us only if there is change in energy demand
+            self._ed_current    = 0
+            self._ed_previous   = 0
             
             if self._bridge_host == 'ZONE':
                 _log.debug(self._bridge_host)
@@ -186,19 +190,6 @@ def volttronbridge(config_path, **kwargs):
                                     })
             return
 
-        @PubSub.subscribe('pubsub', pricePoint_topic)
-        def onNewPrice(self, peer, sender, bus,  topic, headers, message):
-            _log.debug('onNewPrice()')
-            if sender == 'pubsub.compat':
-                message = compat.unpack_legacy_message(headers, message)
-                
-            new_price_point = message[0]
-            _log.debug ( "*** New Price Point: {0:.2f} ***".format(new_price_point))
-            
-            #we want to post to ds only if there is change in price point
-            if self._price_point_current != new_price_point:
-                self._processNewPricePoint(new_price_point)
-            
         @RPC.export
         def rpc_from_net(self, header, message):
             _log.debug('rpc_from_net()')
@@ -245,6 +236,72 @@ def volttronbridge(config_path, **kwargs):
                 print(e)
                 return jsonrpc.json_error('NA', UNHANDLED_EXCEPTION, e)
         
+        #price point on local bus published, post it to all downstream bridges
+        @PubSub.subscribe('pubsub', pricePoint_topic)
+        def onNewPrice(self, peer, sender, bus,  topic, headers, message):
+            if self._bridge_host == 'STRIP':
+                return
+                
+            _log.debug('onNewPrice()')
+            if sender == 'pubsub.compat':
+                message = compat.unpack_legacy_message(headers, message)
+                
+            new_price_point = message[0]
+            _log.debug ( "*** New Price Point: {0:.2f} ***".format(new_price_point))
+            
+            #we want to post to ds only if there is change in price point
+            if self._price_point_current != new_price_point:
+                self._processNewPricePoint(new_price_point)
+            
+            return
+            
+        #energy demand on local bus published, post it to upstream bridge
+        @PubSub.subscribe('pubsub', energyDemand_topic)
+        def onNewEnergyDemand(self, peer, sender, bus,  topic, headers, message):
+            if self._bridge_host == 'ZONE':
+                #do nothing
+                return
+                
+            _log.debug("onNewEnergyDemand()")
+                    
+            if sender == 'pubsub.compat':
+                message = compat.unpack_legacy_message(headers, message)
+                
+            newEnergyDemand = message[0]
+            _log.debug ( "*** New Energy Demand: {0:.4f} ***".format(newEnergyDemand))
+            
+            #we want to post to us only if there is change in energy demand
+            if self._ed_current != newEnergyDemand:
+                self._ed_previous = self._ed_current
+                self._ed_current = newEnergyDemand
+                
+                _log.debug("posting new energy demand to upstream VolttronBridge")
+                url_root = 'http://' + self._up_ip_addr + ':' + str(self._up_port) + '/VolttronBridge'
+                
+                #check for upstream connection, if not retry once
+                if self._usConnected == False:
+                    result = self.do_rpc(url_root, 'rpc_registerDsBridge', \
+                                        {'discovery_address': self._discovery_address, \
+                                            'deviceId': self._deviceId \
+                                        })
+                    if result:
+                        self._usConnected = True
+                    else :
+                        _log.debug('May be upstream bridge is not running!!!')
+                        return
+
+                result = self.do_rpc(url_root, 'rpc_postEnergyDemand', \
+                                    {'discovery_address': self._discovery_address, \
+                                        'deviceId': self._deviceId, \
+                                        'newEnergyDemand': rpcdata.params['newEnergyDemand']
+                                    })
+                if result:
+                    _log.debug("Success!!!")
+                else : 
+                    _log.debug("Failed!!!")
+
+            return
+            
         #price point on local bus changed post it to ds
         def _processNewPricePoint(self, new_price_point):
             _log.debug('_processNewPricePoint()')
