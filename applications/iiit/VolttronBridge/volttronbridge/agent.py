@@ -119,7 +119,7 @@ def volttronbridge(config_path, **kwargs):
                 #upstream volttron instance (Zone)
                 self._up_ip_addr      = config.get('zone_ip_addr', "192.168.1.250")
                 self._up_port         = int(config.get('zone_port', 8082))
-                _log.debug('self._up_ip_addr: ' + self._up_ip_addr + ' self._up_port: ' + self._up_port)
+                _log.debug('self._up_ip_addr: ' + self._up_ip_addr + ' self._up_port: ' + str(self._up_port))
                 
                 self._this_ip_addr    = config.get('sh_ip_addr', "192.168.1.61")
                 self._this_port       = int(config.get('sh_port', 8082))
@@ -135,7 +135,7 @@ def volttronbridge(config_path, **kwargs):
                 #upstream volttron instance (Smart Hub)
                 self._up_ip_addr      = config.get('sh_ip_addr', "192.168.1.61")
                 self._up_port         = int(config.get('sh_port', 8082))
-                _log.debug('self._up_ip_addr: ' + self._up_ip_addr + ' self._up_port: ' + self._up_port)
+                _log.debug('self._up_ip_addr: ' + self._up_ip_addr + ' self._up_port: ' + str(self._up_port))
                 
                 self._this_ip_addr      = config.get('ss_ip_addr', "192.168.1.71")
                 self._this_port         = int(config.get('ss_port', 8082))
