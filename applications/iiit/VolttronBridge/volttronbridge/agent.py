@@ -99,6 +99,7 @@ def volttronbridge(config_path, **kwargs):
             self._price_point_previous  = 0
             
             if self._bridge_host == 'ZONE':
+                _log.debug(self._bridge_host)
                 
                 self._this_ip_addr    = config.get('zone_ip_addr', "192.168.1.250")
                 self._this_port       = int(config.get('zone_port', 8082))
@@ -109,10 +110,12 @@ def volttronbridge(config_path, **kwargs):
                 self._ds_deviceId = []
                 
             elif self._bridge_host == 'HUB':
+                _log.debug(self._bridge_host)
                 
                 #upstream volttron instance (Zone)
                 self._up_ip_addr      = config.get('zone_ip_addr', "192.168.1.250")
                 self._up_port         = int(config.get('zone_port', 8082))
+                _log.debug('self._up_ip_addr: ' + self._up_ip_addr + ' self._up_port: ' + self._up_port)
                 
                 self._this_ip_addr    = config.get('sh_ip_addr', "192.168.1.61")
                 self._this_port       = int(config.get('sh_port', 8082))
@@ -123,30 +126,35 @@ def volttronbridge(config_path, **kwargs):
                 self._ds_deviceId = []
                 
             elif self._bridge_host == 'STRIP':
+                _log.debug(self._bridge_host)
                 
                 #upstream volttron instance (Smart Hub)
                 self._up_ip_addr      = config.get('sh_ip_addr', "192.168.1.61")
                 self._up_port         = int(config.get('sh_port', 8082))
+                _log.debug('self._up_ip_addr: ' + self._up_ip_addr + ' self._up_port: ' + self._up_port)
                 
                 self._this_ip_addr      = config.get('ss_ip_addr', "192.168.1.71")
                 self._this_port         = int(config.get('ss_port', 8082))
                 
             self._discovery_address = self._this_ip_addr + ':' + str(self._this_port)
+            _log.debug('self._discovery_address: ' + self._discovery_address)
             
         @Core.receiver('onstart')            
         def startup(self, sender, **kwargs):
             _log.debug('startup()')
+            
+            _log.debug('registering rpc routes')
             self.vip.rpc.call(MASTER_WEB, 'register_agent_route', \
                     r'^/VolttronBridge', \
                     self.core.identity, \
                     "rpc_from_net").get(timeout=30)
 
             if self._bridge_host == 'ZONE':
-                _log.debug('ZONE')
+                _log.debug(self._bridge_host)
                 #do nothing
                 
             elif self._bridge_host == 'HUB' or self._bridge_host == 'STRIP' :
-                _log.debug('HUB/STRIP')
+                _log.debug(self._bridge_host)
                 _log.debug("registering with upstream VolttronBridge")
                 url_root = 'http://' + self._up_ip_addr + ':' + str(self._up_port) + '/VolttronBridge'
                 result = self.do_rpc(url_root, 'rpc_registerDsBridge', \
@@ -162,11 +170,11 @@ def volttronbridge(config_path, **kwargs):
         def onstop(self, sender, **kwargs):
             _log.debug('onstop()')
             if self._bridge_host == 'ZONE':
-                _log.debug('ZONE')
+                _log.debug(self._bridge_host)
                 #do nothing
                 
             elif self._bridge_host == 'HUB' or self._bridge_host == 'STRIP':
-                _log.debug('HUB/STRIP')
+                _log.debug(self._bridge_host)
                 if self._usConnected == False:
                     return
                     
@@ -245,33 +253,35 @@ def volttronbridge(config_path, **kwargs):
             
             for discovery_address in self._ds_voltBr:
                 self._postDsNewPricePoint(discovery_address, new_price_point)
+                
+            return
             
         def _postDsNewPricePoint(discovery_address, newPricePoint):
-            _log.debug('_postDsNewPricePoint()')
+            _log.debug('_postDsNewPricePoint() to : ' + discovery_address)
+            
             url_root = 'http://' + discovery_address + '/VolttronBridge'
             result = self.do_rpc(url_root, 'rpc_postPricePoint', \
                                     {'discovery_address': self._discovery_address, \
                                     'deviceId': self._deviceId, \
                                     'newPricePoint':newPricePoint   \
                                     })
-            if result:
-                self._usConnected = True            
             return
             
         def _registerDsBridge(self, discovery_address, deviceId):
-            _log.debug('_registerDsBridge()')
+            _log.debug('_registerDsBridge(), discovery_address:' + discovery_address + 'deviceId:' + deviceId)
             if discovery_address in self._ds_voltBr:
-                _log.debug('already registered')
+                _log.debug('already registered!!!')
                 return True
                 
             #TODO: potential bug in this method, not atomic
             self._ds_voltBr.append(discovery_address)
             index = self._ds_voltBr.index(discovery_address)
             self._ds_deviceId.insert(index, deviceId)
+            _log.debug('registered!!!')
             return True
             
         def _unregisterDsBridge(self, discovery_address, deviceId):
-            _log.debug('_unregisterDsBridge()')
+            _log.debug('_unregisterDsBridge(), discovery_address:' + discovery_address + 'deviceId:' + deviceId)
             if discovery_address not in self._ds_voltBr:
                 _log.debug('already unregistered')
                 return True
@@ -280,31 +290,36 @@ def volttronbridge(config_path, **kwargs):
             index = self._ds_voltBr.index(discovery_address)
             self._ds_voltBr.remove(discovery_address)
             del self._ds_deviceId[index]
+            _log.debug('unregistered!!!')
             return True
             
         #post the new new price point from us to the local bus        
         def _postPricePoint(self, newPricePoint):
             _log.debug('_postPricePoint()')
+            _log.debug ( "*** New Price Point: {0:.2f} ***".format(newPricePoint))
             #we want to post to bus only if there is change in price point
-            if self._price_point_current != new_price_point:
+            if self._price_point_current != newPricePoint:
                 self._price_point_previous = self._price_point_current
                 self._price_point_current = newPricePoint
                 #post to bus
                 pubTopic =  pricePoint_topic
                 pubMsg = [newPricePoint,{'units': 'cents', 'tz': 'UTC', 'type': 'float'}]
+                _log.debug('publishing to local bus topic: ' + pubTopic)
                 self._publishToBus(pubTopic, pubMsg)
                 return True
             else:
+                _log.debug('no change in price, do nothing')
                 return False
                 
         #post the new energy demand from ds to the local bus
         def _postEnergyDemand(self, discovery_address, deviceId, newEnergyDemand):
-            _log.debug('_postEnergyDemand()')
+            _log.debug('_postEnergyDemand(), newEnergyDemand: {0:.4f}'.format(newEnergyDemand))
             if discovery_address in self._ds_voltBr:
                 index = self._ds_voltBr.index(discovery_address)
                 if self._ds_deviceId(index) == deviceId:
                     #post to bus
                     pubTopic = energyDemand_topic + "/" + deviceId
+                    _log.debug('publishing to local bus topic: ' + pubTopic)
                     pubMsg = [newEnergyDemand,{'units': 'mW', 'tz': 'UTC', 'type': 'float'}]
                     self._publishToBus(pubTopic, pubMsg)
                     return True
@@ -345,11 +360,12 @@ def volttronbridge(config_path, **kwargs):
                     _log.debug('no respone, {} result: {}'.format(method, response))
             except KeyError:
                 error = response.json()['error']
-                print (error)
+                #print (error)
+                _log.exception('KeyError: SHOULD NEVER REACH THIS ERROR - contact developer')
                 return False
             except Exception as e:
                 #print (e)
-                _log.exception('do_rpc() unhandled exception, most likely server is down')
+                _log.exception('Exception: do_rpc() unhandled exception, most likely dest is down')
                 return False
                 
     Agent.__name__ = 'VolttronBridge_Agent'
