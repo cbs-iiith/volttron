@@ -57,9 +57,9 @@ def volttronbridge(config_path, **kwargs):
     config = utils.load_config(config_path)
     agent_id = config['agentid']
     
-    energyDemand_topic = self.config.get('energyDemand_topic', \
+    energyDemand_topic  = config.get('energyDemand_topic', \
                                             'zone/energydemand')  
-    pricePoint_topic = self.config.get('pricePoint_topic', \
+    pricePoint_topic    = config.get('pricePoint_topic', \
                                             'zone/pricepoint')
     '''
     Retrive the data from volttron bus and pushes it to upstream or downstream volttron instance
@@ -101,37 +101,37 @@ def volttronbridge(config_path, **kwargs):
             if self._bridge_host == 'ZONE':
                 
                 self._this_ip_addr    = config.get('zone_ip_addr', "192.168.1.250")
-                self._this_port       = config.get('zone_port', 8082)
+                self._this_port       = int(config.get('zone_port', 8082))
                 
                 #downstream volttron instances (SmartHubs)
                 #post price point to these instances
                 self._ds_voltBr = []
                 self._ds_deviceId = []
                 
-            elif self._bridge_host == 'HUB'
+            elif self._bridge_host == 'HUB':
                 
                 #upstream volttron instance (Zone)
                 self._up_ip_addr      = config.get('zone_ip_addr', "192.168.1.250")
-                self._up_port         = config.get('zone_port', 8082)
+                self._up_port         = int(config.get('zone_port', 8082))
                 
                 self._this_ip_addr    = config.get('sh_ip_addr', "192.168.1.61")
-                self._this_port       = config.get('sh_port', 8082)
+                self._this_port       = int(config.get('sh_port', 8082))
 
                 #downstream volttron instances (SmartStrips)
                 #post price point to these instances
                 self._ds_voltBr = []
                 self._ds_deviceId = []
                 
-            elif self._bridge_host == 'STRIP'
+            elif self._bridge_host == 'STRIP':
                 
                 #upstream volttron instance (Smart Hub)
                 self._up_ip_addr      = config.get('sh_ip_addr', "192.168.1.61")
-                self._up_port         = config.get('sh_port', 8082)
+                self._up_port         = int(config.get('sh_port', 8082))
                 
                 self._this_ip_addr      = config.get('ss_ip_addr', "192.168.1.71")
-                self._this_port         = config.get('ss_port', 8082)
+                self._this_port         = int(config.get('ss_port', 8082))
                 
-            self._discovery_address = self._this_ip_addr + ':' + self._this_port
+            self._discovery_address = self._this_ip_addr + ':' + str(self._this_port)
             
         @Core.receiver('onstart')            
         def startup(self, sender, **kwargs):
@@ -142,30 +142,33 @@ def volttronbridge(config_path, **kwargs):
                     "rpc_from_net").get(timeout=30)
 
             if self._bridge_host == 'ZONE':
+                _log.debug('ZONE')
                 #downstream volttron instances (SmartHubs)
                 #do nothing
                 
-            elif self._bridge_host == 'HUB'
+            elif self._bridge_host == 'HUB':
+                _log.debug('HUB')
                 #upstream volttron instance (Zone) - register with zone VolttronBridge
-                url_root = 'http://' + self._up_ip_addr + ':' + self._up_port + '/VolttronBridge'
-                result = self.do_rpc(url_root, 'rpc_registerDsBridge', 
-                                    {'discovery_address': self._discovery_address, 
-                                        'deviceId': self._deviceId
+                url_root = 'http://' + self._up_ip_addr + ':' + str(self._up_port) + '/VolttronBridge'
+                result = self.do_rpc(url_root, 'rpc_registerDsBridge', \
+                                    {'discovery_address': self._discovery_address, \
+                                        'deviceId': self._deviceId \
                                     })
-                if result == 'SUCCESS':
+                if result:
                     self._usConnected = True
                     
                 #downstream volttron instances (SmartStrips)
                 # do nothing
                 
-            elif self._bridge_host == 'STRIP'
+            elif self._bridge_host == 'STRIP':
+                _log.debug('STRIP')
                 #upstream volttron instance (SmartHub) - register with smarthub VolttronBridge
-                url_root = 'http://' + self._up_ip_addr + ':' + self._up_port + '/VolttronBridge'
+                url_root = 'http://' + self._up_ip_addr + ':' + str(self._up_port) + '/VolttronBridge'
                 result = self.do_rpc(url_root, 'rpc_registerDsBridge', 
                                     {'discovery_address': self._discovery_address, 
                                         'deviceId': self._deviceId
                                     })
-                if result == 'SUCCESS':
+                if result:
                     self._usConnected = True
                     
             return
@@ -214,7 +217,7 @@ def volttronbridge(config_path, **kwargs):
                             }
                     #post the new new price point from us to the local bus
                     result = self._postPricePoint(**args)
-                else
+                else:
                     return jsonrpc.json_error(rpcdata.id, METHOD_NOT_FOUND, \
                                                 'Invalid method {}'.format(rpcdata.method))
                 return jsonrpc.json_result(rpcdata.id, result)
@@ -232,18 +235,18 @@ def volttronbridge(config_path, **kwargs):
             self._price_point_previous = self._price_point_current
             self._price_point_current = new_price_point
             
-            for discovery_address in _ds_voltBr
+            for discovery_address in _ds_voltBr:
                 self._postDsNewPricePoint(discovery_address, new_price_point)
             
         def _postDsNewPricePoint(discovery_address, newPricePoint):
             url_root = 'http://' + discovery_address + '/VolttronBridge'
-                result = self.do_rpc(url_root, 'rpc_postPricePoint', 
-                                    {'discovery_address': self._discovery_address, 
-                                        'deviceId': self._deviceId,
-                                        'newPricePoint':newPricePoint
+            result = self.do_rpc(url_root, 'rpc_postPricePoint', \
+                                    {'discovery_address': self._discovery_address, \
+                                    'deviceId': self._deviceId, \
+                                    'newPricePoint':newPricePoint   \
                                     })
-                if result == 'SUCCESS':
-                    self._usConnected = True            
+            if result:
+                self._usConnected = True            
             return
             
         def _registerDsBridge(self, discovery_address, deviceId):
@@ -287,7 +290,7 @@ def volttronbridge(config_path, **kwargs):
             headers = {headers_mod.DATE: now}          
             #Publish messages
             self.vip.pubsub.publish('pubsub', pubTopic, headers, pubMsg).get(timeout=5)
-        return
+            return
         
         def do_rpc(self, url_root, method, params=None ):
             result = False
