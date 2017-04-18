@@ -268,7 +268,7 @@ def volttronbridge(config_path, **kwargs):
             return
             
         def _registerDsBridge(self, discovery_address, deviceId):
-            _log.debug('_registerDsBridge(), discovery_address:' + discovery_address + 'deviceId:' + deviceId)
+            _log.debug('_registerDsBridge(), discovery_address: ' + discovery_address + ' deviceId: ' + deviceId)
             if discovery_address in self._ds_voltBr:
                 _log.debug('already registered!!!')
                 return True
@@ -281,7 +281,7 @@ def volttronbridge(config_path, **kwargs):
             return True
             
         def _unregisterDsBridge(self, discovery_address, deviceId):
-            _log.debug('_unregisterDsBridge(), discovery_address:' + discovery_address + 'deviceId:' + deviceId)
+            _log.debug('_unregisterDsBridge(), discovery_address: ' + discovery_address + ' deviceId: ' + deviceId)
             if discovery_address not in self._ds_voltBr:
                 _log.debug('already unregistered')
                 return True
