@@ -59,8 +59,12 @@ def volttronbridge(config_path, **kwargs):
     
     energyDemand_topic  = config.get('energyDemand_topic', \
                                             'zone/energydemand')  
+                                            
+    pricePoint_topic_us = config.get('pricePoint_topic_us', \
+                                    'building/pricepoint')
     pricePoint_topic    = config.get('pricePoint_topic', \
-                                            'zone/pricepoint')
+                                    'zone/pricepoint')
+
     '''
     Retrive the data from volttron bus and pushes it to upstream or downstream volttron instance
     if posting to downstream, then the data is pricepoint
@@ -93,7 +97,7 @@ def volttronbridge(config_path, **kwargs):
             self._usConnected = False
             self._bridge_host = config.get('bridge_host', 'ZONE')
             self._deviceId    = config.get('deviceId', 'Zone-1')
-            
+                    
             #we want to post ds only if there is change in price point
             self._price_point_current   = 0
             self._price_point_previous  = 0
@@ -221,7 +225,7 @@ def volttronbridge(config_path, **kwargs):
                             'deviceId':rpcdata.params['deviceId'],
                             'newPricePoint': rpcdata.params['newPricePoint']
                             }
-                    #post the new new price point from us to the local bus
+                    #post the new new price point from us to the local-us-bus
                     result = self._postPricePoint(**args)
                 else:
                     return jsonrpc.json_error(rpcdata.id, METHOD_NOT_FOUND, \
@@ -350,16 +354,20 @@ def volttronbridge(config_path, **kwargs):
             _log.debug('unregistered!!!')
             return True
             
-        #post the new new price point from us to the local bus        
+        #post the new new price point from us to the local-us-bus        
         def _postPricePoint(self, discovery_address, deviceId, newPricePoint):
+            if self._bridge_host == 'ZONE':
+                #do nothing 
+                return
+                
             _log.debug('_postPricePoint()')
             _log.debug ( "*** New Price Point: {0:.2f} ***".format(newPricePoint))
-            #we want to post to bus only if there is change in price point
-            if self._price_point_current != newPricePoint:
-                self._price_point_previous = self._price_point_current
-                self._price_point_current = newPricePoint
+            #we want to post to bus only if there is change in previous us price point
+            if self._us_last_pp != newPricePoint:
+                self._us_last_pp_previous = self._us_last_pp_current
+                self._us_last_pp_current = newPricePoint
                 #post to bus
-                pubTopic =  pricePoint_topic
+                pubTopic =  pricePoint_topic_us
                 pubMsg = [newPricePoint,{'units': 'cents', 'tz': 'UTC', 'type': 'float'}]
                 _log.debug('publishing to local bus topic: ' + pubTopic)
                 self._publishToBus(pubTopic, pubMsg)
