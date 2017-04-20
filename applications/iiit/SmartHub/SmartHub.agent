@@ -5,6 +5,7 @@
 		"location": "loc1",
 		"campus": "iiit",
 		"building": "cbs",
-		"period_read_data": 10		
+		"period_read_data": 10,
+		"topic_price_point": "smarthub/pricepoint"		
 		
 }

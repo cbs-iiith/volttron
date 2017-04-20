@@ -207,7 +207,7 @@ class SmartHub(Agent):
         return
     def _configGetPoints(self):
         self.topic_price_point = self.config.get('topic_price_point', \
-                                        'prices/PricePoint')
+                                        'smarthub/pricepoint')
         self.ledDebugState_point = self.config.get('ledDebugState_point',
                                             'smarthub/leddebugstate')    
         self.ledState_point = self.config.get('ledState_point',

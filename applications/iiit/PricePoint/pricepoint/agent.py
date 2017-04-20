@@ -48,7 +48,7 @@ def pricepoint(config_path, **kwargs):
     config = utils.load_config(config_path)
     agentid = config['agentid']
     message = config['message']
-    topic_price_point= config.get('topic_price_point', 'prices/PricePoint')
+    topic_price_point= config.get('topic_price_point', 'zone/pricepoint')
     period_read_price_point = config['period_read_price_point']
     default_base_price = config['default_base_price']
     min_price = config.get("min_price", 0.01)
