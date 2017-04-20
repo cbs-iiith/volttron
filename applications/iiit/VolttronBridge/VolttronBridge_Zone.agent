@@ -7,6 +7,6 @@
     "zone_ip_addr":  "192.168.1.250", 
     "zone_port": 8082,
 	"energyDemand_topic": "zone/energydemand",
-	"pricePoint_topic_bd": "building/pricepoint",
-	"pricePoint_topic_zn": "zone/pricepoint"
+	"pricePoint_topic_us": "building/pricepoint",
+	"pricePoint_topic": "zone/pricepoint"
 }

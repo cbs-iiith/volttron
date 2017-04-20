@@ -9,6 +9,6 @@
 	"sh_ip_addr":  "192.168.1.50",
     "sh_port": 8080,
 	"energyDemand_topic": "smarthub/energydemand",
-	"pricePoint_topic_zn": "zone/pricepoint",
-	"pricePoint_topic_sh": "smarthub/pricepoint"
+	"pricePoint_topic_us": "zone/pricepoint",
+	"pricePoint_topic": "smarthub/pricepoint"
 }

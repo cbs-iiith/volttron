@@ -29,8 +29,8 @@ def smartstripgc(config_path, **kwargs):
 
     period_read_price_point = config['period_read_price_point']
     
-    topic_price_point_sh = config.get('pricePoint_topic_sh', 'smarthub/pricepoint')
-    topic_price_point_ss = config.get('pricePoint_topic_ss', 'smartstrip/pricepoint')
+    topic_price_point_us = config.get('pricePoint_topic_us', 'smarthub/pricepoint')
+    topic_price_point = config.get('pricePoint_topic', 'smartstrip/pricepoint')
         
     
     class SmartStripGC(Agent):
@@ -53,7 +53,7 @@ def smartstripgc(config_path, **kwargs):
             _log.debug('startup()')
             return
 
-        @PubSub.subscribe('pubsub', topic_price_point_sh)
+        @PubSub.subscribe('pubsub', topic_price_point_us)
         def onNewPrice(self, peer, sender, bus,  topic, headers, message):
             if sender == 'pubsub.compat':
                 message = compat.unpack_legacy_message(headers, message)
@@ -75,7 +75,7 @@ def smartstripgc(config_path, **kwargs):
         def _post_price(self, ss_pp):
             _log.debug('_post_price()')
             #post to bus
-            pubTopic =  topic_price_point_sh
+            pubTopic =  topic_price_point
             pubMsg = [ss_pp,{'units': 'cents', 'tz': 'UTC', 'type': 'float'}]
             _log.debug('publishing to local bus topic: ' + pubTopic)
             self._publishToBus(pubTopic, pubMsg)
