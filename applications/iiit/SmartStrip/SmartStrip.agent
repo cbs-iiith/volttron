@@ -38,7 +38,7 @@
 
 		"period_read_data": 10,
 
-		"topic_price_point": "prices/PricePoint",
+		"topic_price_point": "smartstrip/pricepoint",
 		"default_base_price": 0.4,
 		"plug_pricepoint_th": [0.25, 0.5, 0.6, 0.75],
 		"price_point_latest": 0.4

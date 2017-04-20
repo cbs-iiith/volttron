@@ -177,7 +177,7 @@ class SmartStrip(Agent):
 
     def _configGetPoints(self):
         self.topic_price_point= self.config.get('topic_price_point',
-                                            'prices/PricePoint')
+                                            'smartstrip/pricepoint')
         self.plug1_meterData_all_point = self.config.get('plug1_meterData_all_point',
                                             'smartstrip/plug1/meterdata/all')
         self.plug2_meterData_all_point = self.config.get('plug2_meterData_all_point',
