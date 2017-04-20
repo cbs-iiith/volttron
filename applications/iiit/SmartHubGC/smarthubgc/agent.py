@@ -42,10 +42,10 @@ def smarthubgc(config_path, **kwargs):
 
         @Core.receiver('onsetup')
         def setup(self, sender, **kwargs):
-            _log.info(self.config['message'])
-            self._agent_id = self.config['agentid']
+            _log.info(config['message'])
+            self._agent_id = config['agentid']
             
-            self._price_point_current = 0
+            self._current_zn_pp = 0
             
 
         @Core.receiver('onstart')            
