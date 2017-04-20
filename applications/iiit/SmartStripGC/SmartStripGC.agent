@@ -1,0 +1,8 @@
+{
+	"exec":"smartstripgc-0.1-py2.7.egg --config \"%c\"--sub\"%s\"--pub \"%p\"",  
+    "agentid": "SmartStripGC",
+    "message": "I am Smart Strip Grid Controller Agent",
+	"period_read_price_point": 5,
+	"pricePoint_topic_sh": "smarthub/pricepoint",
+	"pricePoint_topic_ss": "smartstrip/pricepoint"
+}
