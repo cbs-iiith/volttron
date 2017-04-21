@@ -67,9 +67,9 @@ AT_GET_THPP     = 327
 AT_SET_THPP     = 328
 AT_PUB_THPP     = 329
 
-SMARTHUB_BASE_ENERGY = 2
-SMARTHUB_FAN_ENERGY = 6
-SMARTHUB_LED_ENERGY = 3
+SMARTHUB_BASE_ENERGY    = 2.0
+SMARTHUB_FAN_ENERGY     = 6.0
+SMARTHUB_LED_ENERGY     = 3.0
 
 
 utils.setup_logging()
@@ -101,8 +101,6 @@ class SmartHub(Agent):
     '''
     _taskID_LedDebug = 1
     _ledDebugState = 0
-    _ledState = 0
-    _fanState = 0
     
     _voltState = 0
     
@@ -123,8 +121,12 @@ class SmartHub(Agent):
     _price_point_previous = 0.4 
     _price_point_current = 0.4
     
+    #downstream energy demand and deviceId
     _ds_ed = []
     _ds_deviceId = []
+    
+    #smarthub total energy demand (including downstream smartstrips)
+    _ted = SMARTHUB_BASE_ENERGY
 
     def __init__(self, config_path, **kwargs):
         super(SmartHub, self).__init__(**kwargs)
@@ -178,6 +180,9 @@ class SmartHub(Agent):
         
         #perodically publish sensor data to volttron bus
         self.core.periodic(self._period_read_data, self.publishSensorData, wait=None)
+        
+        #perodically publish sensor data to volttron bus
+        self.core.periodic(self._period_read_data, self.publishTed, wait=None)
 
         self.vip.rpc.call(MASTER_WEB, 'register_agent_route', \
                             r'^/SmartHub', \
@@ -1027,35 +1032,41 @@ class SmartHub(Agent):
     
     #calculate the local energy demand
     def _calculateLocalEd(self):
-        _log.debug('_calculateLocalEd()')
+        #_log.debug('_calculateLocalEd()')
         
         ed = SMARTHUB_BASE_ENERGY
-        if self. _ledState == SH_DEVICE_STATE_ON:
+        if self._shDevicesState[SH_DEVICE_LED] == SH_DEVICE_STATE_ON:
             ed = ed + SMARTHUB_LED_ENERGY
-        if self. _fanState == SH_DEVICE_STATE_ON:
+        if self._shDevicesState[SH_DEVICE_FAN] == SH_DEVICE_STATE_ON:
             ed = ed + SMARTHUB_FAN_ENERGY
     
         return ed
     
     #calculate the total energy demand (TED)
     def _calculateTed(self):
-        _log.debug('_calculateTed()')
+        #_log.debug('_calculateTed()')
         
-        ted = _calculateLocalEd()
+        ted = self._calculateLocalEd()
         for ed in self._ds_ed:
             ted = ted + ed
         
         return ted
         
     def publishTed(self):
-        _log.debug('publishTed()')
+        #_log.debug('publishTed()')
         
         ted = self._calculateTed()
         
+        #only publish if change in ted
+        if self._ted == ted:
+            return
+            
+        self._ted = ted
+        _log.debug ( "*** New TED: {0:.2f}, publishing to bus ***".format(ted))
         pubTopic = self.energyDemand_topic
         pubMsg = [ted,
                     {'units': 'W', 'tz': 'UTC', 'type': 'float'}]
-        self.publishToBus(pubTopic, pubMsg)
+        self._publishToBus(pubTopic, pubMsg)
         return  
         
     @PubSub.subscribe('pubsub','smartstrip/energydemand')
