@@ -3,7 +3,7 @@ import logging
 import requests
 import time
 import pytz
-import uuid
+import uuid 
 
 from volttron.platform.agent import utils 
 
@@ -119,7 +119,7 @@ def chunk_list(lst, num_elements_in_sublist):
     return [lst[i:i + num_elements_in_sublist] for i in range(0, len(lst), num_elements_in_sublist)]
 
 
-def _upload(readings, url, api_key, source_name, path, obj_uuid, units="kW", additional_metadata={},
+def _upload(readings, url, api_key, source_name, path, obj_uuid, units="kW", time_zone="US/Pacific", additional_metadata={},
            doRobustUpload=True):
     _log.debug("Starting smap upload sourcename: {sn} path: {p} ".format(sn = source_name, p = path))
     _log.debug("Trying to upload:\nfirst_point:\t{d_start}\nlast_point:\t{d_end}".format(d_start=readings[0],
@@ -132,7 +132,7 @@ def _upload(readings, url, api_key, source_name, path, obj_uuid, units="kW", add
     except Exception as e:
         pass
 
-    headers = get_everything_to_post_except_timeseries(source_name, path, obj_uuid, units, additional_metadata)
+    headers = get_everything_to_post_except_timeseries(source_name, path, obj_uuid, timezone=time_zone, units=units, additional_metadata=additional_metadata)
     data_to_post = get_data_to_post(headers, path, readings)
 
     if url[-1] == "/":
@@ -200,7 +200,7 @@ def smap_post(smap_root, smap_api_key, stream, units, reading_type, readings, so
 
         try:
             _log.debug("trying to upload {stream}".format(stream=stream))
-            res = _upload(readings, smap_root, smap_api_key, source_name, stream, stream_uuid, units,
+            res = _upload(readings, smap_root, smap_api_key, source_name, stream, stream_uuid, units, time_zone,
                          additional_metadata=additional_metadata)
             return res
         except Exception as e:
