@@ -303,7 +303,7 @@ def volttronbridge(config_path, **kwargs):
                 result = self.do_rpc(url_root, 'rpc_postEnergyDemand', \
                                     {'discovery_address': self._discovery_address, \
                                         'deviceId': self._deviceId, \
-                                        'newEnergyDemand': rpcdata.params['newEnergyDemand']
+                                        'newEnergyDemand': newEnergyDemand
                                     })
                 if result:
                     _log.debug("Success!!!")
@@ -387,7 +387,7 @@ def volttronbridge(config_path, **kwargs):
             _log.debug('_postEnergyDemand(), newEnergyDemand: {0:.4f}'.format(newEnergyDemand))
             if discovery_address in self._ds_voltBr:
                 index = self._ds_voltBr.index(discovery_address)
-                if self._ds_deviceId(index) == deviceId:
+                if self._ds_deviceId[index] == deviceId:
                     #post to bus
                     pubTopic = energyDemand_topic_ds + "/" + deviceId
                     _log.debug('publishing to local bus topic: ' + pubTopic)
@@ -438,7 +438,8 @@ def volttronbridge(config_path, **kwargs):
                 #print (e)
                 _log.exception('Exception: do_rpc() unhandled exception, most likely dest is down')
                 return False
-                
+            return result
+            
     Agent.__name__ = 'VolttronBridge_Agent'
     return VolttronBridge(**kwargs)
 
