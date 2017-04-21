@@ -57,13 +57,15 @@ def volttronbridge(config_path, **kwargs):
     config = utils.load_config(config_path)
     agent_id = config['agentid']
     
-    energyDemand_topic  = config.get('energyDemand_topic', \
+    energyDemand_topic      = config.get('energyDemand_topic', \
                                             'zone/energydemand')  
+    energyDemand_topic_ds   = config.get('energyDemand_topic_ds', \
+                                            'smarthub/energydemand')  
                                             
-    pricePoint_topic_us = config.get('pricePoint_topic_us', \
-                                    'building/pricepoint')
-    pricePoint_topic    = config.get('pricePoint_topic', \
-                                    'zone/pricepoint')
+    pricePoint_topic_us     = config.get('pricePoint_topic_us', \
+                                            'building/pricepoint')
+    pricePoint_topic        = config.get('pricePoint_topic', \
+                                            'zone/pricepoint')
 
     '''
     Retrive the data from volttron bus and pushes it to upstream or downstream volttron instance
@@ -386,7 +388,7 @@ def volttronbridge(config_path, **kwargs):
                 index = self._ds_voltBr.index(discovery_address)
                 if self._ds_deviceId(index) == deviceId:
                     #post to bus
-                    pubTopic = energyDemand_topic + "/" + deviceId
+                    pubTopic = energyDemand_topic_ds + "/" + deviceId
                     _log.debug('publishing to local bus topic: ' + pubTopic)
                     pubMsg = [newEnergyDemand,{'units': 'mW', 'tz': 'UTC', 'type': 'float'}]
                     self._publishToBus(pubTopic, pubMsg)
