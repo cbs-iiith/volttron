@@ -1085,6 +1085,8 @@ class SmartHub(Agent):
     def _get_ds_device_idx(self, deviceID):   
         if deviceID not in self._ds_deviceId:
             self._ds_deviceId.append(deviceID)
+            idx = self._ds_deviceId.index(deviceID)
+            self._ds_ed.insert(idx, 0.0)
         return self._ds_deviceId.index(deviceID)
         
 def main(argv=sys.argv):

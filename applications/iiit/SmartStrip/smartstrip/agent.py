@@ -121,6 +121,10 @@ class SmartStrip(Agent):
     _newTagId2 = ''
     _newTagId3 = ''
     _newTagId4 = ''
+    
+    #smartstrip total energy demand
+    _ted = SMARTSTRIP_BASE_ENERGY
+
 
     def __init__(self, config_path, **kwargs):
         super(SmartStrip, self).__init__(**kwargs)
@@ -137,7 +141,7 @@ class SmartStrip(Agent):
 
     @Core.receiver('onstart')            
     def startup(self, sender, **kwargs):
-        self.runSmartStripTest()
+        #self.runSmartStripTest()
         self.switchLedDebug(LED_ON)
         
         #perodically read the meter data & connected tag ids from h/w
@@ -808,20 +812,26 @@ class SmartStrip(Agent):
 
     #calculate the total energy demand (TED)
     def _calculateTed(self):
-        _log.debug('_calculateLocalEd()')
+        #_log.debug('_calculateTed()')
         
-        ed = SMARTSTRIP_BASE_ENERGY
-        for idx, plugState in enumerate(_plugRelayState):
+        ted = SMARTSTRIP_BASE_ENERGY
+        for idx, plugState in enumerate(self._plugRelayState):
             if plugState == RELAY_ON:
-                ed = ed + _plugActivePwr[idx]
+                ted = ted + self._plugActivePwr[idx]
 
-        return ed
+        return ted
         
     def publishTed(self):
-        _log.debug('publishTed()')
+        #_log.debug('publishTed()')
         
         ted = self._calculateTed()
         
+        #only publish if change in ted
+        if self._ted == ted:
+            return
+
+        self._ted = ted
+        _log.debug ( "*** New TED: {0:.2f}, publishing to bus ***".format(ted))
         pubTopic = self.energyDemand_topic
         pubMsg = [ted,
                     {'units': 'W', 'tz': 'UTC', 'type': 'float'}]
