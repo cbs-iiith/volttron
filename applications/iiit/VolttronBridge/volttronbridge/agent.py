@@ -293,6 +293,7 @@ def volttronbridge(config_path, **kwargs):
                                         {'discovery_address': self._discovery_address, \
                                             'deviceId': self._deviceId \
                                         })
+                    print(result)
                     if result:
                         self._usConnected = True
                     else :
