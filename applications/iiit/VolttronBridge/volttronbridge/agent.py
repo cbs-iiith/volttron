@@ -170,15 +170,17 @@ def volttronbridge(config_path, **kwargs):
                 _log.debug(self._bridge_host)
                 _log.debug("registering with upstream VolttronBridge")
                 url_root = 'http://' + self._up_ip_addr + ':' + str(self._up_port) + '/VolttronBridge'
-                result = self.do_rpc(url_root, 'rpc_registerDsBridge', \
-                                    {'discovery_address': self._discovery_address, \
-                                        'deviceId': self._deviceId \
-                                    })
-                if result:
-                    self._usConnected = True
-                    
+                self._usConnected = self._registerToUsBridge(url_root, self._discovery_address, self._deviceId)
+                
             return
-            
+
+        #register with upstream volttron bridge
+        def _registerToUsBridge(self, url_root, discovery_address, deviceId):
+            return self.do_rpc(url_root, 'rpc_registerDsBridge', \
+                                {'discovery_address': discovery_address, \
+                                    'deviceId': deviceId \
+                                    })
+                                    
         @Core.receiver('onstop')
         def onstop(self, sender, **kwargs):
             _log.debug('onstop()')
@@ -280,35 +282,32 @@ def volttronbridge(config_path, **kwargs):
             _log.debug ( "*** New Energy Demand: {0:.4f} ***".format(newEnergyDemand))
             
             #we want to post to us only if there is change in energy demand
-            if self._ed_current != newEnergyDemand:
-                self._ed_previous = self._ed_current
-                self._ed_current = newEnergyDemand
+            if self._ed_current == newEnergyDemand:
+                return
                 
-                _log.debug("posting new energy demand to upstream VolttronBridge")
-                url_root = 'http://' + self._up_ip_addr + ':' + str(self._up_port) + '/VolttronBridge'
-                
-                #check for upstream connection, if not retry once
-                if self._usConnected == False:
-                    result = self.do_rpc(url_root, 'rpc_registerDsBridge', \
-                                        {'discovery_address': self._discovery_address, \
-                                            'deviceId': self._deviceId \
-                                        })
-                    print(result)
-                    if result:
-                        self._usConnected = True
-                    else :
-                        _log.debug('May be upstream bridge is not running!!!')
-                        return
+            self._ed_previous = self._ed_current
+            self._ed_current = newEnergyDemand
+            
+            _log.debug("posting new energy demand to upstream VolttronBridge")
+            url_root = 'http://' + self._up_ip_addr + ':' + str(self._up_port) + '/VolttronBridge'
+            
+            #check for upstream connection, if not retry once
+            if self._usConnected == False:
+                self._usConnected = self._registerToUsBridge(url_root,\
+                                                                self._discovery_address,\
+                                                                self._deviceId)
+                if not self._usConnected:
+                    _log.debug('May be upstream bridge is not running!!!')
+                    return
 
-                result = self.do_rpc(url_root, 'rpc_postEnergyDemand', \
-                                    {'discovery_address': self._discovery_address, \
-                                        'deviceId': self._deviceId, \
-                                        'newEnergyDemand': newEnergyDemand
-                                    })
-                if result:
-                    _log.debug("Success!!!")
-                else : 
-                    _log.debug("Failed!!!")
+            if self.do_rpc(url_root, 'rpc_postEnergyDemand', \
+                            {'discovery_address': self._discovery_address, \
+                                'deviceId': self._deviceId, \
+                                'newEnergyDemand': newEnergyDemand
+                            }):
+                _log.debug("Success!!!")
+            else : 
+                _log.debug("Failed!!!")
 
             return
             
