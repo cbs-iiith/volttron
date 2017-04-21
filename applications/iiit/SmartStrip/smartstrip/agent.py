@@ -72,6 +72,9 @@ DEFAULT_TAG_ID = '7FC000007FC00000'
 SCHEDULE_AVLB = 1
 SCHEDULE_NOT_AVLB = 0
 
+# smartstrip base peak energy (200mA * 12V)
+SMARTSTRIP_BASE_ENERGY = 2
+
 utils.setup_logging()
 _log = logging.getLogger(__name__)
 __version__ = '0.1'
@@ -108,6 +111,7 @@ class SmartStrip(Agent):
     _ledDebugState = 0
     _plugRelayState = [0, 0, 0, 0]
     _plugConnected = [ 0, 0, 0, 0]
+    _plugActivePwr = [0.0, 0.0, 0.0, 0.0]
     _plug_tag_id = ['7FC000007FC00000', '7FC000007FC00000', '7FC000007FC00000', '7FC000007FC00000']
     _plug_pricepoint_th = [0.25, 0.5, 0.6, 0.75]
     _price_point_previous = 0.4 
@@ -141,6 +145,9 @@ class SmartStrip(Agent):
         
         #perodically publish plug threshold price point to volttron bus
         self.core.periodic(self._period_read_data, self.publishPlugThPP, wait=None)
+        
+        #perodically publish total energy demand to volttron bus
+        self.core.periodic(self._period_read_data, self.publishTed, wait=None)
         
         self.vip.rpc.call(MASTER_WEB, 'register_agent_route',
                       r'^/SmartStrip',
@@ -210,6 +217,12 @@ class SmartStrip(Agent):
         self.plug4_tagId_point = self.config.get('plug4_thresholdPP_point',
                                             'smartstrip/plug4/tagid')
 
+        self.energyDemand_topic = self.config.get('energyDemand_topic', \
+                                            'smartstrip/energydemand')
+        self.energyDemand_topic = self.config.get('energyDemand_topic, \
+                                            'notused/energydemand')
+        return
+        
     def runSmartStripTest(self):
         _log.debug("Running : runSmartStripTest()...")
         _log.debug('switch on debug led')
@@ -362,7 +375,10 @@ class SmartStrip(Agent):
                 fCurrent = 0.0
             if fActivePower > 80000:
                 fActivePower = 0.0
-                
+
+            #keep track of plug active power
+            self._plugActivePwr[plugID] = fActivePower
+            
             #publish data to volttron bus
             self.publishMeterData(pubTopic, fVolatge, fCurrent, fActivePower)
 
@@ -790,8 +806,29 @@ class SmartStrip(Agent):
             print(e)
             return jsonrpc.json_error('NA', UNHANDLED_EXCEPTION, e)
 
+    #calculate the local energy demand
+    def _calculateLocalEd(self):
+        _log.debug('_calculateLocalEd()')
+        
+        ed = SMARTSTRIP_BASE_ENERGY
+        for idx, plugState in enumerate(_plugRelayState):
+            if plugState == RELAY_ON:
+                ed = ed + _plugActivePwr[idx]
 
-
+        return ed
+        
+    def publishTed(self):
+        _log.debug('_calculateLocalEd()')
+        
+        #get total energy demand
+        ted = self._calculateLocalEd()
+        
+        pubTopic = self.energyDemand_topic
+        pubMsg = [ted,
+                    {'units': 'W', 'tz': 'UTC', 'type': 'float'}]
+        self.publishToBus(pubTopic, pubMsg)
+        return
+        
 def main(argv=sys.argv):
     '''Main method called by the eggsecutable.'''
     try:
