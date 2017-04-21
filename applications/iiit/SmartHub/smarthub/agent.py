@@ -1019,6 +1019,10 @@ class SmartHub(Agent):
             result = True        
             return jsonrpc.json_result(rpcdata.id, result)
             
+        except KeyError as ke:
+            print(ke)
+            return jsonrpc.json_error('NA', INVALID_PARAMS,
+                    'Invalid params {}'.format(rpcdata.params))
         except AssertionError:
             print('AssertionError')
             return jsonrpc.json_error('NA', INVALID_REQUEST,
