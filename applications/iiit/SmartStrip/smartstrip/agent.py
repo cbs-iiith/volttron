@@ -217,9 +217,9 @@ class SmartStrip(Agent):
         self.plug4_tagId_point = self.config.get('plug4_thresholdPP_point',
                                             'smartstrip/plug4/tagid')
 
-        self.energyDemand_topic = self.config.get('energyDemand_topic', \
+        self.energyDemand_topic     = self.config.get('energyDemand_topic', \
                                             'smartstrip/energydemand')
-        self.energyDemand_topic = self.config.get('energyDemand_topic, \
+        self.energyDemand_topic_ds  = self.config.get('energyDemand_topic_ds', \
                                             'notused/energydemand')
         return
         
@@ -806,8 +806,8 @@ class SmartStrip(Agent):
             print(e)
             return jsonrpc.json_error('NA', UNHANDLED_EXCEPTION, e)
 
-    #calculate the local energy demand
-    def _calculateLocalEd(self):
+    #calculate the total energy demand (TED)
+    def _calculateTed(self):
         _log.debug('_calculateLocalEd()')
         
         ed = SMARTSTRIP_BASE_ENERGY
@@ -818,10 +818,9 @@ class SmartStrip(Agent):
         return ed
         
     def publishTed(self):
-        _log.debug('_calculateLocalEd()')
+        _log.debug('publishTed()')
         
-        #get total energy demand
-        ted = self._calculateLocalEd()
+        ted = self._calculateTed()
         
         pubTopic = self.energyDemand_topic
         pubMsg = [ted,

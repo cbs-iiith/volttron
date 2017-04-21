@@ -67,6 +67,11 @@ AT_GET_THPP     = 327
 AT_SET_THPP     = 328
 AT_PUB_THPP     = 329
 
+SMARTHUB_BASE_ENERGY = 2
+SMARTHUB_FAN_ENERGY = 6
+SMARTHUB_LED_ENERGY = 3
+
+
 utils.setup_logging()
 _log = logging.getLogger(__name__)
 __version__ = '0.1'
@@ -116,7 +121,10 @@ class SmartHub(Agent):
     _shDevicesLevel = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
     _shDevicesPP_th = [ 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25]
     _price_point_previous = 0.4 
-    _price_point_current = 0.4 
+    _price_point_current = 0.4
+    
+    self._ds_ed = []
+    self._ds_deviceId = []
 
     def __init__(self, config_path, **kwargs):
         super(SmartHub, self).__init__(**kwargs)
@@ -235,6 +243,11 @@ class SmartHub(Agent):
                                             'smarthub/sensors/co2level')
         self.sensorPirLevel_point = self.config.get('sensorPirLevel_point',
                                             'smarthub/sensors/pirlevel')
+                                            
+        self.energyDemand_topic     = self.config.get('energyDemand_topic', \
+                                            'smarthub/energydemand')
+        self.energyDemand_topic_ds  = self.config.get('energyDemand_topic_ds', \
+                                            'smartstrip/energydemand')
         return
     def runSmartHubTest(self):
         _log.debug("Running : runSmartHubTest()...")
@@ -1011,6 +1024,57 @@ class SmartHub(Agent):
     #comparing floats is mess
     def _isclose(self, a, b, rel_tol=1e-09, abs_tol=0.0):
         return abs(a-b) <= max(rel_tol * max(abs(a), abs(b)), abs_tol)
+    
+    #calculate the local energy demand
+    def _calculateLocalEd(self):
+        _log.debug('_calculateLocalEd()')
+        
+        ed = SMARTHUB_BASE_ENERGY
+        if self. _ledState == SH_DEVICE_STATE_ON:
+            ed = ed + SMARTHUB_LED_ENERGY
+        if self. _fanState == SH_DEVICE_STATE_ON:
+            ed = ed + SMARTHUB_FAN_ENERGY
+    
+        return ed
+    
+    #calculate the total energy demand (TED)
+    def _calculateTed(self):
+        _log.debug('_calculateTed()')
+        
+        ted = _calculateLocalEd()
+        for ed in self._ds_ed:
+            ted = ted + ed
+        
+        return ted
+        
+    def publishTed(self):
+        _log.debug('publishTed()')
+        
+        ted = self._calculateTed()
+        
+        pubTopic = self.energyDemand_topic
+        pubMsg = [ted,
+                    {'units': 'W', 'tz': 'UTC', 'type': 'float'}]
+        self.publishToBus(pubTopic, pubMsg)
+        return  
+        
+    @PubSub.subscribe('pubsub','smartstrip/energydemand')
+    def onDsEd(self, peer, sender, bus,  topic, headers, message):
+        if sender == 'pubsub.compat':
+            message = compat.unpack_legacy_message(headers, message)
+        _log.debug('*********** New ed from ds, topic: ' + topic + \
+                    ' & ed: {0:.4f}'.format(message[0]))
+        
+        deviceID = (topic.split('/', 3))[2]
+        idx = self._get_ds_device_idx(deviceID)
+        self._ds_ed[idx] = message[0]
+
+        return
+        
+    def _get_ds_device_idx(self, deviceID):   
+        if deviceID not in self._ds_deviceId:
+            self._ds_deviceId.append(deviceID)
+        return self._ds_deviceId.index(deviceID)
         
 def main(argv=sys.argv):
     '''Main method called by the eggsecutable.'''
