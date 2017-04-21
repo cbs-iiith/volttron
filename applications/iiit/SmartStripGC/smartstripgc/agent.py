@@ -58,7 +58,7 @@ def smartstripgc(config_path, **kwargs):
             if sender == 'pubsub.compat':
                 message = compat.unpack_legacy_message(headers, message)
                 
-            #new zone price point
+            #new hub price point
             sh_pp = message[0]
             _log.debug ( "*** New Price Point: {0:.2f} ***".format(sh_pp))
             

@@ -591,7 +591,7 @@ class SmartHub(Agent):
         self._publishToBus(self.topic_price_point, pubMsg)
         
         
-    @PubSub.subscribe('pubsub','prices/PricePoint')
+    @PubSub.subscribe('pubsub','smarthub/pricepoint')
     def onNewPrice(self, peer, sender, bus,  topic, headers, message):
         if sender == 'pubsub.compat':
             message = compat.unpack_legacy_message(headers, message)

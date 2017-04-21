@@ -92,7 +92,7 @@ def smartstrip(config_path, **kwargs):
     vip_identity = config.get('vip_identity', 'iiit.smartstrip')
     # This agent needs to be named iiit.smartstrip. Pop the uuid id off the kwargs
     kwargs.pop('identity', None)
-
+    
     Agent.__name__ = 'SmartStrip_Agent'
     return SmartStrip(config_path, identity=vip_identity, **kwargs)
 
@@ -176,8 +176,6 @@ class SmartStrip(Agent):
         self._plug_pricepoint_th = self.config['plug_pricepoint_th']
 
     def _configGetPoints(self):
-        self.topic_price_point= self.config.get('topic_price_point',
-                                            'smartstrip/pricepoint')
         self.plug1_meterData_all_point = self.config.get('plug1_meterData_all_point',
                                             'smartstrip/plug1/meterdata/all')
         self.plug2_meterData_all_point = self.config.get('plug2_meterData_all_point',
@@ -502,8 +500,7 @@ class SmartStrip(Agent):
                 self._plugConnected[plugID] = 0
                 self.switchRelay(plugID, RELAY_OFF, SCHEDULE_AVLB)
 
-    #@PubSub.subscribe('pubsub', self.topic_price_point)
-    @PubSub.subscribe('pubsub','prices/PricePoint')
+    @PubSub.subscribe('pubsub', 'smartstrip/pricepoint')
     def onNewPrice(self, peer, sender, bus,  topic, headers, message):
         if sender == 'pubsub.compat':
             message = compat.unpack_legacy_message(headers, message)

@@ -62,7 +62,7 @@ def smarthubui_clnt(config_path, **kwargs):
     ble_ui_server_port = int(config.get('ble_ui_server_port', 8082))
     
     topic_price_point = config.get('topic_price_point', \
-                                    'prices/PricePoint')
+                                    'smarthub/pricepoint')
     topic_sensorsLevelAll_point = config.get('sensorsLevelAll_point', \
                                             'smarthub/sensors/all')
     topic_ledState_point = config.get('ledState_point', \

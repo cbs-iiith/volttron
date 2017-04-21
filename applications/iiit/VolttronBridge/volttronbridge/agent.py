@@ -102,6 +102,9 @@ def volttronbridge(config_path, **kwargs):
             self._price_point_current   = 0
             self._price_point_previous  = 0
             
+            self._us_last_pp_previous   = 0
+            self._us_last_pp_current    = 0
+            
             #we want to post to us only if there is change in energy demand
             self._ed_current    = 0
             self._ed_previous   = 0
@@ -363,7 +366,7 @@ def volttronbridge(config_path, **kwargs):
             _log.debug('_postPricePoint()')
             _log.debug ( "*** New Price Point: {0:.2f} ***".format(newPricePoint))
             #we want to post to bus only if there is change in previous us price point
-            if self._us_last_pp != newPricePoint:
+            if self._us_last_pp_current != newPricePoint:
                 self._us_last_pp_previous = self._us_last_pp_current
                 self._us_last_pp_current = newPricePoint
                 #post to bus
