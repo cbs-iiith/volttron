@@ -35,6 +35,8 @@ import settings
 
 import time
 import struct
+import gevent
+import gevent.event
 
 SH_DEVICE_STATE_ON = 1
 SH_DEVICE_STATE_OFF = 0

@@ -59,6 +59,8 @@ import settings
 
 import time
 import struct
+import gevent
+import gevent.event
 
 LED_ON = 1
 LED_OFF = 0
@@ -294,7 +296,10 @@ class SmartStrip(Agent):
                     self._agent_id, 
                     'schdl_getData_low_preempt',
                     'LOW_PREEMPT',
-                    msg).get(timeout=1)
+                    msg).get(timeout=10)
+        except gevent.Timeout:
+            _log.exception("Expection: gevent.Timeout in getData()")
+            return
         except Exception as e:
             _log.exception ("Could not contact actuator. Is it running?")
             #print(e)
@@ -359,17 +364,17 @@ class SmartStrip(Agent):
             fVolatge = self.vip.rpc.call(
                     'platform.actuator','get_point',
                     'iiit/cbs/smartstrip/' + \
-                    pointVolatge).get(timeout=2)
+                    pointVolatge).get(timeout=10)
             #_log.debug('voltage: {0:.2f}'.format(fVolatge))
             fCurrent = self.vip.rpc.call(
                     'platform.actuator','get_point',
                     ('iiit/cbs/smartstrip/' + \
-                    pointCurrent)).get(timeout=2)
+                    pointCurrent)).get(timeout=10)
             #_log.debug('current: {0:.2f}'.format(fCurrent))
             fActivePower = self.vip.rpc.call(
                     'platform.actuator','get_point',
                     'iiit/cbs/smartstrip/' + \
-                    pointActivePower).get(timeout=2)
+                    pointActivePower).get(timeout=10)
             #_log.debug('active: {0:.2f}'.format(fActivePower))
 
             #TODO: temp fix, need to move this to backend code
@@ -392,6 +397,9 @@ class SmartStrip(Agent):
                     + ', ActivePower: {0:.2f}'.format(fActivePower)
                     ))
             #release the time schedule, if we finish early.
+        except gevent.Timeout:
+            _log.exception("Expection: gevent.Timeout in readMeterData()")
+            return
         except Exception as e:
             _log.exception ("Expection: exception in readMeterData()")
             #print(e)
@@ -418,49 +426,52 @@ class SmartStrip(Agent):
             
             fTagID1_1 = self.vip.rpc.call(
                     'platform.actuator','get_point',
-                    'iiit/cbs/smartstrip/TagID1_1').get(timeout=2)
+                    'iiit/cbs/smartstrip/TagID1_1').get(timeout=10)
 
             fTagID1_2 = self.vip.rpc.call(
                     'platform.actuator','get_point',
-                    'iiit/cbs/smartstrip/TagID1_2').get(timeout=2)
+                    'iiit/cbs/smartstrip/TagID1_2').get(timeout=10)
             self._newTagId1 = self.recoveryTagID(fTagID1_1, fTagID1_2)
             #_log.debug('Tag 1: ' + newTagId1)
 
             #get second tag id
             fTagID2_1 = self.vip.rpc.call(
                     'platform.actuator','get_point',
-                    'iiit/cbs/smartstrip/TagID2_1').get(timeout=2)
+                    'iiit/cbs/smartstrip/TagID2_1').get(timeout=10)
 
             fTagID2_2 = self.vip.rpc.call(
                     'platform.actuator','get_point',
-                    'iiit/cbs/smartstrip/TagID2_2').get(timeout=2)
+                    'iiit/cbs/smartstrip/TagID2_2').get(timeout=10)
             self._newTagId2 = self.recoveryTagID(fTagID2_1, fTagID2_2)
             #_log.debug('Tag 2: ' + newTagId2)
 
             #get third tag id
             fTagID3_1 = self.vip.rpc.call(
                     'platform.actuator','get_point',
-                    'iiit/cbs/smartstrip/TagID3_1').get(timeout=2)
+                    'iiit/cbs/smartstrip/TagID3_1').get(timeout=10)
 
             fTagID3_2 = self.vip.rpc.call(
                     'platform.actuator','get_point',
-                    'iiit/cbs/smartstrip/TagID3_2').get(timeout=2)
+                    'iiit/cbs/smartstrip/TagID3_2').get(timeout=10)
             self._newTagId3 = self.recoveryTagID(fTagID3_1, fTagID3_2)
             #_log.debug('Tag 3: ' + newTagId3)
 
             #get fourth tag id
             fTagID4_1 = self.vip.rpc.call(
                     'platform.actuator','get_point',
-                    'iiit/cbs/smartstrip/TagID4_1').get(timeout=2)
+                    'iiit/cbs/smartstrip/TagID4_1').get(timeout=10)
 
             fTagID4_2 = self.vip.rpc.call(
                     'platform.actuator','get_point',
-                    'iiit/cbs/smartstrip/TagID4_2').get(timeout=2)
+                    'iiit/cbs/smartstrip/TagID4_2').get(timeout=10)
             self._newTagId4 = self.recoveryTagID(fTagID4_1, fTagID4_2)
             #_log.debug('Tag 4: ' + newTagId4)
 
             _log.debug('Tag 1: '+ self._newTagId1 +', Tag 2: ' + self._newTagId2 + ', Tag 3: '+ self._newTagId3 +', Tag 4: ' + self._newTagId4)
 
+        except gevent.Timeout:
+            _log.exception("Expection: gevent.Timeout in readTagIDs()")
+            return
         except Exception as e:
             _log.exception ("Exception: reading tag ids")
             #print(e)
@@ -617,8 +628,11 @@ class SmartStrip(Agent):
                     self._agent_id, 
                     str(self._taskID_LedDebug),
                     'HIGH',
-                    msg).get(timeout=2)
+                    msg).get(timeout=10)
             #print("schedule result", result)
+        except gevent.Timeout:
+            _log.exception("Expection: gevent.Timeout in switchLedDebug()")
+            return
         except Exception as e:
             _log.exception ("Exception: Could not contact actuator. Is it running?")
             #print(e)
@@ -631,9 +645,12 @@ class SmartStrip(Agent):
                         'set_point',
                         self._agent_id, 
                         'iiit/cbs/smartstrip/LEDDebug',
-                        state).get(timeout=1)
+                        state).get(timeout=10)
                 #print("Set result", result)
                 self.updateLedDebugState(state)
+        except gevent.Timeout:
+            _log.exception("Expection: gevent.Timeout in switchLedDebug()")
+            return
         except Exception as e:
             _log.exception ("Expection: setting ledDebug")
             #print(e)
@@ -663,8 +680,11 @@ class SmartStrip(Agent):
                         self._agent_id, 
                         'taskID_Plug' + str(plugID+1) + 'Relay',
                         'HIGH',
-                        msg).get(timeout=1)
+                        msg).get(timeout=10)
                 #print("schedule result", result)
+            except gevent.Timeout:
+                _log.exception("Expection: gevent.Timeout in switchRelay()")
+                return
             except Exception as e:
                 _log.exception ("Could not contact actuator. Is it running?")
                 #print(e)
@@ -673,6 +693,9 @@ class SmartStrip(Agent):
             try:
                 if result['result'] == 'SUCCESS':
                     self.rpc_switchRelay(plugID, state)
+            except gevent.Timeout:
+                _log.exception("Expection: gevent.Timeout in switchRelay()")
+                return
             except Exception as e:
                 _log.exception ("Expection: setting plug 1 relay")
                 #print(e)
@@ -688,7 +711,7 @@ class SmartStrip(Agent):
                 'set_point',
                 self._agent_id, 
                 'iiit/cbs/smartstrip/Plug' + str(plugID+1) + 'Relay',
-                state).get(timeout=1)
+                state).get(timeout=10)
         #print("Set result", result)
         #_log.debug('OK call updatePlug1RelayState()')
         self.updatePlugRelayState(plugID, state)
@@ -699,7 +722,7 @@ class SmartStrip(Agent):
         headers = { 'requesterID': self._agent_id, }
         ledDebug_status = self.vip.rpc.call(
                 'platform.actuator','get_point',
-                'iiit/cbs/smartstrip/LEDDebug').get(timeout=1)
+                'iiit/cbs/smartstrip/LEDDebug').get(timeout=10)
         
         if state == int(ledDebug_status):
             self._ledDebugState = state
@@ -714,7 +737,7 @@ class SmartStrip(Agent):
         headers = { 'requesterID': self._agent_id, }
         relay_status = self.vip.rpc.call(
                 'platform.actuator','get_point',
-                'iiit/cbs/smartstrip/Plug' + str(plugID+1) + 'Relay').get(timeout=1)
+                'iiit/cbs/smartstrip/Plug' + str(plugID+1) + 'Relay').get(timeout=10)
 
         if state == int(relay_status):
             self._plugRelayState[plugID] = state
