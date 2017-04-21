@@ -162,11 +162,19 @@ def volttronbridge(config_path, **kwargs):
                     self.core.identity, \
                     "rpc_from_net").get(timeout=30)
 
-            if self._bridge_host == 'ZONE':
-                _log.debug(self._bridge_host)
-                #do nothing
-                
-            elif self._bridge_host == 'HUB' or self._bridge_host == 'STRIP' :
+            if self._bridge_host == 'ZONE' or self._bridge_host == 'HUB' :
+                self.vip.pubsub.subscribe("pubsub", \
+                                            pricePoint_topic, \
+                                            self.onNewPrice \
+                                            )
+                                            
+            if self._bridge_host == 'HUB' or self._bridge_host == 'STRIP' :
+                self.vip.pubsub.subscribe("pubsub", \
+                                            energyDemand_topic, \
+                                            self.onNewEnergyDemand \
+                                            )
+                                                
+            if self._bridge_host == 'HUB' or self._bridge_host == 'STRIP' :
                 _log.debug(self._bridge_host)
                 _log.debug("registering with upstream VolttronBridge")
                 url_root = 'http://' + self._up_ip_addr + ':' + str(self._up_port) + '/VolttronBridge'
@@ -248,7 +256,6 @@ def volttronbridge(config_path, **kwargs):
                 return jsonrpc.json_error('NA', UNHANDLED_EXCEPTION, e)
         
         #price point on local bus published, post it to all downstream bridges
-        @PubSub.subscribe('pubsub', pricePoint_topic)
         def onNewPrice(self, peer, sender, bus,  topic, headers, message):
             if self._bridge_host == 'STRIP':
                 return
@@ -267,7 +274,6 @@ def volttronbridge(config_path, **kwargs):
             return
             
         #energy demand on local bus published, post it to upstream bridge
-        @PubSub.subscribe('pubsub', energyDemand_topic)
         def onNewEnergyDemand(self, peer, sender, bus,  topic, headers, message):
             if self._bridge_host == 'ZONE':
                 #do nothing
