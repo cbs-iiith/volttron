@@ -123,8 +123,8 @@ class SmartHub(Agent):
     _price_point_previous = 0.4 
     _price_point_current = 0.4
     
-    self._ds_ed = []
-    self._ds_deviceId = []
+    _ds_ed = []
+    _ds_deviceId = []
 
     def __init__(self, config_path, **kwargs):
         super(SmartHub, self).__init__(**kwargs)
