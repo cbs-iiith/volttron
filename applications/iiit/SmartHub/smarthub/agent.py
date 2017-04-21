@@ -118,8 +118,8 @@ class SmartHub(Agent):
         SH_DEVICE_S_PIR     = 8 only level (binary on/off)
     '''
     _shDevicesState = [0, 0, 0, 0, 0, 0, 0, 0, 0]
-    _shDevicesLevel = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
-    _shDevicesPP_th = [ 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25]
+    _shDevicesLevel = [0.3, 0.3, 0.3, 0.3, 0.3, 0.3, 0.3, 0.3, 0.3]
+    _shDevicesPP_th = [ 0.95, 0.95, 0.95, 0.95, 0.95, 0.95, 0.95, 0.95, 0.95]
     _price_point_previous = 0.4 
     _price_point_current = 0.4
     
