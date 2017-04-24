@@ -98,7 +98,6 @@ def smartstripgc(config_path, **kwargs):
                 return
             return
             
-
     Agent.__name__ = 'SmartStripGC_Agent'
     return SmartStripGC(**kwargs)
 
