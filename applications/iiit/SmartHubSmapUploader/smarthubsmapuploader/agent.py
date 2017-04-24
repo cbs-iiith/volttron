@@ -40,7 +40,7 @@ __version__ = '0.1'
 # start with LPDM.  E.G. /LPDM/energy_price or /LPDM/power_use
 # If you want to listen to all topics just replace the below with empty string ""  
 SH_MAIN_TOPIC   = "smarthub" 
-SH_PRICEPOINT   = "prices/PricePoint" 
+VB_MAIN_TOPIC   = "zone" 
 
 # This is the information needed to post to smap.  The source_name might be able
 # to be derived somehow and the API key and server root could go in a config
@@ -52,7 +52,7 @@ TIME_ZONE = "UTC"
 
 #agents whose published data to volttron bus we are interested in uploading to smap
 SENDER_SH = 'iiit.smarthub'
-SENDER_PP = 'iiit.pricepoint'
+SENDER_VB = 'iiit.volttronbridge'
     
 def smarthubsmapuploader(config_path, **kwargs):
     
@@ -60,8 +60,7 @@ def smarthubsmapuploader(config_path, **kwargs):
     agent_id = config['agentid']
     
     sh_main_topic           = config.get('sh_main_topic', SH_MAIN_TOPIC)
-    sh_price_point_topic    = config.get('sh_price_point_topic', SH_PRICEPOINT)
-    
+    vb_main_topic           = config.get('vb_main_topic', VB_MAIN_TOPIC)
     
     class SmartHubSmapUploader(Agent):
         '''
@@ -85,7 +84,6 @@ def smarthubsmapuploader(config_path, **kwargs):
             self.time_zone      = config.get('time_zone', TIME_ZONE)
             
             self.sender_sh      = config.get('sender_sh', SENDER_SH)
-            self.sender_pp      = config.get('sender_pp', SENDER_PP)
             
             return
             
@@ -105,18 +103,18 @@ def smarthubsmapuploader(config_path, **kwargs):
             self.shSmapPostData(peer, sender, bus, topic, headers, message)
             return
             
-        @PubSub.subscribe('pubsub', sh_price_point_topic)
-        def on_match_shCurrentPP(self, peer, sender, bus, topic, headers, message):
-            _log.debug('on_match_shCurrentPP()')
-            self.shSmapPostData(peer, sender, bus, topic, headers, message)
+        @PubSub.subscribe('pubsub', vb_main_topic)
+        def on_match_ssCurrentPP(self, peer, sender, bus, topic, headers, message):
+            _log.debug('on_match_ssCurrentPP()')
+            self.ssSmapPostData(peer, sender, bus, topic, headers, message)
             return
-            
+        
         def shSmapPostData(self, peer, sender, bus, topic, headers, message):
             _log.debug('shSmapPostData()')
             
-            #we don't want to post messages other than those published 
-            #by 'iiit.smarthub' or 'iiit.pricepoint'
-            if sender != self.sender_sh and sender != self.sender_pp:
+            #we don't want to post messages other than those
+            #published by 'iiit.smarthub' or by 'iiit.volttronbridge' or by  'iiit.smarthubgc'
+            if sender != self.sender_sh and sender != self.sender_vb and sender != 'iiit.smarthubgc':
                 _log.debug('not valid sender')
                 return
                 
@@ -127,17 +125,11 @@ def smarthubsmapuploader(config_path, **kwargs):
                 if keyword in topic:
                     return
                     
-            #topic = "/SmartHub/" + self.sh_id + "/" + topic
-            
             _log.debug("Peer: %r, Sender: %r, Bus: %r, Topic: %r, Headers: %r, Message: %r", peer, sender, bus, topic, headers, message)
             
             str_time = headers[headers_mod.DATE]
             msg_time = dateutil.parser.parse(str_time)
-            msg_value = message[0]
-            #units = message[1]['units']
-            #reading_type = message[1]['type']
             reading_type = 'double'
-            readings = [[msg_time, msg_value]]      
             
             if 'sensors' in topic:
                 _log.debug('shSmapPostData() - sensors')
@@ -162,44 +154,96 @@ def smarthubsmapuploader(config_path, **kwargs):
                 return
             elif 'ledstate' in topic:
                 _log.debug('shSmapPostData() - ledstate')
+                
                 topic = "/SmartHub/" + self.sh_id + "/Led/state"
                 units = message[1]['units']
+                msg_value = message[0]
+                readings = [[msg_time, msg_value]]
+                
                 smap_post(self.smap_root, self.api_key, topic, units, reading_type, readings, self.source_data, self.time_zone)
                 return
             elif 'fanstate' in topic:
                 _log.debug('shSmapPostData() - fanstate')
+                
                 topic = "/SmartHub/" + self.sh_id + "/Fan/state"
                 units = message[1]['units']
+                msg_value = message[0]
+                readings = [[msg_time, msg_value]]
+                
                 smap_post(self.smap_root, self.api_key, topic, units, reading_type, readings, self.source_data, self.time_zone)
                 return
             elif 'ledlevel' in topic:
                 _log.debug('shSmapPostData() - ledlevel')
+                
                 topic = "/SmartHub/" + self.sh_id + "/Led/level"
                 units = message[1]['units']
+                msg_value = message[0]
+                readings = [[msg_time, msg_value]]
+                
                 smap_post(self.smap_root, self.api_key, topic, units, reading_type, readings, self.source_data, self.time_zone)
                 return
             elif 'fanlevel' in topic:
                 _log.debug('shSmapPostData() - fanlevel')
+                
                 topic = "/SmartHub/" + self.sh_id + "/Fan/level"
                 units = message[1]['units']
+                msg_value = message[0]
+                readings = [[msg_time, msg_value]]
+                
                 smap_post(self.smap_root, self.api_key, topic, units, reading_type, readings, self.source_data, self.time_zone)
                 return
             elif 'ledthpp' in topic:
                 _log.debug('shSmapPostData() - ledthpp')
+                
                 topic = "/SmartHub/" + self.sh_id + "/Led/threshold"
                 units = message[1]['units']
+                msg_value = message[0]
+                readings = [[msg_time, msg_value]]
+                
                 smap_post(self.smap_root, self.api_key, topic, units, reading_type, readings, self.source_data, self.time_zone)
                 return
             elif 'fanthpp' in topic:
                 _log.debug('shSmapPostData() - fanthpp')
+                
                 topic = "/SmartHub/" + self.sh_id + "/Fan/threshold"
                 units = message[1]['units']
+                msg_value = message[0]
+                readings = [[msg_time, msg_value]]
+                
                 smap_post(self.smap_root, self.api_key, topic, units, reading_type, readings, self.source_data, self.time_zone)
                 return
-            elif 'PricePoint' in topic:
-                _log.debug('shSmapPostData() - PricePoint')
-                topic = "/SmartHub/" + self.sh_id + "/pricepoint"
+            elif 'smartstrip/energydemand' in topic:
+                #downstream smart strips energy demand
+                _log.debug('smapPostSSData() - Energy Demand - SmartStrip - (DownStream) - YET TO IMPLEMENT!!!!!')
+                return
+            elif 'smarthub/energydemand' in topic:
+                _log.debug('smapPostSSData() - Energy Demand - SmartHub')
+                
+                topic = "/SmartHub/" + self.ss_id + "/energydemand/smarthub"
                 units = message[1]['units']
+                msg_value = message[0]
+                readings = [[msg_time, msg_value]]
+
+                smap_post(self.smap_root, self.api_key, topic, units, reading_type, readings, self.source_data, self.time_zone)
+                return
+            elif 'smarthub/pricepoint' in topic:
+                _log.debug('shSmapPostData() - PricePoint - SmartHub')
+                
+                topic = "/SmartHub/" + self.sh_id + "/pricepoint/smarthub"
+                units = message[1]['units']
+                msg_value = message[0]
+                readings = [[msg_time, msg_value]]
+                
+                smap_post(self.smap_root, self.api_key, topic, units, reading_type, readings, self.source_data, self.time_zone)
+                return
+            elif 'zone/pricepoint' in topic:
+                _log.debug('shSmapPostData() - PricePoint - Zone (Upstream)')
+                
+                topic = "/SmartHub/" + self.sh_id + "/pricepoint/zone"
+                units = message[1]['units']
+                msg_value = message[0]
+                readings = [[msg_time, msg_value]]
+                
                 smap_post(self.smap_root, self.api_key, topic, units, reading_type, readings, self.source_data, self.time_zone)
                 return
             else:
@@ -207,12 +251,12 @@ def smarthubsmapuploader(config_path, **kwargs):
                 return
                         
         def smapPostSensorsData(self, field, topic, headers, message, msg_time):
-            msg_value = message[0][field]
-            units = message[1][field]['units']
-            #reading_type = message[1][field]['type']
             reading_type = 'double'
             
+            units = message[1][field]['units']
+            msg_value = message[0][field]
             readings = [[msg_time, msg_value]]      
+            
             smap_post(self.smap_root, self.api_key, topic, units, reading_type, readings, self.source_data, self.time_zone)
             return
             

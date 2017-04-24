@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*- {{{
 # vim: set fenc=utf-8 ft=python sw=4 ts=4 sts=4 et:
 #
-# Copyright (c) 2017, IIIT-Hyderabad
+# Copyright (c) 2017, IIIT-Hyderabad.
 # All rights reserved.
 #
 #
@@ -40,7 +40,7 @@ __version__ = '0.1'
 # start with LPDM.  E.G. /LPDM/energy_price or /LPDM/power_use
 # If you want to listen to all topics just replace the below with empty string ""  
 SS_MAIN_TOPIC   = "smartstrip" 
-SS_PRICEPOINT   = "prices/PricePoint" 
+VB_MAIN_TOPIC   = "smarthub"
 
 # This is the information needed to post to smap.  The source_name might be able
 # to be derived somehow and the API key and server root could go in a config
@@ -52,7 +52,7 @@ TIME_ZONE = "UTC"
 
 #agents whose published data to volttron bus we are interested in uploading to smap
 SENDER_SS = 'iiit.smartstrip'
-SENDER_PP = 'iiit.pricepoint'
+SENDER_VB = 'iiit.volttronbridge'
     
 def smartstripsmapuploader(config_path, **kwargs):
     
@@ -60,7 +60,7 @@ def smartstripsmapuploader(config_path, **kwargs):
     agent_id = config['agentid']
     
     ss_main_topic           = config.get('ss_main_topic', SS_MAIN_TOPIC)
-    ss_price_point_topic    = config.get('ss_price_point_topic', SS_PRICEPOINT)
+    vb_main_topic           = config.get('vb_main_topic', VB_MAIN_TOPIC)
     
     
     class SmartStripSmapUploader(Agent):
@@ -85,7 +85,7 @@ def smartstripsmapuploader(config_path, **kwargs):
             self.time_zone      = config.get('time_zone', TIME_ZONE)
             
             self.sender_ss      = config.get('sender_ss', SENDER_SS)
-            self.sender_pp      = config.get('sender_pp', SENDER_PP)
+            self.sender_vb      = config.get('sender_vb', SENDER_VB)
             
             return
             
@@ -105,7 +105,7 @@ def smartstripsmapuploader(config_path, **kwargs):
             self.ssSmapPostData(peer, sender, bus, topic, headers, message)
             return
             
-        @PubSub.subscribe('pubsub', ss_price_point_topic)
+        @PubSub.subscribe('pubsub', vb_main_topic)
         def on_match_ssCurrentPP(self, peer, sender, bus, topic, headers, message):
             _log.debug('on_match_ssCurrentPP()')
             self.ssSmapPostData(peer, sender, bus, topic, headers, message)
@@ -114,9 +114,9 @@ def smartstripsmapuploader(config_path, **kwargs):
         def ssSmapPostData(self, peer, sender, bus, topic, headers, message):
             _log.debug('ssSmapPostData()')
             
-            #we don't want to post messages other than those published 
-            #by 'iiit.smartstrip' or 'iiit.pricepoint'
-            if sender != self.sender_ss and sender != self.sender_pp:
+            #we don't want to post messages other than those
+            #published by 'iiit.smartstrip' or by 'iiit.volttronbridge' or by 'iiit.smartstripgc'
+            if sender != self.sender_ss and sender != self.sender_vb and sender != 'iiit.smartstripgc':
                 _log.debug('not valid sender')
                 return
                 
@@ -127,25 +127,19 @@ def smartstripsmapuploader(config_path, **kwargs):
                 if keyword in topic:
                     return
                     
-            #topic = "/" + self.ss_id + "/" + topic
-            
             _log.debug("Peer: %r, Sender: %r, Bus: %r, Topic: %r, Headers: %r, Message: %r", peer, sender, bus, topic, headers, message)
             
             str_time = headers[headers_mod.DATE]
             msg_time = dateutil.parser.parse(str_time)
-            msg_value = message[0]
-            #units = message[1]['units']
-            #reading_type = message[1]['type']
             reading_type = 'double'
-            readings = [[msg_time, msg_value]]      
-            
+
+            plug_id = (topic.split('/', 3))[1]
+                
             if 'meterdata' in topic:
                 _log.debug('smapPostSSData() - meterdata')
                 #strip 'all' from the topic, don't know how to post all (volt, current & apwr) to the smap
                 #so posting individually
-                #topic = (topic.split('all', 1))[0]
                 
-                plug_id = (topic.split('/', 3))[1]
                 topic = "/SmartStrip/" + self.ss_id + "/meterdata/voltage/" + plug_id
                 self.smapPostMeterData('voltage', topic, headers, message, msg_time)
                 
@@ -157,31 +151,62 @@ def smartstripsmapuploader(config_path, **kwargs):
                 return
             elif 'threshold' in topic:
                 _log.debug('smapPostSSData() - threshold')
-                plug_id = (topic.split('/', 3))[1]
+                
                 topic = "/SmartStrip/" + self.ss_id + "/threshold/" + plug_id
                 units = message[1]['units']                
+                msg_value = message[0]
+                readings = [[msg_time, msg_value]]
+
                 smap_post(self.smap_root, self.api_key, topic, units, reading_type, readings, self.source_data, self.time_zone)
                 return
-            elif 'PricePoint' in topic:
-                _log.debug('smapPostSSData() - PricePoint')
-                topic = "/SmartStrip/" + self.ss_id + "/pricepoint/"
+            elif 'smartstrip/energydemand' in topic:
+                _log.debug('smapPostSSData() - Energy Demand - SmartStrip')
+                
+                topic = "/SmartStrip/" + self.ss_id + "/energydemand/smartstrip"
                 units = message[1]['units']
+                msg_value = message[0]
+                readings = [[msg_time, msg_value]]
+
+                smap_post(self.smap_root, self.api_key, topic, units, reading_type, readings, self.source_data, self.time_zone)
+                return
+            elif 'smartstrip/pricepoint' in topic:
+                _log.debug('smapPostSSData() - PricePoint - SmartStrip')
+                
+                topic = "/SmartStrip/" + self.ss_id + "/pricepoint/smartstrip"
+                units = message[1]['units']
+                msg_value = message[0]
+                readings = [[msg_time, msg_value]]
+
+                smap_post(self.smap_root, self.api_key, topic, units, reading_type, readings, self.source_data, self.time_zone)
+                return
+            elif 'smarthub/pricepoint' in topic:
+                _log.debug('smapPostSSData() - PricePoint - Smarthub')
+                
+                topic = "/SmartStrip/" + self.ss_id + "/pricepoint/smarthub (Upstream)"
+                units = message[1]['units']
+                msg_value = message[0]
+                readings = [[msg_time, msg_value]]
+
                 smap_post(self.smap_root, self.api_key, topic, units, reading_type, readings, self.source_data, self.time_zone)
                 return
             elif 'tagid' in topic:
                 _log.debug('smapPostSSData() - tagid')
-                plug_id = (topic.split('/', 3))[1]
+                
                 topic = "/SmartStrip/" + self.ss_id + "/tagid/" + plug_id
                 units = 'n/a'
                 msg_value = float.fromhex('0x'+message[0])
                 readings = [[msg_time, msg_value]]
+
                 smap_post(self.smap_root, self.api_key, topic, units, reading_type, readings, self.source_data, self.time_zone)
                 return
             elif 'relaystate' in topic:
                 _log.debug('smapPostSSData() - relaystate')
-                plug_id = (topic.split('/', 3))[1]
+                
                 topic = "/SmartStrip/" + self.ss_id + "/relaystate/" + plug_id
                 units = message[1]['units']
+                msg_value = message[0]
+                readings = [[msg_time, msg_value]]
+
                 smap_post(self.smap_root, self.api_key, topic, units, reading_type, readings, self.source_data, self.time_zone)
                 return
             else:
@@ -189,12 +214,11 @@ def smartstripsmapuploader(config_path, **kwargs):
                 return
                         
         def smapPostMeterData(self, field, topic, headers, message, msg_time):
-            msg_value = message[0][field]
+            reading_type = 'double'            
             units = message[1][field]['units']
-            #reading_type = message[1][field]['type']
-            reading_type = 'double'
-            
+            msg_value = message[0][field]
             readings = [[msg_time, msg_value]]      
+
             smap_post(self.smap_root, self.api_key, topic, units, reading_type, readings, self.source_data, self.time_zone)
             return
             
