@@ -32,6 +32,8 @@ from volttron.platform.jsonrpc import (
         UNAVAILABLE_AGENT)
         
 import time
+import gevent
+import gevent.event
 
 import requests
 import json
@@ -402,12 +404,18 @@ def volttronbridge(config_path, **kwargs):
             return False
             
         def _publishToBus(self, pubTopic, pubMsg):
-            _log.debug('_publishToBus()')
+            #_log.debug('_publishToBus()')
             now = datetime.datetime.utcnow().isoformat(' ') + 'Z'
             headers = {headers_mod.DATE: now}          
             #Publish messages
-            self.vip.pubsub.publish('pubsub', pubTopic, headers, pubMsg).get(timeout=5)
-            return
+			try:
+				self.vip.pubsub.publish('pubsub', pubTopic, headers, pubMsg).get(timeout=10)
+			except gevent.Timeout:
+				_log.exception("Expection: gevent.Timeout in _publishToBus()")
+			except Exception as e:
+				_log.exception ("Expection: _publishToBus?")
+
+			return
         
         def do_rpc(self, url_root, method, params=None ):
             _log.debug('do_rpc()')
