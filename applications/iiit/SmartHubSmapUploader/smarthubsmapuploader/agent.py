@@ -134,7 +134,7 @@ def smarthubsmapuploader(config_path, **kwargs):
             str_time = headers[headers_mod.DATE]
             msg_time = dateutil.parser.parse(str_time)
             msg_value = message[0]
-            units = message[1]['units']
+            #units = message[1]['units']
             #reading_type = message[1]['type']
             reading_type = 'double'
             readings = [[msg_time, msg_value]]      
@@ -163,36 +163,43 @@ def smarthubsmapuploader(config_path, **kwargs):
             elif 'ledstate' in topic:
                 _log.debug('shSmapPostData() - ledstate')
                 topic = "/SmartHub/" + self.sh_id + "/Led/state"
+                units = message[1]['units']
                 smap_post(self.smap_root, self.api_key, topic, units, reading_type, readings, self.source_data, self.time_zone)
                 return
             elif 'fanstate' in topic:
                 _log.debug('shSmapPostData() - fanstate')
                 topic = "/SmartHub/" + self.sh_id + "/Fan/state"
+                units = message[1]['units']
                 smap_post(self.smap_root, self.api_key, topic, units, reading_type, readings, self.source_data, self.time_zone)
                 return
             elif 'ledlevel' in topic:
                 _log.debug('shSmapPostData() - ledlevel')
                 topic = "/SmartHub/" + self.sh_id + "/Led/level"
+                units = message[1]['units']
                 smap_post(self.smap_root, self.api_key, topic, units, reading_type, readings, self.source_data, self.time_zone)
                 return
             elif 'fanlevel' in topic:
                 _log.debug('shSmapPostData() - fanlevel')
                 topic = "/SmartHub/" + self.sh_id + "/Fan/level"
+                units = message[1]['units']
                 smap_post(self.smap_root, self.api_key, topic, units, reading_type, readings, self.source_data, self.time_zone)
                 return
             elif 'ledthpp' in topic:
                 _log.debug('shSmapPostData() - ledthpp')
                 topic = "/SmartHub/" + self.sh_id + "/Led/threshold"
+                units = message[1]['units']
                 smap_post(self.smap_root, self.api_key, topic, units, reading_type, readings, self.source_data, self.time_zone)
                 return
             elif 'fanthpp' in topic:
                 _log.debug('shSmapPostData() - fanthpp')
                 topic = "/SmartHub/" + self.sh_id + "/Fan/threshold"
+                units = message[1]['units']
                 smap_post(self.smap_root, self.api_key, topic, units, reading_type, readings, self.source_data, self.time_zone)
                 return
             elif 'PricePoint' in topic:
                 _log.debug('shSmapPostData() - PricePoint')
                 topic = "/SmartHub/" + self.sh_id + "/pricepoint"
+                units = message[1]['units']
                 smap_post(self.smap_root, self.api_key, topic, units, reading_type, readings, self.source_data, self.time_zone)
                 return
             else:

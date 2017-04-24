@@ -134,7 +134,7 @@ def smartstripsmapuploader(config_path, **kwargs):
             str_time = headers[headers_mod.DATE]
             msg_time = dateutil.parser.parse(str_time)
             msg_value = message[0]
-            units = message[1]['units']
+            #units = message[1]['units']
             #reading_type = message[1]['type']
             reading_type = 'double'
             readings = [[msg_time, msg_value]]      
@@ -159,12 +159,13 @@ def smartstripsmapuploader(config_path, **kwargs):
                 _log.debug('smapPostSSData() - threshold')
                 plug_id = (topic.split('/', 3))[1]
                 topic = "/SmartStrip/" + self.ss_id + "/threshold/" + plug_id
-                
+                units = message[1]['units']                
                 smap_post(self.smap_root, self.api_key, topic, units, reading_type, readings, self.source_data, self.time_zone)
                 return
             elif 'PricePoint' in topic:
                 _log.debug('smapPostSSData() - PricePoint')
                 topic = "/SmartStrip/" + self.ss_id + "/pricepoint/"
+                units = message[1]['units']
                 smap_post(self.smap_root, self.api_key, topic, units, reading_type, readings, self.source_data, self.time_zone)
                 return
             elif 'tagid' in topic:
@@ -180,6 +181,7 @@ def smartstripsmapuploader(config_path, **kwargs):
                 _log.debug('smapPostSSData() - relaystate')
                 plug_id = (topic.split('/', 3))[1]
                 topic = "/SmartStrip/" + self.ss_id + "/relaystate/" + plug_id
+                units = message[1]['units']
                 smap_post(self.smap_root, self.api_key, topic, units, reading_type, readings, self.source_data, self.time_zone)
                 return
             else:
