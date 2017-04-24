@@ -48,7 +48,7 @@ VB_MAIN_TOPIC   = "smarthub"
 SMAP_ROOT = "http://chomp.lbl.gov/"
 API_KEY = "u606HlEFHTeVLfpBQZkNF232wChljnLHCKBY"
 SOURCE_NAME = "CBERD Flexlab Data"
-TIME_ZONE = "UTC"
+TIME_ZONE = "Etc/UTC"
 
 #agents whose published data to volttron bus we are interested in uploading to smap
 SENDER_SS = 'iiit.smartstrip'
