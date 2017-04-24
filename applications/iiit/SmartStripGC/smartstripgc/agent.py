@@ -84,7 +84,7 @@ def smartstripgc(config_path, **kwargs):
             return
             
         def _publishToBus(self, pubTopic, pubMsg):
-            _log.debug('_publishToBus()')
+            #_log.debug('_publishToBus()')
             now = datetime.datetime.utcnow().isoformat(' ') + 'Z'
             headers = {headers_mod.DATE: now}
             #Publish messages
