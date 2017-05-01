@@ -4,9 +4,9 @@
     "message": "I am Smart Hub Smap Uploader Agent",
 	"sh_id": "SmartHub-61",
 	"sh_main_topic": "smarthub",
-	"sh_price_point_topic": "prices/PricePoint", 
+	"vb_main_topic": "zone", 
 	"smap_root": "http://chomp.lbl.gov/",
 	"api_key": "u606HlEFHTeVLfpBQZkNF232wChljnLHCKBY",
-	"source_data": "CBERD Flexlab Data",
-	"time_zone": "UTC"
+	"source_data": "CBERD Flexlab Data V2",
+	"time_zone": "Etc/UTC"
 }

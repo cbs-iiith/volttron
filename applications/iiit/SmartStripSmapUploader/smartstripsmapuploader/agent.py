@@ -47,7 +47,7 @@ VB_MAIN_TOPIC   = "smarthub"
 # But this seems easier to show for an example.
 SMAP_ROOT = "http://chomp.lbl.gov/"
 API_KEY = "u606HlEFHTeVLfpBQZkNF232wChljnLHCKBY"
-SOURCE_NAME = "CBERD Flexlab Data"
+SOURCE_NAME = "CBERD Flexlab Data V2"
 TIME_ZONE = "Etc/UTC"
 
 #agents whose published data to volttron bus we are interested in uploading to smap
