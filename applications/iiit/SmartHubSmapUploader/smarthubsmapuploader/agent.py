@@ -53,6 +53,7 @@ TIME_ZONE = "Etc/UTC"
 #agents whose published data to volttron bus we are interested in uploading to smap
 SENDER_SH = 'iiit.smarthub'
 SENDER_VB = 'iiit.volttronbridge'
+SENDER_GC = 'iiit.smarthubgc'
     
 def smarthubsmapuploader(config_path, **kwargs):
     
@@ -84,6 +85,8 @@ def smarthubsmapuploader(config_path, **kwargs):
             self.time_zone      = config.get('time_zone', TIME_ZONE)
             
             self.sender_sh      = config.get('sender_sh', SENDER_SH)
+            self.sender_vb      = config.get('sender_vb', SENDER_VB)
+            self.sender_gc      = config.get('sender_gc', SENDER_GC)
             
             return
             
@@ -104,20 +107,23 @@ def smarthubsmapuploader(config_path, **kwargs):
             return
             
         @PubSub.subscribe('pubsub', vb_main_topic)
-        def on_match_ssCurrentPP(self, peer, sender, bus, topic, headers, message):
+        def on_match_shCurrentPP(self, peer, sender, bus, topic, headers, message):
             _log.debug('on_match_ssCurrentPP()')
-            self.ssSmapPostData(peer, sender, bus, topic, headers, message)
+            self.shSmapPostData(peer, sender, bus, topic, headers, message)
             return
         
         def shSmapPostData(self, peer, sender, bus, topic, headers, message):
             _log.debug('shSmapPostData()')
             
+            '''
             #we don't want to post messages other than those
             #published by 'iiit.smarthub' or by 'iiit.volttronbridge' or by  'iiit.smarthubgc'
-            if sender != self.sender_sh and sender != self.sender_vb and sender != 'iiit.smarthubgc':
-                _log.debug('not valid sender')
+            if sender != self.sender_sh and sender != self.sender_vb and sender != self.sender_gc:
+                _log.debug('not valid sender: ' + sender)
                 return
                 
+            #vb & gc agent id is not static 
+            '''
             # Just check for it or any other messages you don't want to log here
             # and return without doing anything.            
             keywords_to_skip = ["subscriptions", "init", "finished_processing"]
@@ -219,11 +225,16 @@ def smarthubsmapuploader(config_path, **kwargs):
             elif 'smarthub/energydemand' in topic:
                 _log.debug('smapPostSSData() - Energy Demand - SmartHub')
                 
-                topic = "/SmartHub/" + self.ss_id + "/energydemand/smarthub"
+                topic = "/SmartHub/" + self.sh_id + "/energydemand/smarthub"
                 units = message[1]['units']
                 msg_value = message[0]
                 readings = [[msg_time, msg_value]]
-
+                
+                print('**Sam**')
+                print('topic: ' + topic)
+                print('msg_value: ' + str(msg_value))
+                print('message: ' + str(message))
+                
                 smap_post(self.smap_root, self.api_key, topic, units, reading_type, readings, self.source_data, self.time_zone)
                 return
             elif 'smarthub/pricepoint' in topic:
@@ -233,6 +244,11 @@ def smarthubsmapuploader(config_path, **kwargs):
                 units = message[1]['units']
                 msg_value = message[0]
                 readings = [[msg_time, msg_value]]
+                
+                print('**Sam**')
+                print('topic: ' + topic)
+                print('msg_value: ' + str(msg_value))
+                print('message: ' + str(message))
                 
                 smap_post(self.smap_root, self.api_key, topic, units, reading_type, readings, self.source_data, self.time_zone)
                 return
@@ -244,10 +260,15 @@ def smarthubsmapuploader(config_path, **kwargs):
                 msg_value = message[0]
                 readings = [[msg_time, msg_value]]
                 
+                print('**Sam**')
+                print('topic: ' + topic)
+                print('msg_value: ' + str(msg_value))
+                print('message: ' + str(message))
+                
                 smap_post(self.smap_root, self.api_key, topic, units, reading_type, readings, self.source_data, self.time_zone)
                 return
             else:
-                _log.Exception("Exception: unhandled topic")
+                _log.Exception("Exception: unhandled topic: " + topic)
                 return
                         
         def smapPostSensorsData(self, field, topic, headers, message, msg_time):

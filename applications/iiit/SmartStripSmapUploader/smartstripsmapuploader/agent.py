@@ -116,10 +116,12 @@ def smartstripsmapuploader(config_path, **kwargs):
             
             #we don't want to post messages other than those
             #published by 'iiit.smartstrip' or by 'iiit.volttronbridge' or by 'iiit.smartstripgc'
+            '''
             if sender != self.sender_ss and sender != self.sender_vb and sender != 'iiit.smartstripgc':
-                _log.debug('not valid sender')
+                _log.debug('not valid sender: ' + sender)
                 return
                 
+            '''
             # Just check for it or any other messages you don't want to log here
             # and return without doing anything.            
             keywords_to_skip = ["subscriptions", "init", "finished_processing"]
@@ -180,9 +182,9 @@ def smartstripsmapuploader(config_path, **kwargs):
                 smap_post(self.smap_root, self.api_key, topic, units, reading_type, readings, self.source_data, self.time_zone)
                 return
             elif 'smarthub/pricepoint' in topic:
-                _log.debug('smapPostSSData() - PricePoint - Smarthub')
+                _log.debug('smapPostSSData() - PricePoint - Smarthub (Upstream)')
                 
-                topic = "/SmartStrip/" + self.ss_id + "/pricepoint/smarthub (Upstream)"
+                topic = "/SmartStrip/" + self.ss_id + "/pricepoint/smarthub"
                 units = message[1]['units']
                 msg_value = message[0]
                 readings = [[msg_time, msg_value]]
@@ -210,7 +212,7 @@ def smartstripsmapuploader(config_path, **kwargs):
                 smap_post(self.smap_root, self.api_key, topic, units, reading_type, readings, self.source_data, self.time_zone)
                 return
             else:
-                _log.Exception("Exception: unhandled topic")
+                _log.Exception("Exception: unhandled topic: " + topic)
                 return
                         
         def smapPostMeterData(self, field, topic, headers, message, msg_time):
