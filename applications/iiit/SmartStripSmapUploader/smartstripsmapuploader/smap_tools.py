@@ -64,7 +64,7 @@ def download_most_recent_point(smap_root, stream):
         tz = pytz.timezone(timezone)
         ts = tz.localize(ts)
         
-        _log.debug("ts=\t{ts}\nval=\t{val}".format(ts=ts, val=val))        
+        #_log.debug("ts=\t{ts}\nval=\t{val}".format(ts=ts, val=val))        
         if val is None:
             val = float("NaN")
          
@@ -73,7 +73,7 @@ def download_most_recent_point(smap_root, stream):
             newest_val = val
             newest_uuid = uuid            
             
-    _log.debug("Latest info:\tuuid:\t{uuid}\tts:\t{ts}\tval:\t{val}".format(uuid = newest_uuid, ts = newest_ts, val = newest_val))
+    #_log.debug("Latest info:\tuuid:\t{uuid}\tts:\t{ts}\tval:\t{val}".format(uuid = newest_uuid, ts = newest_ts, val = newest_val))
     return newest_uuid, newest_ts, newest_val
 
 
@@ -121,9 +121,9 @@ def chunk_list(lst, num_elements_in_sublist):
 
 def _upload(readings, url, api_key, source_name, path, obj_uuid, units="kW", time_zone="US/Pacific", additional_metadata={},
            doRobustUpload=True):
-    _log.debug("Starting smap upload sourcename: {sn} path: {p} ".format(sn = source_name, p = path))
-    _log.debug("Trying to upload:\nfirst_point:\t{d_start}\nlast_point:\t{d_end}".format(d_start=readings[0],
-                                                                                           d_end=readings[-1]))
+    #_log.debug("Starting smap upload sourcename: {sn} path: {p} ".format(sn = source_name, p = path))
+    #_log.debug("Trying to upload:\nfirst_point:\t{d_start}\nlast_point:\t{d_end}".format(d_start=readings[0],
+    #                                                                                       d_end=readings[-1]))
     to_smap_time = lambda x: 1000 * time.mktime(x.timetuple())
     # try parsing to smap time.  If it fails assume the timestamps are already in the expect time (unix time in ms)
     try:
@@ -145,8 +145,8 @@ def _upload(readings, url, api_key, source_name, path, obj_uuid, units="kW", tim
         _log.debug("Successfully uploaded data")
         return success
 
-    _log.debug(
-        "Posting data to smap in one file failed.  Attempting to split the file into smaller pieces and post individually.")
+    #_log.debug(
+    #    "Posting data to smap in one file failed.  Attempting to split the file into smaller pieces and post individually.")
 
     # if we are here than the upload failed.  Try breaking it into smaller chunks and post those with repetition in case of failure
     nPoints = 20000
@@ -154,7 +154,7 @@ def _upload(readings, url, api_key, source_name, path, obj_uuid, units="kW", tim
     maxAttempts = 10
 
     for chunk in chunks:
-        _log.debug("Posting file with %i points to smap path %s." % (len(chunk), path))
+        #_log.debug("Posting file with %i points to smap path %s." % (len(chunk), path))
         attempt = 1
         success = False
         while not success:
@@ -163,11 +163,11 @@ def _upload(readings, url, api_key, source_name, path, obj_uuid, units="kW", tim
             success = res.status_code == requests.codes.ok
 
             if not success:
-                _log.debug(
-                    "Posting file with {ct} points to smap failed.  Attempt: {t}".format(ct=len(chunk), t=attempt))
+                #_log.debug(
+#                    "Posting file with {ct} points to smap failed.  Attempt: {t}".format(ct=len(chunk), t=attempt))
                 if attempt > maxAttempts:
-                    _log.debug("Posting file with {ct} points to smap failed on all {t} attempts.  Aborting.".format(
-                        ct=len(chunk), t=attempt))
+                    #_log.debug("Posting file with {ct} points to smap failed on all {t} attempts.  Aborting.".format(
+              #          ct=len(chunk), t=attempt))
                     return False
                 else:
                     attempt += 1
@@ -177,7 +177,20 @@ def _upload(readings, url, api_key, source_name, path, obj_uuid, units="kW", tim
 def convert_time_stamp_to_epoch(timestamp):
     return time.mktime(timestamp.timetuple())
 
+def dump_args(func):
+    "This decorator dumps out the arguments passed to a function before calling it"
+    argnames = func.func_code.co_varnames[:func.func_code.co_argcount]
+    fname = func.func_name
 
+    def echo_func(*args,**kwargs):
+        print fname, ":", ', '.join(
+            '%s=%r' % entry
+            for entry in zip(argnames,args) + kwargs.items())
+        return func(*args, **kwargs)
+
+    return echo_func
+
+@dump_args
 def smap_post(smap_root, smap_api_key, stream, units, reading_type, readings, source_name, time_zone, additional_metadata = {}):
     try:
         if not hasattr(smap_post, "cached_uuids"):
@@ -199,18 +212,20 @@ def smap_post(smap_root, smap_api_key, stream, units, reading_type, readings, so
         smap_post.cached_uuids[(smap_root, source_name, stream)] = stream_uuid
 
         try:
-            _log.debug("trying to upload {stream}".format(stream=stream))
+            #_log.debug("trying to upload {stream}".format(stream=stream))
             res = _upload(readings, smap_root, smap_api_key, source_name, stream, stream_uuid, units, time_zone,
                          additional_metadata=additional_metadata)
             return res
         except Exception as e:
-            _log.warning("Error posting to smap: {e}".format(e=e))
-            _log.warning(stream)
-            _log.warning(units)
-            _log.warning(reading_type)
-            _log.warning(readings)
+            pass
+            #_log.warning("Error posting to smap: {e}".format(e=e))
+            #_log.warning(stream)
+            #_log.warning(units)
+            #_log.warning(reading_type)
+            #_log.warning(readings)
     except Exception as e:
-        _log.warning("Outer loop error posting to smap: {e}".format(e=e))
-        _log.warning(units)
-        _log.warning(reading_type)
-        _log.warning(readings)
+        pass
+        #_log.warning("Outer loop error posting to smap: {e}".format(e=e))
+        #_log.warning(units)
+        #_log.warning(reading_type)
+        #_log.warning(readings)
