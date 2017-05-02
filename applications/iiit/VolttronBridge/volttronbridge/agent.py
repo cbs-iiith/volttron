@@ -226,7 +226,7 @@ def volttronbridge(config_path, **kwargs):
 
         @RPC.export
         def rpc_from_net(self, header, message):
-            _log.debug('rpc_from_net()')
+            #_log.debug('rpc_from_net()')
             result = False
             try:
                 rpcdata = jsonrpc.JsonRpcData.parse(message)
@@ -281,8 +281,10 @@ def volttronbridge(config_path, **kwargs):
                 f.write("Headers {h}\n".format(h=headers))
                 f.write(str(message) + "\n")
                 
+            new_price_point = message.value
             '''
             new_price_point = message[0]
+            #'''
             _log.debug ( "*** New Price Point: {0:.2f} ***".format(new_price_point))
             
             '''
@@ -299,11 +301,6 @@ def volttronbridge(config_path, **kwargs):
             if self._bridge_host == 'ZONE':
                 #do nothing
                 return
-                
-            _log.debug("onNewEnergyDemand()")
-                    
-            if sender == 'pubsub.compat':
-                message = compat.unpack_legacy_message(headers, message)
                 
             newEnergyDemand = message[0]
             _log.debug ( "*** New Energy Demand: {0:.4f} ***".format(newEnergyDemand))
@@ -340,7 +337,7 @@ def volttronbridge(config_path, **kwargs):
             
         #price point on local bus changed post it to ds
         def _processNewPricePoint(self, new_price_point):
-            _log.debug('_processNewPricePoint()')
+            #_log.debug('_processNewPricePoint()')
             self._price_point_previous = self._price_point_current
             self._price_point_current = new_price_point
             
@@ -370,6 +367,13 @@ def volttronbridge(config_path, **kwargs):
             self._ds_voltBr.append(discovery_address)
             index = self._ds_voltBr.index(discovery_address)
             self._ds_deviceId.insert(index, deviceId)
+            '''
+            headers = {"FROM" : deviceId, "TO" : GRID_CONTROLLER_ID}
+            topic = ADD_END_USE_DEVICE_TOPIC.format(id = GRID_CONTROLLER_ID)
+            message = LpdmConnectDeviceEvent(deviceId, "eud", Eud)
+            message = cPickle.dumps(message)
+            self.vip.pubsub.publish("pubsub", topic, headers, message)
+            '''
             _log.debug('registered!!!')
             return True
             
@@ -388,11 +392,6 @@ def volttronbridge(config_path, **kwargs):
             
         #post the new new price point from us to the local-us-bus        
         def _postPricePoint(self, discovery_address, deviceId, newPricePoint):
-            if self._bridge_host == 'ZONE':
-                #do nothing 
-                return
-                
-            _log.debug('_postPricePoint()')
             _log.debug ( "*** New Price Point: {0:.2f} ***".format(newPricePoint))
             #we want to post to bus only if there is change in previous us price point
             if self._us_last_pp_current != newPricePoint:
@@ -401,30 +400,28 @@ def volttronbridge(config_path, **kwargs):
                 #post to bus
                 pubTopic =  pricePoint_topic_us
                 pubMsg = [newPricePoint,{'units': 'cents', 'tz': 'UTC', 'type': 'float'}]
-                _log.debug('publishing to local bus topic: ' + pubTopic)
                 self._publishToBus(pubTopic, pubMsg)
                 return True
             else:
                 _log.debug('no change in price, do nothing')
-                return False
+                return True
                 
         #post the new energy demand from ds to the local bus
         def _postEnergyDemand(self, discovery_address, deviceId, newEnergyDemand):
-            _log.debug('_postEnergyDemand(), newEnergyDemand: {0:.4f}'.format(newEnergyDemand))
+            _log.debug ( "*** New Energy Demand: {0:.4f} ***".format(newEnergyDemand))
             if discovery_address in self._ds_voltBr:
                 index = self._ds_voltBr.index(discovery_address)
                 if self._ds_deviceId[index] == deviceId:
                     #post to bus
+                    #'''
                     pubTopic = energyDemand_topic_ds + "/" + deviceId
-                    _log.debug('publishing to local bus topic: ' + pubTopic)
-                    pubMsg = [newEnergyDemand,{'units': 'W', 'tz': 'UTC', 'type': 'float'}]
+                    pubMsg = [newEnergyDemand,{'units': 'Watts', 'tz': 'UTC', 'type': 'float'}]
                     self._publishToBus(pubTopic, pubMsg)
                     '''
-                    topic = energyDemand_topic_ds + "/" + deviceId
                     headers = {"FROM" : deviceId, "TO" : GRID_CONTROLLER_ID}                    
                     message = LpdmPowerEvent(deviceId, GRID_CONTROLLER_ID, time.time(), newEnergyDemand)
                     message = cPickle.dumps(message)
-                    self.vip.pubsub.publish("pubsub", topic, headers, message)
+                    self.vip.pubsub.publish("pubsub", pubTopic, headers, message)
                     '''
                     return True
             return False
@@ -445,7 +442,7 @@ def volttronbridge(config_path, **kwargs):
             return
             
         def do_rpc(self, url_root, method, params=None ):
-            _log.debug('do_rpc()')
+            #_log.debug('do_rpc()')
             result = False
             json_package = {
                 'jsonrpc': '2.0',
@@ -463,7 +460,7 @@ def volttronbridge(config_path, **kwargs):
                 if response.ok:
                     success = response.json()['result']
                     if success:
-                        _log.debug('response - ok, {} result:{}'.format(method, success))
+                        #_log.debug('response - ok, {} result:{}'.format(method, success))
                         result = True
                     else:
                         _log.debug('respone - not ok, {} result:{}'.format(method, success))
