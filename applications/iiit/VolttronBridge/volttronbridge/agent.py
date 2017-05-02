@@ -15,6 +15,7 @@ import datetime
 import logging
 import sys
 import uuid
+#import cPickle
 
 from volttron.platform.vip.agent import Agent, Core, PubSub, compat, RPC
 from volttron.platform.agent import utils
@@ -37,6 +38,16 @@ import gevent.event
 
 import requests
 import json
+
+'''
+from applications.lbnl.LPDM.BaseAgent.base.topics import *
+
+from lpdm_event import LpdmConnectDeviceEvent, LpdmPowerEvent
+from device.simulated.eud import Eud
+
+
+GRID_CONTROLLER_ID = "grid_controller_1"
+'''
 
 utils.setup_logging()
 _log = logging.getLogger(__name__)
@@ -264,6 +275,13 @@ def volttronbridge(config_path, **kwargs):
             if self._bridge_host == 'STRIP':
                 return
                 
+            '''
+            message = cPickle.loads(message)
+            with open("/tmp/bridge_on_new_price", "a") as f:
+                f.write("Headers {h}\n".format(h=headers))
+                f.write(str(message) + "\n")
+                
+            '''
             new_price_point = message[0]
             _log.debug ( "*** New Price Point: {0:.2f} ***".format(new_price_point))
             
@@ -401,6 +419,13 @@ def volttronbridge(config_path, **kwargs):
                     _log.debug('publishing to local bus topic: ' + pubTopic)
                     pubMsg = [newEnergyDemand,{'units': 'W', 'tz': 'UTC', 'type': 'float'}]
                     self._publishToBus(pubTopic, pubMsg)
+                    '''
+                    topic = energyDemand_topic_ds + "/" + deviceId
+                    headers = {"FROM" : deviceId, "TO" : GRID_CONTROLLER_ID}                    
+                    message = LpdmPowerEvent(deviceId, GRID_CONTROLLER_ID, time.time(), newEnergyDemand)
+                    message = cPickle.dumps(message)
+                    self.vip.pubsub.publish("pubsub", topic, headers, message)
+                    '''
                     return True
             return False
             
