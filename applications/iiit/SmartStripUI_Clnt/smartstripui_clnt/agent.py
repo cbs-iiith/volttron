@@ -190,7 +190,7 @@ def smartstripui_clnt(config_path, **kwargs):
 
             data = json.dumps(json_package)
             try:
-                response = requests.post(self.url_root, data=json.dumps(json_package), timeout=5)
+                response = requests.post(self.url_root, data=json.dumps(json_package), timeout=10)
                 
                 if response.ok:
                     _log.debug('response - ok, {} result:{}'.format(method, response.json()['result']))
@@ -198,7 +198,7 @@ def smartstripui_clnt(config_path, **kwargs):
                     _log.debug('respone - not ok, {}'.format(method))
             except Exception as e:
                 #print (e)
-                _log.exception('do_rpc() unhandled exception, most likely server is down')
+                _log.warning('do_rpc() unhandled exception, most likely server is down')
                 return
                 
     Agent.__name__ = 'SmartStripUI_Clnt_Agent'

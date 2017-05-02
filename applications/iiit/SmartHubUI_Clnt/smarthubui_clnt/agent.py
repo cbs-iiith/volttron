@@ -225,7 +225,7 @@ def smarthubui_clnt(config_path, **kwargs):
 
             data = json.dumps(json_package)
             try:
-                response = requests.post(self.url_root, data=json.dumps(json_package), timeout=5)
+                response = requests.post(self.url_root, data=json.dumps(json_package), timeout=10)
                 
                 if response.ok:
                     success = response.json()['result']
@@ -237,7 +237,7 @@ def smarthubui_clnt(config_path, **kwargs):
                     _log.debug('no respone, {} result: {}'.format(method, response))
             except Exception as e:
                 #print (e)
-                _log.exception('do_rpc() unhandled exception, most likely server is down')
+                _log.warning('do_rpc() unhandled exception, most likely server is down')
                 return
                 
     Agent.__name__ = 'SmartHubUI_Clnt_Agent'

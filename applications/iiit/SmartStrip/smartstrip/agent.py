@@ -153,7 +153,7 @@ class SmartStrip(Agent):
         self.core.periodic(self._period_read_data, self.publishPlugThPP, wait=None)
         
         #perodically publish total energy demand to volttron bus
-        self.core.periodic(self._period_read_data, self.publishTed, wait=None)
+        self.core.periodic(500, self.publishTed, wait=None)
         
         self.vip.rpc.call(MASTER_WEB, 'register_agent_route',
                       r'^/SmartStrip',
@@ -753,7 +753,7 @@ class SmartStrip(Agent):
                     'active_power':fActivePower},
                     {'voltage':{'units': 'V', 'tz': 'UTC', 'type': 'float'},
                     'current':{'units': 'A', 'tz': 'UTC', 'type': 'float'},
-                    'active_power':{'units': 'mW', 'tz': 'UTC', 'type': 'float'}
+                    'active_power':{'units': 'W', 'tz': 'UTC', 'type': 'float'}
                     }]
         self.publishToBus(pubTopic, pubMsg)
 
@@ -804,10 +804,10 @@ class SmartStrip(Agent):
         try:
             self.vip.pubsub.publish('pubsub', pubTopic, headers, pubMsg).get(timeout=10)
         except gevent.Timeout:
-            _log.exception("Expection: gevent.Timeout in _publishToBus()")
+            _log.warning("Expection: gevent.Timeout in _publishToBus()")
             return
         except Exception as e:
-            _log.exception ("Expection: _publishToBus?")
+            _log.warning("Expection: _publishToBus?")
             return
         return
         

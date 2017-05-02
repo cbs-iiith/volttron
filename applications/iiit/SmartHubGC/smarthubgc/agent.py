@@ -89,10 +89,10 @@ def smarthubgc(config_path, **kwargs):
             try:
                 self.vip.pubsub.publish('pubsub', pubTopic, headers, pubMsg).get(timeout=10)
             except gevent.Timeout:
-                _log.exception("Expection: gevent.Timeout in _publishToBus()")
+                _log.warning("Expection: gevent.Timeout in _publishToBus()")
                 return
             except Exception as e:
-                _log.exception ("Expection: _publishToBus?")
+                _log.warning ("Expection: _publishToBus?")
                 return
             return
             

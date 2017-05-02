@@ -395,7 +395,7 @@ def volttronbridge(config_path, **kwargs):
             
         #post the new new price point from us to the local-us-bus        
         def _postPricePoint(self, discovery_address, deviceId, newPricePoint):
-            _log.debug ( "*** New Price Point: {0:.2f} ***".format(newPricePoint))
+            _log.debug ( "*** New Price Point(us): {0:.2f} ***".format(newPricePoint))
             #we want to post to bus only if there is change in previous us price point
             if True:
             #if self._us_last_pp_current != newPricePoint:
@@ -419,7 +419,7 @@ def volttronbridge(config_path, **kwargs):
                     #post to bus
                     pubTopic = energyDemand_topic_ds + "/" + deviceId
                     #'''
-                    pubMsg = [newEnergyDemand,{'units': 'Watts', 'tz': 'UTC', 'type': 'float'}]
+                    pubMsg = [newEnergyDemand,{'units': 'W', 'tz': 'UTC', 'type': 'float'}]
                     self._publishToBus(pubTopic, pubMsg)
                     '''
                     headers = {"FROM" : deviceId, "TO" : GRID_CONTROLLER_ID}                    
@@ -438,10 +438,10 @@ def volttronbridge(config_path, **kwargs):
             try:
                 self.vip.pubsub.publish('pubsub', pubTopic, headers, pubMsg).get(timeout=10)
             except gevent.Timeout:
-                _log.exception("Expection: gevent.Timeout in _publishToBus()")
+                _log.warning("Expection: gevent.Timeout in _publishToBus()")
                 return
             except Exception as e:
-                _log.exception ("Expection: _publishToBus?")
+                _log.warning("Expection: _publishToBus?")
                 return
             return
             
@@ -459,7 +459,7 @@ def volttronbridge(config_path, **kwargs):
 
             data = json.dumps(json_package)
             try:
-                response = requests.post(url_root, data=json.dumps(json_package), timeout=5)
+                response = requests.post(url_root, data=json.dumps(json_package), timeout=10)
                 
                 if response.ok:
                     success = response.json()['result']
@@ -477,7 +477,7 @@ def volttronbridge(config_path, **kwargs):
                 return False
             except Exception as e:
                 #print (e)
-                _log.exception('Exception: do_rpc() unhandled exception, most likely dest is down')
+                _log.warning('Exception: do_rpc() unhandled exception, most likely dest is down')
                 return False
             return result
             
