@@ -184,7 +184,7 @@ class SmartHub(Agent):
         self.core.periodic(self._period_read_data, self.publishSensorData, wait=None)
         
         #perodically publish sensor data to volttron bus
-        self.core.periodic(500, self.publishTed, wait=None)
+        self.core.periodic(self._period_read_data, self.publishTed, wait=None)
 
         self.vip.rpc.call(MASTER_WEB, 'register_agent_route', \
                             r'^/SmartHub', \
@@ -1070,10 +1070,11 @@ class SmartHub(Agent):
         
         ted = self._calculateTed()
         
+        '''
         #only publish if change in ted
         if self._ted == ted:
             return
-            
+        '''
         self._ted = ted
         _log.debug ( "*** New TED: {0:.2f}, publishing to bus ***".format(ted))
         pubTopic = self.energyDemand_topic
