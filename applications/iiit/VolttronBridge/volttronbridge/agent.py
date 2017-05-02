@@ -157,6 +157,7 @@ def volttronbridge(config_path, **kwargs):
         @Core.receiver('onstart')            
         def startup(self, sender, **kwargs):
             _log.debug('startup()')
+            _log.debug(self._bridge_host)
             
             _log.debug('registering rpc routes')
             self.vip.rpc.call(MASTER_WEB, 'register_agent_route', \
@@ -165,21 +166,22 @@ def volttronbridge(config_path, **kwargs):
                     "rpc_from_net").get(timeout=30)
 
             if self._bridge_host == 'ZONE' or self._bridge_host == 'HUB' :
+                _log.debug("subscribing to pricePoint_topic: " + pricePoint_topic)
                 self.vip.pubsub.subscribe("pubsub", \
                                             pricePoint_topic, \
                                             self.onNewPrice \
                                             )
                                             
             if self._bridge_host == 'HUB' or self._bridge_host == 'STRIP' :
+                _log.debug("subscribing to energyDemand_topic: " + energyDemand_topic)
                 self.vip.pubsub.subscribe("pubsub", \
                                             energyDemand_topic, \
                                             self.onNewEnergyDemand \
                                             )
-                                                
+                                            
             if self._bridge_host == 'HUB' or self._bridge_host == 'STRIP' :
-                _log.debug(self._bridge_host)
-                _log.debug("registering with upstream VolttronBridge")
                 url_root = 'http://' + self._up_ip_addr + ':' + str(self._up_port) + '/VolttronBridge'
+                _log.debug("registering with upstream VolttronBridge: " + url_root)
                 self._usConnected = self._registerToUsBridge(url_root, self._discovery_address, self._deviceId)
                 
             return
@@ -262,16 +264,15 @@ def volttronbridge(config_path, **kwargs):
             if self._bridge_host == 'STRIP':
                 return
                 
-            _log.debug('onNewPrice()')
-            if sender == 'pubsub.compat':
-                message = compat.unpack_legacy_message(headers, message)
-                
             new_price_point = message[0]
             _log.debug ( "*** New Price Point: {0:.2f} ***".format(new_price_point))
             
+            '''
             #we want to post to ds only if there is change in price point
             if self._price_point_current != new_price_point:
                 self._processNewPricePoint(new_price_point)
+            '''
+            self._processNewPricePoint(new_price_point)
             
             return
             
@@ -398,7 +399,7 @@ def volttronbridge(config_path, **kwargs):
                     #post to bus
                     pubTopic = energyDemand_topic_ds + "/" + deviceId
                     _log.debug('publishing to local bus topic: ' + pubTopic)
-                    pubMsg = [newEnergyDemand,{'units': 'mW', 'tz': 'UTC', 'type': 'float'}]
+                    pubMsg = [newEnergyDemand,{'units': 'W', 'tz': 'UTC', 'type': 'float'}]
                     self._publishToBus(pubTopic, pubMsg)
                     return True
             return False
