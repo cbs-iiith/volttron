@@ -190,7 +190,7 @@ def smartstripui_clnt(config_path, **kwargs):
 
             data = json.dumps(json_package)
             try:
-                response = requests.post(self.url_root, data=json.dumps(json_package))
+                response = requests.post(self.url_root, data=json.dumps(json_package), timeout=5)
                 
                 if response.ok:
                     _log.debug('response - ok, {} result:{}'.format(method, response.json()['result']))

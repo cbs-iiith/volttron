@@ -325,13 +325,15 @@ def volttronbridge(config_path, **kwargs):
                     _log.debug('May be upstream bridge is not running!!!')
                     return
 
-            if self.do_rpc(url_root, 'rpc_postEnergyDemand', \
+            result = self.do_rpc(url_root, 'rpc_postEnergyDemand', \
                             {'discovery_address': self._discovery_address, \
                                 'deviceId': self._deviceId, \
                                 'newEnergyDemand': newEnergyDemand
-                            }):
+                            })
+            if result:
                 _log.debug("Success!!!")
-            else : 
+            else :
+                self._usConnected == False
                 _log.debug("Failed!!!")
 
             return
@@ -410,13 +412,13 @@ def volttronbridge(config_path, **kwargs):
                 
         #post the new energy demand from ds to the local bus
         def _postEnergyDemand(self, discovery_address, deviceId, newEnergyDemand):
-            _log.debug ( "*** New Energy Demand: {0:.4f} ***".format(newEnergyDemand))
+            _log.debug ( "*** New Energy Demand: {0:.4f} ***".format(newEnergyDemand) +'from: ' + deviceId)
             if discovery_address in self._ds_voltBr:
                 index = self._ds_voltBr.index(discovery_address)
                 if self._ds_deviceId[index] == deviceId:
                     #post to bus
-                    #'''
                     pubTopic = energyDemand_topic_ds + "/" + deviceId
+                    #'''
                     pubMsg = [newEnergyDemand,{'units': 'Watts', 'tz': 'UTC', 'type': 'float'}]
                     self._publishToBus(pubTopic, pubMsg)
                     '''
@@ -457,7 +459,7 @@ def volttronbridge(config_path, **kwargs):
 
             data = json.dumps(json_package)
             try:
-                response = requests.post(url_root, data=json.dumps(json_package))
+                response = requests.post(url_root, data=json.dumps(json_package), timeout=5)
                 
                 if response.ok:
                     success = response.json()['result']
