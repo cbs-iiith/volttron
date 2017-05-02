@@ -64,7 +64,8 @@ def smartstripgc(config_path, **kwargs):
             sh_pp = message[0]
             _log.debug ( "*** New Price Point: {0:.2f} ***".format(sh_pp))
             
-            if self._current_sh_pp != sh_pp:
+            if True:
+            #if self._current_sh_pp != sh_pp:
                 ss_pp = self._computeNewPrice(sh_pp)
                 self._post_price(ss_pp)
 

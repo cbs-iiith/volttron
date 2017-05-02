@@ -230,8 +230,6 @@ def volttronbridge(config_path, **kwargs):
             result = False
             try:
                 rpcdata = jsonrpc.JsonRpcData.parse(message)
-                _log.info('rpc method: {}'.format(rpcdata.method) + \
-                            '; rpc params: {}'.format(rpcdata.params))
                 
                 if rpcdata.method == "rpc_registerDsBridge":
                     args = {'discovery_address': rpcdata.params['discovery_address'],
@@ -394,7 +392,8 @@ def volttronbridge(config_path, **kwargs):
         def _postPricePoint(self, discovery_address, deviceId, newPricePoint):
             _log.debug ( "*** New Price Point: {0:.2f} ***".format(newPricePoint))
             #we want to post to bus only if there is change in previous us price point
-            if self._us_last_pp_current != newPricePoint:
+            if True:
+            #if self._us_last_pp_current != newPricePoint:
                 self._us_last_pp_previous = self._us_last_pp_current
                 self._us_last_pp_current = newPricePoint
                 #post to bus

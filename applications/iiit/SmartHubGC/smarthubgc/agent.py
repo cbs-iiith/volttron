@@ -57,14 +57,12 @@ def smarthubgc(config_path, **kwargs):
 
         @PubSub.subscribe('pubsub', topic_price_point_us)
         def onNewPrice(self, peer, sender, bus,  topic, headers, message):
-            if sender == 'pubsub.compat':
-                message = compat.unpack_legacy_message(headers, message)
-                
             #new zone price point
             zn_pp = message[0]
             _log.debug ( "*** New Price Point: {0:.2f} ***".format(zn_pp))
             
-            if self._current_zn_pp != zn_pp:
+            if True:
+            #if self._current_zn_pp != zn_pp:
                 sh_pp = self._computeNewPrice(zn_pp)
                 self._post_price(sh_pp)
 
