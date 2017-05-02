@@ -182,7 +182,10 @@ def volttronbridge(config_path, **kwargs):
                                             pricePoint_topic, \
                                             self.onNewPrice \
                                             )
-                                            
+                self._ds_voltBr = []
+                self._ds_deviceId = []
+                
+
             if self._bridge_host == 'HUB' or self._bridge_host == 'STRIP' :
                 _log.debug("subscribing to energyDemand_topic: " + energyDemand_topic)
                 self.vip.pubsub.subscribe("pubsub", \
