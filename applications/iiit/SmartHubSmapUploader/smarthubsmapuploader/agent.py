@@ -268,7 +268,7 @@ def smarthubsmapuploader(config_path, **kwargs):
                 smap_post(self.smap_root, self.api_key, topic, units, reading_type, readings, self.source_data, self.time_zone)
                 return
             else:
-                _log.Exception("Exception: unhandled topic: " + topic)
+                _log.exception("Exception: unhandled topic: " + topic)
                 return
                         
         def smapPostSensorsData(self, field, topic, headers, message, msg_time):
