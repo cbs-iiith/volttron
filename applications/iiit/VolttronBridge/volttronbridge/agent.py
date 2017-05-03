@@ -64,6 +64,10 @@ def DatetimeFromValue(ts):
         raise ValueError('Unknown timestamp value')
     return ts
 
+#if the rpc connection fails to post for more than MAX_RETRIES, 
+#then it is assumed that the dest is down
+#in case of ds posts, the retry count is reset when the ds registers again
+MAX_RETRIES = 5
 
 def volttronbridge(config_path, **kwargs):
 
@@ -124,6 +128,8 @@ def volttronbridge(config_path, **kwargs):
             self._ed_current    = 0
             self._ed_previous   = 0
             
+            self._us_retrycount = 0
+            
             if self._bridge_host == 'ZONE':
                 _log.debug(self._bridge_host)
                 
@@ -134,6 +140,7 @@ def volttronbridge(config_path, **kwargs):
                 #post price point to these instances
                 self._ds_voltBr = []
                 self._ds_deviceId = []
+                self._ds_retrycount = []
                 
             elif self._bridge_host == 'HUB':
                 _log.debug(self._bridge_host)
@@ -150,6 +157,7 @@ def volttronbridge(config_path, **kwargs):
                 #post price point to these instances
                 self._ds_voltBr = []
                 self._ds_deviceId = []
+                self._ds_retrycount = []
                 
             elif self._bridge_host == 'STRIP':
                 _log.debug(self._bridge_host)
@@ -182,8 +190,9 @@ def volttronbridge(config_path, **kwargs):
                                             pricePoint_topic, \
                                             self.onNewPrice \
                                             )
-                self._ds_voltBr = []
-                self._ds_deviceId = []
+                self._ds_voltBr[:] = []
+                self._ds_deviceId[:] = []
+                self._ds_retrycount[:] = []
                 
 
             if self._bridge_host == 'HUB' or self._bridge_host == 'STRIP' :
@@ -210,6 +219,13 @@ def volttronbridge(config_path, **kwargs):
         @Core.receiver('onstop')
         def onstop(self, sender, **kwargs):
             _log.debug('onstop()')
+            self._us_retrycount = 0
+            
+            if self._bridge_host == 'ZONE' or self._bridge_host == 'HUB' :
+                del self._ds_voltBr[:]
+                del self._ds_deviceId[:]
+                del self._ds_retrycount[:]
+                
             if self._bridge_host == 'ZONE':
                 _log.debug(self._bridge_host)
                 #do nothing
@@ -225,15 +241,23 @@ def volttronbridge(config_path, **kwargs):
                                     {'discovery_address': self._discovery_address, \
                                         'deviceId': self._deviceId \
                                     })
+                self._usConnected = False
+                
+            _log.debug('un registering rpc routes')
+            self.vip.rpc.call(MASTER_WEB, 'unregister_all_agent_routes').get(timeout=30)
+            
             return
 
         @RPC.export
         def rpc_from_net(self, header, message):
-            #_log.debug('rpc_from_net()')
             result = False
             try:
                 rpcdata = jsonrpc.JsonRpcData.parse(message)
-                
+                '''
+                _log.debug('rpc_from_net()...' + \
+                            ', rpc method: {}'.format(rpcdata.method) +\
+                            ', rpc params: {}'.format(rpcdata.params))
+                '''
                 if rpcdata.method == "rpc_registerDsBridge":
                     args = {'discovery_address': rpcdata.params['discovery_address'],
                             'deviceId':rpcdata.params['deviceId']
@@ -306,13 +330,14 @@ def volttronbridge(config_path, **kwargs):
             newEnergyDemand = message[0]
             _log.debug ( "*** New Energy Demand: {0:.4f} ***".format(newEnergyDemand))
             
+            '''
             #we want to post to us only if there is change in energy demand
             if self._ed_current == newEnergyDemand:
                 return
                 
             self._ed_previous = self._ed_current
             self._ed_current = newEnergyDemand
-            
+            '''
             _log.debug("posting new energy demand to upstream VolttronBridge")
             url_root = 'http://' + self._up_ip_addr + ':' + str(self._up_port) + '/VolttronBridge'
             
@@ -331,9 +356,13 @@ def volttronbridge(config_path, **kwargs):
                                 'newEnergyDemand': newEnergyDemand
                             })
             if result:
+                self._us_retrycount = 0
                 _log.debug("Success!!!")
             else :
-                self._usConnected == False
+                self._us_retrycount = self._us_retrycount + 1
+                if self._us_retrycount > MAX_RETRIES:
+                    _log.debug('May be upstream bridge is not running!!!')
+                    self._usConnected == False
                 _log.debug("Failed!!!")
 
             return
@@ -345,8 +374,18 @@ def volttronbridge(config_path, **kwargs):
             self._price_point_current = new_price_point
             
             for discovery_address in self._ds_voltBr:
-                self._postDsNewPricePoint(discovery_address, new_price_point)
-                
+                index = self._ds_voltBr.index(discovery_address)
+                if self._ds_retrycount[index] < MAX_RETRIES:
+                    result = self._postDsNewPricePoint(discovery_address, new_price_point)
+                    if result:
+                        #success, reset retry count
+                        self._ds_retrycount[index] = 0
+                        _log.debug("post to:" + discovery_address + " sucess!!!")
+                    else:
+                        #failed to post, increment retry count
+                        self._ds_retrycount[index] = self._ds_retrycount[index]  + 1
+                        _log.debug("post to:" + discovery_address + \
+                                    " failed, count: {0:d} !!!".format(self._ds_retrycount[index]))
             return
             
         def _postDsNewPricePoint(self, discovery_address, newPricePoint):
@@ -358,18 +397,22 @@ def volttronbridge(config_path, **kwargs):
                                     'deviceId': self._deviceId, \
                                     'newPricePoint':newPricePoint   \
                                     })
-            return
+            return result
             
         def _registerDsBridge(self, discovery_address, deviceId):
             _log.debug('_registerDsBridge(), discovery_address: ' + discovery_address + ' deviceId: ' + deviceId)
             if discovery_address in self._ds_voltBr:
                 _log.debug('already registered!!!')
+                index = self._ds_voltBr.index(discovery_address)
+                self._ds_retrycount[index] = 0
                 return True
                 
             #TODO: potential bug in this method, not atomic
             self._ds_voltBr.append(discovery_address)
             index = self._ds_voltBr.index(discovery_address)
             self._ds_deviceId.insert(index, deviceId)
+            self._ds_retrycount.insert(index, 0)
+            
             '''
             headers = {"FROM" : deviceId, "TO" : GRID_CONTROLLER_ID}
             topic = ADD_END_USE_DEVICE_TOPIC.format(id = GRID_CONTROLLER_ID)
@@ -390,6 +433,7 @@ def volttronbridge(config_path, **kwargs):
             index = self._ds_voltBr.index(discovery_address)
             self._ds_voltBr.remove(discovery_address)
             del self._ds_deviceId[index]
+            del self._ds_retrycount[index]
             _log.debug('unregistered!!!')
             return True
             
@@ -427,7 +471,9 @@ def volttronbridge(config_path, **kwargs):
                     message = cPickle.dumps(message)
                     self.vip.pubsub.publish("pubsub", pubTopic, headers, message)
                     '''
+                    _log.debug("...Done!!!")
                     return True
+            _log.debug("...Failed!!!")
             return False
             
         def _publishToBus(self, pubTopic, pubMsg):
