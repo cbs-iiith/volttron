@@ -31,6 +31,9 @@ utils.setup_logging()
 _log = logging.getLogger(__name__)
 __version__ = '0.1'
 
+MAX_RETRIES = 5
+MAX_THPP = 1
+MIN_THPP = 0
 
 def ss_sh_device(config_path, **kwargs):
 
@@ -94,12 +97,13 @@ def ss_sh_device(config_path, **kwargs):
         @Core.receiver('onsetup')
         def setup(self, sender, **kwargs):
             _log.info(config['message'])
-            self._agent_id = config['agentid']
+            self._agent_id = config['agentid']            
             return
             
         @Core.receiver('onstart')            
         def startup(self, sender, **kwargs):
             _log.debug('startup()')
+            self.hub_ping_count = 0
             self.core.periodic(self.period_read, self._pingSmartHub, wait=None)
             self.core.periodic(self.period_read, self._monitorShBattery, wait=None)
             self.vip.pubsub.subscribe("pubsub", self.ss_pp_topic, self._onNewPrice)
@@ -115,16 +119,74 @@ def ss_sh_device(config_path, **kwargs):
             self.sh_ip_addr     = config.get("sh_ip_addr", "192.168.1.50")
             self.sh_port        = config.get("sh_port", 8080)
             self.sh_plug_id     = config.get("sh_plug_id", 4)
-            self.sh_plug_id     = config.get("sh_threshold_pp", 0.5)
+            self.sh_th_pp       = config.get("sh_threshold_pp", 0.5)
             self.ss_pp_topic    = config.get("ss_pp_topic", "smartstrip/pricepoint")
             return
             
-        def _onNewPrice(self):
+        def _onNewPrice(self, peer, sender, bus,  topic, headers, message):
+            new_price_point = message[0]
+            if self._price_point == new_price_point:
+                return
+                
+            if not sh_on_btry and new_price_point > self.sh_th_pp and sh_btry_th == 1:
+                #change th_pp to max for the plug to which hub is connected (ss will switch-off the plug)
+                plugOff = self.vip.rpc.call('iiit.smartstrip', \
+                                            'setThresholdPP', \
+                                            self.sh_plug_id, \
+                                            MAX_THPP \
+                                            ).get(timeout=10)
+                
+                if plugOff:
+                    sh_on_btry = True
+                    sh_on_btry_start_time = datetime.datetime.utcnow()
+                else:
+                    #dont know what to do
+                    
+            if sh_on_btry and new_price_point <= self.sh_th_pp:
+                #change th_pp to min for the plug to which hub is connected (ss will switch-on the plug)
+                plugOn = self.vip.rpc.call('iiit.smartstrip', \
+                                            'setThresholdPP', \
+                                            self.sh_plug_id, \
+                                            MIN_THPP \
+                                            ).get(timeout=10)
+                
+                if plugOn:
+                    sh_on_btry = False
+                    sh_on_grid_start_time = datetime.datetime.utcnow()
+                else:
+                    #dont know what to do
+            
+            self._price_point = new_price_point
             return
             
         def _pingSmartHub(self):
+            _log.debug('_pingSmartHub()')
+            url_root = 'http://' + self.sh_ip_addr + ':' + str(self.sh_port) + '/SmartHub'
+            if not sh_on_btry or self.do_rpc(url_root, 'rpc_ping')  :
+                #hub is not on btry or hub is alive, do nothing
+                self.hub_ping_count = 0
+                return
+                
+            self.hub_ping_count = self.hub_ping_count + 1
+            _log.debug('not pinging, ping count: ' +str(self.hub_ping_count))
+                
+            if self.hub_ping_count > MAX_RETRIES:
+                _log.debug('ping count > MAX_RETRIES, switch on power to hub')
+                plugOn = self.vip.rpc.call('iiit.smartstrip', \
+                                        'setThresholdPP', \
+                                        self.sh_plug_id, \
+                                        MIN_THPP \
+                                        ).get(timeout=10)
+                if plugOn:
+                    _log.debug('thpp updated successfuly, hopefull ss will switch-on power!!!')
+                    sh_on_btry = False
+                    sh_on_grid_start_time = datetime.datetime.utcnow()
+                else:
+                    _log.debug('failed to switch on power, will try in next iteration')
+                    self.hub_ping_count = 0
+
             return
-            
+                                                    
         def _monitorShBattery(self):
             return
             
