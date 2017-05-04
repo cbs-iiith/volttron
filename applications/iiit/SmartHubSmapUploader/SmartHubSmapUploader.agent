@@ -2,11 +2,11 @@
     "exec":"smarthubsmapuploader-0.1-py2.7.egg --config \"%c\"--sub\"%s\"--pub \"%p\"",  
     "agentid": "SmartHubSmapUploader",
     "message": "I am Smart Hub Smap Uploader Agent",
-	"sh_id": "SmartHub-61",
-	"sh_main_topic": "smarthub",
-	"vb_main_topic": "zone", 
-	"smap_root": "http://chomp.lbl.gov/",
-	"api_key": "u606HlEFHTeVLfpBQZkNF232wChljnLHCKBY",
-	"source_data": "CBERD Flexlab Data V2",
-	"time_zone": "Etc/UTC"
+    "sh_id": "SmartHub-61",
+    "sh_main_topic": "smarthub",
+    "vb_main_topic": "zone", 
+    "smap_root": "http://chomp.lbl.gov/",
+    "api_key": "u606HlEFHTeVLfpBQZkNF232wChljnLHCKBY",
+    "source_data": "CBERD Flexlab Data V2",
+    "time_zone": "Etc/UTC"
 }

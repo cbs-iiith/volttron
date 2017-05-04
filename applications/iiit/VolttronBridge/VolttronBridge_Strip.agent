@@ -2,14 +2,14 @@
     "exec":"volttronbridge-0.1-py2.7.egg --config \"%c\"--sub\"%s\"--pub \"%p\"",  
     "agentid": "VolttronBridge",
     "message": "I am Volttron Bridge Agent",
-	"bridge_host": "STRIP",
-	"deviceId": "SmartStrip-71",
+    "bridge_host": "STRIP",
+    "deviceId": "SmartStrip-71",
     "sh_ip_addr":  "192.168.1.50",
     "sh_port": 8080,
-	"ss_ip_addr":  "192.168.1.71", 
+    "ss_ip_addr":  "192.168.1.71", 
     "ss_port": 8080,
-	"energyDemand_topic": "smartstrip/energydemand",
-	"energyDemand_topic_ds": "notused/energydemand",
-	"pricePoint_topic_us": "smarthub/pricepoint",
-	"pricePoint_topic": "smartstrip/pricepoint"
+    "energyDemand_topic": "smartstrip/energydemand",
+    "energyDemand_topic_ds": "notused/energydemand",
+    "pricePoint_topic_us": "smarthub/pricepoint",
+    "pricePoint_topic": "smartstrip/pricepoint"
 }
