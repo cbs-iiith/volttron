@@ -229,39 +229,12 @@ class SmartHub(Agent):
         
         return
     def _configGetPoints(self):
+        self.topic_root = self.config.get('topic_root', 'smarthub')
         self.topic_price_point = self.config.get('topic_price_point', \
                                         'smarthub/pricepoint')
-        self.ledDebugState_point = self.config.get('ledDebugState_point',
-                                            'smarthub/leddebugstate')    
-        self.ledState_point = self.config.get('ledState_point',
-                                            'smarthub/ledstate')    
-        self.fanState_point = self.config.get('fanState_point',
-                                            'smarthub/fanstate')    
-        self.ledLevel_point = self.config.get('ledLevel_point',
-                                            'smarthub/ledlevel')    
-        self.fanLevel_point = self.config.get('fanLevel_point',
-                                            'smarthub/fanlevel')
-        self.ledThPP_point = self.config.get('ledThPP_point',
-                                            'smarthub/ledthpp')    
-        self.fanThPP_point = self.config.get('fanThPP_point',
-                                            'smarthub/fanthpp')
-
-        self.sensorsLevelAll_point = self.config.get('sensorsLevelAll_point',
-                                            'smarthub/sensors/all')
-        self.sensorLuxLevel_point = self.config.get('sensorLuxLevel_point',
-                                            'smarthub/sensors/luxlevel')    
-        self.sensorRhLevel_point = self.config.get('sensorRhLevel_point',
-                                            'smarthub/sensors/rhlevel')    
-        self.sensorTempLevel_point = self.config.get('sensorTempLevel_point',
-                                            'smarthub/sensors/templevel')    
-        self.sensorCo2Level_point = self.config.get('sensorCo2Level_point',
-                                            'smarthub/sensors/co2level')
-        self.sensorPirLevel_point = self.config.get('sensorPirLevel_point',
-                                            'smarthub/sensors/pirlevel')
-                                            
-        self.energyDemand_topic     = self.config.get('energyDemand_topic', \
+        self.energyDemand_topic     = self.config.get('topic_energy_demand', \
                                             'smarthub/energydemand')
-        self.energyDemand_topic_ds  = self.config.get('energyDemand_topic_ds', \
+        self.energyDemand_topic_ds  = self.config.get('topic_energy_demand_ds', \
                                             'smartstrip/energydemand')
         return
     def runSmartHubTest(self):
@@ -543,7 +516,7 @@ class SmartHub(Agent):
         #print(result)
         try:
             if result['result'] == 'SUCCESS':
-                pubTopic = self.sensorsLevelAll_point
+                pubTopic = self.topic_root + '/sensors/all'
                 lux_level = self.getShDeviceLevel(SH_DEVICE_S_LUX, SCHEDULE_AVLB)
                 rh_level = self.getShDeviceLevel(SH_DEVICE_S_RH, SCHEDULE_AVLB)
                 temp_level = self.getShDeviceLevel(SH_DEVICE_S_TEMP, SCHEDULE_AVLB)
@@ -854,31 +827,31 @@ class SmartHub(Agent):
     def _getPubTopic(self, deviceId, actionType):
         if actionType == AT_PUB_STATE:
             if deviceId ==SH_DEVICE_LED_DEBUG:
-                return self.ledDebugState_point
+                return self.topic_root + '/leddebugstate'
             elif deviceId ==SH_DEVICE_LED:
-                return self.ledState_point
+                return self.topic_root + '/ledstate'
             elif deviceId ==SH_DEVICE_FAN:
-                return self.fanState_point
+                return self.topic_root + '/fanstate'
         elif actionType == AT_PUB_LEVEL :    
             if deviceId == SH_DEVICE_LED:
-                return self.ledLevel_point
+                return self.topic_root + '/ledlevel'
             elif deviceId == SH_DEVICE_FAN:
-                return self.fanLevel_point
+                return self.topic_root + '/fanlevel'
             elif deviceId ==SH_DEVICE_S_LUX:
-                return self.sensorLuxLevel_point
+                return self.topic_root + '/sensors/luxlevel'
             elif deviceId ==SH_DEVICE_S_RH:
-                return self.sensorRhLevel_point
+                return self.topic_root + '/sensors/rhlevel'
             elif deviceId ==SH_DEVICE_S_TEMP:
-                return self.sensorTempLevel_point
+                return self.topic_root + '/sensors/templevel'
             elif deviceId ==SH_DEVICE_S_CO2:
-                return self.sensorCo2Level_point
+                return self.topic_root + '/sensors/co2level'
             elif deviceId ==SH_DEVICE_S_PIR:
-                return self.sensorPirLevel_point
+                return self.topic_root + '/sensors/pirlevel'
         elif actionType == AT_PUB_THPP:
             if deviceId == SH_DEVICE_LED:
-                return self.ledThPP_point
+                return self.topic_root + '/ledthpp'
             elif deviceId == SH_DEVICE_FAN:
-                return self.fanThPP_point
+                return self.topic_root + '/fanthpp'
         _log.exception ("Expection: not a vaild device-action type for pubTopic")
         return ""
         

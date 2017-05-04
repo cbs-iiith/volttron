@@ -6,6 +6,8 @@
 		"campus": "iiit",
 		"building": "cbs",
 		"period_read_data": 10,
-		"topic_price_point": "smarthub/pricepoint"		
-		
+		"topic_root": 'smarthub',
+		"topic_price_point": "smarthub/pricepoint",
+		"topic_energy_demand": "smarthub/energydemand",
+		"topic_energy_demand_ds": "smartstrip/energydemand"
 }
