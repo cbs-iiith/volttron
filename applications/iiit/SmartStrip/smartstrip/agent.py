@@ -170,45 +170,9 @@ class SmartStrip(Agent):
         self._plug_pricepoint_th = self.config['plug_pricepoint_th']
 
     def _configGetPoints(self):
-        self.plug1_meterData_all_point = self.config.get('plug1_meterData_all_point',
-                                            'smartstrip/plug1/meterdata/all')
-        self.plug2_meterData_all_point = self.config.get('plug2_meterData_all_point',
-                                            'smartstrip/plug2/meterdata/all')
-        self.plug1_relayState_point = self.config.get('plug1_relayState_point',
-                                            'smartstrip/plug1/relaystate')
-        self.plug2_relayState_point = self.config.get('plug2_relayState_point',
-                                            'smartstrip/plug2/relaystate')
-        self.plug1_thresholdPP_point = self.config.get('plug1_thresholdPP_point',
-                                            'smartstrip/plug1/threshold')
-        self.plug2_thresholdPP_point = self.config.get('plug2_thresholdPP_point',
-                                            'smartstrip/plug2/threshold')
-        self.plug1_tagId_point = self.config.get('plug1_tagId_point',
-                                            'smartstrip/plug1/tagid')
-        self.plug2_tagId_point = self.config.get('plug2_thresholdPP_point',
-                                            'smartstrip/plug2/tagid')
-                                            
-        self.plug3_meterData_all_point = self.config.get('plug3_meterData_all_point',
-                                            'smartstrip/plug3/meterdata/all')
-        self.plug4_meterData_all_point = self.config.get('plug4_meterData_all_point',
-                                            'smartstrip/plug4/meterdata/all')
-        self.plug3_relayState_point = self.config.get('plug3_relayState_point',
-                                            'smartstrip/plug3/relaystate')
-        self.plug4_relayState_point = self.config.get('plug4_relayState_point',
-                                            'smartstrip/plug4/relaystate')
-        self.plug3_thresholdPP_point = self.config.get('plug3_thresholdPP_point',
-                                            'smartstrip/plug3/threshold')
-        self.plug4_thresholdPP_point = self.config.get('plug4_thresholdPP_point',
-                                            'smartstrip/plug4/threshold')
-        self.plug3_tagId_point = self.config.get('plug3_tagId_point',
-                                            'smartstrip/plug3/tagid')
-        self.plug4_tagId_point = self.config.get('plug4_thresholdPP_point',
-                                            'smartstrip/plug4/tagid')
-
-        self.energyDemand_topic     = self.config.get('energyDemand_topic', \
+        self.root_topic              = self.config.get('topic_root', 'smartstrip')
+        self.energyDemand_topic     = self.config.get('topic_energy_demand', \
                                             'smartstrip/energydemand')
-        self.energyDemand_topic_ds  = self.config.get('energyDemand_topic_ds', \
-                                            'notused/energydemand')
-        
         self.topic_price_point      = self.config.get('topic_price_point', \
                                             'topic_price_point')
         return
@@ -320,30 +284,13 @@ class SmartStrip(Agent):
 
     def readMeterData(self, plugID):
         #_log.info ('readMeterData(), plugID: ' + str(plugID))
-        if plugID == PLUG_ID_1:
-            pointVolatge = 'Plug1Voltage'
-            pointCurrent = 'Plug1Current'
-            pointActivePower = 'Plug1ActivePower'
-            pubTopic = self.plug1_meterData_all_point
-        elif plugID == PLUG_ID_2:
-            pointVolatge = 'Plug2Voltage'
-            pointCurrent = 'Plug2Current'
-            pointActivePower = 'Plug2ActivePower'
-            pubTopic = self.plug2_meterData_all_point
-        elif plugID == PLUG_ID_3:
-            pointVolatge = 'Plug3Voltage'
-            pointCurrent = 'Plug3Current'
-            pointActivePower = 'Plug3ActivePower'
-            pubTopic = self.plug3_meterData_all_point
-        elif plugID == PLUG_ID_4:
-            pointVolatge = 'Plug4Voltage'
-            pointCurrent = 'Plug4Current'
-            pointActivePower = 'Plug4ActivePower'
-            pubTopic = self.plug4_meterData_all_point
-        else:
+        if plugID not in [PLUG_ID_1, PLUG_ID_2, PLUG_ID_3, PLUG_ID_4]:
             return
-
-        #
+        
+        pointVolatge = 'Plug'+str(plugID+1)+'Voltage'
+        pointCurrent = 'Plug'+str(plugID+1)+'Current'
+        pointActivePower = 'Plug'+str(plugID+1)+'ActivePower'
+        pubTopic = self.root_topic + '/plug' + str(plugID+1) + '/meterdata/all'
         try:
             fVolatge = self.vip.rpc.call(
                     'platform.actuator','get_point',
@@ -360,14 +307,6 @@ class SmartStrip(Agent):
                     'iiit/cbs/smartstrip/' + \
                     pointActivePower).get(timeout=10)
             #_log.debug('active: {0:.2f}'.format(fActivePower))
-
-            #TODO: temp fix, need to move this to backend code
-            if fVolatge > 80000:
-                fVolatge = 0.0
-            if fCurrent > 80000:
-                fCurrent = 0.0
-            if fActivePower > 80000:
-                fActivePower = 0.0
 
             #keep track of plug active power
             self._plugActivePwr[plugID] = fActivePower
