@@ -145,6 +145,8 @@ class SmartStrip(Agent):
         self.switchRelay(PLUG_ID_3, RELAY_OFF, SCHEDULE_NOT_AVLB)
         self.switchRelay(PLUG_ID_4, RELAY_OFF, SCHEDULE_NOT_AVLB)
 
+        _log.debug('un registering rpc routes')
+        self.vip.rpc.call(MASTER_WEB, 'unregister_all_agent_routes').get(timeout=30)
         return
 
     @Core.receiver('onfinish')

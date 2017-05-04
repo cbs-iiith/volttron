@@ -199,6 +199,8 @@ class SmartHub(Agent):
         if self._voltState != 0:
             self._stopVolt()
         
+        _log.debug('un registering rpc routes')
+        self.vip.rpc.call(MASTER_WEB, 'unregister_all_agent_routes').get(timeout=30)
         return
     @Core.receiver('onfinish')
     def onfinish(self, sender, **kwargs):

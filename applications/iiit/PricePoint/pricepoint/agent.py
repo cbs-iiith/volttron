@@ -106,6 +106,13 @@ class PricePoint(Agent):
                       "rpc_from_net").get(timeout=30)    
         return
 
+    @Core.receiver('onstop')
+    def onstop(self, sender, **kwargs):
+        _log.debug('onstop()')
+        _log.debug('un registering rpc routes')
+        self.vip.rpc.call(MASTER_WEB, 'unregister_all_agent_routes').get(timeout=30)
+        return
+
     def update_price_point(self):
         '''
         read the new price and publish it to the bus
