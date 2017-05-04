@@ -60,10 +60,6 @@ def smartstripsmapuploader(config_path, **kwargs):
     config = utils.load_config(config_path)
     agent_id = config['agentid']
     
-    ss_main_topic           = config.get('ss_main_topic', SS_MAIN_TOPIC)
-    vb_main_topic           = config.get('vb_main_topic', VB_MAIN_TOPIC)
-    
-    
     class SmartStripSmapUploader(Agent):
         '''
         retrive the data from volttron and post it the smap Server
@@ -87,12 +83,17 @@ def smartstripsmapuploader(config_path, **kwargs):
             
             self.sender_ss      = config.get('sender_ss', SENDER_SS)
             self.sender_vb      = config.get('sender_vb', SENDER_VB)
+
+            self.ss_main_topic = config.get('ss_main_topic', SS_MAIN_TOPIC)
+            self.vb_main_topic = config.get('vb_main_topic', VB_MAIN_TOPIC)
             
             return
             
         @Core.receiver('onstart')            
         def startup(self, sender, **kwargs):
             _log.debug('startup()')
+            self.vip.pubsub.subscribe("pubsub", self.ss_main_topic, self.on_match_ssData)
+            self.vip.pubsub.subscribe("pubsub", self.vb_main_topic, self.on_match_ssCurrentPP)
             return
             
         @Core.receiver('onstop')
@@ -100,13 +101,11 @@ def smartstripsmapuploader(config_path, **kwargs):
             _log.debug('onstop()')
             return
             
-        @PubSub.subscribe('pubsub', ss_main_topic)
         def on_match_ssData(self, peer, sender, bus, topic, headers, message):
             _log.debug('on_match_ssData()')
             self.ssSmapPostData(peer, sender, bus, topic, headers, message)
             return
             
-        @PubSub.subscribe('pubsub', vb_main_topic)
         def on_match_ssCurrentPP(self, peer, sender, bus, topic, headers, message):
             _log.debug('on_match_ssCurrentPP()')
             self.ssSmapPostData(peer, sender, bus, topic, headers, message)

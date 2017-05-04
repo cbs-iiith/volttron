@@ -58,26 +58,6 @@ def smarthubui_clnt(config_path, **kwargs):
     config = utils.load_config(config_path)
     agent_id = config['agentid']
     
-    ble_ui_server_address = config.get('ble_ui_server_address', '127.0.0.1')
-    ble_ui_server_port = int(config.get('ble_ui_server_port', 8082))
-    
-    topic_price_point = config.get('topic_price_point', \
-                                    'smarthub/pricepoint')
-    topic_sensorsLevelAll_point = config.get('sensorsLevelAll_point', \
-                                            'smarthub/sensors/all')
-    topic_ledState_point = config.get('ledState_point', \
-                                            'smarthub/ledstate')    
-    topic_fanState_point = config.get('fanState_point', \
-                                            'smarthub/fanstate')    
-    topic_ledLevel_point = config.get('ledLevel_point', \
-                                            'smarthub/ledlevel')    
-    topic_fanLevel_point = config.get('fanLevel_point', \
-                                            'smarthub/fanlevel')
-    topic_ledThPP_point = config.get('ledThPP_point', \
-                                            'smarthub/ledthpp')    
-    topic_fanThPP_point = config.get('fanThPP_point', \
-                                            'smarthub/fanthpp')
-
     class SmartHubUI_Clnt(Agent):
         '''
         retrive the data from volttron and pushes it to the BLE UI Server
@@ -86,6 +66,8 @@ def smarthubui_clnt(config_path, **kwargs):
         def __init__(self, **kwargs):
             _log.debug('__init__()')
             super(SmartHubUI_Clnt, self).__init__(**kwargs)
+            
+            self._configGetPoints()
             
         @Core.receiver('onsetup')
         def setup(self, sender, **kwargs):
@@ -105,50 +87,80 @@ def smarthubui_clnt(config_path, **kwargs):
         def onstop(self, sender, **kwargs):
             _log.debug('onstop()')
             return
-
-        @PubSub.subscribe('pubsub', topic_price_point)
+        
+        def _configGetPoints(self):
+            self.topic_price_point              = config.get('topic_price_point', \
+                                                            'smarthub/pricepoint')
+            self.topic_sensorsLevelAll_point    = config.get('sensorsLevelAll_point', \
+                                                            'smarthub/sensors/all')
+            self.topic_ledState_point           = config.get('ledState_point', \
+                                                            'smarthub/ledstate')    
+            self.topic_fanState_point           = config.get('fanState_point', \
+                                                            'smarthub/fanstate')    
+            self.topic_ledLevel_point           = config.get('ledLevel_point', \
+                                                            'smarthub/ledlevel')    
+            self.topic_fanLevel_point           = config.get('fanLevel_point', \
+                                                            'smarthub/fanlevel')
+            self.topic_ledThPP_point            = config.get('ledThPP_point', \
+                                                            'smarthub/ledthpp')    
+            self.topic_fanThPP_point            = config.get('fanThPP_point', \
+                                                            'smarthub/fanthpp')
+            return
+            
+        def _subscribeTopics(self):
+            self.vip.pubsub.subscribe("pubsub", self.topic_price_point,\
+                                                    self.on_match_currentPP)
+            self.vip.pubsub.subscribe("pubsub", self.topic_sensorsLevelAll_point,\
+                                                    self.on_match_sensorData)
+            self.vip.pubsub.subscribe("pubsub", self.topic_ledState_point,\
+                                                    self.on_match_ledState)
+            self.vip.pubsub.subscribe("pubsub", self.topic_fanState_point,\
+                                                    self.on_match_fanState)
+            self.vip.pubsub.subscribe("pubsub", self.topic_ledLevel_point,\
+                                                    self.on_match_ledLevel)
+            self.vip.pubsub.subscribe("pubsub", self.topic_fanLevel_point,\
+                                                    self.on_match_fanLevel)
+            self.vip.pubsub.subscribe("pubsub", self.topic_ledThPP_point,\
+                                                    self.on_match_ledThPP)
+            self.vip.pubsub.subscribe("pubsub", self.topic_fanThPP_point,\
+                                                    self.on_match_fanThPP)
+            return
+            
         def on_match_currentPP(self, peer, sender, bus,
                 topic, headers, message):
             _log.debug('on_match_currentPP()')
             self.uiPostCurrentPricePoint(headers, message)
             
-        @PubSub.subscribe('pubsub', topic_sensorsLevelAll_point)
         def on_match_sensorData(self, peer, sender, bus,
                 topic, headers, message):
             _log.debug('on_match_sensorData()')
             self.uiPostSensorData(headers, message)
             
-        @PubSub.subscribe('pubsub', topic_ledState_point)
         def on_match_ledState(self, peer, sender, bus,
                 topic, headers, message):
             _log.debug('on_match_ledState()')
             self.uiPostLedState(headers, message)
             
-        @PubSub.subscribe('pubsub', topic_fanState_point)
         def on_match_fanState(self, peer, sender, bus,
                 topic, headers, message):
             _log.debug('on_match_fanState()')
             self.uiPostFanState(headers, message)
             
-        @PubSub.subscribe('pubsub', topic_ledLevel_point)
         def on_match_ledLevel(self, peer, sender, bus,
                 topic, headers, message):
             _log.debug('on_match_ledLevel()')
             self.uiPostLedLevel(headers, message)
             
-        @PubSub.subscribe('pubsub', topic_fanLevel_point)
         def on_match_fanLevel(self, peer, sender, bus,
                 topic, headers, message):
             _log.debug('on_match_fanLevel()')
             self.uiPostFanLevel(headers, message)
             
-        @PubSub.subscribe('pubsub', topic_ledThPP_point)
         def on_match_ledThPP(self, peer, sender, bus,
                 topic, headers, message):
             _log.debug('on_match_ledThPP()')
             self.uiPostLedThPP(headers, message)
             
-        @PubSub.subscribe('pubsub', topic_fanThPP_point)
         def on_match_fanThPP(self, peer, sender, bus,
                 topic, headers, message):
             _log.debug('on_match_fanThPP()')

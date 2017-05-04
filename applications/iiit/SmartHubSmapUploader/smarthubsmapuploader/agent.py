@@ -61,9 +61,6 @@ def smarthubsmapuploader(config_path, **kwargs):
     config = utils.load_config(config_path)
     agent_id = config['agentid']
     
-    sh_main_topic           = config.get('sh_main_topic', SH_MAIN_TOPIC)
-    vb_main_topic           = config.get('vb_main_topic', VB_MAIN_TOPIC)
-    
     class SmartHubSmapUploader(Agent):
         '''
         retrive the data from volttron and post it the smap Server
@@ -89,11 +86,19 @@ def smarthubsmapuploader(config_path, **kwargs):
             self.sender_vb      = config.get('sender_vb', SENDER_VB)
             self.sender_gc      = config.get('sender_gc', SENDER_GC)
             
+            self.sh_main_topic  = config.get('sh_main_topic', SH_MAIN_TOPIC)
+            self.vb_main_topic  = config.get('vb_main_topic', VB_MAIN_TOPIC)
             return
             
         @Core.receiver('onstart')            
         def startup(self, sender, **kwargs):
             _log.debug('startup()')
+            
+            #subscribing to sh_main_topic
+            self.vip.pubsub.subscribe("pubsub", self.sh_main_topic, self.on_match_shData)
+            #subscribing to vb_main_topic
+            self.vip.pubsub.subscribe("pubsub", self.vb_main_topic, self.on_match_shCurrentPP)
+        
             return
             
         @Core.receiver('onstop')
@@ -101,13 +106,11 @@ def smarthubsmapuploader(config_path, **kwargs):
             _log.debug('onstop()')
             return
             
-        @PubSub.subscribe('pubsub', sh_main_topic)
         def on_match_shData(self, peer, sender, bus, topic, headers, message):
             _log.debug('on_match_shData()')
             self.shSmapPostData(peer, sender, bus, topic, headers, message)
             return
             
-        @PubSub.subscribe('pubsub', vb_main_topic)
         def on_match_shCurrentPP(self, peer, sender, bus, topic, headers, message):
             _log.debug('on_match_ssCurrentPP()')
             self.shSmapPostData(peer, sender, bus, topic, headers, message)

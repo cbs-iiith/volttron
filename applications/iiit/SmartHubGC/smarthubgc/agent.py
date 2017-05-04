@@ -38,12 +38,6 @@ def smarthubgc(config_path, **kwargs):
     agentid = config['agentid']
     message = config['message']
 
-    period_read_price_point = config['period_read_price_point']
-    
-    topic_price_point_us = config.get('pricePoint_topic_us', 'zone/pricepoint')
-    topic_price_point = config.get('pricePoint_topic', 'smarthub/pricepoint')
-        
-    
     class SmartHubGC(Agent):
 
         def __init__(self, **kwargs):
@@ -58,13 +52,17 @@ def smarthubgc(config_path, **kwargs):
             
             self._current_zn_pp = 0
             
+            self.topic_price_point_us   = config.get('pricePoint_topic_us', 'zone/pricepoint')
+            self.topic_price_point      = config.get('pricePoint_topic', 'smarthub/pricepoint')
+            return
 
         @Core.receiver('onstart')            
         def startup(self, sender, **kwargs):
             _log.debug('startup()')
+            #subscribing to topic_price_point_us
+            self.vip.pubsub.subscribe("pubsub", self.topic_price_point_us, self.onNewPrice)
             return
 
-        @PubSub.subscribe('pubsub', topic_price_point_us)
         def onNewPrice(self, peer, sender, bus,  topic, headers, message):
             #new zone price point
             zn_pp = message[0]
@@ -84,7 +82,7 @@ def smarthubgc(config_path, **kwargs):
         def _post_price(self, sh_pp):
             _log.debug('_post_price()')
             #post to bus
-            pubTopic =  topic_price_point
+            pubTopic =  self.topic_price_point
             pubMsg = [sh_pp,{'units': 'cents', 'tz': 'UTC', 'type': 'float'}]
             _log.debug('publishing to local bus topic: ' + pubTopic)
             self._publishToBus(pubTopic, pubMsg)

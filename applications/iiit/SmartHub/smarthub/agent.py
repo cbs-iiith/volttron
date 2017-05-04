@@ -185,6 +185,12 @@ class SmartHub(Agent):
         
         #perodically publish sensor data to volttron bus
         self.core.periodic(self._period_read_data, self.publishTed, wait=None)
+        
+        #subscribing to smarthub price point, sh gc published sh pp
+        self.vip.pubsub.subscribe("pubsub", self.topic_price_point, self.onNewPrice)
+        
+        #subscribing to ds energy demand, vb publishes ed from registered ds to this topic
+        self.vip.pubsub.subscribe("pubsub", self.energyDemand_topic_ds, self.onDsEd)
 
         self.vip.rpc.call(MASTER_WEB, 'register_agent_route', \
                             r'^/SmartHub', \
@@ -613,7 +619,6 @@ class SmartHub(Agent):
         self._publishToBus(self.topic_price_point, pubMsg)
         
         
-    @PubSub.subscribe('pubsub','smarthub/pricepoint')
     def onNewPrice(self, peer, sender, bus,  topic, headers, message):
         if sender == 'pubsub.compat':
             message = compat.unpack_legacy_message(headers, message)
@@ -1087,7 +1092,6 @@ class SmartHub(Agent):
         self._publishToBus(pubTopic, pubMsg)
         return  
         
-    @PubSub.subscribe('pubsub','smartstrip/energydemand')
     def onDsEd(self, peer, sender, bus,  topic, headers, message):
         if sender == 'pubsub.compat':
             message = compat.unpack_legacy_message(headers, message)

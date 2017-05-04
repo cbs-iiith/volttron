@@ -54,25 +54,6 @@ def smartstripui_clnt(config_path, **kwargs):
     PLUG_ID_1 = 0
     PLUG_ID_2 = 1
 
-    topic_price_point = config.get('topic_price_point',
-            'smartstrip/pricepoint')
-    plug1_meterData_all_point = config.get('plug1_meterData_all_point',
-            'smartstrip/plug1/meterdata/all')
-    plug2_meterData_all_point = config.get('plug2_meterData_all_point',
-            'smartstrip/plug2/meterdata/all')
-    plug1_relayState_point = config.get('plug1_relayState_point',
-            'smartstrip/plug1/relaystate')
-    plug2_relayState_point = config.get('plug2_relayState_point',
-            'smartstrip/plug2/relaystate')
-    plug1_thresholdPP_point = config.get('plug1_thresholdPP_point',
-            'smartstrip/plug1/threshold')
-    plug2_thresholdPP_point = config.get('plug2_thresholdPP_point',
-            'smartstrip/plug2/threshold')
-    plug1_tagId_point = config.get('plug1_tagId_point',
-            'smartstrip/plug1/tagid')
-    plug2_tagId_point = config.get('plug2_thresholdPP_point',
-            'smartstrip/plug2/tagid')
-
     class SmartStripUI_Clnt(Agent):
         '''
         retrive the data from volttron and pushes it to the BLE UI Server
@@ -81,6 +62,8 @@ def smartstripui_clnt(config_path, **kwargs):
         def __init__(self, **kwargs):
             _log.debug('__init__()')
             super(SmartStripUI_Clnt, self).__init__(**kwargs)
+            
+            self._configGetPoints()
             
         @Core.receiver('onsetup')
         def setup(self, sender, **kwargs):
@@ -94,57 +77,100 @@ def smartstripui_clnt(config_path, **kwargs):
         @Core.receiver('onstart')            
         def startup(self, sender, **kwargs):
             _log.debug('startup()')
+            self._subscribeTopics()
             return
 
         @Core.receiver('onstop')
         def onstop(self, sender, **kwargs):
             _log.debug('onstop()')
             return
-
-        @PubSub.subscribe('pubsub', topic_price_point)
+        
+        def _configGetPoints(self):
+            self.topic_price_point          = config.get('topic_price_point',\
+                                                    'smartstrip/pricepoint')
+            self.plug1_meterData_all_point  = config.get('plug1_meterData_all_point',\
+                                                    'smartstrip/plug1/meterdata/all')
+            self.plug2_meterData_all_point  = config.get('plug2_meterData_all_point',\
+                                                    'smartstrip/plug2/meterdata/all')
+            self.plug1_relayState_point     = config.get('plug1_relayState_point',\
+                                                    'smartstrip/plug1/relaystate')
+            self.plug2_relayState_point     = config.get('plug2_relayState_point',\
+                                                    'smartstrip/plug2/relaystate')
+            self.plug1_thresholdPP_point    = config.get('plug1_thresholdPP_point',\
+                                                    'smartstrip/plug1/threshold')
+            self.plug2_thresholdPP_point    = config.get('plug2_thresholdPP_point',\
+                                                    'smartstrip/plug2/threshold')
+            self.plug1_tagId_point          = config.get('plug1_tagId_point',\
+                                                    'smartstrip/plug1/tagid')
+            self.plug2_tagId_point          = config.get('plug2_thresholdPP_point',\
+                                                    'smartstrip/plug2/tagid')
+            return
+            
+        def _subscribeTopics(self):
+            self.vip.pubsub.subscribe("pubsub", self.topic_price_point, \
+                                                    self.on_match_currentPP)
+            self.vip.pubsub.subscribe("pubsub", self.plug1_meterData_all_point,\
+                                                    self.on_match_plug1MeterData)
+            self.vip.pubsub.subscribe("pubsub", self.plug2_meterData_all_point,\
+                                                    self.on_match_plug2MeterData)
+            self.vip.pubsub.subscribe("pubsub", self.plug1_relayState_point,\
+                                                    self.on_match_plug1RelayState)
+            self.vip.pubsub.subscribe("pubsub", self.plug2_relayState_point,\
+                                                    self.on_match_plug2RelayState)
+            self.vip.pubsub.subscribe("pubsub", self.plug1_thresholdPP_point,\
+                                                    self.on_match_plug1Threshold)
+            self.vip.pubsub.subscribe("pubsub", self.plug2_thresholdPP_point,\
+                                                    self.on_match_plug2Threshold)
+            self.vip.pubsub.subscribe("pubsub", self.plug1_tagId_point,\
+                                                    self.on_match_plug1TagID)
+            self.vip.pubsub.subscribe("pubsub", self.plug2_tagId_point,\
+                                                    self.on_match_plug2TagID)
+            return
+            
+        #@PubSub.subscribe('pubsub', topic_price_point)
         def on_match_currentPP(self, peer, sender, bus,
                 topic, headers, message):
             _log.debug('on_match_currentPP()')
             self.uiPostCurrentPricePoint(headers, message)
 
-        @PubSub.subscribe('pubsub', plug1_meterData_all_point)
+        #@PubSub.subscribe('pubsub', plug1_meterData_all_point)
         def on_match_plug1MeterData(self, peer, sender, bus, 
                 topic, headers, message):
             _log.debug('on_match_plug1MeterData()')
             self.uiPostMeterData(PLUG_ID_1, headers, message)
 
-        @PubSub.subscribe('pubsub', plug2_meterData_all_point)
+        #@PubSub.subscribe('pubsub', plug2_meterData_all_point)
         def on_match_plug2MeterData(self, peer, sender, bus,
                 topic, headers, message):
             _log.debug('on_match_plug2MeterData()')
             self.uiPostMeterData(PLUG_ID_2, headers, message)
 
-        @PubSub.subscribe('pubsub', plug1_relayState_point)
+        #@PubSub.subscribe('pubsub', plug1_relayState_point)
         def on_match_plug1RelayState(self, peer, sender, bus,
                 topic, headers, message):
             self.uiPostRelayState(PLUG_ID_1, headers, message)
 
-        @PubSub.subscribe('pubsub', plug2_relayState_point)
+        #@PubSub.subscribe('pubsub', plug2_relayState_point)
         def on_match_plug2RelayState(self, peer, sender, bus,
                 topic, headers, message):
             self.uiPostRelayState(PLUG_ID_2, headers, message)
 
-        @PubSub.subscribe('pubsub', plug1_thresholdPP_point)
+        #@PubSub.subscribe('pubsub', plug1_thresholdPP_point)
         def on_match_plug1Threshold(self, peer, sender, bus,
                 topic, headers, message):
             self.uiPostThreshold(PLUG_ID_1, headers, message)
 
-        @PubSub.subscribe('pubsub', plug2_thresholdPP_point)
+        #@PubSub.subscribe('pubsub', plug2_thresholdPP_point)
         def on_match_plug2Threshold(self, peer, sender, bus,
                 topic, headers, message):
             self.uiPostThreshold(PLUG_ID_2, headers, message)
         
-        @PubSub.subscribe('pubsub', plug1_tagId_point)
+        #@PubSub.subscribe('pubsub', plug1_tagId_point)
         def on_match_plug1TagID(self, peer, sender, bus,
                 topic, headers, message):
             self.uiPostTagID(PLUG_ID_1, headers, message)
         
-        @PubSub.subscribe('pubsub', plug2_tagId_point)
+        #@PubSub.subscribe('pubsub', plug2_tagId_point)
         def on_match_plug2TagID(self, peer, sender, bus,
                 topic, headers, message):
             self.uiPostTagID(PLUG_ID_2, headers, message)

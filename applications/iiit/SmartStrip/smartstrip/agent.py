@@ -131,6 +131,9 @@ class SmartStrip(Agent):
         #perodically publish total energy demand to volttron bus
         self.core.periodic(self._period_read_data, self.publishTed, wait=None)
         
+        #subscribing to topic_price_point
+        self.vip.pubsub.subscribe("pubsub", self.topic_price_point, self.onNewPrice)
+        
         self.vip.rpc.call(MASTER_WEB, 'register_agent_route',
                       r'^/SmartStrip',
                       self.core.identity,
@@ -205,6 +208,9 @@ class SmartStrip(Agent):
                                             'smartstrip/energydemand')
         self.energyDemand_topic_ds  = self.config.get('energyDemand_topic_ds', \
                                             'notused/energydemand')
+        
+        self.topic_price_point      = self.config.get('topic_price_point', \
+                                            'topic_price_point')
         return
         
     def runSmartStripTest(self):
@@ -509,7 +515,6 @@ class SmartStrip(Agent):
                 self._plugConnected[plugID] = 0
                 self.switchRelay(plugID, RELAY_OFF, SCHEDULE_AVLB)
 
-    @PubSub.subscribe('pubsub', 'smartstrip/pricepoint')
     def onNewPrice(self, peer, sender, bus,  topic, headers, message):
         if sender == 'pubsub.compat':
             message = compat.unpack_legacy_message(headers, message)
