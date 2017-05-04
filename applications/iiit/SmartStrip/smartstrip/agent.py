@@ -806,6 +806,8 @@ class SmartStrip(Agent):
                         'newThreshold': rpcdata.params['newThreshold']
                         }
                 result = self.setThresholdPP(**args)
+            elif rpcdata.method == "rpc_ping":
+                result = True
             else:
                 return jsonrpc.json_error('NA', METHOD_NOT_FOUND,
                     'Invalid method {}'.format(rpcdata.method))

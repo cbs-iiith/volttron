@@ -142,6 +142,8 @@ class PricePoint(Agent):
             if rpcdata.method == "rpc_updatePricePoint":
                 args = {'newPricePoint': rpcdata.params['newPricePoint']}
                 result = self.updatePricePoint(**args)
+            elif rpcdata.method == "rpc_ping":
+                result = True
             else:
                 return jsonrpc.json_error(rpcdata.id, METHOD_NOT_FOUND,
                     'Invalid method {}'.format(rpcdata.method))

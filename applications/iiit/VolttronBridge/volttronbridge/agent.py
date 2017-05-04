@@ -282,6 +282,8 @@ def volttronbridge(config_path, **kwargs):
                             }
                     #post the new new price point from us to the local-us-bus
                     result = self._postPricePoint(**args)
+                elif rpcdata.method == "rpc_ping":
+                    result = True
                 else:
                     return jsonrpc.json_error(rpcdata.id, METHOD_NOT_FOUND, \
                                                 'Invalid method {}'.format(rpcdata.method))

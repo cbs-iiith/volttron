@@ -1022,6 +1022,8 @@ class SmartHub(Agent):
                         'thPP': rpcdata.params['newThPP']
                         }
                 result = self.setShDeviceThPP(**args)                
+            elif rpcdata.method == "rpc_ping":
+                result = True
             else:
                 return jsonrpc.json_error('NA', METHOD_NOT_FOUND,
                     'Invalid method {}'.format(rpcdata.method))
