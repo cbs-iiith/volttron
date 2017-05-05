@@ -232,20 +232,22 @@ def volttronbridge(config_path, **kwargs):
                 
             elif self._bridge_host == 'HUB' or self._bridge_host == 'STRIP':
                 _log.debug(self._bridge_host)
-                if self._usConnected == False:
-                    return
-                    
-                _log.debug("unregistering with upstream VolttronBridge")
-                url_root = 'http://' + self._up_ip_addr + ':' + str(self._up_port) + '/VolttronBridge'
-                result = self.do_rpc(url_root, 'rpc_unregisterDsBridge', \
-                                    {'discovery_address': self._discovery_address, \
-                                        'deviceId': self._deviceId \
-                                    })
-                self._usConnected = False
+                if self._usConnected:
+                    _log.debug("unregistering with upstream VolttronBridge")
+                    url_root = 'http://' + self._up_ip_addr + ':' + str(self._up_port) + '/VolttronBridge'
+                    result = self.do_rpc(url_root, 'rpc_unregisterDsBridge', \
+                                        {'discovery_address': self._discovery_address, \
+                                            'deviceId': self._deviceId \
+                                        })
+                    self._usConnected = False
                 
             _log.debug('un registering rpc routes')
-            self.vip.rpc.call(MASTER_WEB, 'unregister_all_agent_routes').get(timeout=30)
+            self.vip.rpc.call(MASTER_WEB, \
+                                'unregister_all_agent_routes'\
+                                , self.core.identity\
+                                ).get(timeout=30)
             
+            _log.debug('done!!!')
             return
 
         @RPC.export
@@ -344,29 +346,34 @@ def volttronbridge(config_path, **kwargs):
             url_root = 'http://' + self._up_ip_addr + ':' + str(self._up_port) + '/VolttronBridge'
             
             #check for upstream connection, if not retry once
-            if self._usConnected == False:
+            if not self._usConnected:
+                _log.debug('Trying to register once...')
                 self._usConnected = self._registerToUsBridge(url_root,\
                                                                 self._discovery_address,\
                                                                 self._deviceId)
+                _log.debug('_usConnected: ' + str(self._usConnected))
                 if not self._usConnected:
-                    _log.debug('May be upstream bridge is not running!!!')
+                    _log.debug('Failed to register, May be upstream bridge is not running!!!')
                     return
 
-            result = self.do_rpc(url_root, 'rpc_postEnergyDemand', \
+            success = self.do_rpc(url_root, 'rpc_postEnergyDemand', \
                             {'discovery_address': self._discovery_address, \
                                 'deviceId': self._deviceId, \
                                 'newEnergyDemand': newEnergyDemand
                             })
-            if result:
-                self._us_retrycount = 0
+            #_log.debug('success: ' + str(success))
+            if success:
                 _log.debug("Success!!!")
+                self._us_retrycount = 0
             else :
+                _log.debug("Failed!!!")
                 self._us_retrycount = self._us_retrycount + 1
                 if self._us_retrycount > MAX_RETRIES:
-                    _log.debug('May be upstream bridge is not running!!!')
-                    self._usConnected == False
-                _log.debug("Failed!!!")
-
+                    _log.debug('failed too many times to post ed, reset counter and yeild for a movement!!!')
+                    self._usConnected = False
+                    self._us_retrycount = 0
+                    time.sleep(10) #yeild for a movement
+                    
             return
             
         #price point on local bus changed post it to ds
