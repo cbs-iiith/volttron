@@ -480,6 +480,7 @@ def volttronbridge(config_path, **kwargs):
                     message = cPickle.dumps(message)
                     self.vip.pubsub.publish("pubsub", pubTopic, headers, message)
                     '''
+                    self._ds_retrycount[index] = 0
                     _log.debug("...Done!!!")
                     return True
             _log.debug("...Failed!!!")
