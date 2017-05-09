@@ -20,3 +20,4 @@ parser.out
 /docs/source/apidocs
 *.out
 *.log
+*.bak

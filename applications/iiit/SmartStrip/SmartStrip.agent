@@ -1,43 +1,58 @@
 {
-	"exec":"smartstrip-0.1-py2.7.egg --config \"%c\"--sub\"%s\"--pub \"%p\"",  
-		"agentid": "SmartStrip",
-		"message": "I am SmartStrip Agent",
-		"location": "loc1",
-		"campus": "iiit",
-		"building": "cbs",
-		"plugs": {
-			"plug_1":{
-				"id": 1,
-				"name":"plug 1",
-				"description": "plug 1 - 240V 3A",
-				"connected": "false",
-				"connected_tag_id": 0
-			},
-			"plug_2":{
-				"id": 2,
-				"name":"plug 2",
-				"description": "plug 2 - 240V 3A",
-				"connected": "false",
-				"connected_tag_id": 0
-			}
-		},
-		"tag_ids": [
-			"0DAA131300000029",
-			"0DF6F212000000E2",
-			"0D61FC1200000074",
-			"0D40851400000062",
-			"0D736613000000C4",
-			"0D703A1300000029",
-			"0D88071300000092",
-			"0D365E13000000E0"
-		],
+    "exec":"smartstrip-0.1-py2.7.egg --config \"%c\"--sub\"%s\"--pub \"%p\"",  
+    "agentid": "SmartStrip",
+    "message": "I am SmartStrip Agent",
+    "location": "loc1",
+    "campus": "iiit",
+    "building": "cbs",
+    "plugs": {
+        "plug_1":{
+            "id": 1,
+            "name":"plug 1",
+            "description": "plug 1 - 240V 3A",
+            "connected": "false",
+            "connected_tag_id": 0
+        },
+        "plug_2":{
+            "id": 2,
+            "name":"plug 2",
+            "description": "plug 2 - 240V 3A",
+            "connected": "false",
+            "connected_tag_id": 0
+        }
+    },
+    "tag_ids": [
+        "0D07321E00000097",
+        "0D115D1E00000000",
+        "0D23221F0000000E",
+        "0D24EE1E00000007",
+        "0D29090C000000F9",
+        "0D33451F00000015",
+        "0D365E13000000E0",
+        "0D40851400000062",
+        "0D497E1E00000039",
+        "0D4E0F1F00000093",
+        "0D50651F00000077",
+        "0D61FC1200000074",
+        "0D6E351F0000001C",
+        "0D703A1300000029",
+        "0D736613000000C4",
+        "0D88071300000092",
+        "0D8DF01E00000013",
+        "0DAA131300000029",
+        "0DD6121F00000013",
+        "0DF5131E000000BE",
+        "0DF6F212000000E2",
+        "0DF7191F000000E2",
+        "20BDFA00000048FF",
+        "C39C3601000010FF"
+    ],
 
-		"period_read_data": 10,
-
-		"topic_price_point": "prices/PricePoint",
-		"default_base_price": 0.4,
-		"plug_pricepoint_th": [0.5, 0.75],
-		"price_point_latest": 0.4
-		
-		
+    "period_read_data": 10,
+    "topic_root": 'smartstrip',
+    "topic_price_point": "smartstrip/pricepoint",
+    "topic_energy_demand": "smartstrip/energydemand",
+    "default_base_price": 0.2,
+    "plug_pricepoint_th": [0.25, 0.5, 0.75, 0.95],
+    "price_point_latest": 0.2
 }
