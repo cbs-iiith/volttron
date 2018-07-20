@@ -88,7 +88,7 @@ local_requirements = [
 # Standard requirements
 requirements = [
     'BACpypes==0.13.2',
-    'gevent>=0.13,<2',
+    'gevent==1.2.2',
     'monotonic',
     'pymodbus>=1.2,<2',
     'setuptools',
