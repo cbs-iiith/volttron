@@ -45,11 +45,12 @@
         "0DF6F212000000E2",
         "0DF7191F000000E2",
         "20BDFA00000048FF",
-        "C39C3601000010FF"
+        "C39C3601000010FF",
+        "0D285F1300000065"
     ],
 
     "period_read_data": 10,
-    "topic_root": 'smartstrip',
+    "topic_root": "smartstrip",
     "topic_price_point": "smartstrip/pricepoint",
     "topic_energy_demand": "smartstrip/energydemand",
     "default_base_price": 0.2,

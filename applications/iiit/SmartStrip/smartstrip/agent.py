@@ -149,7 +149,9 @@ class SmartStrip(Agent):
         self.switchRelay(PLUG_ID_4, RELAY_OFF, SCHEDULE_NOT_AVLB)
 
         _log.debug('un registering rpc routes')
-        self.vip.rpc.call(MASTER_WEB, 'unregister_all_agent_routes').get(timeout=30)
+        self.vip.rpc.call(MASTER_WEB, \
+                            self.core.identity, \
+                            'unregister_all_agent_routes').get(timeout=30)
         return
 
     @Core.receiver('onfinish')
@@ -485,7 +487,7 @@ class SmartStrip(Agent):
             #else:
                 #do nothing
         else:
-            if self._plugConnected[plugID] == 1:
+            if self._plugConnected[plugID] == 1 and self.tagAuthorised(self._plug_tag_id[plugID]):
                 _log.info(('Plug {0:d}: '.format(plugID + 1),
                         'Current price point < threshold',
                         '({0:.2f}), '.format(plug_pp_th),
@@ -680,44 +682,27 @@ class SmartStrip(Agent):
         self.publishToBus(pubTopic, pubMsg)
 
     def publishTagId(self, plugID, newTagId):
-        if plugID == PLUG_ID_1:
-            pubTopic = self.plug1_tagId_point
-        elif plugID == PLUG_ID_2:
-            pubTopic = self.plug2_tagId_point
-        else:
+        if not self._validPlugId(plugID):
             return
+        pubTopic = self.root_topic+"/plug"+str(plugID+1)+"/tagid"
         pubMsg = [newTagId,{'units': '', 'tz': 'UTC', 'type': 'string'}]
         self.publishToBus(pubTopic, pubMsg)
-            
+        
     def publishRelayState(self, plugID, state):
-        if plugID == PLUG_ID_1:
-            pubTopic = self.plug1_relayState_point
-        elif plugID == PLUG_ID_2:
-            pubTopic = self.plug2_relayState_point
-        elif plugID == PLUG_ID_3:
-            pubTopic = self.plug3_relayState_point
-        elif plugID == PLUG_ID_4:
-            pubTopic = self.plug4_relayState_point
-        else:
+        if not self._validPlugId(plugID):
             return
+        pubTopic = self.root_topic+"/plug" + str(plugID+1) + "/relaystate"
         pubMsg = [state,{'units': 'On/Off', 'tz': 'UTC', 'type': 'int'}]
         self.publishToBus(pubTopic, pubMsg)
-            
+        
     def publishThresholdPP(self, plugID, thresholdPP):
-        if plugID == PLUG_ID_1:
-            pubTopic = self.plug1_thresholdPP_point
-        elif plugID == PLUG_ID_2:
-            pubTopic = self.plug2_thresholdPP_point
-        elif plugID == PLUG_ID_3:
-            pubTopic = self.plug3_thresholdPP_point
-        elif plugID == PLUG_ID_4:
-            pubTopic = self.plug4_thresholdPP_point
-        else:
+        if not self._validPlugId(plugID):
             return
+        pubTopic = self.root_topic+"/plug" + str(plugID+1) + "/threshold"
         pubMsg = [thresholdPP,
                     {'units': 'cents', 'tz': 'UTC', 'type': 'float'}]
         self.publishToBus(pubTopic, pubMsg)
-            
+        
     def publishToBus(self, pubTopic, pubMsg):
         #_log.debug('_publishToBus()')
         now = datetime.datetime.utcnow().isoformat(' ') + 'Z'
@@ -798,6 +783,12 @@ class SmartStrip(Agent):
                     {'units': 'W', 'tz': 'UTC', 'type': 'float'}]
         self.publishToBus(pubTopic, pubMsg)
         return
+        
+    def _validPlugId(self, plugID):
+        if plugID == PLUG_ID_1 or plugID == PLUG_ID_2 or plugID == PLUG_ID_3 or plugID == PLUG_ID_4:
+            return True
+        else:
+            return False
         
 def main(argv=sys.argv):
     '''Main method called by the eggsecutable.'''
