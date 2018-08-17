@@ -81,6 +81,7 @@ def smarthubui_clnt(config_path, **kwargs):
         @Core.receiver('onstart')            
         def startup(self, sender, **kwargs):
             _log.debug('startup()')
+            self._subscribeTopics()
             return
 
         @Core.receiver('onstop')
