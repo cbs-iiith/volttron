@@ -1,3 +1,5 @@
+.. _VCM-Webservice-API:
+
 ===============================================
 VOLTTRON Central Web Services Api Documentation
 ===============================================
@@ -42,7 +44,7 @@ All posted JSON payloads will look like the following block:
         "authorization": "server_authorization_token"
     }
 
-As an alternative, the params can be an array as illistrated by the following:
+As an alternative, the params can be an array as illustrated by the following:
 
 .. code-block:: JSON
 
@@ -97,7 +99,7 @@ JSON-RPC Data Objects
 =====================
 
 .. csv-table:: Platform
-:header: "Key", "Type", "Value"
+    :header: "Key", "Type", "Value"
     :widths: 10, 10, 40
 
                 "uuid", "string", "A unique identifier for the platform."
@@ -105,7 +107,7 @@ JSON-RPC Data Objects
                 "status", "Status", "A status object for the platform."
 
 .. csv-table:: PlatformDetails
-:header: "Key", "Type", "Value"
+    :header: "Key", "Type", "Value"
     :widths: 10, 10, 40
 
                 "uuid", "string", "A unique identifier for the platform."
@@ -113,7 +115,7 @@ JSON-RPC Data Objects
                 "status", "Status", "A status object for the platform."
 
 .. csv-table:: Agent
-:header: "Key", "Type", "Value"
+    :header: "Key", "Type", "Value"
     :widths: 10, 10, 40
 
                 "uuid", "string", "A unique identifier for the agent."
@@ -125,21 +127,21 @@ JSON-RPC Data Objects
 
 
 .. csv-table:: DiscoveryRegistratyEntry
-:header: "Key", "Type", "Value"
+    :header: "Key", "Type", "Value"
     :widths: 10, 10, 40
 
                 "name",
                 "discovery_address":
 
 .. csv-table:: AdvancedRegistratyEntry_TODO
-:header: "Key", "Type", "Value"
+    :header: "Key", "Type", "Value"
     :widths: 10, 10, 40
 
                 "name",
                 "vip_address"
 
 .. csv-table:: Agent_TODO
-:header: "Key", "Type", "Value"
+    :header: "Key", "Type", "Value"
     :widths: 10, 10, 40
 
                 "uuid", "string", "A unique identifier for the platform."
@@ -147,7 +149,7 @@ JSON-RPC Data Objects
                 "status", "Status", "A status object for the platform."
 
 .. csv-table:: Building_TODO
-:header: "Key", "Type", "Value"
+    :header: "Key", "Type", "Value"
     :widths: 10, 10, 40
 
                 "uuid", "string", "A unique identifier for the platform."
@@ -155,7 +157,7 @@ JSON-RPC Data Objects
                 "status", "Status", "A status object for the platform."
 
 .. csv-table:: Device_TODO
-:header: "Key", "Type", "Value"
+    :header: "Key", "Type", "Value"
     :widths: 10, 10, 40
 
                 "uuid", "string", "A unique identifier for the platform."
@@ -163,7 +165,7 @@ JSON-RPC Data Objects
                 "status", "Status", "A status object for the platform."
 
 .. csv-table:: Status
-:header: "Key", "Type", "Value"
+    :header: "Key", "Type", "Value"
     :widths: 10, 10, 40
 
                 "status", "string", "A value of GOOD, BAD, UNKNOWN, SUCCESS, FAIL"
@@ -342,6 +344,7 @@ TODO: change repsonse Retrieve Installed Agents From platform1
              "result": [
                  {
                      "name": "HelloAgent",
+                     "identity": "helloagent-0.0_1",
                      "uuid": "a1b2c3d4-e5f6-a7b8-c9d0-e1f2a3b4c5d6",
                      "process_id": 3142,
                      "error_code": null,
@@ -359,6 +362,7 @@ TODO: change repsonse Retrieve Installed Agents From platform1
                  },
                  {
                      "name": "Historian",
+                     "identity": "sqlhistorianagent-3.5.0_1",
                      "uuid": "a1b2c3d4-e5f6-a7b8-c9d0-e1f2a3b4c5d6",
                      "process_id": 3143,
                      "error_code": null,
@@ -377,6 +381,7 @@ TODO: change repsonse Retrieve Installed Agents From platform1
                  },
                  {
                     "name": "VolltronCentralPlatform",
+                    "identity": "platform.agent",
                     "uuid": "a1b2c3d4-e5f6-a7b8-c9d0-e1f2a3b4c5d6",
                     "process_id": 3144,
                     "error_code": null,
@@ -394,6 +399,7 @@ TODO: change repsonse Retrieve Installed Agents From platform1
                 },
                 {
                      "name": "StoppedAgent-0.1",
+                     "identity": "stoppedagent-0.1_1",
                      "uuid": "a1b2c3d4-e5f6-a7b8-c9d0-e1f2a3b4c5d6",
                      "process_id": null,
                      "error_code": 0,

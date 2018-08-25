@@ -22,35 +22,25 @@ matrix:
       python: "2.7.11"
       
 before_install:
+  - sudo rm -vf /etc/apt/sources.list.d/*riak*
   - sudo apt-get update -qq
   - sudo apt-get install -y build-essential python-dev openssl libssl-dev libevent-dev
+  #- sudo bash -c "$(curl -L install.crate.io)"
+
   #- ./services/core/MongodbHistorian/tests/mongosetup.sh
 
 install:
   - python2 bootstrap.py
+  # Installs testing toolkit
+  #- python2 bootstrap.py --crate
+  - python2 bootstrap.py --testing
 
-script: scripts/run-tests.sh
+script: ci-integration/run-tests.sh
 
-#notifications:
-#  email:
-#    - craig.allwardt@pnnl.gov
-#    - zachary.beech@pnnl.gov
-#    recipients:
-#      - craig.allwardt@pnnl.gov
-      #- zachary.beech@pnnl.gov
-      #- jereme.haack@pnnl.gov
-      #- kyle.monson@pnnl.gov
-      #- joseph.chapman@pnnl.gov
-      #- poorva.sharma@pnnl.gov
-      #- michael.roup@pnnl.gov
-      #- bora.akyol@pnnl.gov
-      #- robert.lutes@pnnl.gov
-#      on_success: change
-#      on_failure: change
+notifications:
+  slack: volttron-team:EgnBsUcQ98b75kU59tV8TnEa
 
-#language: python
-#matrix:
-#  include:
-#    - python: "2.7"
-#      env: TEST_SUITE=suite_2_7
-# script: env/bin/python
+addons:
+  apt:
+    packages:
+        - oracle-java8-installer

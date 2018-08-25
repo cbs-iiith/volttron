@@ -1,6 +1,3 @@
-# Use with --log-config option:
-#    volttron --log-config rotatinglog.py
-
 {
     'version': 1,
     'disable_existing_loggers': False,
@@ -12,7 +9,7 @@
     'handlers': {
         'rotating': {
             'class': 'logging.handlers.TimedRotatingFileHandler',
-            'level': 'DEBUG',
+            'level': 'INFO',
             'formatter': 'agent',
             'filename': 'volttron.log',
             'encoding': 'utf-8',
@@ -22,6 +19,6 @@
     },
     'root': {
         'handlers': ['rotating'],
-        'level': 'DEBUG',
+        'level': 'INFO',
     },
 }

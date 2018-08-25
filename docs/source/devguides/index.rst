@@ -1,14 +1,21 @@
+.. _devguides_index:
+
 ===================
-Developer Resources
+Developing VOLTTRON
 ===================
 
 .. toctree::
     :glob:
-    :maxdepth: 2
+    :maxdepth: 1
 
-    setup/index
     agent_development/index
     deployment/index
     walkthroughs/index
     eclipse/index
+    pycharm/index
+    scalability/index
+    supporting/index
+    roadmap/index
+    
+
     *
