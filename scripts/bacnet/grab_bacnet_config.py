@@ -104,19 +104,13 @@ class SynchronousApplication(BIPSimpleApplication):
         self.expected_device_id = expected_device_id
         self._request = request
         
-        _log.debug("SAM:11")
-        _log.debug(expected_device_id)
         self.request(request)
-        request.debug_contents()
-
-        _log.debug("SAM:12")
         run()
         return self.apdu
     
 def get_iam(app, device_id, target_address = None):
     request = WhoIsRequest()
-    _log.debug("SAM:2")
-
+    
     request.deviceInstanceRangeLowLimit = device_id
     request.deviceInstanceRangeHighLimit = device_id
     
@@ -124,11 +118,7 @@ def get_iam(app, device_id, target_address = None):
         request.pduDestination = Address(target_address)
     else:
         request.pduDestination = GlobalBroadcast()
-
-    _log.debug("SAM:3")
-    _log.debug(request.pduDestination)
-    request.debug_contents()
-
+        
     result = app.make_request(request, expected_device_id=device_id)
     
     return result
@@ -424,8 +414,7 @@ def main():
     _log.debug("starting build")
     
     result = get_iam(this_application, args.device_id, args.address)
-    _log.debug("SAM:1")
-
+    
 #     request = WhoIsRequest()
 #     request.pduDestination = target_address
 #     result = this_application.make_request(request, expect_confirmation = False)
@@ -463,6 +452,9 @@ def main():
         device_name = read_prop(this_application, target_address, "device", device_id, "objectName")
         _log.debug('device_name = ' + str(device_name))
     except TypeError:
+        _log.debug('device missing objectName')
+    
+    try:
         device_description = read_prop(this_application, target_address, "device", device_id, "description")
         _log.debug('description = ' + str(device_description))
     except TypeError:
