@@ -1,9 +1,6 @@
 {
-    "agentid": "master_driver",
-    "driver_config_list": [
-    					   "/home/volttron/volttron/examples/configurations/drivers/bacnet1.config"
-    					   "/home/volttron/volttron/examples/configurations/drivers/bacnet2.config",
-    					   "/home/volttron/volttron/examples/configurations/drivers/modbus1.config",
-    					   "/home/volttron/volttron/examples/configurations/drivers/fake.config",
-    					  ]
+    "driver_scrape_interval": 0.05,
+    "publish_breadth_first_all": false,
+    "publish_depth_first": false,
+    "publish_breadth_first": false
 }
