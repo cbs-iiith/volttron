@@ -1033,6 +1033,7 @@ class ActuatorAgent(Agent):
             try:
                 self.request_cancel_schedule(requester_id, task_id)
             except StandardError as ex:
+<<<<<<< HEAD
                 return self._handle_unknown_schedule_error(ex, headers, message)
         else:
             _log.debug('handle-schedule_request, invalid request type')
@@ -1045,6 +1046,96 @@ class ActuatorAgent(Agent):
     def request_new_schedule(self, requester_id, task_id, priority, requests):
         """
         RPC method
+=======
+                
+                error = {'type': ex.__class__.__name__, 'value': str(ex)}
+                self.push_result_topic_pair(ERROR_RESPONSE_PREFIX,
+                                            point, headers, error)
+                _log.debug('Actuator Agent Error: '+str(error))
+                
+                
+        @RPC.export        
+        def get_point(self, topic):
+            topic = topic.strip('/')
+            _log.debug('handle_get: {topic}'.format(topic=topic))
+            path, point_name = topic.rsplit('/', 1)
+            return self.vip.rpc.call(driver_vip_identity, 'get_point', path, point_name).get()
+        
+        @RPC.export
+        def set_point(self, requester_id, topic, value):  
+            topic = topic.strip('/')
+            _log.debug('handle_set: {topic},{requester_id}, {value}'.
+                       format(topic=topic, requester_id=requester_id, value=value))
+            
+            path, point_name = topic.rsplit('/', 1)
+            
+            headers = self.get_headers(requester_id)
+            
+            if self.check_lock(path, requester_id):
+                result = self.vip.rpc.call(driver_vip_identity, 'set_point', path, point_name, value).get()
+        
+                headers = self.get_headers(requester_id)
+                self.push_result_topic_pair(WRITE_ATTEMPT_PREFIX,
+                                            topic, headers, value)
+                self.push_result_topic_pair(VALUE_RESPONSE_PREFIX,
+                                            topic, headers, result)
+            else:
+                raise LockError("caller does not have this lock")
+                
+            return result
+
+        def check_lock(self, device, requester):
+            _log.debug('check_lock: {device}, {requester}'.format(device=device, 
+                                                                  requester=requester))
+            device = device.strip('/')
+            if device in self._device_states:
+                device_state = self._device_states[device]
+                return device_state.agent_id == requester
+            return False
+
+
+        def handle_schedule_request(self, peer, sender, bus, topic, headers, message):
+            request_type = headers.get('type')
+            _log.debug('handle_schedule_request: {topic}, {headers}, {message}'.
+                       format(topic=topic, headers=str(headers), message=str(message)))
+            
+            requester_id = headers.get('requesterID')
+            task_id = headers.get('taskID')
+            priority = headers.get('priority')
+                   
+            if request_type == SCHEDULE_ACTION_NEW:
+                try:
+                    if len(message) == 1:
+                        requests = message[0]
+                    else:
+                        requests = message
+                
+                    self.request_new_schedule(requester_id, task_id, priority, requests)
+                except StandardError as ex:
+                    _log.error('bad request: {request}, {error}'.format(request=requests, error=str(ex)))
+                    self.vip.pubsub.publish('pubsub', topics.ACTUATOR_SCHEDULE_RESULT(), headers,
+                                            {'result':SCHEDULE_RESPONSE_FAILURE, 
+                                             'data': {},
+                                             'info': 'INVALID_REQUEST_TYPE'})
+                    
+            elif request_type == SCHEDULE_ACTION_CANCEL:
+                try:
+                    self.request_cancel_schedule(requester_id, task_id)
+                except StandardError as ex:
+                    _log.error('bad request: {request}, {error}'.format(request=requests, error=str(ex)))
+                    self.vip.pubsub.publish('pubsub', topics.ACTUATOR_SCHEDULE_RESULT(), headers,
+                                            {'result':SCHEDULE_RESPONSE_FAILURE, 
+                                             'data': {},
+                                             'info': 'INVALID_REQUEST_TYPE'})
+                
+            else:
+                _log.debug('handle-schedule_request, invalid request type')
+                self.vip.pubsub.publish('pubsub', topics.ACTUATOR_SCHEDULE_RESULT(), headers,
+                                        {'result':SCHEDULE_RESPONSE_FAILURE, 
+                                         'data': {},
+                                         'info': 'INVALID_REQUEST_TYPE'})
+            
+>>>>>>> refs/remotes/origin/master
         
         Requests one or more blocks on time on one or more device.
         

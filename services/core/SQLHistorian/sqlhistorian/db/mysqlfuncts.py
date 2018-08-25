@@ -174,6 +174,7 @@ class MySqlFuncts(DbDriver):
             '''  values(%s, %s, %s)'''
 
     def insert_topic_query(self):
+<<<<<<< HEAD
         return '''INSERT INTO ''' + self.topics_table + ''' (topic_name)
             values (%s)'''
 
@@ -182,6 +183,10 @@ class MySqlFuncts(DbDriver):
             WHERE topic_id = %s'''
 
     #@property
+=======
+        return '''REPLACE INTO topics (topic_name) values (%s)'''
+    
+>>>>>>> refs/remotes/origin/master
     def get_topic_map(self):
         _log.debug("in get_topic_map")
         q = "SELECT topic_id, topic_name FROM " + self.topics_table + ";"

@@ -62,12 +62,17 @@ To update the scripts after modifying `setup.py` or after a repository update,
 use the following command:
 
 ```sh
+<<<<<<< HEAD
 (volttron) user@machine $ python bootstrap.py
+=======
+  $ env/bin/python bootstrap.py
+>>>>>>> refs/remotes/origin/master
 ```
 
 The bootstrap script creates a virtual Python environment, using virtualenv,
 and installs Volttron as an editable (or developer mode) package using pip.
 
+<<<<<<< HEAD
 ## Testing
 
 VOLTTRON uses py.test as a framework for executing tests.  py.test is not installed
@@ -84,6 +89,8 @@ root directory:
 ```
 (volttron) user@machine $ py.test
 ```
+=======
+>>>>>>> refs/remotes/origin/master
 
 ## Configuration
 
