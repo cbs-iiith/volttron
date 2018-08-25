@@ -6,6 +6,7 @@ var dispatcher = require('../dispatcher');
 var Store = require('../lib/store');
 
 var _platforms = null;
+var _initialized = false;
 
 var platformsStore = new Store();
 
@@ -60,29 +61,83 @@ platformsStore.getVcInstance = function ()
         }
     }
 
-    return vc;
+    return (typeof vc === "undefined" ? null : vc);
 };
 
-platformsStore.getHistorianRunning = function (platform) {
+platformsStore.getAgentRunning = function (platform, agentType) {
 
-    var historianRunning = false;
+    var agentRunning = false;
 
     if (platform)
     {
         if (platform.hasOwnProperty("agents"))
         {
-            var historian = platform.agents.find(function (agent) {     
-                return agent.name.toLowerCase().indexOf("historian") > -1;
+            var agentToFind = platform.agents.find(function (agent) {     
+                return agent.name.toLowerCase().indexOf(agentType) > -1;
             });
 
-            if (historian)
+            if (agentToFind)
             {
-                historianRunning = ((historian.process_id !== null) && (historian.return_code === null));
+                agentRunning = ((agentToFind.process_id !== null) && (agentToFind.return_code === null));
             }
         }        
     }
 
+    return agentRunning;
+};
+
+platformsStore.getVcHistorianRunning = function (vcInstance) {
+
+    var platform = (vcInstance ? vcInstance : platformsStore.getVcInstance());
+    var historianRunning = platformsStore.getAgentRunning(platform, "historian");
+
     return historianRunning;
+};
+
+platformsStore.getRunningBacnetProxies = function (uuid)
+{
+    var bacnetProxies = [];
+
+    if (_platforms)
+    {
+        if (_platforms.length)
+        {
+            var foundPlatform = _platforms.find(function (platform) {
+                return platform.uuid === uuid;
+            });
+
+            if (foundPlatform)
+            {
+                if (foundPlatform.hasOwnProperty("agents"))
+                {
+                    bacnetProxies = foundPlatform.agents.filter(function (agent) {
+
+                        // var runningProxy = ((agent.name.toLowerCase().indexOf("bacnet_proxy") > -1) &&
+                        //                     (agent.actionPending === false) &&
+                        //                     (agent.process_id !== null) &&
+                        //                     (agent.return_code === null));
+                        var runningProxy = ((agent.name.toLowerCase().indexOf("bacnet_proxy") > -1) &&
+                                            (agent.is_running));
+                        return runningProxy;
+                    });
+                }
+            }
+        }
+    }    
+
+    return bacnetProxies;
+};
+
+platformsStore.getForwarderRunning = function (platformUuid) {
+
+    var platform = platformsStore.getPlatform(platformUuid);
+    var forwarderRunning = platformsStore.getAgentRunning(platform, "forwarderagent");
+
+    return forwarderRunning;
+};
+
+platformsStore.getInitialized = function () {
+    return _initialized;
 };
 
 platformsStore.dispatchToken = dispatcher.register(function (action) {
@@ -91,6 +146,10 @@ platformsStore.dispatchToken = dispatcher.register(function (action) {
     switch (action.type) {
         case ACTION_TYPES.CLEAR_AUTHORIZATION:
             _platforms = null;
+            break;
+
+        case ACTION_TYPES.WILL_INITIALIZE_PLATFORMS:
+            _initialized = true;
             break;
 
         case ACTION_TYPES.RECEIVE_PLATFORMS:

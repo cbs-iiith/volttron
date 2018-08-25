@@ -4,7 +4,9 @@ import sqlite3
 import json
 
 import gevent
-from zmq.utils import jsonapi
+
+from volttron.platform import get_services_core
+from volttron.platform.agent import json as jsonapi
 
 from volttrontesting.utils.platformwrapper import PlatformWrapper
 from volttron.platform.vip.agent import Agent
@@ -47,17 +49,17 @@ def listener(peer, sender, bus, topic, headers, message):
 
 
 @pytest.mark.xfail(reason="This won't work on all machines because of hardcoded paths.")
-def test_base_historian(volttron_instance1):
+def test_base_historian(volttron_instance):
     global foundtopic
-    v1 = volttron_instance1
+    v1 = volttron_instance
     assert v1.is_running()
 
     master_config = prep_config(v1.volttron_home)
-    master_uuid = v1.install_agent(agent_dir="services/core/MasterDriverAgent",
+    master_uuid = v1.install_agent(agent_dir=get_services_core("MasterDriverAgent"),
                                    config_file=master_config)
     gevent.sleep(2)
 
-    db = Historian(address=v1.vip_address[0],
+    db = Historian({}, address=v1.vip_address[0],
                    backup_storage_limit_gb=0.00002)
     gevent.spawn(db.core.run).join(0)
 
