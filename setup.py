@@ -107,7 +107,11 @@ install_requires = (
 if __name__ == '__main__':
     setup(
         name = 'volttron',
+<<<<<<< HEAD
         version = '3.5.0',
+=======
+        version = '3.0.2',
+>>>>>>> refs/remotes/origin/master
         description = 'Agent Execution Platform',
         author = 'Volttron Team',
         author_email = 'volttron@pnnl.gov',

@@ -220,12 +220,16 @@ class SqlLiteFuncts(DbDriver):
                ''' values(?, ?, ?)'''
     
     def insert_topic_query(self):
+<<<<<<< HEAD
         return '''INSERT INTO ''' + self.topics_table + \
             ''' (topic_name) values (?)'''
 
     def update_topic_query(self):
         return '''UPDATE ''' + self.topics_table + ''' SET topic_name = ?
             WHERE topic_id = ?'''
+=======
+        return '''INSERT OR REPLACE INTO topics (topic_name) values (?)'''
+>>>>>>> refs/remotes/origin/master
 
     def get_topic_map(self):
         _log.debug("in get_topic_map")
