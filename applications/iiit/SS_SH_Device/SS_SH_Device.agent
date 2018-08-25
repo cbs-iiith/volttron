@@ -3,7 +3,7 @@
     "agentid": "SS_SH_DeviceAgent",
     "message": "I am SmartStrip - Smart Hub Device Agent",
     "period_read": 10,
-    "sh_ip_addr":  "192.168.1.50",
+    "sh_ip_addr":  "192.168.1.61",
     "sh_port": 8080,
     "sh_plug_id": 4,
     "sh_threshold_pp": 0.5,

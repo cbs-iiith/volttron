@@ -88,13 +88,13 @@ local_requirements = [
 # Standard requirements
 requirements = [
     'BACpypes==0.13.2',
-    'gevent>=0.13,<2',
-    'monotonic',
-    'pymodbus>=1.2,<2',
-    'setuptools',
-    'simplejson>=3.3,<4',
+    'gevent==1.1.2',
+    'monotonic==1.2',
+    'pymodbus==1.2.0',
+    'setuptools==27.2.0',
+    'simplejson==3.8.2',
     'Smap==2.0.24c780d',
-    'wheel>=0.24,<2',
+    'wheel==0.30.0a0',
 ]
 
 install_requires = (
