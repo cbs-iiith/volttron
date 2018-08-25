@@ -2,19 +2,16 @@
 
 var ACTION_TYPES = require('../constants/action-types');
 var authorizationStore = require('../stores/authorization-store');
+var platformsStore = require('../stores/platforms-store');
+var platformChartStore = require('../stores/platform-chart-store');
 var dispatcher = require('../dispatcher');
 var rpc = require('../lib/rpc');
+var statusIndicatorActionCreators = require('../action-creators/status-indicator-action-creators');
 
 var platformActionCreators = {
     loadPlatform: function (platform) {
         platformActionCreators.loadAgents(platform);
         platformActionCreators.loadCharts(platform);
-    },
-    clearPlatformError: function (platform) {
-        dispatcher.dispatch({
-            type: ACTION_TYPES.CLEAR_PLATFORM_ERROR,
-            platform: platform,
-        });
     },
     loadAgents: function (platform) {
         var authorization = authorizationStore.getAuthorization();
@@ -59,9 +56,14 @@ var platformActionCreators = {
                             type: ACTION_TYPES.RECEIVE_PLATFORM,
                             platform: platform,
                         });
+                    })            
+                    .catch(rpc.Error, function (error) {
+                        handle401(error, "Unable to load agents for platform " + platform.name + ": " + error.message);
                     });
-            })
-            .catch(rpc.Error, handle401);
+            })            
+            .catch(rpc.Error, function (error) {
+                handle401(error, "Unable to load agents for platform " + platform.name + ": " + error.message);
+            });
     },
     startAgent: function (platform, agent) {
         var authorization = authorizationStore.getAuthorization();
@@ -81,8 +83,10 @@ var platformActionCreators = {
             .then(function (status) {
                 agent.process_id = status.process_id;
                 agent.return_code = status.return_code;
+            })                        
+            .catch(rpc.Error, function (error) {
+                handle401(error, "Unable to start agent " + agent.name + ": " + error.message);
             })
-            .catch(rpc.Error, handle401)
             .finally(function () {
                 agent.actionPending = false;
 
@@ -110,8 +114,10 @@ var platformActionCreators = {
             .then(function (status) {
                 agent.process_id = status.process_id;
                 agent.return_code = status.return_code;
+            })                      
+            .catch(rpc.Error, function (error) {
+                handle401(error, "Unable to stop agent " + agent.name + ": " + error.message);
             })
-            .catch(rpc.Error, handle401)
             .finally(function () {
                 agent.actionPending = false;
 
@@ -119,6 +125,43 @@ var platformActionCreators = {
                     type: ACTION_TYPES.RECEIVE_PLATFORM,
                     platform: platform,
                 });
+            });
+    },
+    removeAgent: function (platform, agent) {
+        var authorization = authorizationStore.getAuthorization();
+
+        agent.actionPending = true;
+        
+
+        dispatcher.dispatch({
+            type: ACTION_TYPES.CLOSE_MODAL,
+        });
+
+        dispatcher.dispatch({
+            type: ACTION_TYPES.RECEIVE_PLATFORM,
+            platform: platform,
+        });
+
+        var methodStr = 'platforms.uuid.' + platform.uuid + '.remove_agent';
+        var agentId = [agent.uuid];
+        
+        new rpc.Exchange({
+            method: methodStr,
+            params: agentId,
+            authorization: authorization,
+        }).promise
+            .then(function (result) {
+                
+                if (result.error) {
+                    statusIndicatorActionCreators.openStatusIndicator("error", "Unable to remove agent " + agent.name + ": " + result.error);
+                }
+                else
+                {
+                    platformActionCreators.loadPlatform(platform);
+                }
+            })                      
+            .catch(rpc.Error, function (error) {
+                handle401(error, "Unable to remove agent " + agent.name + ": " + error.message);
             });
     },
     installAgents: function (platform, files) {
@@ -141,169 +184,128 @@ var platformActionCreators = {
                 });
 
                 if (errors.length) {
-                    dispatcher.dispatch({
-                        type: ACTION_TYPES.RECEIVE_PLATFORM_ERROR,
-                        platform: platform,
-                        error: errors.join('\n'),
-                    });
+                    statusIndicatorActionCreators.openStatusIndicator("error", "Unable to install agents for platform " + platform.name + ": " + errors.join('\n'));
                 }
 
                 if (errors.length !== files.length) {
                     platformActionCreators.loadPlatform(platform);
                 }
-            })
-            .catch(rpc.Error, handle401);
-    },
+            })                      
+            .catch(rpc.Error, function (error) {
+                handle401(error, "Unable to install agents for platform " + platform.name + ": " + error.message);
+            });
+    },    
     loadCharts: function (platform) {
         var authorization = authorizationStore.getAuthorization();
 
         new rpc.Exchange({
-            method: 'platforms.uuid.' + platform.uuid + '.get_setting',
+            method: 'get_setting_keys',
             params: { key: 'charts' },
             authorization: authorization,
         }).promise
-            .then(function (charts) {
-                if (charts && charts.length) {
-                    platform.charts = charts;
-                } else {
-                    // Provide default set of charts if none are configured
-                    platform.charts = [
-                        {
-                          "topic": "datalogger/log/platform/status/cpu/percent",
-                          "refreshInterval": 15000,
-                          "type": "line",
-                          "min": 0,
-                          "max": 100
-                        },
-                        {
-                          "topic": "datalogger/log/platform/status/cpu/times_percent/idle",
-                          "refreshInterval": 15000,
-                          "type": "line",
-                          "min": 0,
-                          "max": 100
-                        },
-                        {
-                          "topic": "datalogger/log/platform/status/cpu/times_percent/nice",
-                          "refreshInterval": 15000,
-                          "type": "line",
-                          "min": 0,
-                          "max": 100
-                        },
-                        {
-                          "topic": "datalogger/log/platform/status/cpu/times_percent/system",
-                          "refreshInterval": 15000,
-                          "type": "line",
-                          "min": 0,
-                          "max": 100
-                        },
-                        {
-                          "topic": "datalogger/log/platform/status/cpu/times_percent/user",
-                          "refreshInterval": 15000,
-                          "type": "line",
-                          "min": 0,
-                          "max": 100
-                        },
-                    ];
-                }
+            .then(function (valid_keys) {
+            
+                if (valid_keys.indexOf("charts") > -1)
+                {                    
+                    new rpc.Exchange({
+                        method: 'get_setting',
+                        params: { key: 'charts' },
+                        authorization: authorization,
+                    }).promise
+                        .then(function (charts) {
+                        
+                            var notifyRouter = false;
 
-                dispatcher.dispatch({
-                    type: ACTION_TYPES.RECEIVE_PLATFORM,
-                    platform: platform,
-                });
+                            dispatcher.dispatch({
+                                type: ACTION_TYPES.LOAD_CHARTS,
+                                charts: charts,
+                            });
+                        })
+                        .catch(rpc.Error, function (error) {
+                            handle401(error, "Unable to load charts for platform " + platform.name + ": " + error.message);
+                        });
+                        
+                    }
             })
-            .catch(rpc.Error, handle401);
+            .catch(rpc.Error, function (error) {
+                handle401(error, "Unable to load charts for platform " + platform.name + ": " + error.message);
+            });
+
+
+        
     },
-    getTopicData: function (platform, topic) {
+    saveCharts: function (chartsToSave) {
         var authorization = authorizationStore.getAuthorization();
 
+        var savedCharts = (chartsToSave ? chartsToSave : platformChartStore.getPinnedCharts());
+
         new rpc.Exchange({
-            method: 'platforms.uuid.' + platform.uuid + '.historian.query',
-            params: {
-                topic: topic,
-                count: 20,
-                order: 'LAST_TO_FIRST',
-            },
+            method: 'set_setting',
+            params: { key: 'charts', value: savedCharts },
             authorization: authorization,
         }).promise
-            .then(function (result) {
-                dispatcher.dispatch({
-                    type: ACTION_TYPES.RECEIVE_PLATFORM_TOPIC_DATA,
-                    platform: platform,
-                    topic: topic,
-                    data: result.values,
-                });
+            .then(function () {
+
             })
-            .catch(rpc.Error, handle401);
-    },
-    saveChart: function (platform, oldChart, newChart) {
-        var authorization = authorizationStore.getAuthorization();
-        var newCharts;
-
-        if (!oldChart) {
-            newCharts = platform.charts.concat([newChart]);
-        } else {
-            newCharts = platform.charts.map(function (chart) {
-                if (chart === oldChart) {
-                    return newChart;
-                }
-
-                return chart;
+            .catch(rpc.Error, function (error) {
+                handle401(error, "Unable to save charts: " + error.message);
             });
-        }
+    },
+    saveChart: function (newChart) {
+        var authorization = authorizationStore.getAuthorization();
+
+        var newCharts = [newChart];
 
         new rpc.Exchange({
-            method: 'platforms.uuid.' + platform.uuid + '.set_setting',
+            method: 'set_setting',
             params: { key: 'charts', value: newCharts },
             authorization: authorization,
         }).promise
             .then(function () {
-                platform.charts = newCharts;
 
-                dispatcher.dispatch({
-                    type: ACTION_TYPES.CLOSE_MODAL,
-                });
-
-                dispatcher.dispatch({
-                    type: ACTION_TYPES.RECEIVE_PLATFORM,
-                    platform: platform,
-                });
+            })
+            .catch(rpc.Error, function (error) {
+                handle401(error, "Unable to save chart: " + error.message);
             });
     },
-    deleteChart: function (platform, chartToDelete) {
+    deleteChart: function (chartToDelete) {
         var authorization = authorizationStore.getAuthorization();
 
-        var newCharts = platform.charts.filter(function (chart) {
-            return (chart !== chartToDelete);
+        var savedCharts = platformChartStore.getPinnedCharts();
+
+        var newCharts = savedCharts.filter(function (chart) {
+
+            return (chart.chartKey !== chartToDelete);
         });
 
         new rpc.Exchange({
-            method: 'platforms.uuid.' + platform.uuid + '.set_setting',
+            method: 'set_setting',
             params: { key: 'charts', value: newCharts },
             authorization: authorization,
         }).promise
             .then(function () {
-                platform.charts = newCharts;
 
-                dispatcher.dispatch({
-                    type: ACTION_TYPES.CLOSE_MODAL,
-                });
-
-                dispatcher.dispatch({
-                    type: ACTION_TYPES.RECEIVE_PLATFORM,
-                    platform: platform,
-                });
+            })
+            .catch(rpc.Error, function (error) {
+                handle401(error, "Unable to delete chart: " + error.message);
             });
     },
 };
 
-function handle401(error) {
-    if (error.code && error.code === 401) {
+function handle401(error, message) {
+    if ((error.code && error.code === 401) || (error.response && error.response.status === 401)) {
         dispatcher.dispatch({
             type: ACTION_TYPES.RECEIVE_UNAUTHORIZED,
             error: error,
         });
 
-        platformActionCreators.clearAuthorization();
+        dispatcher.dispatch({
+            type: ACTION_TYPES.CLEAR_AUTHORIZATION,
+        });
+    }
+    else
+    {
+        statusIndicatorActionCreators.openStatusIndicator("error", message);
     }
 }
 

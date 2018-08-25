@@ -56,6 +56,9 @@
 #}}}
 
 from os import environ
+from os import path
+import sys
+import json
 
 #from distutils.core import setup
 from setuptools import setup, find_packages
@@ -65,33 +68,50 @@ option_requirements = [
     ('pyzmq>=14.7,<15', ['--zmq=bundled']),
 ]
 
+optional_requirements = set()
+
+# For the different keyed in options allow the command paramenter to
+# install the given requirements.
+if path.exists('optional_requirements.json'):
+    with open('optional_requirements.json') as optional:
+        data = json.load(optional)
+
+        for arg, val in data.items():
+            if arg in sys.argv:
+                for req in val['packages']:
+                    optional_requirements.add(req)
+
 # Requirements in the repository which should be installed as editable.
 local_requirements = [
 ]
 
 # Standard requirements
 requirements = [
-    'BACpypes>=0.10,<2',
-    'gevent>=0.13,<2',
-    'monotonic',
-    'pymodbus>=1.2,<2',
-    'setuptools',
-    'simplejson>=3.3,<4',
+    'BACpypes==0.13.2',
+    'gevent==1.1.2',
+    'monotonic==1.2',
+    'pymodbus==1.2.0',
+    'setuptools==27.2.0',
+    'simplejson==3.8.2',
     'Smap==2.0.24c780d',
-    'wheel>=0.24,<2',
+    'wheel==0.30.0a0',
 ]
 
 install_requires = (
     [req for req, _ in option_requirements] +
     [req for req, _ in local_requirements] +
-    requirements
+    requirements +
+    [req for req in optional_requirements]
 )
-
 
 if __name__ == '__main__':
     setup(
         name = 'volttron',
+<<<<<<< HEAD
+        version = '3.5.0',
+=======
         version = '3.0.2',
+>>>>>>> refs/remotes/origin/master
         description = 'Agent Execution Platform',
         author = 'Volttron Team',
         author_email = 'volttron@pnnl.gov',
@@ -103,6 +123,7 @@ if __name__ == '__main__':
                 'volttron = volttron.platform.main:_main',
                 'volttron-ctl = volttron.platform.control:_main',
                 'volttron-pkg = volttron.platform.packaging:_main',
+                'volttron-cfg = volttron.platform.config:_main',
             ]
         },
         zip_safe = False,

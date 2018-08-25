@@ -59,8 +59,10 @@ import logging
 import sys
 import uuid
 
-from volttron.platform.agent import BaseAgent, PublishMixin, periodic
-from volttron.platform.agent import utils, matching
+from volttron.platform.vip.agent import Agent, Core, PubSub, compat
+from volttron.platform.agent import utils
+from volttron.platform.messaging import headers as headers_mod
+
 from volttron.platform.messaging import topics, headers as headers_mod
 
 import settings
@@ -68,7 +70,7 @@ import settings
 
 utils.setup_logging()
 _log = logging.getLogger(__name__)
-
+__version__ = '0.1'
 
 def DatetimeFromValue(ts):
     ''' Utility for dealing with time
@@ -81,47 +83,52 @@ def DatetimeFromValue(ts):
         raise ValueError('Unknown timestamp value')
     return ts
 
-def ScheduleExampleAgent(config_path, **kwargs):
+def schedule_example(config_path, **kwargs):
 
     config = utils.load_config(config_path)
     agent_id = config['agentid']
 
-    class Agent(PublishMixin, BaseAgent):
+    class SchedulerExample(Agent):
         '''This agent can be used to demonstrate scheduling and 
         acutation of devices. It reserves a non-existant device, then
         acts when its time comes up. Since there is no device, this 
         will cause an error.
         '''
     
+    
         def __init__(self, **kwargs):
-            super(Agent, self).__init__(**kwargs)
+            super(SchedulerExample, self).__init__(**kwargs)
     
-        def setup(self):
-            # Demonstrate accessing a value from the config file
-            _log.info(config['message'])
-            
-            # Always call the base class setup()
-            super(Agent, self).setup()
-            
-            self.publish_schedule()
+        @Core.receiver('onsetup')
+        def setup(self, sender, **kwargs):
+            self._agent_id = config['agentid']
+
+        @Core.receiver('onstart')            
+        def startup(self, sender, **kwargs):
+#             self.publish_schedule()
+            self.use_rpc()
     
     
-        @matching.match_exact(topics.ACTUATOR_SCHEDULE_ANNOUNCE(campus='campus',
-                                             building='building',unit='unit'))
-        @matching.match_headers({headers_mod.REQUESTER_ID: agent_id})
-        def actuate(self, topic, headers, message, match):
+    
+        @PubSub.subscribe('pubsub', topics.ACTUATOR_SCHEDULE_ANNOUNCE(campus='iiit',
+                                             building='cbs',unit='smarthub'))
+        def actuate(self, peer, sender, bus,  topic, headers, message):
+            print ("response:",topic,headers,message)
+            if headers[headers_mod.REQUESTER_ID] != agent_id:
+                return
             '''Match the announce for our fake device with our ID
             Then take an action. Note, this command will fail since there is no 
             actual device'''
             headers = {
                         'requesterID': agent_id,
                        }
-            self.publish_json(topics.ACTUATOR_SET(campus='campus',
-                                             building='building',unit='unit',
-                                             point='point'),
-                                     headers, str(0.0))
+            self.vip.pubsub.publish(
+            'pubsub', topics.ACTUATOR_SET(campus='iiit',
+                                             building='cbs',unit='smarthub',
+                                             point='LEDLight1'),
+                                     headers, 1)
     
-        @periodic(settings.SCHEDULE_PERIOD)
+        
         def publish_schedule(self):
             '''Periodically publish a schedule request'''
             headers = {
@@ -137,7 +144,7 @@ def ScheduleExampleAgent(config_path, **kwargs):
     
     
             msg = [
-                   ['campus/building/unit',start,end]
+                   ['iiit/cbs/smarthub',start,end]
                    #Could add more devices
     #                 ["campus/building/device1", #First time slot.
     #                  "2014-1-31 12:27:00",     #Start of time slot.
@@ -150,18 +157,56 @@ def ScheduleExampleAgent(config_path, **kwargs):
     #                  "2016-1-31 12:32:00"],     #End of time slot.
                     #etc...
                 ]
-            self.publish_json(topics.ACTUATOR_SCHEDULE_REQUEST, headers, msg)
+            self.vip.pubsub.publish(
+            'pubsub', topics.ACTUATOR_SCHEDULE_REQUEST, headers, msg)
+            
+            
+        def use_rpc(self):
+            try: 
+                start = str(datetime.datetime.now())
+                end = str(datetime.datetime.now() + datetime.timedelta(minutes=1))
+    
+                msg = [
+                   ['iiit/cbs/smarthub',start,end]
+                   ]
+                result = self.vip.rpc.call(
+                                           'platform.actuator', 
+                                           'request_new_schedule',
+                                           agent_id, 
+                                           "some task",
+                                           'LOW',
+                                           msg).get(timeout=10)
+                print("schedule result", result)
+            except Exception as e:
+                print ("Could not contact actuator. Is it running?")
+                print(e)
+                return
+            
+            try:
+                if result['result'] == 'SUCCESS':
+                    result = self.vip.rpc.call(
+                                           'platform.actuator', 
+                                           'set_point',
+                                           agent_id, 
+                                           'iiit/cbs/smarthub/LEDLight1',
+                                           1).get(timeout=10)
+                    print("Set result", result)
+            except Exception as e:
+                print ("Expected to fail since there is no real device to set")
+                print(e)    
+                
+                
+            
+            
     Agent.__name__ = 'ScheduleExampleAgent'
-    return Agent(**kwargs)
+    return SchedulerExample(**kwargs)
             
     
     
 def main(argv=sys.argv):
     '''Main method called by the eggsecutable.'''
     try:
-        utils.default_main(ScheduleExampleAgent,
-                           description='Example agent using the Scheduler',
-                           argv=argv)
+        utils.vip_main(schedule_example)
     except Exception as e:
         print e
         _log.exception('unhandled exception')

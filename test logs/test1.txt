@@ -1,0 +1,933 @@
+login as: bsrc-sam
+bsrc-sam@192.168.1.62's password:
+bsrc-edison-2:~$ timedatectl status
+      Local time: Fri 2016-07-01 10:51:43 UTC
+  Universal time: Fri 2016-07-01 10:51:43 UTC
+        RTC time: Fri 2016-07-01 10:51:43
+       Time zone: Universal (UTC, +0000)
+     NTP enabled: yes
+NTP synchronized: yes
+ RTC in local TZ: no
+      DST active: n/a
+bsrc-edison-2:~$ sudo opkg install tzdata-asia
+
+We trust you have received the usual lecture from the local System
+Administrator. It usually boils down to these three things:
+
+    #1) Respect the privacy of others.
+    #2) Think before you type.
+    #3) With great power comes great responsibility.
+
+Password:
+Unknown package 'tzdata-asia'.
+Collected errors:
+ * opkg_install_cmd: Cannot install package tzdata-asia.
+bsrc-edison-2:~$ clear
+bsrc-edison-2:~$ ls -al
+total 20
+drwxr-sr-x 2 bsrc-sam bsrc-sam 4096 Jul  1 16:19 .
+drwxr-xr-x 5 root     root     4096 Jul  1 16:19 ..
+-rw------- 1 bsrc-sam bsrc-sam   11 Jul  1 16:19 .bash_history
+-rwxr-xr-x 1 bsrc-sam bsrc-sam  410 Jul  1 16:19 .bashrc
+-rwxr-xr-x 1 bsrc-sam bsrc-sam  145 Jul  1 16:19 .profile
+bsrc-edison-2:~$ git clone https://github.com/cbs-iiith/volttron
+Cloning into 'volttron'...
+remote: Counting objects: 25469, done.
+remote: Compressing objects: 100% (10/10), done.
+remote: Total 25469 (delta 1), reused 1 (delta 1), pack-reused 25458
+Receiving objects: 100% (25469/25469), 40.25 MiB | 1.30 MiB/s, done.
+Resolving deltas: 100% (17287/17287), done.
+Checking connectivity... done.
+Checking out files: 100% (1163/1163), done.
+bsrc-edison-2:~$ opkg install python-pip
+Collected errors:
+ * opkg_conf_load: Could not create lock file /var/lib/opkg/lock: Permission denied.
+bsrc-edison-2:~$ cd volttron/
+bsrc-edison-2:~/volttron$ clear
+bsrc-edison-2:~/volttron$ git checkout sam
+Already on 'sam'
+Your branch is up-to-date with 'origin/sam'.
+bsrc-edison-2:~/volttron$ git branch
+* sam
+bsrc-edison-2:~/volttron$ git status
+On branch sam
+Your branch is up-to-date with 'origin/sam'.
+
+nothing to commit, working directory clean
+bsrc-edison-2:~/volttron$ python2.7 bootstrap.py
+Creating virtual Python environment
+Downloading virtualenv DOAP record
+Downloading virtualenv 15.0.2
+New python executable in /home/bsrc-sam/volttron/env/bin/python2.7
+Also creating executable in /home/bsrc-sam/volttron/env/bin/python
+Installing setuptools, pip, wheel...done.
+Installing required packages
++ pip install --install-option --zmq=bundled --no-deps pyzmq>=14.7,<15
+/home/bsrc-sam/volttron/env/lib/python2.7/site-packages/pip/commands/install.py:180: UserWarning: Disabling all use of wheels due to the use of --build-options / --global-options / --install-options.
+  cmdoptions.check_install_build_global(options)
+Collecting pyzmq<15,>=14.7
+/home/bsrc-sam/volttron/env/lib/python2.7/site-packages/pip/_vendor/requests/packages/urllib3/util/ssl_.py:318: SNIMissingWarning: An HTTPS request has been made, but the SNI (Subject Name Indication) extension to TLS is not available on this platform. This may cause the server to present an incorrect TLS certificate, which can cause validation failures. You can upgrade to a newer version of Python to solve this. For more information, see https://urllib3.readthedocs.org/en/latest/security.html#snimissingwarning.
+  SNIMissingWarning
+/home/bsrc-sam/volttron/env/lib/python2.7/site-packages/pip/_vendor/requests/packages/urllib3/util/ssl_.py:122: InsecurePlatformWarning: A true SSLContext object is not available. This prevents urllib3 from configuring SSL appropriately and may cause certain SSL connections to fail. You can upgrade to a newer version of Python to solve this. For more information, see https://urllib3.readthedocs.org/en/latest/security.html#insecureplatformwarning.
+  InsecurePlatformWarning
+  Downloading pyzmq-14.7.0.zip (1.5MB)
+    100% |################################| 1.5MB 74kB/s
+Skipping bdist_wheel for pyzmq, due to binaries being disabled for it.
+Installing collected packages: pyzmq
+  Running setup.py install for pyzmq ... done
+Successfully installed pyzmq-14.7.0
++ pip install --editable . --requirement ./requirements.txt
+Obtaining file:///home/bsrc-sam/volttron
+Collecting pytz (from -r ./requirements.txt (line 1))
+/home/bsrc-sam/volttron/env/lib/python2.7/site-packages/pip/_vendor/requests/packages/urllib3/util/ssl_.py:318: SNIMissingWarning: An HTTPS request has been made, but the SNI (Subject Name Indication) extension to TLS is not available on this platform. This may cause the server to present an incorrect TLS certificate, which can cause validation failures. You can upgrade to a newer version of Python to solve this. For more information, see https://urllib3.readthedocs.org/en/latest/security.html#snimissingwarning.
+  SNIMissingWarning
+/home/bsrc-sam/volttron/env/lib/python2.7/site-packages/pip/_vendor/requests/packages/urllib3/util/ssl_.py:122: InsecurePlatformWarning: A true SSLContext object is not available. This prevents urllib3 from configuring SSL appropriately and may cause certain SSL connections to fail. You can upgrade to a newer version of Python to solve this. For more information, see https://urllib3.readthedocs.org/en/latest/security.html#insecureplatformwarning.
+  InsecurePlatformWarning
+  Downloading pytz-2016.4-py2.py3-none-any.whl (480kB)
+    100% |################################| 481kB 169kB/s
+Collecting python-dateutil<3,>=2 (from -r ./requirements.txt (line 2))
+  Downloading python_dateutil-2.5.3-py2.py3-none-any.whl (201kB)
+    100% |################################| 204kB 279kB/s
+Collecting requests<3,>=2.2 (from -r ./requirements.txt (line 3))
+  Downloading requests-2.10.0-py2.py3-none-any.whl (506kB)
+    100% |################################| 512kB 158kB/s
+Collecting psutil (from -r ./requirements.txt (line 4))
+  Downloading psutil-4.3.0.tar.gz (316kB)
+    100% |################################| 317kB 321kB/s
+Collecting ply (from -r ./requirements.txt (line 5))
+  Downloading ply-3.8.tar.gz (157kB)
+    100% |################################| 163kB 233kB/s
+Requirement already satisfied (use --upgrade to upgrade): pyzmq<15,>=14.7 in ./env/lib/python2.7/site-packages (from volttron==3.5.0)
+Collecting BACpypes==0.13.2 (from volttron==3.5.0)
+  Downloading bacpypes-0.13.2-py2-none-any.whl (124kB)
+    100% |################################| 133kB 147kB/s
+Collecting gevent<2,>=0.13 (from volttron==3.5.0)
+  Downloading gevent-1.1.1.tar.gz (2.0MB)
+    100% |################################| 2.0MB 50kB/s
+Collecting monotonic (from volttron==3.5.0)
+  Downloading monotonic-1.1-py2.py3-none-any.whl
+Collecting pymodbus<2,>=1.2 (from volttron==3.5.0)
+  Downloading pymodbus-1.2.0.tar.gz (75kB)
+    100% |################################| 81kB 832kB/s
+Requirement already satisfied (use --upgrade to upgrade): setuptools in ./env/lib/python2.7/site-packages (from volttron==3.5.0)
+Collecting simplejson<4,>=3.3 (from volttron==3.5.0)
+  Downloading simplejson-3.8.2.tar.gz (76kB)
+    100% |################################| 81kB 833kB/s
+Collecting Smap==2.0.24c780d (from volttron==3.5.0)
+  Downloading Smap-2.0.24c780d.zip (322kB)
+    100% |################################| 327kB 322kB/s
+Requirement already satisfied (use --upgrade to upgrade): wheel<2,>=0.24 in ./env/lib/python2.7/site-packages (from volttron==3.5.0)
+Collecting six>=1.5 (from python-dateutil<3,>=2->-r ./requirements.txt (line 2))
+  Downloading six-1.10.0-py2.py3-none-any.whl
+Collecting greenlet>=0.4.9 (from gevent<2,>=0.13->volttron==3.5.0)
+  Downloading greenlet-0.4.10.zip (82kB)
+    100% |################################| 92kB 587kB/s
+Collecting twisted>=12.2.0 (from pymodbus<2,>=1.2->volttron==3.5.0)
+  Downloading Twisted-16.2.0.tar.bz2 (2.9MB)
+    100% |################################| 2.9MB 37kB/s
+Collecting pyserial>=2.6 (from pymodbus<2,>=1.2->volttron==3.5.0)
+  Downloading pyserial-3.1.1-py2.py3-none-any.whl (200kB)
+    100% |################################| 204kB 282kB/s
+Collecting configobj (from Smap==2.0.24c780d->volttron==3.5.0)
+  Downloading configobj-5.0.6.tar.gz
+Collecting avro (from Smap==2.0.24c780d->volttron==3.5.0)
+  Downloading avro-1.8.1.tar.gz (44kB)
+    100% |################################| 51kB 796kB/s
+Collecting zope.interface>=3.6.0 (from twisted>=12.2.0->pymodbus<2,>=1.2->volttron==3.5.0)
+  Downloading zope.interface-4.2.0.tar.gz (146kB)
+    100% |################################| 153kB 622kB/s
+Building wheels for collected packages: psutil, ply, gevent, pymodbus, simplejson, Smap, greenlet, twisted, configobj, avro, zope.interface
+  Running setup.py bdist_wheel for psutil ... done
+  Stored in directory: /home/bsrc-sam/.cache/pip/wheels/e9/8b/35/535f07b31ebe94e56901cee48e1291e18989b272d79de437db
+  Running setup.py bdist_wheel for ply ... done
+  Stored in directory: /home/bsrc-sam/.cache/pip/wheels/6f/23/3c/7055bf8004cee3c7d06c46318014e0374539094c4e36246e9a
+  Running setup.py bdist_wheel for gevent ... done
+  Stored in directory: /home/bsrc-sam/.cache/pip/wheels/57/f6/fb/4cb1a4111ab75d3f628e94e95b14b51edd2d11c5d22f92e026
+  Running setup.py bdist_wheel for pymodbus ... done
+  Stored in directory: /home/bsrc-sam/.cache/pip/wheels/16/55/37/212c0dc25f7088dee2554bf9182836ae57f1d09384abb13acd
+  Running setup.py bdist_wheel for simplejson ... done
+  Stored in directory: /home/bsrc-sam/.cache/pip/wheels/e4/32/71/60b361b0d05433eb9d1dd3d47619931c08cc4e387dc494ad3c
+  Running setup.py bdist_wheel for Smap ... done
+  Stored in directory: /home/bsrc-sam/.cache/pip/wheels/eb/ba/8f/5048c172d3f6e90c2133d0fab32e73232ddef5f5a3c1a16f2d
+  Running setup.py bdist_wheel for greenlet ... done
+  Stored in directory: /home/bsrc-sam/.cache/pip/wheels/e0/f2/33/6e4a562e7497e9393110f64fee640f5bc9eefdd82c02b035b1
+  Running setup.py bdist_wheel for twisted ... done
+  Stored in directory: /home/bsrc-sam/.cache/pip/wheels/fe/9d/3f/9f7b1c768889796c01929abb7cdfa2a9cdd32bae64eb7aa239
+  Running setup.py bdist_wheel for configobj ... done
+  Stored in directory: /home/bsrc-sam/.cache/pip/wheels/87/76/48/1564f8466fbd36402af5ac4972ffb56a6ef7f143892ef57fe5
+  Running setup.py bdist_wheel for avro ... done
+  Stored in directory: /home/bsrc-sam/.cache/pip/wheels/48/ab/c0/24e702060d5a877cb970047248c9ea5d531067915324128b58
+  Running setup.py bdist_wheel for zope.interface ... done
+  Stored in directory: /home/bsrc-sam/.cache/pip/wheels/20/a2/bc/74fe87cee17134f5219ba01fe82dd8c10998377e0fb910bb22
+Successfully built psutil ply gevent pymodbus simplejson Smap greenlet twisted configobj avro zope.interface
+Installing collected packages: pytz, six, python-dateutil, requests, psutil, ply, BACpypes, greenlet, gevent, monotonic, zope.interface, twisted, pyserial, pymodbus, simplejson, configobj, avro, Smap, volttron
+  Running setup.py develop for volttron
+Successfully installed BACpypes-0.13.2 Smap-2.0.24c780d avro-1.8.1 configobj-5.0.6 gevent-1.1.1 greenlet-0.4.10 monotonic-1.1 ply-3.8 psutil-4.3.0 pymodbus-1.2.0 pyserial-3.1.1 python-dateutil-2.5.3 pytz-2016.4 requests-2.10.0 simplejson-3.8.2 six-1.10.0 twisted-16.2.0 volttron-3.5.0 zope.interface-4.2.0
+bsrc-edison-2:~/volttron$ source env/bin/activate
+(volttron)bsrc-edison-2:~/volttron$ pip install mock
+Collecting mock
+/home/bsrc-sam/volttron/env/lib/python2.7/site-packages/pip/_vendor/requests/packages/urllib3/util/ssl_.py:318: SNIMissingWarning: An HTTPS request has been made, but the SNI (Subject Name Indication) extension to TLS is not available on this platform. This may cause the server to present an incorrect TLS certificate, which can cause validation failures. You can upgrade to a newer version of Python to solve this. For more information, see https://urllib3.readthedocs.org/en/latest/security.html#snimissingwarning.
+  SNIMissingWarning
+/home/bsrc-sam/volttron/env/lib/python2.7/site-packages/pip/_vendor/requests/packages/urllib3/util/ssl_.py:122: InsecurePlatformWarning: A true SSLContext object is not available. This prevents urllib3 from configuring SSL appropriately and may cause certain SSL connections to fail. You can upgrade to a newer version of Python to solve this. For more information, see https://urllib3.readthedocs.org/en/latest/security.html#insecureplatformwarning.
+  InsecurePlatformWarning
+  Downloading mock-2.0.0-py2.py3-none-any.whl (56kB)
+    100% |################################| 61kB 132kB/s
+Collecting funcsigs>=1; python_version < "3.3" (from mock)
+  Downloading funcsigs-1.0.2-py2.py3-none-any.whl
+Collecting pbr>=0.11 (from mock)
+  Downloading pbr-1.10.0-py2.py3-none-any.whl (96kB)
+    100% |################################| 102kB 201kB/s
+Requirement already satisfied (use --upgrade to upgrade): six>=1.9 in ./env/lib/python2.7/site-packages (from mock)
+Installing collected packages: funcsigs, pbr, mock
+Successfully installed funcsigs-1.0.2 mock-2.0.0 pbr-1.10.0
+(volttron)bsrc-edison-2:~/volttron$ pip install MagicMock
+Collecting MagicMock
+/home/bsrc-sam/volttron/env/lib/python2.7/site-packages/pip/_vendor/requests/packages/urllib3/util/ssl_.py:318: SNIMissingWarning: An HTTPS request has been made, but the SNI (Subject Name Indication) extension to TLS is not available on this platform. This may cause the server to present an incorrect TLS certificate, which can cause validation failures. You can upgrade to a newer version of Python to solve this. For more information, see https://urllib3.readthedocs.org/en/latest/security.html#snimissingwarning.
+  SNIMissingWarning
+/home/bsrc-sam/volttron/env/lib/python2.7/site-packages/pip/_vendor/requests/packages/urllib3/util/ssl_.py:122: InsecurePlatformWarning: A true SSLContext object is not available. This prevents urllib3 from configuring SSL appropriately and may cause certain SSL connections to fail. You can upgrade to a newer version of Python to solve this. For more information, see https://urllib3.readthedocs.org/en/latest/security.html#insecureplatformwarning.
+  InsecurePlatformWarning
+  Downloading magicmock-0.03.tar.gz (113kB)
+    100% |################################| 122kB 142kB/s
+Collecting httplib2 (from MagicMock)
+  Downloading httplib2-0.9.2.zip (210kB)
+    100% |################################| 215kB 452kB/s
+Building wheels for collected packages: MagicMock, httplib2
+  Running setup.py bdist_wheel for MagicMock ... done
+  Stored in directory: /home/bsrc-sam/.cache/pip/wheels/d2/7d/72/ec31ea1ed8f68d5d9b55311d5af56e93956761fe96361909ae
+  Running setup.py bdist_wheel for httplib2 ... done
+  Stored in directory: /home/bsrc-sam/.cache/pip/wheels/c7/67/60/e0be8ccfc1e08f8ff1f50d99ea5378e204580ea77b0169fb55
+Successfully built MagicMock httplib2
+Installing collected packages: httplib2, MagicMock
+Successfully installed MagicMock-0.3 httplib2-0.9.2
+(volttron)bsrc-edison-2:~/volttron$ pip install urllib3
+Collecting urllib3
+/home/bsrc-sam/volttron/env/lib/python2.7/site-packages/pip/_vendor/requests/packages/urllib3/util/ssl_.py:318: SNIMissingWarning: An HTTPS request has been made, but the SNI (Subject Name Indication) extension to TLS is not available on this platform. This may cause the server to present an incorrect TLS certificate, which can cause validation failures. You can upgrade to a newer version of Python to solve this. For more information, see https://urllib3.readthedocs.org/en/latest/security.html#snimissingwarning.
+  SNIMissingWarning
+/home/bsrc-sam/volttron/env/lib/python2.7/site-packages/pip/_vendor/requests/packages/urllib3/util/ssl_.py:122: InsecurePlatformWarning: A true SSLContext object is not available. This prevents urllib3 from configuring SSL appropriately and may cause certain SSL connections to fail. You can upgrade to a newer version of Python to solve this. For more information, see https://urllib3.readthedocs.org/en/latest/security.html#insecureplatformwarning.
+  InsecurePlatformWarning
+  Downloading urllib3-1.16-py2.py3-none-any.whl (98kB)
+    100% |################################| 102kB 144kB/s
+Installing collected packages: urllib3
+Successfully installed urllib3-1.16
+(volttron)bsrc-edison-2:~/volttron$ pip install urllib3[secure]
+Requirement already satisfied (use --upgrade to upgrade): urllib3[secure] in ./env/lib/python2.7/site-packages
+Collecting ndg-httpsclient; python_version <= "2.7" and extra == "secure" (from urllib3[secure])
+/home/bsrc-sam/volttron/env/lib/python2.7/site-packages/pip/_vendor/requests/packages/urllib3/util/ssl_.py:318: SNIMissingWarning: An HTTPS request has been made, but the SNI (Subject Name Indication) extension to TLS is not available on this platform. This may cause the server to present an incorrect TLS certificate, which can cause validation failures. You can upgrade to a newer version of Python to solve this. For more information, see https://urllib3.readthedocs.org/en/latest/security.html#snimissingwarning.
+  SNIMissingWarning
+/home/bsrc-sam/volttron/env/lib/python2.7/site-packages/pip/_vendor/requests/packages/urllib3/util/ssl_.py:122: InsecurePlatformWarning: A true SSLContext object is not available. This prevents urllib3 from configuring SSL appropriately and may cause certain SSL connections to fail. You can upgrade to a newer version of Python to solve this. For more information, see https://urllib3.readthedocs.org/en/latest/security.html#insecureplatformwarning.
+  InsecurePlatformWarning
+  Downloading ndg_httpsclient-0.4.1.tar.gz
+Collecting pyOpenSSL>=0.13; python_version <= "2.7" and extra == "secure" (from urllib3[secure])
+  Downloading pyOpenSSL-16.0.0-py2.py3-none-any.whl (45kB)
+    100% |################################| 51kB 236kB/s
+Collecting pyasn1; python_version <= "2.7" and extra == "secure" (from urllib3[secure])
+  Downloading pyasn1-0.1.9-py2.py3-none-any.whl
+Collecting certifi; extra == "secure" (from urllib3[secure])
+  Downloading certifi-2016.2.28-py2.py3-none-any.whl (366kB)
+    100% |################################| 368kB 222kB/s
+Requirement already satisfied (use --upgrade to upgrade): six>=1.5.2 in ./env/lib/python2.7/site-packages (from pyOpenSSL>=0.13; python_version <= "2.7" and extra == "secure"->urllib3[secure])
+Collecting cryptography>=1.3 (from pyOpenSSL>=0.13; python_version <= "2.7" and extra == "secure"->urllib3[secure])
+  Downloading cryptography-1.4.tar.gz (399kB)
+    100% |################################| 409kB 184kB/s
+Collecting idna>=2.0 (from cryptography>=1.3->pyOpenSSL>=0.13; python_version <= "2.7" and extra == "secure"->urllib3[secure])
+  Downloading idna-2.1-py2.py3-none-any.whl (54kB)
+    100% |################################| 61kB 820kB/s
+Requirement already satisfied (use --upgrade to upgrade): setuptools>=11.3 in ./env/lib/python2.7/site-packages (from cryptography>=1.3->pyOpenSSL>=0.13; python_version <= "2.7" and extra == "secure"->urllib3[secure])
+Collecting enum34 (from cryptography>=1.3->pyOpenSSL>=0.13; python_version <= "2.7" and extra == "secure"->urllib3[secure])
+  Downloading enum34-1.1.6-py2-none-any.whl
+Collecting ipaddress (from cryptography>=1.3->pyOpenSSL>=0.13; python_version <= "2.7" and extra == "secure"->urllib3[secure])
+  Downloading ipaddress-1.0.16-py27-none-any.whl
+Collecting cffi>=1.4.1 (from cryptography>=1.3->pyOpenSSL>=0.13; python_version <= "2.7" and extra == "secure"->urllib3[secure])
+  Downloading cffi-1.7.0.tar.gz (400kB)
+    100% |################################| 409kB 255kB/s
+Collecting pycparser (from cffi>=1.4.1->cryptography>=1.3->pyOpenSSL>=0.13; python_version <= "2.7" and extra == "secure"->urllib3[secure])
+  Downloading pycparser-2.14.tar.gz (223kB)
+    100% |################################| 225kB 268kB/s
+Building wheels for collected packages: ndg-httpsclient, cryptography, cffi, pycparser
+  Running setup.py bdist_wheel for ndg-httpsclient ... done
+  Stored in directory: /home/bsrc-sam/.cache/pip/wheels/4a/a6/dc/35a51082d89621f2fcb2f1914115f43da9b3e64af4adb86d50
+  Running setup.py bdist_wheel for cryptography ... done
+  Stored in directory: /home/bsrc-sam/.cache/pip/wheels/f6/6c/21/11ec069285a52d7fa8c735be5fc2edfb8b24012c0f78f93d20
+  Running setup.py bdist_wheel for cffi ... done
+  Stored in directory: /home/bsrc-sam/.cache/pip/wheels/83/eb/31/2a9515f6fb5f8bee2bc5b7ae5a068ba8fe1c5dab77f81bad82
+  Running setup.py bdist_wheel for pycparser ... done
+  Stored in directory: /home/bsrc-sam/.cache/pip/wheels/9b/f4/2e/d03e949a551719a1ffcb659f2c63d8444f4df12e994ce52112
+Successfully built ndg-httpsclient cryptography cffi pycparser
+Installing collected packages: idna, pyasn1, enum34, ipaddress, pycparser, cffi, cryptography, pyOpenSSL, ndg-httpsclient, certifi
+Successfully installed certifi-2016.2.28 cffi-1.7.0 cryptography-1.4 enum34-1.1.6 idna-2.1 ipaddress-1.0.16 ndg-httpsclient-0.4.1 pyOpenSSL-16.0.0 pyasn1-0.1.9 pycparser-2.14
+(volttron)bsrc-edison-2:~/volttron$ vim volttron/platform/
+__init__.py   aip.py        auth.py       control.py    keystore.py   main.py       packages.py   resmon.py     web.py
+agent/        async.py      config.py     jsonrpc.py    lib/          messaging/    packaging.py  vip/
+(volttron)bsrc-edison-2:~/volttron$ vim volttron/platform/web.py
+(volttron)bsrc-edison-2:~/volttron$ python bootstrap.py --testing
+Installing required packages
++ pip install --install-option --zmq=bundled --no-deps pyzmq>=14.7,<15
+/home/bsrc-sam/volttron/env/lib/python2.7/site-packages/pip/commands/install.py:180: UserWarning: Disabling all use of wheels due to the use of --build-options / --global-options / --install-options.
+  cmdoptions.check_install_build_global(options)
+Requirement already satisfied (use --upgrade to upgrade): pyzmq<15,>=14.7 in ./env/lib/python2.7/site-packages
++ pip install pytest-bdd>=2.14,<3
+Collecting pytest-bdd<3,>=2.14
+  Downloading pytest-bdd-2.17.0.tar.gz (60kB)
+    100% |################################| 61kB 137kB/s
+Collecting glob2 (from pytest-bdd<3,>=2.14)
+  Downloading glob2-0.4.1.tar.gz
+Collecting Mako (from pytest-bdd<3,>=2.14)
+  Downloading Mako-1.0.4.tar.gz (574kB)
+    100% |################################| 583kB 142kB/s
+Collecting parse (from pytest-bdd<3,>=2.14)
+  Downloading parse-1.6.6-py2-none-any.whl
+Collecting parse_type (from pytest-bdd<3,>=2.14)
+  Downloading parse_type-0.3.4.tar.gz (62kB)
+    100% |################################| 71kB 834kB/s
+Collecting pytest>=2.6.0 (from pytest-bdd<3,>=2.14)
+  Downloading pytest-2.9.2-py2.py3-none-any.whl (162kB)
+    100% |################################| 163kB 300kB/s
+Requirement already satisfied (use --upgrade to upgrade): six>=1.9.0 in ./env/lib/python2.7/site-packages (from pytest-bdd<3,>=2.14)
+Collecting MarkupSafe>=0.9.2 (from Mako->pytest-bdd<3,>=2.14)
+  Downloading MarkupSafe-0.23.tar.gz
+Requirement already satisfied (use --upgrade to upgrade): enum34 in ./env/lib/python2.7/site-packages (from parse_type->pytest-bdd<3,>=2.14)
+Collecting py>=1.4.29 (from pytest>=2.6.0->pytest-bdd<3,>=2.14)
+  Downloading py-1.4.31-py2.py3-none-any.whl (81kB)
+    100% |################################| 92kB 851kB/s
+Building wheels for collected packages: pytest-bdd, glob2, Mako, parse-type, MarkupSafe
+  Running setup.py bdist_wheel for pytest-bdd ... done
+  Stored in directory: /home/bsrc-sam/.cache/pip/wheels/54/a3/9e/086eaba58990a1f00cb55747a6e50e11ce398b2404ef6addab
+  Running setup.py bdist_wheel for glob2 ... done
+  Stored in directory: /home/bsrc-sam/.cache/pip/wheels/25/5e/d1/742f1a34931b3353d26688b43dfdc017b0d853fe910ef6bae8
+  Running setup.py bdist_wheel for Mako ... done
+  Stored in directory: /home/bsrc-sam/.cache/pip/wheels/2a/fa/9a/7030d96d3c51f433848e4cd67a353a411ba6deb5c14e150730
+  Running setup.py bdist_wheel for parse-type ... done
+  Stored in directory: /home/bsrc-sam/.cache/pip/wheels/4e/5c/2b/69e1676d9fbf9328e8d7a12c3a329b1ddced9a020cdbf11e10
+  Running setup.py bdist_wheel for MarkupSafe ... done
+  Stored in directory: /home/bsrc-sam/.cache/pip/wheels/a3/fa/dc/0198eed9ad95489b8a4f45d14dd5d2aee3f8984e46862c5748
+Successfully built pytest-bdd glob2 Mako parse-type MarkupSafe
+Installing collected packages: glob2, MarkupSafe, Mako, parse, parse-type, py, pytest, pytest-bdd
+Successfully installed Mako-1.0.4 MarkupSafe-0.23 glob2-0.4.1 parse-1.6.6 parse-type-0.3.4 py-1.4.31 pytest-2.9.2 pytest-bdd-2.17.0
++ pip install pytest>=2.8,<3
+Requirement already satisfied (use --upgrade to upgrade): pytest<3,>=2.8 in ./env/lib/python2.7/site-packages
+Requirement already satisfied (use --upgrade to upgrade): py>=1.4.29 in ./env/lib/python2.7/site-packages (from pytest<3,>=2.8)
++ pip install --editable . --requirement ./requirements.txt
+Obtaining file:///home/bsrc-sam/volttron
+Requirement already satisfied (use --upgrade to upgrade): pytz in ./env/lib/python2.7/site-packages (from -r ./requirements.txt (line 1))
+Requirement already satisfied (use --upgrade to upgrade): python-dateutil<3,>=2 in ./env/lib/python2.7/site-packages (from -r ./requirements.txt (line 2))
+Requirement already satisfied (use --upgrade to upgrade): requests<3,>=2.2 in ./env/lib/python2.7/site-packages (from -r ./requirements.txt (line 3))
+Requirement already satisfied (use --upgrade to upgrade): psutil in ./env/lib/python2.7/site-packages (from -r ./requirements.txt (line 4))
+Requirement already satisfied (use --upgrade to upgrade): ply in ./env/lib/python2.7/site-packages (from -r ./requirements.txt (line 5))
+Requirement already satisfied (use --upgrade to upgrade): pyzmq<15,>=14.7 in ./env/lib/python2.7/site-packages (from volttron==3.5.0)
+Requirement already satisfied (use --upgrade to upgrade): BACpypes==0.13.2 in ./env/lib/python2.7/site-packages (from volttron==3.5.0)
+Requirement already satisfied (use --upgrade to upgrade): gevent<2,>=0.13 in ./env/lib/python2.7/site-packages (from volttron==3.5.0)
+Requirement already satisfied (use --upgrade to upgrade): monotonic in ./env/lib/python2.7/site-packages (from volttron==3.5.0)
+Requirement already satisfied (use --upgrade to upgrade): pymodbus<2,>=1.2 in ./env/lib/python2.7/site-packages (from volttron==3.5.0)
+Requirement already satisfied (use --upgrade to upgrade): setuptools in ./env/lib/python2.7/site-packages (from volttron==3.5.0)
+Requirement already satisfied (use --upgrade to upgrade): simplejson<4,>=3.3 in ./env/lib/python2.7/site-packages (from volttron==3.5.0)
+Requirement already satisfied (use --upgrade to upgrade): Smap==2.0.24c780d in ./env/lib/python2.7/site-packages (from volttron==3.5.0)
+Requirement already satisfied (use --upgrade to upgrade): wheel<2,>=0.24 in ./env/lib/python2.7/site-packages (from volttron==3.5.0)
+Requirement already satisfied (use --upgrade to upgrade): six>=1.5 in ./env/lib/python2.7/site-packages (from python-dateutil<3,>=2->-r ./requirements.txt (line 2))
+Requirement already satisfied (use --upgrade to upgrade): greenlet>=0.4.9 in ./env/lib/python2.7/site-packages (from gevent<2,>=0.13->volttron==3.5.0)
+Requirement already satisfied (use --upgrade to upgrade): pyserial>=2.6 in ./env/lib/python2.7/site-packages (from pymodbus<2,>=1.2->volttron==3.5.0)
+Requirement already satisfied (use --upgrade to upgrade): twisted>=12.2.0 in ./env/lib/python2.7/site-packages (from pymodbus<2,>=1.2->volttron==3.5.0)
+Requirement already satisfied (use --upgrade to upgrade): configobj in ./env/lib/python2.7/site-packages (from Smap==2.0.24c780d->volttron==3.5.0)
+Requirement already satisfied (use --upgrade to upgrade): avro in ./env/lib/python2.7/site-packages (from Smap==2.0.24c780d->volttron==3.5.0)
+Requirement already satisfied (use --upgrade to upgrade): zope.interface>=3.6.0 in ./env/lib/python2.7/site-packages (from twisted>=12.2.0->pymodbus<2,>=1.2->volttron==3.5.0)
+Installing collected packages: volttron
+  Running setup.py develop for volttron
+Successfully installed volttron-3.5.0
+(volttron)bsrc-edison-2:~/volttron$ volttron -vv -l volttron.log --developer-mode&
+[1] 9795
+(volttron)bsrc-edison-2:~/volttron$ py.test
+.git/                       COPYRIGHT                   applications/               env/                        pytest.ini                  setup.py                    volttron.log
+.gitignore                  README.md                   bootstrap.py                examples/                   requirements.txt            setup.pyc                   volttrontesting/
+.gitmodules                 RELEASE_NOTES.md            conftest.py                 optional_requirements.json  scripts/                    volttron/
+.travis.yml                 TERMS.md                    docs/                       pylintrc                    services/                   volttron.egg-info/
+(volttron)bsrc-edison-2:~/volttron$ py.test se
+services/  setup.py   setup.pyc
+(volttron)bsrc-edison-2:~/volttron$ py.test se
+services/  setup.py   setup.pyc
+(volttron)bsrc-edison-2:~/volttron$ py.test services/
+contrib/    core/       deprecated/
+(volttron)bsrc-edison-2:~/volttron$ py.test services/core/ActuatorAgent
+============================================================================================================ test session starts ============================================================================================================
+platform linux2 -- Python 2.7.3, pytest-2.9.2, py-1.4.31, pluggy-0.3.1 -- /home/bsrc-sam/volttron/env/bin/python
+cachedir: .cache
+rootdir: /home/bsrc-sam/volttron, inifile: pytest.ini
+plugins: bdd-2.17.0
+collected 119 items
+
+services/core/ActuatorAgent/tests/test_actuator_pubsub.py::test_schedule_response[volttron_2] FAILED
+services/core/ActuatorAgent/tests/test_actuator_pubsub.py::test_schedule_announce[volttron_2] SKIPPED
+services/core/ActuatorAgent/tests/test_actuator_pubsub.py::test_schedule_error_int_taskid[volttron_2] FAILED
+services/core/ActuatorAgent/tests/test_actuator_pubsub.py::test_schedule_error_int_agentid[volttron_2] PASSED
+services/core/ActuatorAgent/tests/test_actuator_pubsub.py::test_schedule_empty_task[volttron_2] PASSED
+services/core/ActuatorAgent/tests/test_actuator_pubsub.py::test_schedule_empty_agent[volttron_2] PASSED
+services/core/ActuatorAgent/tests/test_actuator_pubsub.py::test_schedule_error_none_taskid[volttron_2] PASSED
+services/core/ActuatorAgent/tests/test_actuator_pubsub.py::test_schedule_error_none_agent[volttron_2] PASSED
+services/core/ActuatorAgent/tests/test_actuator_pubsub.py::test_schedule_error_invalid_type[volttron_2] PASSED
+services/core/ActuatorAgent/tests/test_actuator_pubsub.py::test_schedule_error_invalid_priority[volttron_2] PASSED
+services/core/ActuatorAgent/tests/test_actuator_pubsub.py::test_schedule_error_empty_message[volttron_2] PASSED
+services/core/ActuatorAgent/tests/test_actuator_pubsub.py::test_schedule_error_multiple_missing_headers[volttron_2] PASSED
+services/core/ActuatorAgent/tests/test_actuator_pubsub.py::test_schedule_error_duplicate_task[volttron_2] PASSED
+services/core/ActuatorAgent/tests/test_actuator_pubsub.py::test_schedule_error_missing_priority[volttron_2] PASSED
+services/core/ActuatorAgent/tests/test_actuator_pubsub.py::test_schedule_error_malformed_request[volttron_2] PASSED
+services/core/ActuatorAgent/tests/test_actuator_pubsub.py::test_schedule_preempt_self[volttron_2] PASSED
+services/core/ActuatorAgent/tests/test_actuator_pubsub.py::test_schedule_preempt_other[volttron_2] PASSED
+services/core/ActuatorAgent/tests/test_actuator_pubsub.py::test_schedule_conflict[volttron_2] PASSED
+services/core/ActuatorAgent/tests/test_actuator_pubsub.py::test_schedule_conflict_self[volttron_2] PASSED
+services/core/ActuatorAgent/tests/test_actuator_pubsub.py::test_schedule_overlap[volttron_2] PASSED
+services/core/ActuatorAgent/tests/test_actuator_pubsub.py::test_cancel_error_invalid_task[volttron_2] PASSED
+services/core/ActuatorAgent/tests/test_actuator_pubsub.py::test_cancel_error_taskid_agentid_mismatch[volttron_2] PASSED
+services/core/ActuatorAgent/tests/test_actuator_pubsub.py::test_get_default[volttron_2] PASSED
+services/core/ActuatorAgent/tests/test_actuator_pubsub.py::test_get_value_success[volttron_2] PASSED
+services/core/ActuatorAgent/tests/test_actuator_pubsub.py::test_get_error_invalid_point[volttron_2] PASSED
+services/core/ActuatorAgent/tests/test_actuator_pubsub.py::test_set_value_bool[volttron_2] PASSED
+services/core/ActuatorAgent/tests/test_actuator_pubsub.py::test_set_value_array[volttron_2] PASSED
+services/core/ActuatorAgent/tests/test_actuator_pubsub.py::test_set_value_float[volttron_2] PASSED
+services/core/ActuatorAgent/tests/test_actuator_pubsub.py::test_revert_point[volttron_2] PASSED
+services/core/ActuatorAgent/tests/test_actuator_pubsub.py::test_revert_device[volttron_2] PASSED
+services/core/ActuatorAgent/tests/test_actuator_pubsub.py::test_set_read_only_point[volttron_2] PASSED
+services/core/ActuatorAgent/tests/test_actuator_pubsub.py::test_set_lock_error[volttron_2] PASSED
+services/core/ActuatorAgent/tests/test_actuator_pubsub.py::test_set_value_error[volttron_2] PASSED
+services/core/ActuatorAgent/tests/test_actuator_pubsub.py::test_set_error_none_agent[volttron_2] PASSED
+services/core/ActuatorAgent/tests/test_actuator_pubsub.py::test_set_error_empty_header[volttron_2] PASSED
+services/core/ActuatorAgent/tests/test_actuator_pubsub.py::test_schedule_response[volttron_3] FAILED
+services/core/ActuatorAgent/tests/test_actuator_pubsub.py::test_schedule_announce[volttron_3] PASSED
+services/core/ActuatorAgent/tests/test_actuator_pubsub.py::test_schedule_error_int_taskid[volttron_3] PASSED
+services/core/ActuatorAgent/tests/test_actuator_pubsub.py::test_schedule_error_int_agentid[volttron_3] PASSED
+services/core/ActuatorAgent/tests/test_actuator_pubsub.py::test_schedule_empty_task[volttron_3] PASSED
+services/core/ActuatorAgent/tests/test_actuator_pubsub.py::test_schedule_empty_agent[volttron_3] PASSED
+services/core/ActuatorAgent/tests/test_actuator_pubsub.py::test_schedule_error_none_taskid[volttron_3] PASSED
+services/core/ActuatorAgent/tests/test_actuator_pubsub.py::test_schedule_error_none_agent[volttron_3] PASSED
+services/core/ActuatorAgent/tests/test_actuator_pubsub.py::test_schedule_error_invalid_type[volttron_3] PASSED
+services/core/ActuatorAgent/tests/test_actuator_pubsub.py::test_schedule_error_invalid_priority[volttron_3] PASSED
+services/core/ActuatorAgent/tests/test_actuator_pubsub.py::test_schedule_error_empty_message[volttron_3] PASSED
+services/core/ActuatorAgent/tests/test_actuator_pubsub.py::test_schedule_error_multiple_missing_headers[volttron_3] PASSED
+services/core/ActuatorAgent/tests/test_actuator_pubsub.py::test_schedule_error_duplicate_task[volttron_3] PASSED
+services/core/ActuatorAgent/tests/test_actuator_pubsub.py::test_schedule_error_missing_priority[volttron_3] PASSED
+services/core/ActuatorAgent/tests/test_actuator_pubsub.py::test_schedule_error_malformed_request[volttron_3] PASSED
+services/core/ActuatorAgent/tests/test_actuator_pubsub.py::test_schedule_preempt_self[volttron_3] PASSED
+services/core/ActuatorAgent/tests/test_actuator_pubsub.py::test_schedule_preempt_other[volttron_3] PASSED
+services/core/ActuatorAgent/tests/test_actuator_pubsub.py::test_schedule_conflict[volttron_3] PASSED
+services/core/ActuatorAgent/tests/test_actuator_pubsub.py::test_schedule_conflict_self[volttron_3] PASSED
+services/core/ActuatorAgent/tests/test_actuator_pubsub.py::test_schedule_overlap[volttron_3] FAILED
+services/core/ActuatorAgent/tests/test_actuator_pubsub.py::test_cancel_error_invalid_task[volttron_3] PASSED
+services/core/ActuatorAgent/tests/test_actuator_pubsub.py::test_cancel_error_taskid_agentid_mismatch[volttron_3] PASSED
+services/core/ActuatorAgent/tests/test_actuator_pubsub.py::test_get_default[volttron_3] PASSED
+services/core/ActuatorAgent/tests/test_actuator_pubsub.py::test_get_value_success[volttron_3] PASSED
+services/core/ActuatorAgent/tests/test_actuator_pubsub.py::test_get_error_invalid_point[volttron_3] PASSED
+services/core/ActuatorAgent/tests/test_actuator_pubsub.py::test_set_value_bool[volttron_3] PASSED
+services/core/ActuatorAgent/tests/test_actuator_pubsub.py::test_set_value_array[volttron_3] PASSED
+services/core/ActuatorAgent/tests/test_actuator_pubsub.py::test_set_value_float[volttron_3] PASSED
+services/core/ActuatorAgent/tests/test_actuator_pubsub.py::test_revert_point[volttron_3] PASSED
+services/core/ActuatorAgent/tests/test_actuator_pubsub.py::test_revert_device[volttron_3] PASSED
+services/core/ActuatorAgent/tests/test_actuator_pubsub.py::test_set_read_only_point[volttron_3] PASSED
+services/core/ActuatorAgent/tests/test_actuator_pubsub.py::test_set_lock_error[volttron_3] PASSED
+services/core/ActuatorAgent/tests/test_actuator_pubsub.py::test_set_value_error[volttron_3] PASSED
+services/core/ActuatorAgent/tests/test_actuator_pubsub.py::test_set_error_none_agent[volttron_3] PASSED
+services/core/ActuatorAgent/tests/test_actuator_pubsub.py::test_set_error_empty_header[volttron_3] PASSED
+services/core/ActuatorAgent/tests/test_actuator_rpc.py::test_schedule_success PASSED
+services/core/ActuatorAgent/tests/test_actuator_rpc.py::test_schedule_error_int_taskid PASSED
+services/core/ActuatorAgent/tests/test_actuator_rpc.py::test_schedule_error_int_agentid PASSED
+services/core/ActuatorAgent/tests/test_actuator_rpc.py::test_schedule_empty_taskid PASSED
+services/core/ActuatorAgent/tests/test_actuator_rpc.py::test_schedule_empty_agentid PASSED
+services/core/ActuatorAgent/tests/test_actuator_rpc.py::test_schedule_error_none_taskid PASSED
+services/core/ActuatorAgent/tests/test_actuator_rpc.py::test_schedule_error_none_agentid PASSED
+services/core/ActuatorAgent/tests/test_actuator_rpc.py::test_schedule_error_invalid_priority PASSED
+services/core/ActuatorAgent/tests/test_actuator_rpc.py::test_schedule_error_empty_message PASSED
+services/core/ActuatorAgent/tests/test_actuator_rpc.py::test_schedule_error_duplicate_task PASSED
+services/core/ActuatorAgent/tests/test_actuator_rpc.py::test_schedule_error_none_priority PASSED
+services/core/ActuatorAgent/tests/test_actuator_rpc.py::test_schedule_error_malformed_request PASSED
+services/core/ActuatorAgent/tests/test_actuator_rpc.py::test_schedule_premept_self PASSED
+services/core/ActuatorAgent/tests/test_actuator_rpc.py::test_schedule_premept_active_task PASSED
+services/core/ActuatorAgent/tests/test_actuator_rpc.py::test_schedule_premept_active_task_gracetime PASSED
+services/core/ActuatorAgent/tests/test_actuator_rpc.py::test_schedule_premept_error_active_task PASSED
+services/core/ActuatorAgent/tests/test_actuator_rpc.py::test_schedule_premept_future_task PASSED
+services/core/ActuatorAgent/tests/test_actuator_rpc.py::test_schedule_conflict_self PASSED
+services/core/ActuatorAgent/tests/test_actuator_rpc.py::test_schedule_conflict PASSED
+services/core/ActuatorAgent/tests/test_actuator_rpc.py::test_schedule_overlap_success PASSED
+services/core/ActuatorAgent/tests/test_actuator_rpc.py::test_cancel_error_invalid_taskid PASSED
+services/core/ActuatorAgent/tests/test_actuator_rpc.py::test_cancel_error_taskid_agentid_mismatch PASSED
+services/core/ActuatorAgent/tests/test_actuator_rpc.py::test_cancel_success PASSED
+services/core/ActuatorAgent/tests/test_actuator_rpc.py::test_get_default PASSED
+services/core/ActuatorAgent/tests/test_actuator_rpc.py::test_get_success PASSED
+services/core/ActuatorAgent/tests/test_actuator_rpc.py::test_get_error_invalid_point PASSED
+services/core/ActuatorAgent/tests/test_actuator_rpc.py::test_set_value_float PASSED
+services/core/ActuatorAgent/tests/test_actuator_rpc.py::test_revert_point PASSED
+services/core/ActuatorAgent/tests/test_actuator_rpc.py::test_revert_device PASSED
+services/core/ActuatorAgent/tests/test_actuator_rpc.py::test_set_error_array PASSED
+services/core/ActuatorAgent/tests/test_actuator_rpc.py::test_set_lock_error PASSED
+services/core/ActuatorAgent/tests/test_actuator_rpc.py::test_set_value_error PASSED
+services/core/ActuatorAgent/tests/test_actuator_rpc.py::test_set_error_none_agent PASSED
+services/core/ActuatorAgent/tests/test_actuator_rpc.py::test_set_error_read_only_point PASSED
+services/core/ActuatorAgent/tests/test_scheduler.py::test_basic PASSED
+services/core/ActuatorAgent/tests/test_scheduler.py::test_two_devices PASSED
+services/core/ActuatorAgent/tests/test_scheduler.py::test_two_agents_two_devices PASSED
+services/core/ActuatorAgent/tests/test_scheduler.py::test_touching_requests PASSED
+services/core/ActuatorAgent/tests/test_scheduler.py::test_schedule_self_conflict PASSED
+services/core/ActuatorAgent/tests/test_scheduler.py::test_malformed_schedule PASSED
+services/core/ActuatorAgent/tests/test_scheduler.py::test_malformed_schdeule_bad_timestr PASSED
+services/core/ActuatorAgent/tests/test_scheduler.py::test_malformed_bad_device PASSED
+services/core/ActuatorAgent/tests/test_scheduler.py::test_schedule_conflict PASSED
+services/core/ActuatorAgent/tests/test_scheduler.py::test_conflict_override PASSED
+services/core/ActuatorAgent/tests/test_scheduler.py::test_conflict_override_fail_on_running_agent PASSED
+services/core/ActuatorAgent/tests/test_scheduler.py::test_conflict_override_success_running_agent PASSED
+services/core/ActuatorAgent/tests/test_scheduler.py::test_conflict_override_error PASSED
+services/core/ActuatorAgent/tests/test_scheduler.py::test_non_conflict_schedule PASSED
+services/core/ActuatorAgent/tests/test_scheduler.py::test_conflict_override_success_running_agent2 PASSED
+========================================================================================================== short test summary info ==========================================================================================================
+SKIP [1] /home/bsrc-sam/volttron/services/core/ActuatorAgent/tests/test_actuator_pubsub.py:346: No difference between 2.0 and 3.0 agent. Skip for 2.0
+
+================================================================================================================= FAILURES ==================================================================================================================
+____________________________________________________________________________________________________ test_schedule_response[volttron_2] _____________________________________________________________________________________________________
+
+publish_agent = <volttron.platform.vip.agent.Agent object at 0x9272a2c>
+
+    @pytest.mark.actuator_pubsub
+    def test_schedule_response(publish_agent):
+        """
+        Test requesting a new schedule and canceling a schedule through pubsub
+        Format of expected result
+        Expected Header
+        {
+        'type': <'NEW_SCHEDULE', 'CANCEL_SCHEDULE'>
+        'requesterID': <Agent ID from the request>,
+        'taskID': <Task ID from the request>
+        }
+        Expected message
+        {
+        'result': <'SUCCESS', 'FAILURE', 'PREEMPTED'>,
+        'info': <Failure reason, if any>,
+        'data': <Data about the failure or cancellation, if any>
+        }
+        :param publish_agent: fixture invoked to setup all agents necessary and
+        returns an instance of Agent object used for publishing
+        """
+        # Mock callback methods
+        print ("\n**** test_schedule_response ****")
+        global publish_agent_v2
+        start = str(datetime.now() + timedelta(seconds=10))
+        end = str(datetime.now() + timedelta(seconds=20))
+        header = {
+            'type': 'NEW_SCHEDULE',
+            'requesterID': TEST_AGENT,  # The name of the requesting agent.
+            'taskID': 'task_schedule_response',
+            # unique (to all tasks) ID for scheduled task.
+            'priority': 'LOW',  # ('HIGH, 'LOW', 'LOW_PREEMPT').
+        }
+        msg = [
+            ['fakedriver0', start, end]
+        ]
+        # reset mock to ignore any previous callback
+        publish_agent.callback.reset_mock()
+        publish(publish_agent, topics.ACTUATOR_SCHEDULE_REQUEST, header, msg)
+        gevent.sleep(1)
+        assert publish_agent.callback.call_count == 1
+        print ('call args ', publish_agent.callback.call_args[0][1])
+        assert publish_agent.callback.call_args[0][1] == PLATFORM_ACTUATOR
+        assert publish_agent.callback.call_args[0][3] == \
+               topics.ACTUATOR_SCHEDULE_RESULT
+        result_header = publish_agent.callback.call_args[0][4]
+        result_message = publish_agent.callback.call_args[0][5]
+        assert result_header['type'] == 'NEW_SCHEDULE'
+        assert result_header['taskID'] == 'task_schedule_response'
+        assert result_header['requesterID'] == TEST_AGENT
+        assert result_message['result'] == SUCCESS
+
+        # Test valid cancellation
+        header = {
+            'type': 'CANCEL_SCHEDULE',
+            'requesterID': TEST_AGENT,  # The name of the requesting agent.
+            'taskID': 'task_schedule_response'
+            # unique (to all tasks) ID for scheduled task.
+        }
+        # reset mock to ignore any previous callback
+        publish_agent.callback.reset_mock()
+        publish(publish_agent, topics.ACTUATOR_SCHEDULE_REQUEST, header, msg)
+        gevent.sleep(1)
+        # expected result {'info': u'', 'data': {}, 'result': 'SUCCESS'}
+        print ("after cancel request")
+>       assert publish_agent.callback.call_count == 1
+E       assert 0 == 1
+E        +  where 0 = <MagicMock name='callback' id='150350700'>.call_count
+E        +    where <MagicMock name='callback' id='150350700'> = <volttron.platform.vip.agent.Agent object at 0x9272a2c>.callback
+
+services/core/ActuatorAgent/tests/test_actuator_pubsub.py:319: AssertionError
+----------------------------------------------------------------------------------------------------------- Captured stdout setup -----------------------------------------------------------------------------------------------------------
+/tmp/tmp9xlq26: Creating platform wrapper
+BUILD_WRAPPER: tcp://127.0.0.28:5208
+/tmp/tmp9xlq26: In start up platform enable_logging is False
+0
+/tmp/tmp9xlq26: PROCESS IS RUNNING: <Popen at 0x8f627ec pid=9862 returncode=None>
+/tmp/tmp9xlq26: Building agent package
+/tmp/tmp9xlq26: STARTING: /tmp/tmp9xlq26/packaged/master_driveragent-0.1-py2-none-any.whl
+/tmp/tmp9xlq26: Starting agent 1dbccde3-cdaf-4caa-b4a1-5938463a173c
+/tmp/tmp9xlq26: VOLTTRONO_HOME SETTING: /tmp/tmp9xlq26
+Starting 1dbccde3-cdaf-4caa-b4a1-5938463a173c master_driveragent-0.1
+/tmp/tmp9xlq26: STATUS NOW: 9962
+('agent id: ', '1dbccde3-cdaf-4caa-b4a1-5938463a173c')
+/tmp/tmp9xlq26: PROCESS IS RUNNING: <Popen at 0x8f627ec pid=9862 returncode=None>
+/tmp/tmp9xlq26: Building agent package
+/tmp/tmp9xlq26: STARTING: /tmp/tmp9xlq26/packaged/actuatoragent-0.3-py2-none-any.whl
+/tmp/tmp9xlq26: Starting agent 833de5be-66dd-4b23-a265-bb2053a292a8
+/tmp/tmp9xlq26: VOLTTRONO_HOME SETTING: /tmp/tmp9xlq26
+Starting 833de5be-66dd-4b23-a265-bb2053a292a8 actuatoragent-0.3
+/tmp/tmp9xlq26: STATUS NOW: 10116
+('agent id: ', '833de5be-66dd-4b23-a265-bb2053a292a8')
+/tmp/tmp9xlq26: PROCESS IS RUNNING: <Popen at 0x8f627ec pid=9862 returncode=None>
+/tmp/tmp9xlq26: Building agent package
+/tmp/tmp9xlq26: STARTING: /tmp/tmp9xlq26/packaged/listeneragent-3.0-py2-none-any.whl
+/tmp/tmp9xlq26: Starting agent c21c9f5a-3e42-42f4-b458-ccaa0629db89
+/tmp/tmp9xlq26: VOLTTRONO_HOME SETTING: /tmp/tmp9xlq26
+Starting c21c9f5a-3e42-42f4-b458-ccaa0629db89 listeneragent-3.0
+/tmp/tmp9xlq26: STATUS NOW: 10270
+('agent id: ', 'c21c9f5a-3e42-42f4-b458-ccaa0629db89')
+/tmp/tmp9xlq26: Building generic agent.
+/tmp/tmp9xlq26: Using vip-address tcp://127.0.0.28:5208
+/tmp/tmp9xlq26: platformwrapper.build_agent.address: tcp://127.0.0.28:5208
+/tmp/tmp9xlq26: platformwrapper.build_agent spawning
+/tmp/tmp9xlq26: Got hello response ['1.0', 'c82c62a6-9b81-4be2-8552-75ca9b67920a', '6fc3b52a-4ade-41ff-881c-ea2d6199395c']
+----------------------------------------------------------------------------------------------------------- Captured stderr setup -----------------------------------------------------------------------------------------------------------
+2016-07-01 17:56:05,040 wheel INFO: creating '/tmp/tmpoOqzIt/pkg/dist/master_driveragent-0.1-py2-none-any.whl' and adding '.' to it
+2016-07-01 17:56:05,049 wheel INFO: adding 'master_driver/driver_locks.py'
+2016-07-01 17:56:05,052 wheel INFO: adding 'master_driver/driver_exceptions.py'
+2016-07-01 17:56:05,057 wheel INFO: adding 'master_driver/agent.py'
+2016-07-01 17:56:05,059 wheel INFO: adding 'master_driver/__init__.py'
+2016-07-01 17:56:05,065 wheel INFO: adding 'master_driver/driver.py'
+2016-07-01 17:56:05,067 wheel INFO: adding 'master_driver/tests/__init__.py'
+2016-07-01 17:56:05,071 wheel INFO: adding 'master_driver/tests/test_revert_mixin.py'
+2016-07-01 17:56:05,077 wheel INFO: adding 'master_driver/interfaces/radiothermostat.py'
+2016-07-01 17:56:05,084 wheel INFO: adding 'master_driver/interfaces/modbus.py'
+2016-07-01 17:56:05,089 wheel INFO: adding 'master_driver/interfaces/bacnet.py'
+2016-07-01 17:56:05,093 wheel INFO: adding 'master_driver/interfaces/fakedriver.py'
+2016-07-01 17:56:05,097 wheel INFO: adding 'master_driver/interfaces/universal.py'
+2016-07-01 17:56:05,108 wheel INFO: adding 'master_driver/interfaces/__init__.py'
+2016-07-01 17:56:05,113 wheel INFO: adding 'master_driver/interfaces/thermostat_api.py'
+2016-07-01 17:56:05,115 wheel INFO: adding 'master_driveragent-0.1.dist-info/DESCRIPTION.rst'
+2016-07-01 17:56:05,117 wheel INFO: adding 'master_driveragent-0.1.dist-info/entry_points.txt'
+2016-07-01 17:56:05,119 wheel INFO: adding 'master_driveragent-0.1.dist-info/metadata.json'
+2016-07-01 17:56:05,121 wheel INFO: adding 'master_driveragent-0.1.dist-info/top_level.txt'
+2016-07-01 17:56:05,123 wheel INFO: adding 'master_driveragent-0.1.dist-info/WHEEL'
+2016-07-01 17:56:05,124 wheel INFO: adding 'master_driveragent-0.1.dist-info/METADATA'
+2016-07-01 17:56:05,127 wheel INFO: adding 'master_driveragent-0.1.dist-info/RECORD'
+Unpacking to: /tmp/tmp9xlq26/agents/1dbccde3-cdaf-4caa-b4a1-5938463a173c/master_driveragent-0.1
+  AGENT                  TAG STATUS
+2016-07-01 17:56:17,719 volttrontesting.utils.platformwrapper DEBUG: AGENT_STATUS: 1dbccde3-cdaf-4caa-b4a1-5938463a173c
+  AGENT                  TAG STATUS
+2016-07-01 17:56:31,044 wheel INFO: creating '/tmp/tmpSHZwxz/pkg/dist/actuatoragent-0.3-py2-none-any.whl' and adding '.' to it
+2016-07-01 17:56:31,054 wheel INFO: adding 'tests/test_scheduler.py'
+2016-07-01 17:56:31,068 wheel INFO: adding 'tests/test_actuator_rpc.py'
+2016-07-01 17:56:31,092 wheel INFO: adding 'tests/test_actuator_pubsub.py'
+2016-07-01 17:56:31,094 wheel INFO: adding 'tests/__init__.py'
+2016-07-01 17:56:31,097 wheel INFO: adding 'tests/actuator-tests.py'
+2016-07-01 17:56:31,115 wheel INFO: adding 'actuator/agent.py'
+2016-07-01 17:56:31,117 wheel INFO: adding 'actuator/__init__.py'
+2016-07-01 17:56:31,125 wheel INFO: adding 'actuator/scheduler.py'
+2016-07-01 17:56:31,127 wheel INFO: adding 'actuatoragent-0.3.dist-info/DESCRIPTION.rst'
+2016-07-01 17:56:31,129 wheel INFO: adding 'actuatoragent-0.3.dist-info/entry_points.txt'
+2016-07-01 17:56:31,131 wheel INFO: adding 'actuatoragent-0.3.dist-info/metadata.json'
+2016-07-01 17:56:31,132 wheel INFO: adding 'actuatoragent-0.3.dist-info/top_level.txt'
+2016-07-01 17:56:31,134 wheel INFO: adding 'actuatoragent-0.3.dist-info/WHEEL'
+2016-07-01 17:56:31,136 wheel INFO: adding 'actuatoragent-0.3.dist-info/METADATA'
+2016-07-01 17:56:31,139 wheel INFO: adding 'actuatoragent-0.3.dist-info/RECORD'
+Unpacking to: /tmp/tmp9xlq26/agents/833de5be-66dd-4b23-a265-bb2053a292a8/actuatoragent-0.3
+  AGENT             TAG STATUS
+2016-07-01 17:56:43,936 volttrontesting.utils.platformwrapper DEBUG: AGENT_STATUS: 833de5be-66dd-4b23-a265-bb2053a292a8
+  AGENT             TAG STATUS
+2016-07-01 17:56:55,118 wheel INFO: creating '/tmp/tmpk1JLlR/pkg/dist/listeneragent-3.0-py2-none-any.whl' and adding '.' to it
+2016-07-01 17:56:55,124 wheel INFO: adding 'listener/settings.py'
+2016-07-01 17:56:55,128 wheel INFO: adding 'listener/agent.py'
+2016-07-01 17:56:55,130 wheel INFO: adding 'listener/__init__.py'
+2016-07-01 17:56:55,132 wheel INFO: adding 'listeneragent-3.0.dist-info/DESCRIPTION.rst'
+2016-07-01 17:56:55,134 wheel INFO: adding 'listeneragent-3.0.dist-info/entry_points.txt'
+2016-07-01 17:56:55,136 wheel INFO: adding 'listeneragent-3.0.dist-info/metadata.json'
+2016-07-01 17:56:55,137 wheel INFO: adding 'listeneragent-3.0.dist-info/top_level.txt'
+2016-07-01 17:56:55,139 wheel INFO: adding 'listeneragent-3.0.dist-info/WHEEL'
+2016-07-01 17:56:55,141 wheel INFO: adding 'listeneragent-3.0.dist-info/METADATA'
+2016-07-01 17:56:55,144 wheel INFO: adding 'listeneragent-3.0.dist-info/RECORD'
+Unpacking to: /tmp/tmp9xlq26/agents/c21c9f5a-3e42-42f4-b458-ccaa0629db89/listeneragent-3.0
+  AGENT             TAG STATUS
+2016-07-01 17:57:07,983 volttrontesting.utils.platformwrapper DEBUG: AGENT_STATUS: c21c9f5a-3e42-42f4-b458-ccaa0629db89
+  AGENT             TAG STATUS
+2016-07-01 17:57:14,105 volttron.platform.vip.agent.core DEBUG: publickey is None
+2016-07-01 17:57:14,107 volttron.platform.vip.agent.core DEBUG: secretkey is None
+2016-07-01 17:57:14,149 volttron.platform.vip.agent.subsystems.hello INFO: Requesting hello from peer ()
+2016-07-01 17:57:14,246 volttron.platform.vip.agent.subsystems.hello INFO: Handling hello message Message(**{'peer': '', 'subsystem': 'hello', 'args': ['welcome', '1.0', 'c82c62a6-9b81-4be2-8552-75ca9b67920a', '6fc3b52a-4ade-41ff-881c-ea2d6199395c'], 'user': 'vip,127.0.0.1,NULL', 'id': '5362217475892091379.-1064443846'})
+----------------------------------------------------------------------------------------------------------- Captured stdout call ------------------------------------------------------------------------------------------------------------
+
+**** test_schedule_response ****
+('call args ', 'platform.actuator')
+after cancel request
+________________________________________________________________________________________________ test_schedule_error_int_taskid[volttron_2] _________________________________________________________________________________________________
+
+publish_agent = <volttron.platform.vip.agent.Agent object at 0x9272a2c>
+
+    @pytest.mark.actuator_pubsub
+    def test_schedule_error_int_taskid(publish_agent):
+        """ Test schedule request through pubsub with int task id
+
+        :param publish_agent: fixture invoked to setup all agents necessary and
+        returns an instance of Agent object used for publishing
+        """
+        print ("\n**** test_schedule_int_taskid ****")
+        taskid = 1234
+
+        start = str(datetime.now() + timedelta(seconds=10))
+        end = str(datetime.now() + timedelta(seconds=20))
+        header = {
+            'type': 'NEW_SCHEDULE',
+            'requesterID': TEST_AGENT,
+            'priority': 'LOW',
+            'taskID': taskid  # unique (to all tasks) ID for scheduled task
+        }
+        msg = [
+            ['fakedriver1', start, end]
+        ]
+        # reset mock to ignore any previous callback
+        publish_agent.callback.reset_mock()
+        publish(publish_agent, topics.ACTUATOR_SCHEDULE_REQUEST, header, msg)
+        gevent.sleep(1)
+        print ("call args list : ", publish_agent.callback.call_args_list)
+>       assert publish_agent.callback.call_count == 1
+E       assert 2 == 1
+E        +  where 2 = <MagicMock name='callback' id='150350700'>.call_count
+E        +    where <MagicMock name='callback' id='150350700'> = <volttron.platform.vip.agent.Agent object at 0x9272a2c>.callback
+
+services/core/ActuatorAgent/tests/test_actuator_pubsub.py:452: AssertionError
+----------------------------------------------------------------------------------------------------------- Captured stdout call ------------------------------------------------------------------------------------------------------------
+
+**** test_schedule_int_taskid ****
+('call args list : ', [call('pubsub', 'platform.actuator', u'', 'devices/actuators/schedule/result', {'requesterID': 'test-agent', 'min_compatible_version': '3.0', 'taskID': 'task_schedule_response', 'time': '2016-07-01T12:27:15.640946', 'max_compatible_version': u'', 'type': 'CANCEL_SCHEDULE'}, {'info': u'', 'data': {}, 'result': 'SUCCESS'}),
+ call('pubsub', 'platform.actuator', u'', 'devices/actuators/schedule/result', {'requesterID': 'test-agent', 'min_compatible_version': '3.0', 'taskID': 1234, 'time': '2016-07-01T12:27:18.175942', 'max_compatible_version': u'', 'type': 'NEW_SCHEDULE'}, {'info': 'MALFORMED_REQUEST: TypeError: taskid must be a nonempty string', 'data': {}, 'result': 'FAILURE'})])
+____________________________________________________________________________________________________ test_schedule_response[volttron_3] _____________________________________________________________________________________________________
+
+publish_agent = <volttron.platform.vip.agent.Agent object at 0x8f26bec>
+
+    @pytest.mark.actuator_pubsub
+    def test_schedule_response(publish_agent):
+        """
+        Test requesting a new schedule and canceling a schedule through pubsub
+        Format of expected result
+        Expected Header
+        {
+        'type': <'NEW_SCHEDULE', 'CANCEL_SCHEDULE'>
+        'requesterID': <Agent ID from the request>,
+        'taskID': <Task ID from the request>
+        }
+        Expected message
+        {
+        'result': <'SUCCESS', 'FAILURE', 'PREEMPTED'>,
+        'info': <Failure reason, if any>,
+        'data': <Data about the failure or cancellation, if any>
+        }
+        :param publish_agent: fixture invoked to setup all agents necessary and
+        returns an instance of Agent object used for publishing
+        """
+        # Mock callback methods
+        print ("\n**** test_schedule_response ****")
+        global publish_agent_v2
+        start = str(datetime.now() + timedelta(seconds=10))
+        end = str(datetime.now() + timedelta(seconds=20))
+        header = {
+            'type': 'NEW_SCHEDULE',
+            'requesterID': TEST_AGENT,  # The name of the requesting agent.
+            'taskID': 'task_schedule_response',
+            # unique (to all tasks) ID for scheduled task.
+            'priority': 'LOW',  # ('HIGH, 'LOW', 'LOW_PREEMPT').
+        }
+        msg = [
+            ['fakedriver0', start, end]
+        ]
+        # reset mock to ignore any previous callback
+        publish_agent.callback.reset_mock()
+        publish(publish_agent, topics.ACTUATOR_SCHEDULE_REQUEST, header, msg)
+        gevent.sleep(1)
+        assert publish_agent.callback.call_count == 1
+        print ('call args ', publish_agent.callback.call_args[0][1])
+        assert publish_agent.callback.call_args[0][1] == PLATFORM_ACTUATOR
+        assert publish_agent.callback.call_args[0][3] == \
+               topics.ACTUATOR_SCHEDULE_RESULT
+        result_header = publish_agent.callback.call_args[0][4]
+        result_message = publish_agent.callback.call_args[0][5]
+        assert result_header['type'] == 'NEW_SCHEDULE'
+        assert result_header['taskID'] == 'task_schedule_response'
+        assert result_header['requesterID'] == TEST_AGENT
+        assert result_message['result'] == SUCCESS
+
+        # Test valid cancellation
+        header = {
+            'type': 'CANCEL_SCHEDULE',
+            'requesterID': TEST_AGENT,  # The name of the requesting agent.
+            'taskID': 'task_schedule_response'
+            # unique (to all tasks) ID for scheduled task.
+        }
+        # reset mock to ignore any previous callback
+        publish_agent.callback.reset_mock()
+        publish(publish_agent, topics.ACTUATOR_SCHEDULE_REQUEST, header, msg)
+        gevent.sleep(1)
+        # expected result {'info': u'', 'data': {}, 'result': 'SUCCESS'}
+        print ("after cancel request")
+>       assert publish_agent.callback.call_count == 1
+E       assert 0 == 1
+E        +  where 0 = <MagicMock name='callback' id='153853228'>.call_count
+E        +    where <MagicMock name='callback' id='153853228'> = <volttron.platform.vip.agent.Agent object at 0x8f26bec>.callback
+
+services/core/ActuatorAgent/tests/test_actuator_pubsub.py:319: AssertionError
+----------------------------------------------------------------------------------------------------------- Captured stdout setup -----------------------------------------------------------------------------------------------------------
+In teardown method of module
+0
+/tmp/tmp9xlq26: PROCESS IS RUNNING: <Popen at 0x8f627ec pid=9862 returncode=None>
+/tmp/tmp9xlq26: Building agent package
+/tmp/tmp9xlq26: STARTING: /tmp/tmp9xlq26/packaged/master_driveragent-0.1-py2-none-any.whl
+/tmp/tmp9xlq26: Starting agent b4bdf815-b072-404f-9187-2602351071d3
+/tmp/tmp9xlq26: VOLTTRONO_HOME SETTING: /tmp/tmp9xlq26
+Starting b4bdf815-b072-404f-9187-2602351071d3 master_driveragent-0.1
+/tmp/tmp9xlq26: STATUS NOW: 10557
+('agent id: ', 'b4bdf815-b072-404f-9187-2602351071d3')
+/tmp/tmp9xlq26: PROCESS IS RUNNING: <Popen at 0x8f627ec pid=9862 returncode=None>
+/tmp/tmp9xlq26: Building agent package
+/tmp/tmp9xlq26: STARTING: /tmp/tmp9xlq26/packaged/actuatoragent-0.3-py2-none-any.whl
+/tmp/tmp9xlq26: Starting agent a12e8976-24a2-4083-8c23-acb148026b75
+/tmp/tmp9xlq26: VOLTTRONO_HOME SETTING: /tmp/tmp9xlq26
+Starting a12e8976-24a2-4083-8c23-acb148026b75 actuatoragent-0.3
+/tmp/tmp9xlq26: STATUS NOW: 10712
+('agent id: ', 'a12e8976-24a2-4083-8c23-acb148026b75')
+/tmp/tmp9xlq26: PROCESS IS RUNNING: <Popen at 0x8f627ec pid=9862 returncode=None>
+/tmp/tmp9xlq26: Building agent package
+/tmp/tmp9xlq26: STARTING: /tmp/tmp9xlq26/packaged/listeneragent-3.0-py2-none-any.whl
+/tmp/tmp9xlq26: Starting agent a93bf6c4-57de-4bb0-aba3-88152a852cf1
+/tmp/tmp9xlq26: VOLTTRONO_HOME SETTING: /tmp/tmp9xlq26
+Starting a93bf6c4-57de-4bb0-aba3-88152a852cf1 listeneragent-3.0
+/tmp/tmp9xlq26: STATUS NOW: 10866
+('agent id: ', 'a93bf6c4-57de-4bb0-aba3-88152a852cf1')
+/tmp/tmp9xlq26: Building generic agent.
+/tmp/tmp9xlq26: Using vip-address tcp://127.0.0.28:5208
+/tmp/tmp9xlq26: platformwrapper.build_agent.address: tcp://127.0.0.28:5208
+/tmp/tmp9xlq26: platformwrapper.build_agent spawning
+/tmp/tmp9xlq26: Got hello response ['1.0', 'c82c62a6-9b81-4be2-8552-75ca9b67920a', '70b69566-788d-4419-9345-6ee93edee5a2']
+----------------------------------------------------------------------------------------------------------- Captured stderr setup -----------------------------------------------------------------------------------------------------------
+2016-07-01 17:58:34,277 volttrontesting.utils.platformwrapper DEBUG: STOPPING AGENT: 833de5be-66dd-4b23-a265-bb2053a292a8
+2016-07-01 17:58:40,596 volttrontesting.utils.platformwrapper DEBUG: AGENT_STATUS: 833de5be-66dd-4b23-a265-bb2053a292a8
+  AGENT             TAG STATUS
+2016-07-01 17:58:46,674 volttrontesting.utils.platformwrapper DEBUG: STOPPING AGENT: 1dbccde3-cdaf-4caa-b4a1-5938463a173c
+2016-07-01 17:58:52,982 volttrontesting.utils.platformwrapper DEBUG: AGENT_STATUS: 1dbccde3-cdaf-4caa-b4a1-5938463a173c
+  AGENT                  TAG STATUS
+2016-07-01 17:59:04,770 wheel INFO: creating '/tmp/tmpQ4QsUX/pkg/dist/master_driveragent-0.1-py2-none-any.whl' and adding '.' to it
+2016-07-01 17:59:04,779 wheel INFO: adding 'master_driver/driver_locks.py'
+2016-07-01 17:59:04,782 wheel INFO: adding 'master_driver/driver_exceptions.py'
+2016-07-01 17:59:04,787 wheel INFO: adding 'master_driver/agent.py'
+2016-07-01 17:59:04,789 wheel INFO: adding 'master_driver/__init__.py'
+2016-07-01 17:59:04,795 wheel INFO: adding 'master_driver/driver.py'
+2016-07-01 17:59:04,797 wheel INFO: adding 'master_driver/tests/__init__.py'
+2016-07-01 17:59:04,801 wheel INFO: adding 'master_driver/tests/test_revert_mixin.py'
+2016-07-01 17:59:04,807 wheel INFO: adding 'master_driver/interfaces/radiothermostat.py'
+2016-07-01 17:59:04,814 wheel INFO: adding 'master_driver/interfaces/modbus.py'
+2016-07-01 17:59:04,819 wheel INFO: adding 'master_driver/interfaces/bacnet.py'
+2016-07-01 17:59:04,823 wheel INFO: adding 'master_driver/interfaces/fakedriver.py'
+2016-07-01 17:59:04,827 wheel INFO: adding 'master_driver/interfaces/universal.py'
+2016-07-01 17:59:04,837 wheel INFO: adding 'master_driver/interfaces/__init__.py'
+2016-07-01 17:59:04,841 wheel INFO: adding 'master_driver/interfaces/thermostat_api.py'
+2016-07-01 17:59:04,843 wheel INFO: adding 'master_driveragent-0.1.dist-info/DESCRIPTION.rst'
+2016-07-01 17:59:04,845 wheel INFO: adding 'master_driveragent-0.1.dist-info/entry_points.txt'
+2016-07-01 17:59:04,847 wheel INFO: adding 'master_driveragent-0.1.dist-info/metadata.json'
+2016-07-01 17:59:04,848 wheel INFO: adding 'master_driveragent-0.1.dist-info/top_level.txt'
+2016-07-01 17:59:04,850 wheel INFO: adding 'master_driveragent-0.1.dist-info/WHEEL'
+2016-07-01 17:59:04,852 wheel INFO: adding 'master_driveragent-0.1.dist-info/METADATA'
+2016-07-01 17:59:04,854 wheel INFO: adding 'master_driveragent-0.1.dist-info/RECORD'
+Unpacking to: /tmp/tmp9xlq26/agents/b4bdf815-b072-404f-9187-2602351071d3/master_driveragent-0.1
+  AGENT                  TAG STATUS
+2016-07-01 17:59:17,613 volttrontesting.utils.platformwrapper DEBUG: AGENT_STATUS: b4bdf815-b072-404f-9187-2602351071d3
+  AGENT                  TAG STATUS
+2016-07-01 17:59:30,921 wheel INFO: creating '/tmp/tmpnQCVSE/pkg/dist/actuatoragent-0.3-py2-none-any.whl' and adding '.' to it
+2016-07-01 17:59:30,931 wheel INFO: adding 'tests/test_scheduler.py'
+2016-07-01 17:59:30,945 wheel INFO: adding 'tests/test_actuator_rpc.py'
+2016-07-01 17:59:30,967 wheel INFO: adding 'tests/test_actuator_pubsub.py'
+2016-07-01 17:59:30,970 wheel INFO: adding 'tests/__init__.py'
+2016-07-01 17:59:30,973 wheel INFO: adding 'tests/actuator-tests.py'
+2016-07-01 17:59:30,990 wheel INFO: adding 'actuator/agent.py'
+2016-07-01 17:59:30,992 wheel INFO: adding 'actuator/__init__.py'
+2016-07-01 17:59:31,000 wheel INFO: adding 'actuator/scheduler.py'
+2016-07-01 17:59:31,002 wheel INFO: adding 'actuatoragent-0.3.dist-info/DESCRIPTION.rst'
+2016-07-01 17:59:31,003 wheel INFO: adding 'actuatoragent-0.3.dist-info/entry_points.txt'
+2016-07-01 17:59:31,005 wheel INFO: adding 'actuatoragent-0.3.dist-info/metadata.json'
+2016-07-01 17:59:31,007 wheel INFO: adding 'actuatoragent-0.3.dist-info/top_level.txt'
+2016-07-01 17:59:31,009 wheel INFO: adding 'actuatoragent-0.3.dist-info/WHEEL'
+2016-07-01 17:59:31,011 wheel INFO: adding 'actuatoragent-0.3.dist-info/METADATA'
+2016-07-01 17:59:31,013 wheel INFO: adding 'actuatoragent-0.3.dist-info/RECORD'
+Unpacking to: /tmp/tmp9xlq26/agents/a12e8976-24a2-4083-8c23-acb148026b75/actuatoragent-0.3
+  AGENT             TAG STATUS
+2016-07-01 17:59:43,961 volttrontesting.utils.platformwrapper DEBUG: AGENT_STATUS: a12e8976-24a2-4083-8c23-acb148026b75
+  AGENT             TAG STATUS
+2016-07-01 17:59:55,121 wheel INFO: creating '/tmp/tmpurMiAV/pkg/dist/listeneragent-3.0-py2-none-any.whl' and adding '.' to it
+2016-07-01 17:59:55,127 wheel INFO: adding 'listener/settings.py'
+2016-07-01 17:59:55,131 wheel INFO: adding 'listener/agent.py'
+2016-07-01 17:59:55,133 wheel INFO: adding 'listener/__init__.py'
+2016-07-01 17:59:55,135 wheel INFO: adding 'listeneragent-3.0.dist-info/DESCRIPTION.rst'
+2016-07-01 17:59:55,137 wheel INFO: adding 'listeneragent-3.0.dist-info/entry_points.txt'
+2016-07-01 17:59:55,139 wheel INFO: adding 'listeneragent-3.0.dist-info/metadata.json'
+2016-07-01 17:59:55,140 wheel INFO: adding 'listeneragent-3.0.dist-info/top_level.txt'
+2016-07-01 17:59:55,142 wheel INFO: adding 'listeneragent-3.0.dist-info/WHEEL'
+2016-07-01 17:59:55,144 wheel INFO: adding 'listeneragent-3.0.dist-info/METADATA'
+2016-07-01 17:59:55,146 wheel INFO: adding 'listeneragent-3.0.dist-info/RECORD'
+Unpacking to: /tmp/tmp9xlq26/agents/a93bf6c4-57de-4bb0-aba3-88152a852cf1/listeneragent-3.0
+  AGENT             TAG STATUS
+2016-07-01 18:00:07,940 volttrontesting.utils.platformwrapper DEBUG: AGENT_STATUS: a93bf6c4-57de-4bb0-aba3-88152a852cf1
+  AGENT             TAG STATUS
+2016-07-01 18:00:14,040 volttron.platform.vip.agent.core DEBUG: publickey is None
+2016-07-01 18:00:14,041 volttron.platform.vip.agent.core DEBUG: secretkey is None
+2016-07-01 18:00:14,077 volttron.platform.vip.agent.subsystems.hello INFO: Requesting hello from peer ()
+2016-07-01 18:00:14,186 volttron.platform.vip.agent.subsystems.hello INFO: Handling hello message Message(**{'peer': '', 'subsystem': 'hello', 'args': ['welcome', '1.0', 'c82c62a6-9b81-4be2-8552-75ca9b67920a', '70b69566-788d-4419-9345-6ee93edee5a2'], 'user': 'vip,127.0.0.1,NULL', 'id': '17314751441877231676.-1064126060'})
+----------------------------------------------------------------------------------------------------------- Captured stdout call ------------------------------------------------------------------------------------------------------------
+
+**** test_schedule_response ****
+('call args ', 'platform.actuator')
+after cancel request
+_____________________________________________________________________________________________________ test_schedule_overlap[volttron_3] _____________________________________________________________________________________________________
+
+publish_agent = <volttron.platform.vip.agent.Agent object at 0x8f26bec>, cancel_schedules = [{'agentid': 'test-agent', 'taskid': 'task_overlap'}]
+
+    @pytest.mark.actuator_pubsub
+    def test_schedule_overlap(publish_agent, cancel_schedules):
+        """
+        Test successful schedule when end time of one time slot is the same as
+        start time of another slot
+
+        :param publish_agent: fixture invoked to setup all agents necessary and
+        returns an instance of Agent object used for publishing
+        :param cancel_schedules: fixture used to cancel the schedule at the end of
+        test so that other tests can use the same device and time slot
+        """
+        print ("\n**** test_schedule_overlap ****")
+        agentid = TEST_AGENT
+        taskid = 'task_overlap'
+        cancel_schedules.append({'agentid': agentid, 'taskid': taskid})
+
+        start = str(datetime.now())
+        end = str(datetime.now() + timedelta(seconds=1))
+        end2 = str(datetime.now() + timedelta(seconds=2))
+        msg = [
+            ['fakedriver0', start, end],
+            ['fakedriver0', end, end2]
+        ]
+        header = {
+            'type': 'NEW_SCHEDULE',
+            'requesterID': agentid,  # The name of the requesting agent.
+            'taskID': taskid,  # unique (to all tasks) ID for scheduled task.
+            'priority': 'LOW'
+        }
+
+        # reset mock to ignore any previous callback
+        publish_agent.callback.reset_mock()
+        publish(publish_agent, topics.ACTUATOR_SCHEDULE_REQUEST, header, msg)
+        gevent.sleep(1)  # wait for result callback
+
+        print ('call args list:', publish_agent.callback.call_args_list)
+>       assert publish_agent.callback.call_count == 1
+E       assert 0 == 1
+E        +  where 0 = <MagicMock name='callback' id='153853228'>.call_count
+E        +    where <MagicMock name='callback' id='153853228'> = <volttron.platform.vip.agent.Agent object at 0x8f26bec>.callback
+
+services/core/ActuatorAgent/tests/test_actuator_pubsub.py:1325: AssertionError
+----------------------------------------------------------------------------------------------------------- Captured stdout call ------------------------------------------------------------------------------------------------------------
+
+**** test_schedule_overlap ****
+('call args list:', [])
+============================================================================================= 4 failed, 114 passed, 1 skipped in 588.13 seconds =============================================================================================
+(volttron)bsrc-edison-2:~/volttron$

@@ -76,8 +76,7 @@ from twisted.spread.pb import respond
 
 utils.setup_logging()
 _log = logging.getLogger(__name__)
-
-
+__version__ = '3.0'
 
 def historian(config_path, **kwargs):
 
@@ -202,10 +201,7 @@ def historian(config_path, **kwargs):
             }
             '''           
 
-        def query_historian(self, topic, start=None, end=None, skip=0,
-                            count=None, order="FIRST_TO_LAST"):
-            raise Exception('Please use Openeis for the query interface.')
-            
+
         def historian_setup(self):
             # TODO Setup connection to openeis.
             pass

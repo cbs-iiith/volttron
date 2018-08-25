@@ -71,8 +71,11 @@ import threading
 import uuid
 
 import gevent
-from zmq import curve_keypair
+from gevent.fileobject import FileObject
 import zmq
+from zmq import curve_keypair, green
+# Create a context common to the green and non-green zmq modules.
+green.Context._instance = green.Context.shadow(zmq.Context.instance().underlying)
 from zmq.utils import jsonapi
 
 from . import aip
@@ -83,9 +86,13 @@ from .vip.agent import Agent, Core
 from .vip.agent.compat import CompatPubSub
 from .vip.router import *
 from .vip.socket import encode_key, Address
+from .vip.tracking import Tracker
 from .auth import AuthService
 from .control import ControlService
+from .web import MasterWebService
 from .agent import utils
+from .agent.known_identities import MASTER_WEB
+from .vip.agent.subsystems.pubsub import ProtectedPubSubTopics
 
 try:
     import volttron.restricted
@@ -247,7 +254,7 @@ class Router(BaseRouter):
 
     def __init__(self, local_address, addresses=(),
                  context=None, secretkey=None, default_user_id=None,
-                 monitor=False):
+                 monitor=False, tracker=None):
         super(Router, self).__init__(
             context=context, default_user_id=default_user_id)
         self.local_address = Address(local_address)
@@ -257,6 +264,7 @@ class Router(BaseRouter):
         if self.logger.level == logging.NOTSET:
             self.logger.setLevel(logging.WARNING)
         self._monitor = monitor
+        self._tracker = tracker
 
     def setup(self):
         sock = self.socket
@@ -295,7 +303,10 @@ class Router(BaseRouter):
         elif topic == UNROUTABLE:
             log('unroutable: %s: %s', extra, formatter)
         else:
-            log('%s: %s', 'incoming' if topic else 'outgoing', formatter)
+            log('%s: %s',
+                ('incoming' if topic == INCOMING else 'outgoing'), formatter)
+        if self._tracker:
+            self._tracker.hit(topic, frames, extra)
 
     def handle_subsystem(self, frames, user_id):
         subsystem = bytes(frames[5])
@@ -314,6 +325,8 @@ class Router(BaseRouter):
                         value = [addr.base for addr in self.addresses]
                     else:
                         value = [self.local_address.base]
+                elif name == b'local_address':
+                    value = self.local_address.base
                 else:
                     value = None
             frames[6:] = [b'', jsonapi.dumps(value)]
@@ -322,9 +335,252 @@ class Router(BaseRouter):
 
 
 class PubSubService(Agent):
+    def __init__(self, protected_topics_file, *args, **kwargs):
+        super(PubSubService, self).__init__(*args, **kwargs)
+        self._protected_topics_file = os.path.abspath(protected_topics_file)
+
     @Core.receiver('onstart')
     def setup_agent(self, sender, **kwargs):
+        self._read_protected_topics_file()
+        self.core.spawn(utils.watch_file, self._protected_topics_file,
+                        self._read_protected_topics_file)
         self.vip.pubsub.add_bus('')
+
+    def _read_protected_topics_file(self):
+        _log.info('loading protected-topics file %s',
+                  self._protected_topics_file)
+        try:
+            utils.create_file_if_missing(self._protected_topics_file)
+            with open(self._protected_topics_file) as fil:
+                # Use gevent FileObject to avoid blocking the thread
+                data = FileObject(fil, close=False).read()
+                topics_data = jsonapi.loads(data) if data else {}
+        except Exception:
+            _log.exception('error loading %s', self._protected_topics_file)
+        else:
+            write_protect = topics_data.get('write-protect', [])
+            topics = ProtectedPubSubTopics()
+            try:
+                for entry in write_protect:
+                    topics.add(entry['topic'], entry['capabilities'])
+            except KeyError:
+                _log.exception('invalid format for protected topics '
+                               'file {}'.format(self._protected_topics_file))
+            else:
+                self.vip.pubsub.protected_topics = topics
+                _log.info('protected-topics file %s loaded',
+                          self._protected_topics_file)
+
+
+def start_volttron_process(opts):
+    '''Start the main volttron process.
+
+    Typically this function is used from main.py and just uses the argparser's
+    Options arguments as inputs.   It also can be called with a dictionary.  In
+    that case the dictionaries keys are mapped into a value that acts like the
+    args options.
+    '''
+
+    if isinstance(opts, dict):
+        opts = type('Options', (), opts)()
+        # vip_address is meant to be a list so make it so.
+        if not isinstance(opts.vip_address, list):
+            opts.vip_address = [opts.vip_address]
+    if opts.log:
+        opts.log = config.expandall(opts.log)
+    if opts.log_config:
+        opts.log_config = config.expandall(opts.log_config)
+    opts.publish_address = config.expandall(opts.publish_address)
+    opts.subscribe_address = config.expandall(opts.subscribe_address)
+    opts.vip_address = [config.expandall(addr) for addr in opts.vip_address]
+    opts.vip_local_address = config.expandall(opts.vip_local_address)
+    import urlparse
+    if opts.bind_web_address:
+        parsed = urlparse.urlparse(opts.bind_web_address)
+        if not parsed.scheme:
+            raise StandardError(
+                'bind-web-address must begin with http or https.')
+        opts.bind_web_address = config.expandall(opts.bind_web_address)
+    if opts.volttron_central_address:
+        parsed = urlparse.urlparse(opts.volttron_central_address)
+        if not parsed.scheme:
+            raise StandardError(
+                'volttron-central-address must begin with http or https.')
+        opts.volttron_central_address = config.expandall(
+            opts.volttron_central_address)
+    if getattr(opts, 'show_config', False):
+        for name, value in sorted(vars(opts).iteritems()):
+            print(name, repr(value))
+        return
+    # Configure logging
+    level = max(1, opts.verboseness)
+    if opts.monitor and level > logging.INFO:
+        level = logging.INFO
+    if opts.log is None:
+        log_to_file(sys.stderr, level)
+    elif opts.log == '-':
+        log_to_file(sys.stdout, level)
+    elif opts.log:
+        log_to_file(opts.log, level, handler_class=handlers.WatchedFileHandler)
+    else:
+        log_to_file(None, 100, handler_class=lambda x: logging.NullHandler())
+    if opts.log_config:
+        error = configure_logging(opts.log_config)
+        if error:
+            parser.error('{}: {}'.format(*error))
+
+    # Increase open files resource limit to max or 8192 if unlimited
+    try:
+        soft, hard = resource.getrlimit(resource.RLIMIT_NOFILE)
+    except OSError:
+        _log.exception('error getting open file limits')
+    else:
+        if soft != hard and soft != resource.RLIM_INFINITY:
+            try:
+                limit = 8192 if hard == resource.RLIM_INFINITY else hard
+                resource.setrlimit(resource.RLIMIT_NOFILE, (limit, hard))
+            except OSError:
+                _log.exception('error setting open file limits')
+            else:
+                _log.debug('open file resource limit increased from %d to %d',
+                           soft, limit)
+
+    # Set configuration
+    if HAVE_RESTRICTED:
+        if opts.verify_agents:
+            _log.info('Agent integrity verification enabled')
+        if opts.resource_monitor:
+            _log.info('Resource monitor enabled')
+            opts.resmon = resmon.ResourceMonitor()
+    opts.aip = aip.AIPplatform(opts)
+    opts.aip.setup()
+
+    # Check for secure mode/permissions on VOLTTRON_HOME directory
+    mode = os.stat(opts.volttron_home).st_mode
+    if mode & (stat.S_IWGRP | stat.S_IWOTH):
+        _log.warning('insecure mode on directory: %s', opts.volttron_home)
+    # Get or generate encryption key
+    if opts.developer_mode:
+        secretkey = None
+        publickey = None
+        _log.warning('developer mode enabled; '
+                     'authentication and encryption are disabled!')
+    else:
+        keyfile = os.path.join(opts.volttron_home, 'curve.key')
+        _log.debug('using key file %s', keyfile)
+        try:
+            st = os.stat(keyfile)
+        except OSError as exc:
+            if exc.errno != errno.ENOENT:
+                parser.error(str(exc))
+            # Key doesn't exist, so create it securely
+            _log.info('generating missing key file')
+            try:
+                fd = os.open(keyfile, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
+            except OSError as exc:
+                parser.error(str(exc))
+            try:
+                key = ''.join(curve_keypair())
+                os.write(fd, key)
+            finally:
+                os.close(fd)
+        else:
+            if st.st_mode & (stat.S_IRWXG | stat.S_IRWXO):
+                _log.warning('insecure mode on key file')
+            if not st.st_size:
+                _log.warning('empty key file; VIP encryption is disabled!')
+                key = ''
+            else:
+                # Allow two extra bytes in case someone opened the file with
+                # a text editor and it appended '\n' or '\r\n'.
+                if not 80 <= st.st_size <= 82:
+                    _log.warning('key file is wrong size; connections may fail')
+                with open(keyfile) as infile:
+                    key = infile.read(80)
+        publickey = key[:40]
+        if publickey:
+            _log.info('public key: %s', encode_key(publickey))
+        secretkey = key[40:]
+
+    # The following line doesn't appear to do anything, but it creates
+    # a context common to the green and non-green zmq modules.
+    zmq.Context.instance()   # DO NOT REMOVE LINE!!
+
+    tracker = Tracker()
+    # Main loops
+    def router(stop):
+        try:
+            Router(opts.vip_local_address, opts.vip_address,
+                   secretkey=secretkey, default_user_id=b'vip.service',
+                   monitor=opts.monitor, tracker=tracker).run()
+        except Exception:
+            _log.exception('Unhandled exception in router loop')
+            raise
+        finally:
+            stop()
+
+    address = 'inproc://vip'
+    try:
+        # Ensure auth service is running before router
+        auth_file = os.path.join(opts.volttron_home, 'auth.json')
+        auth = AuthService(
+            auth_file, opts.aip, address=address, identity='auth',
+            allow_any=opts.developer_mode)
+
+        event = gevent.event.Event()
+        auth_task = gevent.spawn(auth.core.run, event)
+        event.wait()
+        del event
+
+        # Start router in separate thread to remain responsive
+        thread = threading.Thread(target=router, args=(auth.core.stop,))
+        thread.daemon = True
+        thread.start()
+
+        gevent.sleep(0.1)
+        if not thread.isAlive():
+            sys.exit()
+
+        protected_topics_file = os.path.join(opts.volttron_home, 'protected_topics.json')
+        _log.debug('protected topics file %s', protected_topics_file)
+
+        # Launch additional services and wait for them to start before
+        # auto-starting agents
+        services = [
+            ControlService(opts.aip, address=address, identity='control', tracker=tracker, heartbeat_autostart=True),
+            PubSubService(protected_topics_file, address=address, identity='pubsub', heartbeat_autostart=True),
+            CompatPubSub(address=address, identity='pubsub.compat',
+                         publish_address=opts.publish_address,
+                         subscribe_address=opts.subscribe_address),
+            MasterWebService(
+                serverkey=publickey, identity=MASTER_WEB,
+                address=address,
+                bind_web_address=opts.bind_web_address,
+                volttron_central_address=opts.volttron_central_address,
+                aip=opts.aip)
+        ]
+        events = [gevent.event.Event() for service in services]
+        tasks = [gevent.spawn(service.core.run, event)
+                 for service, event in zip(services, events)]
+        tasks.append(auth_task)
+        gevent.wait(events)
+        del events
+
+        # Auto-start agents now that all services are up
+        if opts.autostart:
+            for name, error in opts.aip.autostart():
+                _log.error('error starting {!r}: {}\n'.format(name, error))
+        # Wait for any service to stop, signaling exit
+        try:
+            gevent.wait(tasks, count=1)
+        except KeyboardInterrupt:
+            _log.info('SIGINT received; shutting down')
+            sys.stderr.write('Shutting down.\n')
+            for task in tasks:
+                task.kill(block=False)
+            gevent.wait(tasks)
+    finally:
+        opts.aip.finish()
 
 
 def main(argv=sys.argv):
@@ -404,7 +660,13 @@ def main(argv=sys.argv):
     agents.add_argument(
         '--vip-local-address', metavar='ZMQADDR',
         help='ZeroMQ URL to bind for local agent VIP connections')
-
+    agents.add_argument(
+        '--bind-web-address', metavar='BINDWEBADDR', default=None,
+        help='Bind a web server to the specified ip:port passed')
+    agents.add_argument(
+        '--volttron-central-address', metavar='VOLTTRONCENTRAL',
+        default=None,
+        help='The web address of a volttron central install instance.')
     # XXX: re-implement control options
     #on
     #control.add_argument(
@@ -471,6 +733,11 @@ def main(argv=sys.argv):
         subscribe_address=ipc + 'subscribe',
         vip_address=[],
         vip_local_address=ipc + 'vip.socket',
+        # This is used to start the web server from the web module.
+        bind_web_address=None,
+        # Used to contact volttron central when registering volttron central
+        # platform agent.
+        volttron_central_address=None,
         #allow_root=False,
         #allow_users=None,
         #allow_groups=None,
@@ -487,172 +754,7 @@ def main(argv=sys.argv):
         args = ['--config', conf] + args
     logging.getLogger().setLevel(logging.NOTSET)
     opts = parser.parse_args(args)
-
-    if opts.log:
-        opts.log = config.expandall(opts.log)
-    if opts.log_config:
-        opts.log_config = config.expandall(opts.log_config)
-    opts.publish_address = config.expandall(opts.publish_address)
-    opts.subscribe_address = config.expandall(opts.subscribe_address)
-    opts.vip_address = [config.expandall(addr) for addr in opts.vip_address]
-    opts.vip_local_address = config.expandall(opts.vip_local_address)
-    if getattr(opts, 'show_config', False):
-        for name, value in sorted(vars(opts).iteritems()):
-            print(name, repr(value))
-        return
-    # Configure logging
-    level = max(1, opts.verboseness)
-    if opts.monitor and level > logging.INFO:
-        level = logging.INFO
-    if opts.log is None:
-        log_to_file(sys.stderr, level)
-    elif opts.log == '-':
-        log_to_file(sys.stdout, level)
-    elif opts.log:
-        log_to_file(opts.log, level, handler_class=handlers.WatchedFileHandler)
-    else:
-        log_to_file(None, 100, handler_class=lambda x: logging.NullHandler())
-    if opts.log_config:
-        error = configure_logging(opts.log_config)
-        if error:
-            parser.error('{}: {}'.format(*error))
-
-    # Increase open files resource limit to max or 8192 if unlimited
-    try:
-        soft, hard = resource.getrlimit(resource.RLIMIT_NOFILE)
-    except OSError:
-        _log.exception('error getting open file limits')
-    else:
-        if soft != hard and soft != resource.RLIM_INFINITY:
-            try:
-                limit = 8192 if hard == resource.RLIM_INFINITY else hard
-                resource.setrlimit(resource.RLIMIT_NOFILE, (limit, hard))
-            except OSError:
-                _log.exception('error setting open file limits')
-            else:
-                _log.debug('open file resource limit increased from %d to %d',
-                           soft, limit)
-
-    # Set configuration
-    if HAVE_RESTRICTED:
-        if opts.verify_agents:
-            _log.info('Agent integrity verification enabled')
-        if opts.resource_monitor:
-            _log.info('Resource monitor enabled')
-            opts.resmon = resmon.ResourceMonitor()
-    opts.aip = aip.AIPplatform(opts)
-    opts.aip.setup()
-
-    # Check for secure mode/permissions on VOLTTRON_HOME directory
-    mode = os.stat(volttron_home).st_mode
-    if mode & (stat.S_IWGRP | stat.S_IWOTH):
-        _log.warning('insecure mode on directory: %s', volttron_home)
-    # Get or generate encryption key
-    if opts.developer_mode:
-        secretkey = None
-        _log.warning('developer mode enabled; '
-                     'authentication and encryption are disabled!')
-    else:
-        keyfile = os.path.join(volttron_home, 'curve.key')
-        _log.debug('using key file %s', keyfile)
-        try:
-            st = os.stat(keyfile)
-        except OSError as exc:
-            if exc.errno != errno.ENOENT:
-                parser.error(str(exc))
-            # Key doesn't exist, so create it securely
-            _log.info('generating missing key file')
-            try:
-                fd = os.open(keyfile, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
-            except OSError as exc:
-                parser.error(str(exc))
-            try:
-                key = ''.join(curve_keypair())
-                os.write(fd, key)
-            finally:
-                os.close(fd)
-        else:
-            if st.st_mode & (stat.S_IRWXG | stat.S_IRWXO):
-                _log.warning('insecure mode on key file')
-            if not st.st_size:
-                _log.warning('empty key file; VIP encryption is disabled!')
-                key = ''
-            else:
-                # Allow two extra bytes in case someone opened the file with
-                # a text editor and it appended '\n' or '\r\n'.
-                if not 80 <= st.st_size <= 82:
-                    _log.warning('key file is wrong size; connections may fail')
-                with open(keyfile) as infile:
-                    key = infile.read(80)
-        publickey = key[:40]
-        if publickey:
-            _log.info('public key: %s', encode_key(publickey))
-        secretkey = key[40:]
-
-    # The following line doesn't appear to do anything, but it creates
-    # a context common to the green and non-green zmq modules.
-    zmq.Context.instance()   # DO NOT REMOVE LINE!!
-
-    # Main loops
-    def router(stop):
-        try:
-            Router(opts.vip_local_address, opts.vip_address,
-                   secretkey=secretkey, default_user_id=b'vip.service',
-                   monitor=opts.monitor).run()
-        except Exception:
-            _log.exception('Unhandled exception in router loop')
-        finally:
-            stop()
-
-    address = 'inproc://vip'
-    try:
-        # Ensure auth service is running before router
-        auth_file = os.path.join(volttron_home, 'auth.json')
-        auth = AuthService(
-            auth_file, opts.aip, address=address, identity='auth',
-            allow_any=opts.developer_mode)
-        event = gevent.event.Event()
-        auth_task = gevent.spawn(auth.core.run, event)
-        event.wait()
-        del event
-
-        # Start router in separate thread to remain responsive
-        thread = threading.Thread(target=router, args=(auth.core.stop,))
-        thread.daemon = True
-        thread.start()
-
-        # Launch additional services and wait for them to start before
-        # auto-starting agents
-        services = [
-            ControlService(opts.aip, address=address, identity='control'),
-            PubSubService(address=address, identity='pubsub'),
-            CompatPubSub(address=address, identity='pubsub.compat',
-                         publish_address=opts.publish_address,
-                         subscribe_address=opts.subscribe_address),
-        ]
-        events = [gevent.event.Event() for service in services]
-        tasks = [gevent.spawn(service.core.run, event)
-                 for service, event in zip(services, events)]
-        tasks.append(auth_task)
-        gevent.wait(events)
-        del events
-
-        # Auto-start agents now that all services are up
-        if opts.autostart:
-            for name, error in opts.aip.autostart():
-                _log.error('error starting {!r}: {}\n'.format(name, error))
-        # Wait for any service to stop, signaling exit
-        try:
-            gevent.wait(tasks, count=1)
-        except KeyboardInterrupt:
-            _log.info('SIGINT received; shutting down')
-            sys.stderr.write('Shutting down.\n')
-            for task in tasks:
-                task.kill(block=False)
-            gevent.wait(tasks)
-    finally:
-        opts.aip.finish()
-
+    start_volttron_process(opts)
 
 def _main():
     '''Entry point for scripts.'''

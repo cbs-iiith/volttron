@@ -98,6 +98,7 @@ import subprocess
 import sys
 import json
 
+from distutils.version import LooseVersion
 
 _log = logging.getLogger(__name__)
 
@@ -161,22 +162,29 @@ def bootstrap(dest, prompt='(volttron)', version=None, verbose=None,
             return response
 
         def get_version(self):
-            '''Return the latest version from virtualenv DOAP record.'''
-            _log.info('Downloading virtualenv DOAP record')
-            doap_url = ('https://pypi.python.org/pypi'
-                        '?:action=doap&name=virtualenv')
-            with contextlib.closing(self._fetch(doap_url)) as response:
-                doap_xml = response.read()
-            self.version = re.search(
-                r'<revision>([^<]*)</revision>', doap_xml).group(1)
-            return self.version
+            """Return the latest version from virtualenv DOAP record."""
+            _log.info('Downloading virtualenv package information')
+            default_version = "15.1.0"
+            url = 'https://pypi.python.org/pypi/virtualenv/json'
+            with contextlib.closing(self._fetch(url)) as response:
+                result = json.load(response)
+                releases_dict = result.get("releases", {})
+                releases = sorted(
+                    [LooseVersion(x) for x in releases_dict.keys()])
+            if releases:
+                _log.info('latest release of virtualenv={}'.format(releases[-1]))
+                return str(releases[-1])
+            else:
+                _log.info("Returning default version of virtualenv "
+                          "({})".format(default_version))
+                return default_version
 
         def download(self, directory):
             '''Download the virtualenv tarball into directory.'''
             if self.version is None:
-                self.get_version()
+                self.version = self.get_version()
             url = ('https://pypi.python.org/packages/source/v/virtualenv/'
-                   'virtualenv-{}.tar.gz'.format(self.version))
+                    'virtualenv-{}.tar.gz'.format(self.version))
             _log.info('Downloading virtualenv %s', self.version)
             tarball = os.path.join(directory, 'virtualenv.tar.gz')
             with contextlib.closing(self._fetch(url)) as response:
@@ -235,7 +243,12 @@ def pip(operation, args, verbose=None, upgrade=False, offline=False,
 
 def update(operation, verbose=None, upgrade=False, offline=False, proxy=None):
     '''Install dependencies in setup.py and requirements.txt.'''
+<<<<<<< HEAD
+    from setup import (option_requirements, local_requirements,
+                       optional_requirements)
+=======
     from setup import (option_requirements, local_requirements)
+>>>>>>> refs/remotes/origin/master
     assert operation in ['install', 'wheel']
     wheeling = operation == 'wheel'
     path = os.path.dirname(__file__) or '.'
@@ -252,7 +265,15 @@ def update(operation, verbose=None, upgrade=False, offline=False, proxy=None):
         for opt in options:
             args.extend([build_option, opt])
         args.extend(['--no-deps', requirement])
+<<<<<<< HEAD
+        pip(operation, args, verbose, upgrade, offline)
+    # Build the optional requirements that the user specified via the command
+    # line.
+    for requirement in optional_requirements:
+        pip('install', [requirement], verbose, upgrade, offline)
+=======
         pip(operation, args, verbose, upgrade, offline, proxy)
+>>>>>>> refs/remotes/origin/master
     # Install local packages and remaining dependencies
     args = []
     for _, location in local_requirements:
@@ -322,6 +343,27 @@ def main(argv=sys.argv):
         'in activated environment (default: %(default)s)')
     bs.add_argument('--force-version', help=argparse.SUPPRESS)
 
+<<<<<<< HEAD
+    # allows us to look and see if any of the dynamic optional arguments
+    # are on the command line.  We check this during the processing of the args
+    # variable at the end of the block.  If the option is set then it needs
+    # to be passed on.
+    optional_args = []
+    if os.path.exists('optional_requirements.json'):
+        po = parser.add_argument_group('Extra packaging options')
+        with open('optional_requirements.json', 'r') as optional_arguments:
+            data = json.load(optional_arguments)
+            for arg, vals in data.items():
+                optional_args.append(arg)
+                if 'help' in vals.keys():
+                    po.add_argument(arg, action='store_true', default=False,
+                                    help=vals['help'])
+                else:
+                    po.add_argument(arg, action='store_true', default=False)
+
+    # Update options
+=======
+>>>>>>> refs/remotes/origin/master
     up = parser.add_argument_group('update options')
     up.add_argument(
         '--offline', action='store_true', default=False,
@@ -381,8 +423,16 @@ def main(argv=sys.argv):
         args = [env_exe, __file__]
         if options.verbose is not None:
             args.append('--verbose' if options.verbose else '--quiet')
+<<<<<<< HEAD
+        # Transfer dynamic properties to the subprocess call 'update'.
+        # Clip off the first two characters expecting long parameter form.
+        for arg in optional_args:
+            if getattr(options, arg[2:]):
+                args.append(arg)
+=======
         if options.proxy is not None:
             args.extend(['--proxy', options.proxy])
+>>>>>>> refs/remotes/origin/master
         subprocess.check_call(args)
 
 

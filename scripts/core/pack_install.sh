@@ -46,10 +46,17 @@ fi
 
 WHEEL=$(volttron-pkg package $1 | awk -F": " '{ print $2 }')
 
+#Remove newlines
+WHEEL=${WHEEL//$'\n'/}
+
+
 if [ ! -e "$WHEEL" ]; then
   echo "$WHEEL doesn't exist"
   exit 0
 fi
+
+# Clear the old agents out.
+VOLTTRON_HOME=$VOLTTRON_HOME volttron-ctl clear
 
 VOLTTRON_HOME=$VOLTTRON_HOME volttron-pkg configure "$WHEEL" "$2"
 
