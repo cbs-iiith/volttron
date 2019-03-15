@@ -22,6 +22,6 @@ applications
 /docs/build/*
 /docs/source/apidocs
 volttron.log
-*.out
-*.log
-*.bak
+start-rabbitmq
+stop-rabbitmq
+rabbitmq.log

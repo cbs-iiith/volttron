@@ -53,11 +53,14 @@ import pytz
 import re
 import stat
 import time
+import yaml
 from volttron.platform import get_home, get_address
+from volttron.utils.prompt import prompt_response
 from dateutil.parser import parse
 from dateutil.tz import tzutc, tzoffset
 from tzlocal import get_localzone
 from volttron.platform.agent import json as jsonapi
+from ConfigParser import ConfigParser
 
 try:
     from ..lib.inotify.green import inotify, IN_MODIFY
@@ -68,7 +71,7 @@ except AttributeError:
     IN_MODIFY = None
 
 __all__ = ['load_config', 'run_agent', 'start_agent_thread',
-           'is_valid_identity']
+           'is_valid_identity', 'load_platform_config', 'get_messagebus']
 
 __author__ = 'Brandon Carpenter <brandon.carpenter@pnnl.gov>'
 __copyright__ = 'Copyright (c) 2016, Battelle Memorial Institute'
@@ -143,12 +146,88 @@ def load_config(config_path):
         _log.info("Config file specified by AGENT_CONFIG does not exist. load_config returning empty configuration.")
         return {}
 
+    # First attempt parsing the file with a yaml parser (allows comments natively)
+    # Then if that fails we fallback to our modified json parser.
     try:
         with open(config_path) as f:
-            return parse_json_config(f.read())
-    except StandardError as e:
-        _log.error("Problem parsing agent configuration")
-        raise
+            return yaml.safe_load(f.read())
+    except yaml.scanner.ScannerError as e:
+        try:
+            with open(config_path) as f:
+                return parse_json_config(f.read())
+        except StandardError as e:
+            _log.error("Problem parsing agent configuration")
+            raise
+
+def load_platform_config():
+    """Loads the platform config file if the path exists."""
+    config_opts = {}
+    path = os.path.join(get_home(), 'config')
+    if os.path.exists(path):
+        parser = ConfigParser()
+        parser.read(path)
+        options = parser.options('volttron')
+        for option in options:
+            config_opts[option] = parser.get('volttron', option)
+    return config_opts
+
+
+def get_platform_instance_name(prompt=False):
+    # Next get instance name
+    platform_config = load_platform_config()
+    try:
+        instance_name = platform_config['instance-name'].strip('"')
+    except KeyError as exc:
+        if prompt:
+            instance_name = prompt_response("Name of this volttron instance:",
+                                            mandatory=True)
+        else:
+            raise KeyError("No instance-name is configured in "
+                           "$VOLTTRON_HOME/config. Please set instance-name in "
+                           "$VOLTTRON_HOME/config")
+    return instance_name
+
+
+def get_messagebus():
+    """Get type of message bus - zeromq or rabbbitmq."""
+    message_bus = os.environ.get('MESSAGEBUS')
+    if not message_bus:
+        config = load_platform_config()
+        message_bus = config.get('message-bus', 'zmq')
+    return message_bus
+
+
+def store_message_bus_config(message_bus, instance_name):
+    # If there is no config file or home directory yet, create volttron_home
+    # and config file
+    if not instance_name:
+        raise ValueError("Instance name should be a valid string and should "
+                         "be unique within a network of volttron instances "
+                         "that communicate with each other. start volttron "
+                         "process with '--instance-name <your instance>' if "
+                         "you are running this instance for the first time. "
+                         "Or add instance-name = <instance name> in "
+                         "vhome/config")
+    v_home= get_home()
+    config_path = os.path.join(v_home, "config")
+    if os.path.exists(config_path):
+        config = ConfigParser()
+        config.read(config_path)
+        config.set('volttron', 'message-bus', message_bus)
+        config.set('volttron','instance-name', instance_name)
+        with open(config_path, 'w') as configfile:
+            config.write(configfile)
+    else:
+        if not os.path.exists(v_home):
+            os.makedirs(v_home, 0o755)
+        config = ConfigParser()
+        config.add_section('volttron')
+        config.set('volttron', 'message-bus', message_bus)
+        config.set('volttron', 'instance-name', instance_name)
+
+        with open(config_path, 'w') as configfile:
+            config.write(configfile)
+
 
 def update_kwargs_with_config(kwargs, config):
     """
@@ -186,6 +265,7 @@ def update_kwargs_with_config(kwargs, config):
 
     for k, v in config.items():
         kwargs[k.replace("-","_")] = v
+
 
 def parse_json_config(config_str):
     """Parse a JSON-encoded configuration file."""
@@ -287,6 +367,7 @@ def vip_main(agent_class, identity=None, version='0.1', **kwargs):
 
         config = os.environ.get('AGENT_CONFIG')
         identity = os.environ.get('AGENT_VIP_IDENTITY', identity)
+        message_bus = os.environ.get('MESSAGEBUS', 'zmq')
         if identity is not None:
             if not is_valid_identity(identity):
                 _log.warn('Deprecation warining')
@@ -301,7 +382,8 @@ def vip_main(agent_class, identity=None, version='0.1', **kwargs):
         agent = agent_class(config_path=config, identity=identity,
                             address=address, agent_uuid=agent_uuid,
                             volttron_home=volttron_home,
-                            version=version, **kwargs)
+                            version=version,
+                            message_bus=message_bus, **kwargs)
         
         try:
             run = agent.run
@@ -332,6 +414,8 @@ class SyslogFormatter(logging.Formatter):
 class JsonFormatter(logging.Formatter):
     def format(self, record):
         dct = record.__dict__.copy()
+        dct["msg"] = record.getMessage()
+        dct.pop('args')
         exc_info = dct.pop('exc_info', None)
         if exc_info:
             dct['exc_text'] = ''.join(traceback.format_exception(*exc_info))
@@ -436,7 +520,7 @@ def parse_timestamp_string(time_stamp_str):
             base_time_stamp_str = time_stamp_str[:26]
             time_zone_str = time_stamp_str[26:]
             time_stamp = datetime.strptime(base_time_stamp_str, "%Y-%m-%dT%H:%M:%S.%f")
-            #Handle most common case.
+            # Handle most common case.
             if time_zone_str == "+00:00":
                 return time_stamp.replace(tzinfo=pytz.UTC)
 
@@ -532,6 +616,7 @@ def watch_file(fullpath, callback):
             for event in inot:
                 if event.name == filename and event.mask & IN_MODIFY:
                     callback()
+
 
 def watch_file_with_fullpath(fullpath, callback):
     """Run callback method whenever the file changes
