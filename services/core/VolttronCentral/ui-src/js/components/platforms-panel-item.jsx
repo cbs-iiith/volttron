@@ -1,16 +1,22 @@
 'use strict';
 
 import React from 'react';
+import Router from 'react-router';
 import BaseComponent from './base-component';
 import ControlButton from './control-button';
+import EditSelectButton from './control_buttons/edit-select-button';
 import CheckBox from './check-box';
+import Immutable from 'immutable';
 
 var platformsPanelItemsStore = require('../stores/platforms-panel-items-store');
 var platformsStore = require('../stores/platforms-store');
 var platformsPanelActionCreators = require('../action-creators/platforms-panel-action-creators');
 var platformChartActionCreators = require('../action-creators/platform-chart-action-creators');
+var controlButtonActionCreators = require('../action-creators/control-button-action-creators');
 var devicesActionCreators = require('../action-creators/devices-action-creators');
 var statusIndicatorActionCreators = require('../action-creators/status-indicator-action-creators');
+var wspubsub = require('../lib/wspubsub');
+var authorizationStore = require('../stores/authorization-store');
 
 
 class PlatformsPanelItem extends BaseComponent {
@@ -37,6 +43,7 @@ class PlatformsPanelItem extends BaseComponent {
         }
     }
     componentDidMount () {
+        var authorization = authorizationStore.getAuthorization();
         platformsPanelItemsStore.addChangeListener(this._onStoresChange);
     }
     componentWillUnmount () {
@@ -134,14 +141,7 @@ class PlatformsPanelItem extends BaseComponent {
     _showTooltip (evt) {
         this.setState({showTooltip: true});
         this.setState({tooltipX: evt.clientX - 60});
-
-        var offset = 70;
-        if (this.props.panelItem.context)
-        {
-            offset = 90;
-        }
-
-        this.setState({tooltipY: evt.clientY - offset});
+        this.setState({tooltipY: evt.clientY - 70});
     }
     _hideTooltip () {
         this.setState({showTooltip: false});
@@ -174,6 +174,7 @@ class PlatformsPanelItem extends BaseComponent {
     render () {
 
         var panelItem = this.state.panelItem;
+        var itemPath = this.props.itemPath;
         var propChildren = this.state.children;
         var children;
 
@@ -391,30 +392,21 @@ class PlatformsPanelItem extends BaseComponent {
             itemClasses.push("not_initialized");
         }
 
-        var listItem = ( 
-            <div className={itemClasses.join(' ')}>
-                {panelItem.name}
-            </div>
-        );
+        var listItem = 
+                <div className={itemClasses.join(' ')}>
+                    {panelItem.name}
+                </div>;
 
-        var agentStatus = <div>Status:&nbsp;{panelItem.statusLabel}</div>;
-        var agentContext;
+        // if (this.state.panelItem.get("type") !== "platform" && 
+        //     this.arrowDiv && 
+        //     this.arrowDiv.classList.contains("loadingSpinner"))
+        // {
+        //     this.arrowDiv.classList.remove("loadingSpinner");
 
-        if (panelItem.context)
-        {
-            if (typeof panelItem.context === 'object')
-            {
-                var context = Object.keys(panelItem.context).map(function(key) {
-                    return key + ': ' + panelItem.context[key];
-                }).join(', ');
-
-                agentContext = <div>Context:&nbsp;{context}</div>;
-            }
-            else if (typeof panelItem.context === 'string')
-            {
-                agentContext = <div>Context:&nbsp;{panelItem.context}</div>;
-            }
-        }
+        //     arrowClasses.forEach(function (className) {
+        //         this.arrowDiv.classList.add(className);
+        //     }.bind(this));
+        // }
 
         return (
             <li
@@ -441,8 +433,7 @@ class PlatformsPanelItem extends BaseComponent {
                         <div className="tooltip_inner">
                             <div className="opaque_inner">
                                 {agentInfo}
-                                {agentStatus}
-                                {agentContext}
+                                Status:&nbsp;{(panelItem.context) ? panelItem.context : panelItem.statusLabel}
                             </div>
                         </div>
                     </div>

@@ -43,7 +43,6 @@ import os
 import sys
 import urlparse
 import tempfile
-from shutil import copy
 
 from gevent import subprocess
 from gevent.subprocess import Popen
@@ -52,8 +51,8 @@ from zmq import green as zmq
 
 from volttron.platform.agent.known_identities import PLATFORM_DRIVER
 from volttron.utils.prompt import prompt_response, y, n, y_or_n
-from volttron.utils.rmq_setup import setup_rabbitmq_volttron
-from . import get_home, get_services_core, set_home
+
+from . import get_home, get_services_core
 
 # Global configuration options.  Must be key=value strings.  No cascading
 # structure so that we can easily create/load from the volttron config file
@@ -73,6 +72,7 @@ def _load_config():
         options = parser.options('volttron')
         for option in options:
             config_opts[option] = parser.get('volttron', option)
+
 
 def _install_config_file():
     home = get_home()
@@ -229,17 +229,12 @@ def is_valid_port(port):
     return 0 < port < 65535
 
 
-def is_valid_bus(bus_type):
-    return bus_type in ['zmq', 'rmq']
-
-
 def do_vip():
     global config_opts
 
     parsed = urlparse.urlparse(config_opts.get('vip-address',
                                                'tcp://127.0.0.1:22916'))
     vip_address = None
-    bus_type = None
     if parsed.hostname is not None and parsed.scheme is not None:
         vip_address = parsed.scheme + '://' + parsed.hostname
         vip_port = parsed.port
@@ -270,15 +265,6 @@ def do_vip():
             else:
                 print("Port is not valid")
 
-        valid_bus = False
-        while not valid_bus:
-            prompt = 'What is type of message bus?'
-            new_bus = prompt_response(prompt, default='zmq')
-            valid_bus = is_valid_bus(new_bus)
-            if valid_bus:
-                bus_type = new_bus
-            else:
-                print("Message type is not valid. Valid entries are zmq or rmq")
         while vip_address.endswith('/'):
             vip_address = vip_address[:-1]
 
@@ -288,7 +274,6 @@ def do_vip():
         else:
             print('\nERROR: That address has already been bound to.')
     config_opts['vip-address'] = '{}:{}'.format(vip_address, vip_port)
-    config_opts['message-bus'] = bus_type
 
 
 @installs(get_services_core("VolttronCentral"), 'vc')
@@ -467,17 +452,6 @@ def do_master_driver():
 def do_listener():
     return {}
 
-def confirm_volttron_home():
-    global prompt_vhome
-    volttron_home = get_home()
-    if prompt_vhome:
-        print('\nYour VOLTTRON_HOME currently set to: {}'.format(volttron_home))
-        prompt = '\nIs this the volttron you are attempting to setup? '
-        if not prompt_response(prompt, valid_answers=y_or_n, default='Y') in y:
-            print(
-                '\nPlease execute with VOLTRON_HOME=/your/path volttron-cfg to '
-                'modify VOLTTRON_HOME.\n')
-            exit(1)
 
 def wizard():
     """Routine for configuring an insalled volttron instance.
@@ -488,7 +462,15 @@ def wizard():
 
     # Start true configuration here.
     volttron_home = get_home()
-    confirm_volttron_home()
+
+    print('\nYour VOLTTRON_HOME currently set to: {}'.format(volttron_home))
+    prompt = '\nIs this the volttron you are attempting to setup? '
+    if not prompt_response(prompt, valid_answers=y_or_n, default='Y') in y:
+        print(
+            '\nPlease execute with VOLTRON_HOME=/your/path volttron-cfg to '
+            'modify VOLTTRON_HOME.\n')
+        return
+
     _load_config()
     do_vip()
     _install_config_file()
@@ -524,32 +506,11 @@ def wizard():
     print('the config file at {}/config\n'.format(volttron_home))
 
 
-def process_rmq_inputs(args):
-    confirm_volttron_home()
-    _install_config_file()
-    if len(args) == 2:
-        vhome = get_home()
-        if args[0] == 'single':
-            vhome_config = os.path.join(vhome, 'rabbitmq_config.yml')
-        elif args[0] == 'federation':
-            vhome_config = os.path.join(vhome, 'rabbitmq_federation_config.yml')
-        elif args[0] == 'shovel':
-            vhome_config = os.path.join(vhome, 'rabbitmq_shovel_config.yml')
-        else: # Ignoring 'all' for now
-            return
-        if args[1] != vhome_config:
-            copy(args[1], vhome_config)
-        setup_rabbitmq_volttron(args[0], verbose)
-    else:
-        setup_rabbitmq_volttron(args[0], verbose, prompt=True)
-
-
 def main():
-    global verbose, prompt_vhome
+    global verbose
 
     parser = argparse.ArgumentParser(formatter_class=argparse.RawTextHelpFormatter)
     parser.add_argument('-v', '--verbose', action='store_true')
-    parser.add_argument('--vhome', help="Path to volttron home")
 
     group = parser.add_mutually_exclusive_group()
 
@@ -559,44 +520,18 @@ def main():
 
     group.add_argument('--agent', nargs='+',
                         help='configure listed agents')
-    group.add_argument('--rabbitmq', nargs='+',
-                       help='Configure rabbitmq for single instance, '
-                            'federation, shovel or all either based on '
-                            'configuration file in yml format or providing '
-                            'details when prompted. \nUsage: vcfg --rabbitmq '
-                            'single|federation|shovel|all [rabbitmq config '
-                            'file]')
 
     args = parser.parse_args()
     verbose = args.verbose
-    prompt_vhome = True
-    if args.vhome:
-        set_home(args.vhome)
-        prompt_vhome = False
-    if not args.rabbitmq or args.rabbitmq[0] in ["single", "all"]:
-        fail_if_instance_running()
+
+    fail_if_instance_running()
     fail_if_not_in_src_root()
 
     _load_config()
 
     if args.list_agents:
         print "Agents available to configure:{}".format(agent_list)
-    elif args.rabbitmq:
-        if len(args.rabbitmq) > 2:
-            print("vcfg --rabbitmq can at most accept 2 arguments")
-            parser.print_help()
-            exit(1)
-        elif args.rabbitmq[0] not in ['single', 'federation', 'shovel', 'all']:
-            print("Usage: vcf --rabbitmq single|federation|shovel|all "
-                  "[optional path to rabbitmq config yml]")
-            parser.print_help()
-            exit(1)
-        elif len(args.rabbitmq) == 2 and not os.path.exists(args.rabbitmq[1]):
-            print("Invalid rabbitmq configuration file path.")
-            parser.print_help()
-            exit(1)
-        else:
-            process_rmq_inputs(args.rabbitmq)
+
     elif not args.agent:
         wizard()
 

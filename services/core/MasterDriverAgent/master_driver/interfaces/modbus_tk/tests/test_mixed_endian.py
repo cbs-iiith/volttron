@@ -140,7 +140,11 @@ def agent(request, volttron_instance):
 
 @pytest.fixture(scope='class')
 def modbus_server(request):
-    ModbusClient = Catalog()['mixed_endian_reg'].get_class()
+    # modbus_map = Map(map_dir=os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "maps")),
+    #                  addressing='offset', name='modbus_tk_test', file='modbus_tk_test.csv', endian='big')
+    # ModbusClient = modbus_map.get_class()
+
+    ModbusClient = Catalog()['modbus_tk_test'].get_class()
 
     server_process = Server(address='127.0.0.1', port=5020)
     server_process.define_slave(1, ModbusClient, unsigned=False)

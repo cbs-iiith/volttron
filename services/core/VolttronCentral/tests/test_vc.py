@@ -2,8 +2,6 @@ import pytest
 
 from volttron.platform.web import DiscoveryInfo
 
-import gevent
-
 
 def validate_instances(wrapper1, wrapper2):
     assert wrapper1.bind_web_address
@@ -44,7 +42,6 @@ def test_publickey_retrieval(vc_instance, pa_instance):
     """
     vc_wrapper, vc_uuid, jsonrpc = vc_instance
     pa_wrapper, pa_uuid = pa_instance
-    gevent.sleep(1)
 
     vc_info = DiscoveryInfo.request_discovery_info(
         vc_wrapper.bind_web_address)

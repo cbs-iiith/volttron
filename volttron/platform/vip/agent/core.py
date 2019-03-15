@@ -38,47 +38,44 @@
 
 from __future__ import absolute_import, print_function
 
+from contextlib import contextmanager
+from datetime import datetime
+from errno import ENOENT
 import heapq
 import inspect
 import logging
 import os
-import signal
+import sys
 import threading
 import time
 import urlparse
 import uuid
 import weakref
-from contextlib import contextmanager
-from errno import ENOENT
+import signal
 
 import gevent.event
-from gevent.queue import Queue
 from zmq import green as zmq
-from zmq.green import ZMQError, EAGAIN, ENOTSOCK
+from zmq.green import ZMQError, EAGAIN, ENOTSOCK, EADDRINUSE
+from volttron.platform.agent import json
 from zmq.utils.monitor import recv_monitor_message
 
-from volttron.platform import certs
 from volttron.platform import get_address
-from volttron.platform.agent import utils
-from volttron.platform.agent.utils import load_platform_config
-from volttron.platform.keystore import KeyStore, KnownHostsStore
-from volttron.utils.rmq_mgmt import RabbitMQMgmt
 from .decorators import annotate, annotations, dualmethod
 from .dispatch import Signal
 from .errors import VIPError
+from .. import green as vip
 from .. import router
-from ..rmq_connection import RMQConnection
-from ..socket import Message
-from ..zmq_connection import ZMQConnection
 from .... import platform
+from volttron.platform.keystore import KeyStore, KnownHostsStore
+from volttron.platform.agent import utils
 
-__all__ = ['BasicCore', 'Core', 'RMQCore', 'ZMQCore', 'killing']
+__all__ = ['BasicCore', 'Core', 'killing']
 
 _log = logging.getLogger(__name__)
 
 
 class Periodic(object):  # pylint: disable=invalid-name
-    ''' Decorator to set a method up as a periodic callback.
+    '''Decorator to set a method up as a periodic callback.
 
     The decorated method will be called with the given arguments every
     period seconds while the agent is executing its run loop.
@@ -176,9 +173,8 @@ class BasicCore(object):
         self.oninterrupt = None
         prev_int_signal = gevent.signal.getsignal(signal.SIGINT)
         # To avoid a child agent handler overwriting the parent agent handler
-        if prev_int_signal in [None, signal.SIG_IGN, signal.SIG_DFL]:
-            self.oninterrupt = gevent.signal.signal(signal.SIGINT,
-                                                    self._on_sigint_handler)
+        if prev_int_signal in [None, signal.SIG_IGN, signal.SIG_DFL, signal.default_int_handler]:
+            self.oninterrupt = gevent.signal.signal(signal.SIGINT, self._on_sigint_handler)
         self._owner = owner
 
     def setup(self):
@@ -318,10 +314,9 @@ class BasicCore(object):
         :param _:
         :return:
         '''
-        _log.debug("SIG interrupt received. Calling stop")
+        _log.debug("SIG interrupt received. Setting stop event")
         if signo == signal.SIGINT:
             self._stop_event.set()
-            # self.stop()
 
     def send(self, func, *args, **kwargs):
         self._async_calls.append((func, args, kwargs))
@@ -423,6 +418,7 @@ class Core(BasicCore):
     # confirmation from the server that we have a connection. We will fire
     # the event when we hear the response to the hello message.
     delay_onstart_signal = True
+
     # Agents started before the router can set this variable
     # to false to keep from blocking. AuthService does this.
     delay_running_event_set = True
@@ -431,7 +427,8 @@ class Core(BasicCore):
                  publickey=None, secretkey=None, serverkey=None,
                  volttron_home=os.path.abspath(platform.get_home()),
                  agent_uuid=None, reconnect_interval=None,
-                 version='0.1', instance_name=None, messagebus=None):
+                 version='0.1'):
+
         self.volttron_home = volttron_home
 
         # These signals need to exist before calling super().__init__()
@@ -441,6 +438,7 @@ class Core(BasicCore):
         self.ondisconnected = Signal()
         self.configuration = Signal()
         super(Core, self).__init__(owner)
+        self.context = context or zmq.Context.instance()
         self.address = address if address is not None else get_address()
         self.identity = str(identity) if identity is not None else str(uuid.uuid4())
         self.agent_uuid = agent_uuid
@@ -449,109 +447,20 @@ class Core(BasicCore):
         self.serverkey = serverkey
         self.reconnect_interval = reconnect_interval
         self._reconnect_attempt = 0
-        self.instance_name = None
-        self.connection = None
-        self.messagebus = messagebus
-        self.subsystems = {'error': self.handle_error}
-        self.__connected = False
-        self._version = version
+        self._set_keys()
 
         _log.debug('address: %s', address)
         _log.debug('identity: %s', identity)
         _log.debug('agent_uuid: %s', agent_uuid)
         _log.debug('serverkey: %s', serverkey)
 
+        self.socket = None
+        self.subsystems = {'error': self.handle_error}
+        self.__connected = False
+        self._version = version
+
     def version(self):
         return self._version
-
-    @property
-    def connected(self):
-        return self.__connected
-
-    def register(self, name, handler, error_handler=None):
-        self.subsystems[name] = handler
-        if error_handler:
-            def onerror(sender, error, **kwargs):
-                if error.subsystem == name:
-                    error_handler(sender, error=error, **kwargs)
-
-            self.onviperror.connect(onerror)
-
-    def handle_error(self, message):
-        if len(message.args) < 4:
-            _log.debug('unhandled VIP error %s', message)
-        elif self.onviperror:
-            args = [bytes(arg) for arg in message.args]
-            error = VIPError.from_errno(*args)
-            self.onviperror.send(self, error=error, message=message)
-
-    def create_event_handlers(self, state, hello_response_event, running_event):
-        def connection_failed_check():
-            # If we don't have a verified connection after 10.0 seconds
-            # shut down.
-            if hello_response_event.wait(10.0):
-                return
-            _log.error("No response to hello message after 10 seconds.")
-            _log.error("A common reason for this is a conflicting VIP IDENTITY.")
-            _log.error("Another common reason is not having an auth entry on"
-                       "the target instance.")
-            _log.error("Shutting down agent.")
-            _log.error("Possible conflicting identity is: {}".format(
-                self.identity
-            ))
-
-            self.stop(timeout=5.0)
-
-        def hello():
-            # Send hello message to VIP router to confirm connection with
-            # platform
-            state.ident = ident = b'connect.hello.%d' % state.count
-            state.count += 1
-            self.spawn(connection_failed_check)
-            message = Message(peer=b'', subsystem=b'hello',
-                              id=ident, args=[b'hello'])
-            self.connection.send_vip_object(message)
-
-        def hello_response(sender, version='',
-                           router='', identity=''):
-            _log.info("Connected to platform: "
-                      "router: {} version: {} identity: {}".format(
-                router, version, identity))
-            _log.debug("Running onstart methods.")
-            hello_response_event.set()
-            self.onstart.sendby(self.link_receiver, self)
-            self.configuration.sendby(self.link_receiver, self)
-            if running_event is not None:
-                running_event.set()
-
-        return connection_failed_check, hello, hello_response
-
-
-class ZMQCore(Core):
-    """
-    Concrete Core class for ZeroMQ message bus
-    """
-    def __init__(self, owner, address=None, identity=None, context=None,
-                 publickey=None, secretkey=None, serverkey=None,
-                 volttron_home=os.path.abspath(platform.get_home()),
-                 agent_uuid=None, reconnect_interval=None,
-                 version='0.1', enable_fncs=False,
-                 instance_name=None, messagebus='zmq'):
-        super(ZMQCore, self).__init__(owner,address=address, identity=identity,
-                 context=context, publickey=publickey, secretkey=secretkey,
-                 serverkey=serverkey, volttron_home=volttron_home,
-                 agent_uuid=agent_uuid, reconnect_interval=reconnect_interval,
-                 version=version,
-                 instance_name=instance_name, messagebus=messagebus)
-        self.context = context or zmq.Context.instance()
-        self._fncs_enabled = enable_fncs
-        self.messagebus = messagebus
-        self._set_keys()
-
-        _log.debug("AGENT RUNNING on ZMQ Core {}".format(self.identity))
-
-        self.socket = None
-        self._fncs_enabled = enable_fncs
 
     def _set_keys(self):
         """Implements logic for setting encryption keys and putting
@@ -595,8 +504,8 @@ class ZMQCore(Core):
         if (self.serverkey is not None and known_serverkey is not None
             and self.serverkey != known_serverkey):
             raise Exception("Provided server key ({}) for {} does "
-                            "not match known serverkey ({}).".format(
-                self.serverkey, self.address, known_serverkey))
+                            "not match known serverkey ({}).".format(self.serverkey,
+                                                                     self.address, known_serverkey))
 
         # Until we have containers for agents we should not require all
         # platforms that connect to be in the known host file.
@@ -637,26 +546,82 @@ class ZMQCore(Core):
         serverkey = query.get('serverkey', [None])[0]
         return publickey, secretkey, serverkey
 
+    @property
+    def connected(self):
+        return self.__connected
+
+    def register(self, name, handler, error_handler=None):
+        self.subsystems[name] = handler
+        if error_handler:
+            def onerror(sender, error, **kwargs):
+                if error.subsystem == name:
+                    error_handler(sender, error=error, **kwargs)
+
+            self.onviperror.connect(onerror)
+
+    def handle_error(self, message):
+        if len(message.args) < 4:
+            _log.debug('unhandled VIP error %s', message)
+        elif self.onviperror:
+            args = [bytes(arg) for arg in message.args]
+            error = VIPError.from_errno(*args)
+            self.onviperror.send(self, error=error, message=message)
+
     def loop(self, running_event):
         # pre-setup
-        # self.context.set(zmq.MAX_SOCKETS, 30690)
-        self.connection = ZMQConnection(self.address,
-                                        self.identity,
-                                        self.instance_name,
-                                        context=self.context)
-        self.connection.open_connection(zmq.DEALER)
-        flags = dict(hwm=True, reconnect_interval=self.reconnect_interval)
-        self.connection.set_properties(flags)
-        self.socket = self.connection.socket
+        #self.context.set(zmq.MAX_SOCKETS, 30690)
+        self.socket = vip.Socket(self.context)
+        #_log.debug("CORE::MAx allowable sockets: {}".format(self.context.get(zmq.MAX_SOCKETS)))
+        #_log.debug("AGENT SENDBUF: {0}, {1}".format(self.socket.getsockopt(zmq.SNDBUF), self.socket.getsockopt(zmq.RCVBUF)))
+        # self.socket.setsockopt(zmq.SNDBUF, 302400)
+        # self.socket.setsockopt(zmq.RCVBUF, 302400)
+        # self.socket.set_hwm(500000)
+        self.socket.set_hwm(6000)
+        if self.reconnect_interval:
+            self.socket.setsockopt(zmq.RECONNECT_IVL, self.reconnect_interval)
         if self.identity:
             self.socket.identity = self.identity
         yield
 
         # pre-start
         state = type('HelloState', (), {'count': 0, 'ident': None})
+
         hello_response_event = gevent.event.Event()
-        connection_failed_check, hello, hello_response = \
-            self.create_event_handlers(state, hello_response_event, running_event)
+
+        def connection_failed_check():
+            # If we don't have a verified connection after 10.0 seconds
+            # shut down.
+            if hello_response_event.wait(10.0):
+                return
+            _log.error("No response to hello message after 10 seconds.")
+            _log.error("A common reason for this is a conflicting VIP IDENTITY.")
+            _log.error("Another common reason is not having an auth entry on"
+                       "the target instance.")
+            _log.error("Shutting down agent.")
+            _log.error("Possible conflicting identity is: {}".format(
+                self.socket.identity
+            ))
+
+            self.stop(timeout=5.0)
+
+        def hello():
+            state.ident = ident = b'connect.hello.%d' % state.count
+            state.count += 1
+            self.spawn(connection_failed_check)
+            self.spawn(self.socket.send_vip,
+                       b'', b'hello', [b'hello'], msg_id=ident)
+
+        def hello_response(sender, version='',
+                           router='', identity=''):
+            _log.info("Connected to platform: "
+                      "router: {} version: {} identity: {}".format(
+                router, version, identity))
+            _log.debug("Running onstart methods.")
+            hello_response_event.set()
+            self.onstart.sendby(self.link_receiver, self)
+            self.configuration.sendby(self.link_receiver, self)
+            if running_event is not None:
+                running_event.set()
 
         def close_socket(sender):
             gevent.sleep(2)
@@ -716,12 +681,13 @@ class ZMQCore(Core):
                     except Exception as exc:
                         _log.debug("Error in closing the socket: {}".format(exc.message))
 
+
         self.onconnected.connect(hello_response)
         self.ondisconnected.connect(close_socket)
 
         if self.address[:4] in ['tcp:', 'ipc:']:
             self.spawn(monitor).join(0)
-        self.connection.connect()
+        self.socket.connect(self.address)
         if self.address.startswith('inproc:'):
             hello()
 
@@ -741,9 +707,6 @@ class ZMQCore(Core):
                         raise
 
                 subsystem = bytes(message.subsystem)
-                # _log.debug("Received new message {0}, {1}, {2}, {3}".format(
-                # subsystem, message.id, len(message.args), message.args[0]))
-
                 # Handle hellos sent by CONNECTED event
                 if (subsystem == b'hello' and
                             bytes(message.id) == state.ident and
@@ -774,9 +737,9 @@ class ZMQCore(Core):
         yield
         # pre-finish
         try:
-            self.connection.disconnect()
+            self.socket.disconnect(self.address)
             self.socket.monitor(None, 0)
-            self.connection.close_connection(1)
+            self.socket.close(1)
         except AttributeError:
             pass
         except ZMQError as exc:
@@ -801,127 +764,3 @@ def killing(greenlet, *args, **kwargs):
         yield greenlet
     finally:
         greenlet.kill(*args, **kwargs)
-
-
-class RMQCore(Core):
-    """
-    Concrete Core class for RabbitMQ message bus
-    """
-    def __init__(self, owner, address=None, identity=None, context=None,
-                 publickey=None, secretkey=None, serverkey=None,
-                 volttron_home=os.path.abspath(platform.get_home()),
-                 agent_uuid=None, reconnect_interval=None,
-                 version='0.1', instance_name=None, messagebus='rmq',
-                 volttron_central_address=None,
-                 volttron_central_instance_name=None):
-        super(RMQCore, self).__init__(owner,address=address, identity=identity,
-                 context=context, publickey=publickey, secretkey=secretkey,
-                 serverkey=serverkey, volttron_home=volttron_home,
-                 agent_uuid=agent_uuid, reconnect_interval=reconnect_interval,
-                 version=version, instance_name=instance_name, messagebus=messagebus)
-        self.volttron_central_address = volttron_central_address
-        if not self.instance_name:
-            config_opts = load_platform_config()
-            self.instance_name = config_opts.get('instance-name', 'volttron1')
-        if volttron_central_instance_name:
-            self.instance_name = volttron_central_instance_name
-
-        #self._event_queue = gevent.queue.Queue
-        self._event_queue = Queue()
-        self.rmq_user = self.instance_name + '.' + self.identity
-        _log.debug("AGENT RUNNING on RMQ Core {}".format(self.identity))
-
-        self.messagebus = messagebus
-        self.rmq_mgmt = RabbitMQMgmt()
-
-    def _build_connection_parameters(self):
-        param = None
-
-        if self.identity is None:
-            raise ValueError("Agent's VIP identity is not set")
-        else:
-            param = self.rmq_mgmt.build_agent_connection(self.identity,
-                                                         self.instance_name)
-        return param
-
-    def loop(self, running_event):
-        param = self._build_connection_parameters()
-        # pre-setup
-        self.connection = RMQConnection(param,
-                                        self.identity,
-                                        self.instance_name,
-                                        vc_url=self.volttron_central_address)
-        yield
-
-        # pre-start
-        flags = dict(durable=False, exclusive=True, auto_delete=True)
-        self.connection.set_properties(flags)
-        # Register callback handler for VIP messages
-        self.connection.register(self.vip_message_handler)
-
-        state = type('HelloState', (), {'count': 0, 'ident': None})
-        hello_response_event = gevent.event.Event()
-        connection_failed_check, hello, hello_response = \
-            self.create_event_handlers(state, hello_response_event, running_event)
-
-        def connection_error():
-            self.__connected = False
-            self.stop()
-            self.ondisconnected.send(self)
-
-        # Connect to RMQ broker. Register a callback to get notified when
-        # connection is confirmed
-        self.connection.connect(hello, connection_error)
-
-        self.onconnected.connect(hello_response)
-        self.ondisconnected.connect(self.connection.close_connection)
-
-        def vip_loop():
-            wait_period = 1  # 1 second
-            while True:
-                message = None
-                try:
-                    message = self._event_queue.get(wait_period)
-                except gevent.Timeout:
-                    pass
-                except Exception as exc:
-                    _log.error(exc.args)
-                    raise
-                if message:
-                    subsystem = bytes(message.subsystem)
-
-                    if subsystem == b'hello':
-                        if (subsystem == b'hello' and
-                                    bytes(message.id) == state.ident and
-                                    len(message.args) > 3 and
-                                    bytes(message.args[0]) == b'welcome'):
-                            version, server, identity = [
-                                bytes(x) for x in message.args[1:4]]
-                            self.__connected = True
-                            self.onconnected.send(self, version=version,
-                                                  router=server,
-                                                  identity=identity)
-                            continue
-                    try:
-                        handle = self.subsystems[subsystem]
-                    except KeyError:
-                        _log.error('peer %r requested unknown subsystem %r',
-                                   bytes(message.peer), subsystem)
-                        message.user = b''
-                        message.args = list(router._INVALID_SUBSYSTEM)
-                        message.args.append(message.subsystem)
-                        message.subsystem = b'error'
-                        self.connection.send_vip_object(message)
-                    else:
-                        handle(message)
-
-        yield gevent.spawn(vip_loop)
-        # pre-stop
-        yield
-        # pre-finish
-        self.connection.close_connection()
-        yield
-
-    def vip_message_handler(self, message):
-        # _log.debug("RMQ VIP Core {}".format(message))
-        self._event_queue.put(message)

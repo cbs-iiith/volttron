@@ -37,7 +37,6 @@
 # }}}
 from __future__ import absolute_import, print_function
 
-import contextlib
 import importlib
 import logging
 import threading
@@ -57,23 +56,6 @@ class ConnectionError(Exception):
     pass
 
 
-@contextlib.contextmanager
-def closing(obj):
-    try:
-        yield obj
-    finally:
-        try:
-            obj.close()
-        except Exception as exc:
-            if isinstance(exc, StandardError) and exc.__class__.__module__ == 'exceptions':
-                # Don't ignore built-in exceptions because they likely indicate
-                # a bug that should stop execution. psycopg2.Error subclasses
-                # StandardError, so the module must also be checked. :-(
-                raise
-            _log.exception('An exception was raised while closing '
-                           'the cursor and is being ignored.')
-
-
 class DbDriver(object):
     """
     Parent class used by :py:class:`sqlhistorian.historian.SQLHistorian` to
@@ -85,31 +67,28 @@ class DbDriver(object):
     """
     def __init__(self, dbapimodule, **kwargs):
         thread_name = threading.currentThread().getName()
-        _log.debug("Constructing Driver for %s in thread: %s",
-                   dbapimodule, thread_name)
-        _log.debug("kwargs for connect is %r", kwargs)
-        dbapimodule = importlib.import_module(dbapimodule)
-        self.__connect = lambda: dbapimodule.connect(**kwargs)
-        self.__connection = None
+        _log.debug("Constructing Driver for {} in thread: {}".format(
+            dbapimodule, thread_name)
+        )
 
-    def cursor(self):
-        if self.__connection is not None and not getattr(self.__connection, "closed", False):
-            try:
-                return self.__connection.cursor()
-            except Exception:
-                _log.exception("An exception occured while creating "
-                               "a cursor and is being ignored")
+        self.__dbmodule = importlib.import_module(dbapimodule)
         self.__connection = None
+        self.__connect_params = kwargs
+        _log.debug("kwargs for connect is {}".format(kwargs))
+
+    def __connect(self):
         try:
-            self.__connection = self.__connect()
+            if self.__connection is None:
+                self.__connection = self.__dbmodule.connect(
+                    **self.__connect_params)
+
         except Exception as e:
             _log.error("Could not connect to database. Raise ConnectionError")
             raise ConnectionError(e), None, sys.exc_info()[2]
+
         if self.__connection is None:
             raise ConnectionError(
                 "Unknown error. Could not connect to database")
-        return self.__connection.cursor()
-
 
     def read_tablenames_from_db(self, meta_table_name):
         """
@@ -272,8 +251,9 @@ class DbDriver(object):
         :return: True if execution completes. Raises exception if unable to
         connect to database
         """
+        self.__connect()
         self.execute_stmt(self.insert_meta_query(),
-                          (topic_id, jsonapi.dumps(metadata)), commit=False)
+                       (topic_id, jsonapi.dumps(metadata)), commit=False)
         return True
 
     def insert_data(self, ts, topic_id, data):
@@ -286,8 +266,9 @@ class DbDriver(object):
         :return: True if execution completes. raises Exception if unable to
         connect to database
         """
+        self.__connect()
         self.execute_stmt(self.insert_data_query(),
-                          (ts, topic_id, jsonapi.dumps(data)), commit=False)
+                       (ts, topic_id, jsonapi.dumps(data)), commit=False)
         return True
 
     def insert_topic(self, topic):
@@ -298,9 +279,12 @@ class DbDriver(object):
         :return: id of the topic inserted if insert was successful.
                  Raises exception if unable to connect to database
         """
-        with closing(self.cursor()) as cursor:
-            cursor.execute(self.insert_topic_query(), (topic,))
-            return cursor.lastrowid
+        self.__connect()
+        cursor = self.__connection.cursor()
+        cursor.execute(self.insert_topic_query(), (topic,))
+        row = [cursor.lastrowid]
+        cursor.close()
+        return row
 
     def update_topic(self, topic, topic_id):
         """
@@ -311,6 +295,8 @@ class DbDriver(object):
         :return: True if execution is complete. Raises exception if unable to
         connect to database
         """
+
+        self.__connect()
         self.execute_stmt(self.update_topic_query(), (topic, topic_id),
                           commit=False)
         return True
@@ -324,8 +310,9 @@ class DbDriver(object):
         :return: True if execution completes. Raises exception if connection to
         database fails
         """
+        self.__connect()
         self.execute_stmt(self.replace_agg_meta_stmt(),
-                          (topic_id, jsonapi.dumps(metadata)), commit=False)
+                       (topic_id, jsonapi.dumps(metadata)), commit=False)
         return True
 
     def insert_agg_topic(self, topic, agg_type, agg_time_period):
@@ -338,10 +325,13 @@ class DbDriver(object):
         :return: id of the topic inserted if insert was successful.
                  Raises exception if unable to connect to database
         """
-        with closing(self.cursor()) as cursor:
-            cursor.execute(self.insert_agg_topic_stmt(),
-                           (topic, agg_type, agg_time_period))
-            return cursor.lastrowid
+        self.__connect()
+        cursor = self.__connection.cursor()
+        cursor.execute(self.insert_agg_topic_stmt(),
+                       (topic, agg_type, agg_time_period))
+        row = [cursor.lastrowid]
+        cursor.close()
+        return row
 
     def update_agg_topic(self, agg_id, agg_topic_name):
         """
@@ -352,8 +342,9 @@ class DbDriver(object):
         :return: True if execution is complete. Raises exception if unable to
         connect to database
         """
+        self.__connect()
         self.execute_stmt(self.update_agg_topic_stmt(),
-                          (agg_id, agg_topic_name),commit=False)
+                              (agg_id, agg_topic_name),commit=False)
         return True
 
     def commit(self):
@@ -362,10 +353,11 @@ class DbDriver(object):
 
         :return: True if successful, False otherwise
         """
+        successful = False
         if self.__connection is not None:
             try:
                 self.__connection.commit()
-                return True
+                successful = True
             except sqlite3.OperationalError as e:
                 if "database is locked" in e.message:
                     _log.error("EXCEPTION: SQLITE3 Database is locked. This "
@@ -380,8 +372,11 @@ class DbDriver(object):
                                "\"timeout\"]  "
                                "Default value is 10. Timeout units is seconds")
                 raise
-        _log.warning('connection was null during commit phase.')
-        return False
+
+        else:
+            _log.warning('connection was null during commit phase.')
+
+        return successful
 
     def rollback(self):
         """
@@ -389,11 +384,14 @@ class DbDriver(object):
 
         :return: True if successful, False otherwise
         """
+        successful = False
         if self.__connection is not None:
             self.__connection.rollback()
-            return True
-        _log.warning('connection was null during rollback phase.')
-        return False
+            successful = True
+        else:
+            _log.warning('connection was null during rollback phase.')
+
+        return successful
 
     def close(self):
         """
@@ -414,18 +412,18 @@ class DbDriver(object):
         :return: resultant rows if fetch_all is True else returns the cursor
         It is up to calling method to close the cursor
         """
-        if not args:
-            args = ()
-        cursor = self.cursor()
-        try:
+        self.__connect()
+        cursor = self.__connection.cursor()
+        if args is not None:
             cursor.execute(query, args)
-        except Exception:
-            cursor.close()
-            raise
+        else:
+            cursor.execute(query)
         if fetch_all:
-            with closing(cursor):
-                return cursor.fetchall()
-        return cursor
+            rows = cursor.fetchall()
+            cursor.close()
+        else:
+            rows = cursor
+        return rows
 
     def execute_stmt(self, stmt, args=None, commit=False):
         """
@@ -437,13 +435,16 @@ class DbDriver(object):
         False
         :return: count of the number of affected rows
         """
-        if args is None:
-            args = ()
-        with closing(self.cursor()) as cursor:
+
+        self.__connect()
+        cursor = self.__connection.cursor()
+        if args is not None:
             cursor.execute(stmt, args)
-            if commit:
-                self.commit()
-            return cursor.rowcount
+        else:
+            cursor.execute(stmt)
+        if commit:
+            self.commit()
+        return cursor.rowcount
 
     def execute_many(self, stmt, args, commit=False):
         """
@@ -455,11 +456,13 @@ class DbDriver(object):
         False
         :return: count of the number of affected rows
         """
-        with closing(self.cursor()) as cursor:
-            cursor.executemany(stmt, args)
-            if commit:
-                self.commit()
-            return cursor.rowcount
+
+        self.__connect()
+        cursor = self.__connection.cursor()
+        cursor.executemany(stmt, args)
+        if commit:
+            self.commit()
+        return cursor.rowcount
 
     @abstractmethod
     def query(self, topic_ids, id_name_map, start=None, end=None,
@@ -547,6 +550,8 @@ class DbDriver(object):
         :return: True if execution was successful, raises exception
         in case of connection failures
         """
+
+        self.__connect()
         table_name = agg_type + '_' + period
         _log.debug("Inserting aggregate: {} {} {} {} into table {}".format(
             ts, agg_topic_id, jsonapi.dumps(data), str(topic_ids), table_name))

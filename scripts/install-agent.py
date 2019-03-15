@@ -8,8 +8,6 @@ import tempfile
 from time import sleep
 import sys
 
-import yaml
-
 
 logging.basicConfig(level=logging.WARN)
 log = logging.getLogger(os.path.basename(__file__))
@@ -119,15 +117,14 @@ def install_agent(opts, package, config):
     else:
         cfg = tempfile.NamedTemporaryFile()
         with open(cfg.name, 'w') as fout:
-            fout.write(yaml.safe_dump(config)) # jsonapi.dumps(config))
+            fout.write(jsonapi.dumps(config))
         config_file = cfg.name
 
     try:
         with open(config_file) as fp:
-            data = yaml.safe_load(fp)
-            # data = json.load(fp)
+            data = json.load(fp)
     except:
-        log.error("Invalid yaml/json config file.")
+        log.error("Invalid json config file.")
         sys.exit(-10)
 
     # Configure the whl file before installing.
@@ -224,7 +221,6 @@ def install_agent(opts, package, config):
                 keyline += "%s" % keys[k]
                 valueline += "%s" % output_dict[keys[k]]
         sys.stdout.write("%s\n%s\n" % (keyline, valueline))
-
 
 if __name__ == '__main__':
 
@@ -339,46 +335,20 @@ if __name__ == '__main__':
         sys.exit(-10)
 
     jsonobj = None
-    # At this point if we have opts.config, it will be an open reference to the
-    # passed config file.
     if opts.config:
-        # Attempt to use the yaml parser directly first
-        try:
-            tmp_cfg_load = yaml.safe_load(opts.config.read())
-            opts.config = tmp_cfg_load
+        tmpconfigfile = tempfile.NamedTemporaryFile()
 
-        except yaml.scanner.ScannerError:
-            sys.stderr.write("Invalid yaml file detect, attempting to parser using json parser.\n")
-            opts.config.seek(0)
-            should_parse_json = False
+        with open(tmpconfigfile.name, 'w') as fout:
             for line in opts.config:
                 line = line.partition('#')[0]
                 if line.rstrip():
-                    if line.rstrip()[0] in ('{', '['):
-                        should_parse_json = True
-                        break
-            if not should_parse_json:
-                sys.stderr.write("Invalid json file detected, must start with { or [ character.\n")
-                sys.exit(1)
-
-            # Yaml failed for some reason, could be invalid yaml or could
-            # have embedded invalid character in a json file.  So now we
-            # are going to try to deal with json here.
-
-            tmpconfigfile = tempfile.NamedTemporaryFile()
-            opts.config.seek(0)
-            with open(tmpconfigfile.name, 'w') as fout:
-
-                for line in opts.config:
-                    line = line.partition('#')[0]
-                    if line.rstrip():
-                        fout.write(line.rstrip() + "\n")
-            config_file = tmpconfigfile.name
-            try:
-                with open(tmpconfigfile.name) as f:
-                    opts.config = jsonapi.loads(f.read())
-            finally:
-                tmpconfigfile.close()
+                    fout.write(line.rstrip())
+        config_file = tmpconfigfile.name
+        try:
+            with open(tmpconfigfile.name) as f:
+                opts.config = jsonapi.loads(f.read())
+        finally:
+            tmpconfigfile.close()
 
     if opts.config:
         install_agent(opts, opts.package, opts.config)

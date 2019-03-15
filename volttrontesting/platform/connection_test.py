@@ -1,10 +1,10 @@
 import gevent
 import pytest
-from volttron.platform.agent.known_identities import CONTROL, MASTER_WEB, AUTH, CONFIGURATION_STORE
+from volttron.platform.agent.known_identities import CONTROL, MASTER_WEB, AUTH
 from volttron.platform.keystore import KeyStore
 from volttron.platform.vip.agent.connection import Connection
 from volttron.platform.vip.agent.utils import build_connection
-import os
+
 
 @pytest.fixture(scope="module")
 def setup_control_connection(request, get_volttron_instances):
@@ -30,9 +30,7 @@ def setup_control_connection(request, get_volttron_instances):
                                           peer=CONTROL,
                                           serverkey=wrapper.serverkey,
                                           publickey=ks.public,
-                                          secretkey=ks.secret,
-                                          instance_name=wrapper.instance_name,
-                                          message_bus=wrapper.message_bus)
+                                          secretkey=ks.secret)
 
     # Sleep a couple seconds to wait for things to startup
     gevent.sleep(2)
@@ -52,8 +50,7 @@ def test_can_get_peers(setup_control_connection):
     peers = connection.peers()
     assert MASTER_WEB in peers
     # assert CONTROL in peers
-    # assert AUTH in peers
-    assert CONFIGURATION_STORE in peers
+    assert AUTH in peers
 
 
 @pytest.mark.control
