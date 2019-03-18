@@ -194,7 +194,7 @@ class SmartHub(Agent):
 
         self.vip.rpc.call(MASTER_WEB, 'register_agent_route', \
                             r'^/SmartHub', \
-                            self.core.identity, \
+#                            self.core.identity, \
                             "rpc_from_net").get(timeout=30)
         self._voltState = 1
         
@@ -207,7 +207,7 @@ class SmartHub(Agent):
         
         _log.debug('un registering rpc routes')
         self.vip.rpc.call(MASTER_WEB, \
-                            self.core.identity, \
+#                            self.core.identity, \
                             'unregister_all_agent_routes').get(timeout=30)
         return
     @Core.receiver('onfinish')

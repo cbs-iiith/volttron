@@ -102,7 +102,7 @@ class PricePoint(Agent):
         #self.core.periodic(self.period_read_price_point, self.update_price_point, wait=None)
         self.vip.rpc.call(MASTER_WEB, 'register_agent_route',
                       r'^/PricePoint',
-                      self.core.identity,
+#                      self.core.identity,
                       "rpc_from_net").get(timeout=30)    
         return
 

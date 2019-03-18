@@ -136,7 +136,7 @@ class SmartStrip(Agent):
         
         self.vip.rpc.call(MASTER_WEB, 'register_agent_route',
                       r'^/SmartStrip',
-                      self.core.identity,
+#                      self.core.identity,
                       "rpc_from_net").get(timeout=30)   
 
     @Core.receiver('onstop')
@@ -150,7 +150,7 @@ class SmartStrip(Agent):
 
         _log.debug('un registering rpc routes')
         self.vip.rpc.call(MASTER_WEB, \
-                            self.core.identity, \
+#                            self.core.identity, \
                             'unregister_all_agent_routes').get(timeout=30)
         return
 

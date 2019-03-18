@@ -181,7 +181,7 @@ def volttronbridge(config_path, **kwargs):
             _log.debug('registering rpc routes')
             self.vip.rpc.call(MASTER_WEB, 'register_agent_route', \
                     r'^/VolttronBridge', \
-                    self.core.identity, \
+#                    self.core.identity, \
                     "rpc_from_net").get(timeout=30)
 
             if self._bridge_host == 'ZONE' or self._bridge_host == 'HUB' :
@@ -244,7 +244,7 @@ def volttronbridge(config_path, **kwargs):
             _log.debug('un registering rpc routes')
             self.vip.rpc.call(MASTER_WEB, \
                                 'unregister_all_agent_routes'\
-                                , self.core.identity\
+#                                , self.core.identity\
                                 ).get(timeout=30)
             
             _log.debug('done!!!')
