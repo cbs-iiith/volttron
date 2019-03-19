@@ -8,11 +8,11 @@
     
     #ID of the Device object of the virtual bacnet device.
     #Defaults to 599
-    #"object_id": 599,
+    "object_id": 59971,
     
     #Name of the bacnet network object 
     #Defaults to "Volttron BACnet driver"
-    #"object_name": "Volttron BACnet driver",
+    "object_name": "iSPACE SmartStrip Volttron BACnet driver - 71",
     
     #Vendor ID of the virtual bacnet device. 
     #Defaults to 15

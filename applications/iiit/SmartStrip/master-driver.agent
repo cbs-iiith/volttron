@@ -1,6 +1,8 @@
 {
-    "agentid": "master_driver",
-    "driver_config_list": [
-        "/home/bsrc-sam/volttron/applications/iiit/SmartStrip/bacnet-smartstrip.config"
-    ]
+  "driver_scrape_interval": 0.01,
+  "publish_breadth_first_all": false,
+  "publish_depth_first": true,
+  "publish_breadth_first": false,
+  "publish_depth_first_all": false,
+  "group_offset_interval": 0.0
 }
