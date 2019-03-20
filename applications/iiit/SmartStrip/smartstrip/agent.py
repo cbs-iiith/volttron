@@ -31,6 +31,8 @@ from volttron.platform.jsonrpc import (
         UNABLE_TO_UNREGISTER_INSTANCE, UNAVAILABLE_PLATFORM, INVALID_PARAMS,
         UNAVAILABLE_AGENT)
 
+from random import randint
+
 import settings
 
 import time
@@ -119,7 +121,7 @@ class SmartStrip(Agent):
 
     @Core.receiver('onstart')            
     def startup(self, sender, **kwargs):
-        #self.runSmartStripTest()
+        self.runSmartStripTest()
         self.switchLedDebug(LED_ON)
         
         #perodically read the meter data & connected tag ids from h/w
@@ -191,30 +193,61 @@ class SmartStrip(Agent):
 
         _log.debug('switch on debug led')
         self.switchLedDebug(LED_ON)
-
-        _log.debug('switch on relay 1')
-        self.switchRelay(PLUG_ID_1, RELAY_ON, SCHEDULE_NOT_AVLB)
-        time.sleep(1)
-        _log.debug('switch off relay 1')
-        self.switchRelay(PLUG_ID_1, RELAY_OFF, SCHEDULE_NOT_AVLB)
-
-        _log.debug('switch on relay 2')
-        self.switchRelay(PLUG_ID_2, RELAY_ON, SCHEDULE_NOT_AVLB)
-        time.sleep(1)
-        _log.debug('switch off relay 2')
-        self.switchRelay(PLUG_ID_2, RELAY_OFF, SCHEDULE_NOT_AVLB)
         
-        _log.debug('switch on relay 3')
-        self.switchRelay(PLUG_ID_3, RELAY_ON, SCHEDULE_NOT_AVLB)
-        time.sleep(1)
-        _log.debug('switch off relay 3')
-        self.switchRelay(PLUG_ID_3, RELAY_OFF, SCHEDULE_NOT_AVLB)
+        #get schedule for testing relays
+        try: 
+            start = str(datetime.datetime.now())
+            end = str(datetime.datetime.now() 
+                    + datetime.timedelta(milliseconds=500))
 
-        _log.debug('switch on relay 4')
-        self.switchRelay(PLUG_ID_4, RELAY_ON, SCHEDULE_NOT_AVLB)
-        time.sleep(1)
-        _log.debug('switch off relay 4')
-        self.switchRelay(PLUG_ID_4, RELAY_OFF, SCHEDULE_NOT_AVLB)
+            device = 'iiit/cbs/smartstrip'
+            task_id = str(randint(0, 99999))
+            msg = [
+                    [device,start,end]
+                    ]
+            result = self.vip.rpc.call(
+                    'platform.actuator', 
+                    'request_new_schedule',
+                    self._agent_id,                 #requested id
+                    task_id,
+                    'LOW_PREEMPT',
+                    msg).get(timeout=2)
+        except gevent.Timeout:
+            _log.exception("Expection: gevent.Timeout in runSmartStripTest()")
+            return
+        except Exception as e:
+            _log.exception ("Could not contact actuator. Is it running?")
+            #print(e)
+            return
+
+        #test all four relays
+        if result['result'] == 'SUCCESS':
+            _log.debug('switch on relay 1')
+            self.switchRelay(PLUG_ID_1, RELAY_ON, True)
+            time.sleep(1)
+            _log.debug('switch off relay 1')
+            self.switchRelay(PLUG_ID_1, RELAY_OFF, SCHEDULE_AVLB)
+
+            _log.debug('switch on relay 2')
+            self.switchRelay(PLUG_ID_2, RELAY_ON, SCHEDULE_AVLB)
+            time.sleep(1)
+            _log.debug('switch off relay 2')
+            self.switchRelay(PLUG_ID_2, RELAY_OFF, SCHEDULE_AVLB)
+            
+            _log.debug('switch on relay 3')
+            self.switchRelay(PLUG_ID_3, RELAY_ON, SCHEDULE_AVLB)
+            time.sleep(1)
+            _log.debug('switch off relay 3')
+            self.switchRelay(PLUG_ID_3, RELAY_OFF, SCHEDULE_AVLB)
+
+            _log.debug('switch on relay 4')
+            self.switchRelay(PLUG_ID_4, RELAY_ON, SCHEDULE_AVLB)
+            time.sleep(1)
+            _log.debug('switch off relay 4')
+            self.switchRelay(PLUG_ID_4, RELAY_OFF, SCHEDULE_NOT_AVLB)
+            
+            #cancel the schedule
+            self._actuator_cancel_schedule(task_id)
 
         _log.debug("EOF Testing")
 
@@ -237,14 +270,16 @@ class SmartStrip(Agent):
             end = str(datetime.datetime.now() 
                     + datetime.timedelta(seconds=6))
 
+            device = 'iiit/cbs/smartstrip'
+            task_id = str(randint(0, 99999))
             msg = [
-                    ['iiit/cbs/smartstrip',start,end]
+                    [device,start,end]
                     ]
             result = self.vip.rpc.call(
                     'platform.actuator', 
                     'request_new_schedule',
-                    self._agent_id, 
-                    'schdl_getData_low_preempt',
+                    self._agent_id,                 #requested id
+                    task_id,
                     'LOW_PREEMPT',
                     msg).get(timeout=10)
         except gevent.Timeout:
@@ -273,7 +308,6 @@ class SmartStrip(Agent):
                 
             self.readTagIDs()
             
-            #cancel the schedule
             
             #_log.debug('...getData()')
             
@@ -283,6 +317,10 @@ class SmartStrip(Agent):
             self.processNewTagId(PLUG_ID_3, self._newTagId3)
             self.processNewTagId(PLUG_ID_4, self._newTagId4)
             #_log.debug('...done processNewTagId()')
+        
+            #cancel the schedule
+            self._actuator_cancel_schedule(task_id)
+
 
     def readMeterData(self, plugID):
         #_log.info ('readMeterData(), plugID: ' + str(plugID))
@@ -538,19 +576,22 @@ class SmartStrip(Agent):
             #_log.debug('same state, do nothing')
             return
 
-        try: 
+        try:
+            _log.debug('get schl')
             start = str(datetime.datetime.now())
             end = str(datetime.datetime.now() 
                     + datetime.timedelta(milliseconds=500))
 
+            task_id = str(randint(0, 99999))
+            device = 'iiit/cbs/smartstrip'
             msg = [
-                    ['iiit/cbs/smartstrip',start,end]
+                    [device,start,end]
                     ]
             result = self.vip.rpc.call(
                     'platform.actuator', 
                     'request_new_schedule',
                     self._agent_id, 
-                    str(self._taskID_LedDebug),
+                    task_id,
                     'HIGH',
                     msg).get(timeout=10)
             #print("schedule result", result)
@@ -564,14 +605,20 @@ class SmartStrip(Agent):
 
         try:
             if result['result'] == 'SUCCESS':
+                _log.debug('schl avlb')
                 result = self.vip.rpc.call(
                         'platform.actuator', 
                         'set_point',
                         self._agent_id, 
                         'iiit/cbs/smartstrip/LEDDebug',
                         state).get(timeout=10)
+
                 #print("Set result", result)
                 self.updateLedDebugState(state)
+                
+                #cancel the schedule
+                self._actuator_cancel_schedule(task_id)
+                
         except gevent.Timeout:
             _log.exception("Expection: gevent.Timeout in switchLedDebug()")
             return
@@ -595,14 +642,16 @@ class SmartStrip(Agent):
                 end = str(datetime.datetime.now() 
                         + datetime.timedelta(milliseconds=600))
 
+                task_id = str(randint(0, 99999))
+                device = 'iiit/cbs/smartstrip'
                 msg = [
-                        ['iiit/cbs/smartstrip',start,end]
+                        [device,start,end]
                         ]
                 result = self.vip.rpc.call(
                         'platform.actuator', 
                         'request_new_schedule',
                         self._agent_id, 
-                        'taskID_Plug' + str(plugID+1) + 'Relay',
+                        task_id,
                         'HIGH',
                         msg).get(timeout=10)
                 #print("schedule result", result)
@@ -617,12 +666,15 @@ class SmartStrip(Agent):
             try:
                 if result['result'] == 'SUCCESS':
                     self.rpc_switchRelay(plugID, state)
+                    #cancel the schedule
+                    self._actuator_cancel_schedule(task_id)
+            
             except gevent.Timeout:
                 _log.exception("Expection: gevent.Timeout in switchRelay()")
                 return
             except Exception as e:
-                _log.exception ("Expection: setting plug 1 relay")
-                #print(e)
+                _log.exception ("Expection: setting plug" + str(plugID) + " relay")
+                print(e)
                 return
         else:
             #do notthing
@@ -789,6 +841,12 @@ class SmartStrip(Agent):
             return True
         else:
             return False
+        
+    def _actuator_cancel_schedule(self, task_id):
+        _log.debug('_actuator_cancel_schedule')
+        result = self.vip.rpc.call('platform.actuator', 'request_cancel_schedule', self._agent_id, task_id).get(timeout=2)
+        print(result)
+        
         
 def main(argv=sys.argv):
     '''Main method called by the eggsecutable.'''
