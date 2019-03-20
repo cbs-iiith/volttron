@@ -1,5 +1,5 @@
 {
-  "driver_scrape_interval": 0.01,
+  "driver_scrape_interval": 0.06,
   "publish_breadth_first_all": false,
   "publish_depth_first": true,
   "publish_breadth_first": false,
