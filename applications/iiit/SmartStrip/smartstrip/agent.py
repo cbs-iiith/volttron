@@ -87,12 +87,12 @@ class SmartStrip(Agent):
     _plug_pricepoint_th = [0.25, 0.5, 0.75, 0.95]
     _price_point_previous = 0.4 
     _price_point_current = 0.4 
-    
+
     _newTagId1 = ''
     _newTagId2 = ''
     _newTagId3 = ''
     _newTagId4 = ''
-    
+
     #smartstrip total energy demand
     _ted = SMARTSTRIP_BASE_ENERGY
 
@@ -114,23 +114,22 @@ class SmartStrip(Agent):
     def startup(self, sender, **kwargs):
         self.runSmartStripTest()
         self.switchLedDebug(LED_ON)
-        
+
         #perodically read the meter data & connected tag ids from h/w
         self.core.periodic(self._period_read_data, self.getData, wait=None)
-        
+
         #perodically publish plug threshold price point to volttron bus
         self.core.periodic(self._period_read_data, self.publishPlugThPP, wait=None)
-        
+
         #perodically publish total energy demand to volttron bus
         self.core.periodic(self._period_read_data, self.publishTed, wait=None)
-        
+
         #subscribing to topic_price_point
         self.vip.pubsub.subscribe("pubsub", self.topic_price_point, self.onNewPrice)
-        
+
         self.vip.rpc.call(MASTER_WEB, 'register_agent_route',
                       r'^/SmartStrip',
-#                      self.core.identity,
-                      "rpc_from_net").get(timeout=2)   
+                      "rpc_from_net").get(timeout=10)
 
     @Core.receiver('onstop')
     def onstop(self, sender, **kwargs):
@@ -142,9 +141,7 @@ class SmartStrip(Agent):
         self.switchRelay(PLUG_ID_4, RELAY_OFF, SCHEDULE_NOT_AVLB)
 
         _log.debug('un registering rpc routes')
-        self.vip.rpc.call(MASTER_WEB, \
-#                            self.core.identity, \
-                            'unregister_all_agent_routes').get(timeout=2)
+        self.vip.rpc.call(MASTER_WEB, 'unregister_all_agent_routes').get(timeout=2)
         return
 
     @Core.receiver('onfinish')
@@ -156,7 +153,7 @@ class SmartStrip(Agent):
         self.switchRelay(PLUG_ID_3, RELAY_OFF, SCHEDULE_NOT_AVLB)
         self.switchRelay(PLUG_ID_4, RELAY_OFF, SCHEDULE_NOT_AVLB)
         return
-        
+
     def _configGetInitValues(self):
         self._tag_ids = self.config['tag_ids']
         self._period_read_data = self.config['period_read_data']
@@ -171,7 +168,7 @@ class SmartStrip(Agent):
         self.topic_price_point      = self.config.get('topic_price_point', \
                                             'topic_price_point')
         return
-        
+
     def runSmartStripTest(self):
         _log.debug("Running : runSmartStripTest()...")
         _log.debug('switch on debug led')
@@ -184,33 +181,18 @@ class SmartStrip(Agent):
 
         _log.debug('switch on debug led')
         self.switchLedDebug(LED_ON)
-        
-        #get schedule for testing relays
-        try: 
-            start = str(datetime.datetime.now())
-            end = str(datetime.datetime.now() 
-                    + datetime.timedelta(milliseconds=500))
 
-            device = 'iiit/cbs/smartstrip'
-            task_id = str(randint(0, 99999))
-            print("task_id: ", task_id)
-            msg = [
-                    [device,start,end]
-                    ]
-            result = self.vip.rpc.call(
-                    'platform.actuator', 
-                    'request_new_schedule',
-                    self._agent_id,                 #requested id
-                    task_id,
-                    'LOW_PREEMPT',
-                    msg).get(timeout=2)
-        except gevent.Timeout:
-            _log.exception("Expection: gevent.Timeout in runSmartStripTest()")
-            return
-        except Exception as e:
-            _log.exception ("Could not contact actuator. Is it running?")
-            #print(e)
-            return
+        self.testRelays()
+        _log.debug("EOF Testing")
+
+        return
+
+    def testRelays(self):
+        result = []
+        #get schedule for testing relays
+        task_id = str(randint(0, 99999999))
+        print("task_id: ", task_id)
+        result = self._get_schedule(task_id)
 
         #test all four relays
         if result['result'] == 'SUCCESS':
@@ -236,35 +218,22 @@ class SmartStrip(Agent):
             self.switchRelay(PLUG_ID_4, RELAY_ON, SCHEDULE_AVLB)
             time.sleep(1)
             _log.debug('switch off relay 4')
-            self.switchRelay(PLUG_ID_4, RELAY_OFF, SCHEDULE_NOT_AVLB)
+            self.switchRelay(PLUG_ID_4, RELAY_OFF, SCHEDULE_AVLB)
             
             #cancel the schedule
-            self._actuator_cancel_schedule(task_id)
+            self._cancel_schedule(task_id)
+        return
 
-        _log.debug("EOF Testing")
-
-    def publishPlugThPP(self):
-        self.publishThresholdPP(PLUG_ID_1,
-                                self._plug_pricepoint_th[PLUG_ID_1])
-        self.publishThresholdPP(PLUG_ID_2,
-                                self._plug_pricepoint_th[PLUG_ID_2])    
-        self.publishThresholdPP(PLUG_ID_3,
-                                self._plug_pricepoint_th[PLUG_ID_3])
-        self.publishThresholdPP(PLUG_ID_4,
-                                self._plug_pricepoint_th[PLUG_ID_4])    
-    def getData(self):
-        #_log.debug('getData()...')
+    def _get_schedule(self, task_id):
         result = []
-        
-        #get schedule
+
+        #get schedule for testing relays
         try: 
             start = str(datetime.datetime.now())
             end = str(datetime.datetime.now() 
-                    + datetime.timedelta(milliseconds=500))
+                    + datetime.timedelta(seconds=10))
 
             device = 'iiit/cbs/smartstrip'
-            task_id = str(randint(0, 99999))
-            print("task_id: ", task_id)
             msg = [
                     [device,start,end]
                     ]
@@ -273,15 +242,35 @@ class SmartStrip(Agent):
                     'request_new_schedule',
                     self._agent_id,                 #requested id
                     task_id,
-                    'LOW_PREEMPT',
+                    'HIGH',
                     msg).get(timeout=2)
         except gevent.Timeout:
-            _log.exception("Expection: gevent.Timeout in getData()")
-            return
+            _log.exception("Expection: gevent.Timeout in runSmartStripTest()")
+            return result
         except Exception as e:
             _log.exception ("Could not contact actuator. Is it running?")
             #print(e)
-            return
+            return result
+        return result
+
+    def publishPlugThPP(self):
+        self.publishThresholdPP(PLUG_ID_1,
+                                self._plug_pricepoint_th[PLUG_ID_1])
+        self.publishThresholdPP(PLUG_ID_2,
+                                self._plug_pricepoint_th[PLUG_ID_2])
+        self.publishThresholdPP(PLUG_ID_3,
+                                self._plug_pricepoint_th[PLUG_ID_3])
+        self.publishThresholdPP(PLUG_ID_4,
+                                self._plug_pricepoint_th[PLUG_ID_4])
+
+    def getData(self):
+        _log.debug('getData()...')
+        result = []
+
+        #get schedule for to h/w latest data
+        task_id = str(randint(0, 99999999))
+        print("task_id: ", task_id)
+        result = self._get_schedule(task_id)
 
         #run the task
         if result['result'] == 'SUCCESS':
@@ -298,32 +287,30 @@ class SmartStrip(Agent):
 
             if self._plugRelayState[PLUG_ID_4] == RELAY_ON:
                 self.readMeterData(PLUG_ID_4)
-                
+
+            #_log.debug('...readTagIDs()')
             self.readTagIDs()
-            
-            
-            #_log.debug('...getData()')
-            
+
             #_log.debug('start processNewTagId()...')
             self.processNewTagId(PLUG_ID_1, self._newTagId1)
             self.processNewTagId(PLUG_ID_2, self._newTagId2)
             self.processNewTagId(PLUG_ID_3, self._newTagId3)
             self.processNewTagId(PLUG_ID_4, self._newTagId4)
             #_log.debug('...done processNewTagId()')
-        
-            #cancel the schedule
-            self._actuator_cancel_schedule(task_id)
 
+            #cancel the schedule
+            self._cancel_schedule(task_id)
 
     def readMeterData(self, plugID):
         #_log.info ('readMeterData(), plugID: ' + str(plugID))
         if plugID not in [PLUG_ID_1, PLUG_ID_2, PLUG_ID_3, PLUG_ID_4]:
             return
-        
+
         pointVolatge = 'Plug'+str(plugID+1)+'Voltage'
         pointCurrent = 'Plug'+str(plugID+1)+'Current'
         pointActivePower = 'Plug'+str(plugID+1)+'ActivePower'
         pubTopic = self.root_topic + '/plug' + str(plugID+1) + '/meterdata/all'
+
         try:
             fVolatge = self.vip.rpc.call(
                     'platform.actuator','get_point',
@@ -379,7 +366,7 @@ class SmartStrip(Agent):
             newTagId2 = ''
             newTagId3 = ''
             newTagId4 = ''
-            
+
             fTagID1_1 = self.vip.rpc.call(
                     'platform.actuator','get_point',
                     'iiit/cbs/smartstrip/TagID1_1').get(timeout=2)
@@ -433,17 +420,12 @@ class SmartStrip(Agent):
             #print(e)
             return
 
-
-
-    #TODO: should move the relay switch on/off functionality to a new agent
-    #to accommodate for more roboast control algorithms
-    #(incl price point changes)
-    #also might resolve some of the scheduling issues
     def processNewTagId(self, plugID, newTagId):
         #empty string
         if not newTagId:
             #do nothing
             return
+
         if newTagId != '7FC000007FC00000':
             #device is connected condition
             #check if current tag id is same as new, if so, do nothing
@@ -493,7 +475,7 @@ class SmartStrip(Agent):
 
         new_price_point = message[0]
         _log.debug ( "*** New Price Point: {0:.2f} ***".format(new_price_point))
-        
+
         if self._price_point_current != new_price_point:
             self.processNewPricePoint(new_price_point)
 
@@ -560,7 +542,7 @@ class SmartStrip(Agent):
             self._plug_pricepoint_th[plugID] = newThreshold
             self.publishThresholdPP(plugID, newThreshold)
         return 'success'
-    
+
     def switchLedDebug(self, state):
         _log.debug('switchLedDebug()')
         result = []
@@ -569,33 +551,10 @@ class SmartStrip(Agent):
             _log.debug('same state, do nothing')
             return
 
-        try:
-            _log.debug('get schl')
-            start = str(datetime.datetime.now())
-            end = str(datetime.datetime.now() 
-                    + datetime.timedelta(milliseconds=500))
-
-            task_id = str(randint(0, 99999))
-            print("task_id: ", task_id)
-            device = 'iiit/cbs/smartstrip'
-            msg = [
-                    [device,start,end]
-                    ]
-            result = self.vip.rpc.call(
-                    'platform.actuator', 
-                    'request_new_schedule',
-                    self._agent_id, 
-                    task_id,
-                    'HIGH',
-                    msg).get(timeout=2)
-            print(result)
-        except gevent.Timeout:
-            _log.exception("Expection: gevent.Timeout in switchLedDebug()")
-            return
-        except Exception as e:
-            _log.exception ("Exception: Could not contact actuator. Is it running?")
-            #print(e)
-            return
+        #get schedule to switchLedDebug
+        task_id = str(randint(0, 99999999))
+        print("task_id: ", task_id)
+        result = self._get_schedule(task_id)
 
         try:
             if result['result'] == 'SUCCESS':
@@ -609,16 +568,16 @@ class SmartStrip(Agent):
 
                 #print("Set result", result)
                 self.updateLedDebugState(state)
-                
+
                 #cancel the schedule
-                self._actuator_cancel_schedule(task_id)
-                
+                self._cancel_schedule(task_id)
+
         except gevent.Timeout:
             _log.exception("Expection: gevent.Timeout in switchLedDebug()")
             return
         except Exception as e:
             _log.exception ("Expection: setting ledDebug")
-            print(e)
+            #print(e)
             return
 
     def switchRelay(self, plugID, state, schdExist):
@@ -631,45 +590,23 @@ class SmartStrip(Agent):
         if schdExist == SCHEDULE_AVLB: 
             self.rpc_switchRelay(plugID, state);
         elif schdExist == SCHEDULE_NOT_AVLB:
-            try: 
-                start = str(datetime.datetime.now())
-                end = str(datetime.datetime.now() 
-                        + datetime.timedelta(milliseconds=500))
-
-                #task_id = 'taskID_Plug' + str(plugID+1) + 'Relay'
-                task_id = str(randint(0, 99999))
-                device = 'iiit/cbs/smartstrip'
-                msg = [
-                        [device,start,end]
-                        ]
-                result = self.vip.rpc.call(
-                        'platform.actuator', 
-                        'request_new_schedule',
-                        self._agent_id, 
-                        task_id,
-                        'HIGH',
-                        msg).get(timeout=2)
-                print("schedule result", result)
-            except gevent.Timeout:
-                _log.exception("Expection: gevent.Timeout in switchRelay()")
-                return
-            except Exception as e:
-                _log.exception ("Could not contact actuator. Is it running?")
-                #print(e)
-                return
+            #get schedule to switchRelay
+            task_id = str(randint(0, 99999999))
+            print("task_id: ", task_id)
+            result = self._get_schedule(task_id)
 
             try:
                 if result['result'] == 'SUCCESS':
                     self.rpc_switchRelay(plugID, state)
                     #cancel the schedule
-                    self._actuator_cancel_schedule(task_id)
-            
+                    self._cancel_schedule(task_id)
+
             except gevent.Timeout:
                 _log.exception("Expection: gevent.Timeout in switchRelay()")
                 return
             except Exception as e:
                 _log.exception ("Expection: setting plug" + str(plugID) + " relay")
-                print(e)
+                #print(e)
                 return
         else:
             #do notthing
@@ -694,10 +631,10 @@ class SmartStrip(Agent):
         ledDebug_status = self.vip.rpc.call(
                 'platform.actuator','get_point',
                 'iiit/cbs/smartstrip/LEDDebug').get(timeout=2)
-        
+
         if state == int(ledDebug_status):
             self._ledDebugState = state
-        
+
         if self._ledDebugState == LED_ON:
             _log.debug('Current State: LED Debug is ON!!!')
         else:
@@ -713,7 +650,7 @@ class SmartStrip(Agent):
         if state == int(relay_status):
             self._plugRelayState[plugID] = state
             self.publishRelayState(plugID, state)
-            
+
         if self._plugRelayState[plugID] == RELAY_ON:
             _log.debug('Current State: Plug ' + str(plugID+1) + ' Relay Switched ON!!!')
         else:
@@ -731,29 +668,33 @@ class SmartStrip(Agent):
     def publishTagId(self, plugID, newTagId):
         if not self._validPlugId(plugID):
             return
+
         pubTopic = self.root_topic+"/plug"+str(plugID+1)+"/tagid"
         pubMsg = [newTagId,{'units': '', 'tz': 'UTC', 'type': 'string'}]
         self.publishToBus(pubTopic, pubMsg)
-        
+
     def publishRelayState(self, plugID, state):
         if not self._validPlugId(plugID):
             return
+
         pubTopic = self.root_topic+"/plug" + str(plugID+1) + "/relaystate"
         pubMsg = [state,{'units': 'On/Off', 'tz': 'UTC', 'type': 'int'}]
         self.publishToBus(pubTopic, pubMsg)
-        
+
     def publishThresholdPP(self, plugID, thresholdPP):
         if not self._validPlugId(plugID):
             return
+
         pubTopic = self.root_topic+"/plug" + str(plugID+1) + "/threshold"
         pubMsg = [thresholdPP,
                     {'units': 'cents', 'tz': 'UTC', 'type': 'float'}]
         self.publishToBus(pubTopic, pubMsg)
-        
+
     def publishToBus(self, pubTopic, pubMsg):
         #_log.debug('_publishToBus()')
         now = datetime.datetime.utcnow().isoformat(' ') + 'Z'
         headers = {headers_mod.DATE: now}
+
         #Publish messages
         try:
             self.vip.pubsub.publish('pubsub', pubTopic, headers, pubMsg).get(timeout=2)
@@ -764,7 +705,7 @@ class SmartStrip(Agent):
             _log.warning("Expection: _publishToBus?")
             return
         return
-        
+
     @RPC.export
     def rpc_from_net(self, header, message):
         print(message)
@@ -776,7 +717,7 @@ class SmartStrip(Agent):
         try:
             rpcdata = jsonrpc.JsonRpcData.parse(message)
             _log.info('rpc method: {}'.format(rpcdata.method))
-            
+
             if rpcdata.method == "rpc_setPlugThPP":
                 args = {'plugID': rpcdata.params['plugID'], 
                         'newThreshold': rpcdata.params['newThreshold']
@@ -787,9 +728,9 @@ class SmartStrip(Agent):
             else:
                 return jsonrpc.json_error('NA', METHOD_NOT_FOUND,
                     'Invalid method {}'.format(rpcdata.method))
-                    
+
             return jsonrpc.json_result(rpcdata.id, result)
-            
+
         except KeyError as ke:
             print(ke)
             return jsonrpc.json_error('NA', INVALID_PARAMS,
@@ -805,19 +746,19 @@ class SmartStrip(Agent):
     #calculate the total energy demand (TED)
     def _calculateTed(self):
         #_log.debug('_calculateTed()')
-        
+
         ted = SMARTSTRIP_BASE_ENERGY
         for idx, plugState in enumerate(self._plugRelayState):
             if plugState == RELAY_ON:
                 ted = ted + self._plugActivePwr[idx]
 
         return ted
-        
+
     def publishTed(self):
         #_log.debug('publishTed()')
-        
+
         ted = self._calculateTed()
-        
+
         '''
         #only publish if change in ted
         if self._ted == ted:
@@ -830,19 +771,20 @@ class SmartStrip(Agent):
                     {'units': 'W', 'tz': 'UTC', 'type': 'float'}]
         self.publishToBus(pubTopic, pubMsg)
         return
-        
+
     def _validPlugId(self, plugID):
         if plugID == PLUG_ID_1 or plugID == PLUG_ID_2 or plugID == PLUG_ID_3 or plugID == PLUG_ID_4:
             return True
         else:
             return False
-        
-    def _actuator_cancel_schedule(self, task_id):
-        _log.debug('_actuator_cancel_schedule')
+
+    def _cancel_schedule(self, task_id):
+        _log.debug('_cancel_schedule')
         result = self.vip.rpc.call('platform.actuator', 'request_cancel_schedule', self._agent_id, task_id).get(timeout=2)
+        print("task_id: ", task_id)
         print(result)
-        
-        
+
+
 def main(argv=sys.argv):
     '''Main method called by the eggsecutable.'''
     try:
@@ -858,4 +800,3 @@ if __name__ == '__main__':
         sys.exit(main())
     except KeyboardInterrupt:
         pass
-    
