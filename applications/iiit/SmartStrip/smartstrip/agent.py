@@ -195,7 +195,7 @@ class SmartStrip(Agent):
         result = []
         #get schedule for testing relays
         task_id = str(randint(0, 99999999))
-        print("task_id: ", task_id)
+        _log.debug("task_id: ", task_id)
         result = self._get_schedule(task_id)
 
         #test all four relays
@@ -245,7 +245,7 @@ class SmartStrip(Agent):
 
         #get schedule for to h/w latest data
         task_id = str(randint(0, 99999999))
-        print("task_id: ", task_id)
+        _log.debug("task_id: ", task_id)
         result = self._get_schedule(task_id)
 
         #run the task
@@ -321,7 +321,7 @@ class SmartStrip(Agent):
             return
         except Exception as e:
             _log.exception ("Expection: exception in readMeterData()")
-            #print(e)
+            print(e)
             return
         return
 
@@ -394,7 +394,7 @@ class SmartStrip(Agent):
             return
         except Exception as e:
             _log.exception ("Exception: reading tag ids")
-            #print(e)
+            print(e)
             return
         return
 
@@ -535,7 +535,7 @@ class SmartStrip(Agent):
 
         #get schedule to switchLedDebug
         task_id = str(randint(0, 99999999))
-        print("task_id: ", task_id)
+        _log.debug("task_id: ", task_id)
         result = self._get_schedule(task_id)
 
         if result['result'] == 'SUCCESS':
@@ -574,7 +574,7 @@ class SmartStrip(Agent):
         elif schdExist == SCHEDULE_NOT_AVLB:
             #get schedule to switchRelay
             task_id = str(randint(0, 99999999))
-            print("task_id: ", task_id)
+            _log.debug("task_id: ", task_id)
             result = self._get_schedule(task_id)
 
             if result['result'] == 'SUCCESS':
@@ -586,7 +586,7 @@ class SmartStrip(Agent):
                     return
                 except Exception as e:
                     _log.exception ("Expection: setting plug" + str(plugID) + " relay")
-                    #print(e)
+                    print(e)
                     return
                 finally:
                     #cancel the schedule
@@ -605,6 +605,7 @@ class SmartStrip(Agent):
                 'iiit/cbs/smartstrip/Plug' + str(plugID+1) + 'Relay',
                 state).get(timeout=10)
         #print("Set result", result)
+        print(result)
         #_log.debug('OK call updatePlug1RelayState()')
         self.updatePlugRelayState(plugID, state)
         return
@@ -692,7 +693,7 @@ class SmartStrip(Agent):
 
     @RPC.export
     def rpc_from_net(self, header, message):
-        print(message)
+        _log.debug(message)
         return self._processMessage(message)
 
     def _processMessage(self, message):
@@ -787,7 +788,7 @@ class SmartStrip(Agent):
             return result
         except Exception as e:
             _log.exception ("Could not contact actuator. Is it running?")
-            #print(e)
+            print(e)
             return result
         return result
 
@@ -795,8 +796,8 @@ class SmartStrip(Agent):
         _log.debug('_cancel_schedule')
         result = self.vip.rpc.call('platform.actuator', 'request_cancel_schedule', \
                                     self._agent_id, task_id).get(timeout=10)
-        print("task_id: ", task_id)
-        print(result)
+        _log.debug("task_id: ", task_id)
+        _log.debug(result)
         return
 
 
