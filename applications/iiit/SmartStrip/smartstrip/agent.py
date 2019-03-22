@@ -195,7 +195,7 @@ class SmartStrip(Agent):
         result = []
         #get schedule for testing relays
         task_id = str(randint(0, 99999999))
-        _log.debug("task_id: ", task_id)
+        _log.debug("task_id: " + task_id)
         result = self._get_schedule(task_id)
 
         #test all four relays
@@ -245,7 +245,7 @@ class SmartStrip(Agent):
 
         #get schedule for to h/w latest data
         task_id = str(randint(0, 99999999))
-        _log.debug("task_id: ", task_id)
+        _log.debug("task_id: " + task_id)
         result = self._get_schedule(task_id)
 
         #run the task
@@ -535,7 +535,7 @@ class SmartStrip(Agent):
 
         #get schedule to switchLedDebug
         task_id = str(randint(0, 99999999))
-        _log.debug("task_id: ", task_id)
+        _log.debug("task_id: " + task_id)
         result = self._get_schedule(task_id)
 
         if result['result'] == 'SUCCESS':
@@ -574,7 +574,7 @@ class SmartStrip(Agent):
         elif schdExist == SCHEDULE_NOT_AVLB:
             #get schedule to switchRelay
             task_id = str(randint(0, 99999999))
-            _log.debug("task_id: ", task_id)
+            _log.debug("task_id: " + task_id)
             result = self._get_schedule(task_id)
 
             if result['result'] == 'SUCCESS':
@@ -796,7 +796,7 @@ class SmartStrip(Agent):
         _log.debug('_cancel_schedule')
         result = self.vip.rpc.call('platform.actuator', 'request_cancel_schedule', \
                                     self._agent_id, task_id).get(timeout=10)
-        _log.debug("task_id: ", task_id)
+        _log.debug("task_id: " + task_id)
         _log.debug(result)
         return
 
