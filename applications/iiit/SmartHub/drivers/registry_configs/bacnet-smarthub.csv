@@ -1,13 +1,13 @@
-Reference Point Name,Volttron Point Name,Units,Unit Details,BACnet Object Type,Property,Writable,Index,Write Priority,Notes
-ANALOG INPUT 0,SensorLux,lux,,analogInput,presentValue,FALSE,0,,"Lux Sensor (0..3,000 Lux)"
-ANALOG INPUT 1,SensorRh,percent,,analogInput,presentValue,FALSE,1,,Rh Sensor
-ANALOG INPUT 2,SensorTemp,celcius,,analogInput,presentValue,FALSE,2,,Temperature Sensor
-ANALOG INPUT 3,SensorCO2,ppm,,analogInput,presentValue,FALSE,3,,CO2 Sensor
-ANALOG OUTPUT 0,LEDPwmDuty,percent,(default 0.0),analogOutput,presentValue,TRUE,0,,LED PWM Duty
-ANALOG OUTPUT 1,FanPwmDuty,percent,(default 0.0),analogOutput,presentValue,TRUE,1,,Fan PWM Duty
-BINARY INPUT 0,SensorOccupancy,Enum,0-1,binaryInput,presentValue,FALSE,0,,"PIR Occupancy Sensor (0 - unoccupied, 1 - occupied)"
-BINARY OUTPUT 0,SmartHub,Enum,0-1 (default 0),binaryOutput,presentValue,TRUE,0,,"Smart Hub Init/Deinit  (0 - deinit, 1- init)"
-BINARY OUTPUT 1,LEDDebug,Enum,0-1 (default 0),binaryOutput,presentValue,TRUE,1,,LED for Debug
-BINARY OUTPUT 2,LED,Enum,0-1 (default 0),binaryOutput,presentValue,TRUE,2,,"LED On/Off (0 - Off, 1- On)"
-BINARY OUTPUT 3,Fan,Enum,0-1 (default 0),binaryOutput,presentValue,TRUE,3,,"Fan On/Off (0 - Off, 1- On)"
-BINARY OUTPUT 4,FanSwing,Enum,0-1 (default 0),binaryOutput,presentValue,TRUE,4,,"FanSwing On/Off (0 - Off, 1- On)"
+Reference Point Name,Volttron Point Name,Units,Unit Details,BACnet Object Type,Property,Writable,Index,Notes
+ANALOG INPUT 0,SensorLux,lux,,analogInput,presentValue,FALSE,0,"Lux Sensor (0..3,000 Lux)"
+ANALOG INPUT 1,SensorRh,percent,,analogInput,presentValue,FALSE,1,Rh Sensor
+ANALOG INPUT 2,SensorTemp,celcius,,analogInput,presentValue,FALSE,2,Temperature Sensor
+ANALOG INPUT 3,SensorCO2,ppm,,analogInput,presentValue,FALSE,3,CO2 Sensor
+ANALOG OUTPUT 0,LEDPwmDuty,percent,(default 0.0),analogOutput,presentValue,TRUE,0,LED PWM Duty
+ANALOG OUTPUT 1,FanPwmDuty,percent,(default 0.0),analogOutput,presentValue,TRUE,1,Fan PWM Duty
+BINARY INPUT 0,SensorOccupancy,Enum,0-1,binaryInput,presentValue,FALSE,0,"PIR Occupancy Sensor (0 - unoccupied, 1 - occupied)"
+BINARY OUTPUT 0,SmartHub,Enum,0-1 (default 0),binaryOutput,presentValue,TRUE,0,"Smart Hub Init/Deinit  (0 - deinit, 1- init)"
+BINARY OUTPUT 1,LEDDebug,Enum,0-1 (default 0),binaryOutput,presentValue,TRUE,1,LED for Debug
+BINARY OUTPUT 2,LED,Enum,0-1 (default 0),binaryOutput,presentValue,TRUE,2,"LED On/Off (0 - Off, 1- On)"
+BINARY OUTPUT 3,Fan,Enum,0-1 (default 0),binaryOutput,presentValue,TRUE,3,"Fan On/Off (0 - Off, 1- On)"
+BINARY OUTPUT 4,FanSwing,Enum,0-1 (default 0),binaryOutput,presentValue,TRUE,4,"FanSwing On/Off (0 - Off, 1- On)"
