@@ -37,7 +37,7 @@
         "0D285F1300000065"
     ],
 
-    "period_read_data": 10,
+    "period_read_data": 30,
     "topic_root": "smartstrip",
     "topic_price_point": "smartstrip/pricepoint",
     "topic_energy_demand": "smartstrip/energydemand",

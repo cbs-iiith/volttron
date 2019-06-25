@@ -87,6 +87,7 @@ class SmartStrip(Agent):
     _plug_pricepoint_th = [0.25, 0.5, 0.75, 0.95]
     _price_point_previous = 0.4 
     _price_point_current = 0.4 
+    _price_point_new = 0.45
 
     _newTagId1 = ''
     _newTagId2 = ''
@@ -125,6 +126,10 @@ class SmartStrip(Agent):
 
         #perodically publish total energy demand to volttron bus
         self.core.periodic(self._period_read_data, self.publishTed, wait=None)
+        
+        #perodically process new pricing point
+        self.core.periodic(10, self.processNewPricePoint, wait=None)
+        
 
         #subscribing to topic_price_point
         self.vip.pubsub.subscribe("pubsub", self.topic_price_point, self.onNewPrice)
@@ -150,11 +155,11 @@ class SmartStrip(Agent):
     @Core.receiver('onfinish')
     def onfinish(self, sender, **kwargs):
         _log.debug('onfinish()')
-        self.switchLedDebug(LED_OFF)
-        self.switchRelay(PLUG_ID_1, RELAY_OFF, SCHEDULE_NOT_AVLB)
-        self.switchRelay(PLUG_ID_2, RELAY_OFF, SCHEDULE_NOT_AVLB)
-        self.switchRelay(PLUG_ID_3, RELAY_OFF, SCHEDULE_NOT_AVLB)
-        self.switchRelay(PLUG_ID_4, RELAY_OFF, SCHEDULE_NOT_AVLB)
+        #self.switchLedDebug(LED_OFF)
+        #self.switchRelay(PLUG_ID_1, RELAY_OFF, SCHEDULE_NOT_AVLB)
+        #self.switchRelay(PLUG_ID_2, RELAY_OFF, SCHEDULE_NOT_AVLB)
+        #self.switchRelay(PLUG_ID_3, RELAY_OFF, SCHEDULE_NOT_AVLB)
+        #self.switchRelay(PLUG_ID_4, RELAY_OFF, SCHEDULE_NOT_AVLB)
         return
 
     def _configGetInitValues(self):
@@ -187,6 +192,9 @@ class SmartStrip(Agent):
         self.switchLedDebug(LED_ON)
 
         self.testRelays()
+        
+        _log.debug('switch off debug led')
+        self.switchLedDebug(LED_OFF)
         _log.debug("EOF Testing")
 
         return
@@ -453,24 +461,40 @@ class SmartStrip(Agent):
             message = compat.unpack_legacy_message(headers, message)
 
         new_price_point = message[0]
-        _log.info ( "*** New Price Point: {0:.2f} ***".format(new_price_point))
+        #_log.info ( "*** New Price Point: {0:.2f} ***".format(new_price_point))
 
-        #if self._price_point_current != new_price_point:
-        if True:
-            self.processNewPricePoint(new_price_point)
+        self._price_point_new = new_price_point
+        
+        if self._price_point_current != new_price_point:
+        #if True:
+            self.processNewPricePoint()
+        return
+        
+    def processNewPricePoint(self):
+        if self._price_point_current != self._price_point_new:
+            _log.info ( "*** New Price Point: {0:.2f} ***".format(self._price_point_new))
+            result = {}
+            #get schedule for testing relays
+            task_id = str(randint(0, 99999999))
+            #_log.debug("task_id: " + task_id)
+            result = self._get_schedule(task_id)
+            
+            if result['result'] == 'SUCCESS':
+                self._price_point_previous = self._price_point_current
+                self._price_point_current = self._price_point_new
+
+                self.applyPricingPolicy(PLUG_ID_1, SCHEDULE_AVLB)
+                self.applyPricingPolicy(PLUG_ID_2, SCHEDULE_AVLB)
+                self.applyPricingPolicy(PLUG_ID_3, SCHEDULE_AVLB)
+                self.applyPricingPolicy(PLUG_ID_4, SCHEDULE_AVLB)
+            else :
+                _log.error("unable to processNewPricePoint()")
+                
+            #cancel the schedule
+            self._cancel_schedule(task_id)
         return
 
-    def processNewPricePoint(self, new_price_point):
-        self._price_point_previous = self._price_point_current
-        self._price_point_current = new_price_point
-
-        self.applyPricingPolicy(PLUG_ID_1)
-        self.applyPricingPolicy(PLUG_ID_2)
-        self.applyPricingPolicy(PLUG_ID_3)
-        self.applyPricingPolicy(PLUG_ID_4)
-        return
-
-    def applyPricingPolicy(self, plugID):
+    def applyPricingPolicy(self, plugID, schdExist):
         plug_pp_th = self._plug_pricepoint_th[plugID]
         if self._price_point_current > plug_pp_th: 
             if self._plugRelayState[plugID] == RELAY_ON:
@@ -478,7 +502,7 @@ class SmartStrip(Agent):
                         'Current price point > threshold',
                         '({0:.2f}), '.format(plug_pp_th),
                         'Switching-Off Power'))
-                self.switchRelay(plugID, RELAY_OFF, SCHEDULE_NOT_AVLB)
+                self.switchRelay(plugID, RELAY_OFF, schdExist)
             #else:
                 #do nothing
         else:
@@ -487,7 +511,7 @@ class SmartStrip(Agent):
                         'Current price point < threshold',
                         '({0:.2f}), '.format(plug_pp_th),
                         'Switching-On Power'))
-                self.switchRelay(plugID, RELAY_ON, SCHEDULE_NOT_AVLB)
+                self.switchRelay(plugID, RELAY_ON, schdExist)
             #else:
                 #do nothing
         return
@@ -527,7 +551,7 @@ class SmartStrip(Agent):
 
     def switchLedDebug(self, state):
         _log.debug('switchLedDebug()')
-        result = {}
+        #result = {}
 
         if self._ledDebugState == state:
             _log.info('same state, do nothing')
@@ -539,6 +563,7 @@ class SmartStrip(Agent):
         result = self._get_schedule(task_id)
 
         if result['result'] == 'SUCCESS':
+            result = {}
             try:
                 #_log.debug('schl avlb')
                 result = self.vip.rpc.call(
@@ -548,7 +573,6 @@ class SmartStrip(Agent):
                         'iiit/cbs/smartstrip/LEDDebug',
                         state).get(timeout=10)
 
-                #print("Set result", result)
                 self.updateLedDebugState(state)
             except gevent.Timeout:
                 _log.exception("Expection: gevent.Timeout in switchLedDebug()")
@@ -604,8 +628,7 @@ class SmartStrip(Agent):
                 self._agent_id, 
                 'iiit/cbs/smartstrip/Plug' + str(plugID+1) + 'Relay',
                 state).get(timeout=10)
-        _log.debug("Set result: ", result)
-        #print(result)
+        
         #_log.debug('OK call updatePlug1RelayState()')
         self.updatePlugRelayState(plugID, state)
         return
@@ -764,7 +787,8 @@ class SmartStrip(Agent):
             return False
 
     def _get_schedule(self, task_id):
-        result = {}
+        #_log.debug("_get_schedule()")
+        #result = {}
 
         #get schedule for testing relays
         try: 
@@ -789,11 +813,12 @@ class SmartStrip(Agent):
         except Exception as e:
             _log.exception ("Could not contact actuator. Is it running?")
             print(e)
+            print result
             return result
         return result
 
     def _cancel_schedule(self, task_id):
-        _log.debug('_cancel_schedule')
+        #_log.debug('_cancel_schedule')
         result = self.vip.rpc.call('platform.actuator', 'request_cancel_schedule', \
                                     self._agent_id, task_id).get(timeout=10)
         #_log.debug("task_id: " + task_id)
