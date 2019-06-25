@@ -192,7 +192,7 @@ class SmartStrip(Agent):
         return
 
     def testRelays(self):
-        result = []
+        result = {}
         #get schedule for testing relays
         task_id = str(randint(0, 99999999))
         _log.debug("task_id: " + task_id)
@@ -241,7 +241,7 @@ class SmartStrip(Agent):
 
     def getData(self):
         _log.debug('getData()...')
-        result = []
+        result = {}
 
         #get schedule for to h/w latest data
         task_id = str(randint(0, 99999999))
@@ -527,7 +527,7 @@ class SmartStrip(Agent):
 
     def switchLedDebug(self, state):
         _log.debug('switchLedDebug()')
-        result = []
+        result = {}
 
         if self._ledDebugState == state:
             _log.info('same state, do nothing')
@@ -764,7 +764,7 @@ class SmartStrip(Agent):
             return False
 
     def _get_schedule(self, task_id):
-        result = []
+        result = {}
 
         #get schedule for testing relays
         try: 

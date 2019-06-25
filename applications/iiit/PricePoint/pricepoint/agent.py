@@ -166,7 +166,7 @@ class PricePoint(Agent):
 
     def price_from_smartstrip_bacnet(self):
         #_log.debug('price_from_smartstrip_bacnet()')
-        result = []
+        result = {}
         task_id = str(randint(0, 99999999))
 
         try: 
