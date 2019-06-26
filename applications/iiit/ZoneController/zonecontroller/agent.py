@@ -368,7 +368,8 @@ class ZoneController(Agent):
     def _getTaskSchedule(self, task_id, time_ms=None):
         #_log.debug("_getTaskSchedule()")
         self.time_ms = 600 if time_ms is None else time_ms
-        try: 
+        try:
+            result = {}
             start = str(datetime.datetime.now())
             end = str(datetime.datetime.now() 
                     + datetime.timedelta(milliseconds=self.time_ms))
