@@ -139,6 +139,8 @@ class ZoneController(Agent):
                                             'zonecontroller/energydemand')
         self.topic_price_point      = self.config.get('topic_price_point', \
                                             'topic_price_point')
+        self.energyDemand_topic_ds  = self.config.get('topic_energy_demand_ds', \
+                                            'smarthub/energydemand')
         return
 
 
