@@ -548,7 +548,7 @@ class SmartHub(Agent):
         
         self._shDevicesPP_th[deviceId] = thPP
         self._publishShDeviceThPP(deviceId, thPP)
-        self.applyPricingPolicy(deviceId)
+        self.applyPricingPolicy(deviceId, SCHEDULE_NOT_AVLB)
         
         return
         
@@ -839,7 +839,7 @@ class SmartHub(Agent):
         return
         
     def _updateShDeviceLevel(self, deviceId, endPoint, level):
-        _log.debug('_updateShDeviceLevel()')
+        #_log.debug('_updateShDeviceLevel()')
         
         _log.debug('level {0:0.4f}'.format( level))
         device_level = self.rpc_getShDeviceLevel(deviceId)
