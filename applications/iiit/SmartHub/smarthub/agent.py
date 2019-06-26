@@ -148,7 +148,7 @@ class SmartHub(Agent):
         return
     @Core.receiver('onstart')            
     def startup(self, sender, **kwargs):
-        #self.runSmartHubTest()
+        self.runSmartHubTest()
         
         time.sleep(10) #yeild for a movement
         

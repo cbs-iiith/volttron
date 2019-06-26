@@ -1,4 +1,4 @@
-Reference Point Name,Volttron Point Name,Units,Unit Details,BACnet Object Type,Property,Writable,Index,Notes
+Point Name,Volttron Point Name,Units,Unit Details,BACnet Object Type,Property,Writable,Index,Notes
 ANALOG INPUT 0,SensorLux,lux,,analogInput,presentValue,FALSE,0,"Lux Sensor (0..3,000 Lux)"
 ANALOG INPUT 1,SensorRh,percent,,analogInput,presentValue,FALSE,1,Rh Sensor
 ANALOG INPUT 2,SensorTemp,celcius,,analogInput,presentValue,FALSE,2,Temperature Sensor
