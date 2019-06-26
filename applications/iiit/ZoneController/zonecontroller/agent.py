@@ -110,7 +110,7 @@ class ZoneController(Agent):
         self.vip.pubsub.subscribe("pubsub", self.energyDemand_topic_ds, self.onDsEd)
         
         self.vip.rpc.call(MASTER_WEB, 'register_agent_route',
-                      r'^/RadiantCubicle',
+                      r'^/ZoneController',
                       "rpc_from_net").get(timeout=10)
         return
 
@@ -373,7 +373,7 @@ class ZoneController(Agent):
             end = str(datetime.datetime.now() 
                     + datetime.timedelta(milliseconds=self.time_ms))
 
-            device = 'iiit/cbs/radiantcubicle'
+            device = 'iiit/cbs/zonecontroller'
             msg = [
                     [device,start,end]
                     ]
@@ -429,7 +429,7 @@ class ZoneController(Agent):
 def main(argv=sys.argv):
     '''Main method called by the eggsecutable.'''
     try:
-        utils.vip_main(RadiantCubicle)
+        utils.vip_main(ZoneController)
     except Exception as e:
         print e
         _log.exception('unhandled exception')
