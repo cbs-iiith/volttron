@@ -226,6 +226,7 @@ class ZoneController(Agent):
         task_id = str(randint(0, 99999999))
         result = self._getTaskSchedule(task_id)
         if result['result'] == 'SUCCESS':
+            result = {}
             try:
                 result = self.vip.rpc.call(
                     'platform.actuator', 
