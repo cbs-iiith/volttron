@@ -164,8 +164,8 @@ class SmartHub(Agent):
         #time.sleep(1) #yeild for a movement
 
         #apply pricing policy for default values
-        self.applyPricingPolicy(SH_DEVICE_LED)
-        self.applyPricingPolicy(SH_DEVICE_FAN)
+        self.applyPricingPolicy(SH_DEVICE_LED, SCHEDULE_NOT_AVLB)
+        self.applyPricingPolicy(SH_DEVICE_FAN, SCHEDULE_NOT_AVLB)
         
         #publish initial data to volttron bus
         self.publishDeviceState();
@@ -392,7 +392,7 @@ class SmartHub(Agent):
             return
         finally:
             #cancel the schedule
-            self._cancel_schedule(task_id)
+            self._cancelSchedule(task_id)
 
             
         return
@@ -413,7 +413,7 @@ class SmartHub(Agent):
             return
         finally:
             #cancel the schedule
-            self._cancel_schedule(task_id)
+            self._cancelSchedule(task_id)
         
         return
         
@@ -437,7 +437,7 @@ class SmartHub(Agent):
                 return state
             finally:
                 #cancel the schedule
-                self._cancel_schedule(task_id)
+                self._cancelSchedule(task_id)
         else:
             #do notthing
             _log.exception ("not a valid param - schdExist: " + schdExist)
@@ -466,7 +466,7 @@ class SmartHub(Agent):
                 return level
             finally:
                 #cancel the schedule
-                self._cancel_schedule(task_id)
+                self._cancelSchedule(task_id)
         else:
             #do notthing
             _log.exception ("Expection: not a valid param - schdExist: " + schdExist)
@@ -498,7 +498,7 @@ class SmartHub(Agent):
                 return
             finally:
                 #cancel the schedule
-                self._cancel_schedule(task_id)
+                self._cancelSchedule(task_id)
         else:
             #do notthing
             _log.exception ("not a valid param - schdExist: " + schdExist)
@@ -529,7 +529,7 @@ class SmartHub(Agent):
                 return
             finally:
                 #cancel the schedule
-                self._cancel_schedule(task_id)
+                self._cancelSchedule(task_id)
         else:
             #do notthing
             _log.exception ("Expection: not a valid param - schdExist: " + schdExist)
@@ -567,7 +567,7 @@ class SmartHub(Agent):
                 pir_level = self.getShDeviceLevel(SH_DEVICE_S_PIR, SCHEDULE_AVLB)
                 #time.sleep(1)  #yeild for a movement
                 #cancel the schedule
-                self._cancel_schedule(task_id)
+                self._cancelSchedule(task_id)
                 
                 _log.debug("lux Level: " + "{0:0.4f}".format(lux_level) \
                             + ", rh Level: " + "{0:0.4f}".format(rh_level) \
@@ -598,7 +598,7 @@ class SmartHub(Agent):
             return
         finally:
                 #cancel the schedule
-                self._cancel_schedule(task_id)
+                self._cancelSchedule(task_id)
         return
         
     def publishDeviceState(self) :
@@ -655,11 +655,11 @@ class SmartHub(Agent):
     def processNewPricePoint(self):
         if self._price_point_current != self._price_point_new:
             _log.info ( "*** New Price Point: {0:.2f} ***".format(self._price_point_new))
-            result = {}
+            #result = {}
             #get schedule for testing relays
             task_id = str(randint(0, 99999999))
             #_log.debug("task_id: " + task_id)
-            result = self._get_schedule(task_id)
+            result = self._getTaskSchedule(task_id)
             
             if result['result'] == 'SUCCESS':
                 self._price_point_previous = self._price_point_current
@@ -671,7 +671,7 @@ class SmartHub(Agent):
                 _log.error("unable to processNewPricePoint()")
                 
             #cancel the schedule
-            self._cancel_schedule(task_id)
+            self._cancelSchedule(task_id)
         return
         
     def applyPricingPolicy(self, deviceId, schdExist):
@@ -803,7 +803,6 @@ class SmartHub(Agent):
                     taskId,
                     'HIGH',
                     msg).get(timeout=10)
-            #print("schedule result", result)
         except gevent.Timeout:
             _log.exception("Expection: gevent.Timeout in _getTaskSchedule()")
             return result
@@ -814,8 +813,8 @@ class SmartHub(Agent):
             return result
         return result
 
-    def _cancel_schedule(self, task_id):
-        #_log.debug('_cancel_schedule')
+    def _cancelSchedule(self, task_id):
+        #_log.debug('_cancelSchedule')
         result = self.vip.rpc.call('platform.actuator', 'request_cancel_schedule', \
                                     self._agent_id, task_id).get(timeout=10)
         #_log.debug("task_id: " + task_id)

@@ -204,7 +204,7 @@ class SmartStrip(Agent):
         #get schedule for testing relays
         task_id = str(randint(0, 99999999))
         #_log.debug("task_id: " + task_id)
-        result = self._get_schedule(task_id)
+        result = self._getTaskSchedule(task_id)
 
         #test all four relays
         if result['result'] == 'SUCCESS':
@@ -233,7 +233,7 @@ class SmartStrip(Agent):
             self.switchRelay(PLUG_ID_4, RELAY_OFF, SCHEDULE_AVLB)
             
             #cancel the schedule
-            self._cancel_schedule(task_id)
+            self._cancelSchedule(task_id)
         return
 
     def publishPlugThPP(self):
@@ -254,7 +254,7 @@ class SmartStrip(Agent):
         #get schedule for to h/w latest data
         task_id = str(randint(0, 99999999))
         #_log.debug("task_id: " + task_id)
-        result = self._get_schedule(task_id)
+        result = self._getTaskSchedule(task_id)
 
         #run the task
         if result['result'] == 'SUCCESS':
@@ -283,7 +283,7 @@ class SmartStrip(Agent):
             #_log.debug('...done processNewTagId()')
 
             #cancel the schedule
-            self._cancel_schedule(task_id)
+            self._cancelSchedule(task_id)
         return
 
     def readMeterData(self, plugID):
@@ -477,7 +477,7 @@ class SmartStrip(Agent):
             #get schedule for testing relays
             task_id = str(randint(0, 99999999))
             #_log.debug("task_id: " + task_id)
-            result = self._get_schedule(task_id)
+            result = self._getTaskSchedule(task_id)
             
             if result['result'] == 'SUCCESS':
                 self._price_point_previous = self._price_point_current
@@ -491,7 +491,7 @@ class SmartStrip(Agent):
                 _log.error("unable to processNewPricePoint()")
                 
             #cancel the schedule
-            self._cancel_schedule(task_id)
+            self._cancelSchedule(task_id)
         return
 
     def applyPricingPolicy(self, plugID, schdExist):
@@ -560,7 +560,7 @@ class SmartStrip(Agent):
         #get schedule to switchLedDebug
         task_id = str(randint(0, 99999999))
         #_log.debug("task_id: " + task_id)
-        result = self._get_schedule(task_id)
+        result = self._getTaskSchedule(task_id)
 
         if result['result'] == 'SUCCESS':
             result = {}
@@ -583,7 +583,7 @@ class SmartStrip(Agent):
                 return
             finally:
                 #cancel the schedule
-                self._cancel_schedule(task_id)
+                self._cancelSchedule(task_id)
         return
 
     def switchRelay(self, plugID, state, schdExist):
@@ -599,7 +599,7 @@ class SmartStrip(Agent):
             #get schedule to switchRelay
             task_id = str(randint(0, 99999999))
             #_log.debug("task_id: " + task_id)
-            result = self._get_schedule(task_id)
+            result = self._getTaskSchedule(task_id)
 
             if result['result'] == 'SUCCESS':
                 try:
@@ -614,7 +614,7 @@ class SmartStrip(Agent):
                     return
                 finally:
                     #cancel the schedule
-                    self._cancel_schedule(task_id)
+                    self._cancelSchedule(task_id)
                     return
         else:
             #do notthing
@@ -786,15 +786,13 @@ class SmartStrip(Agent):
         else:
             return False
 
-    def _get_schedule(self, task_id):
-        #_log.debug("_get_schedule()")
-        #result = {}
-
-        #get schedule for testing relays
+    def _getTaskSchedule(self, task_id, time_ms=None):
+        #_log.debug("_getTaskSchedule()")
+        self.time_ms = 600 if time_ms is None else time_ms
         try: 
             start = str(datetime.datetime.now())
             end = str(datetime.datetime.now() 
-                    + datetime.timedelta(seconds=10))
+                    + datetime.timedelta(milliseconds=self.time_ms))
 
             device = 'iiit/cbs/smartstrip'
             msg = [
@@ -808,7 +806,7 @@ class SmartStrip(Agent):
                     'HIGH',
                     msg).get(timeout=10)
         except gevent.Timeout:
-            _log.exception("Expection: gevent.Timeout in runSmartStripTest()")
+            _log.exception("Expection: gevent.Timeout in _getTaskSchedule()")
             return result
         except Exception as e:
             _log.exception ("Could not contact actuator. Is it running?")
@@ -817,8 +815,8 @@ class SmartStrip(Agent):
             return result
         return result
 
-    def _cancel_schedule(self, task_id):
-        #_log.debug('_cancel_schedule')
+    def _cancelSchedule(self, task_id):
+        #_log.debug('_cancelSchedule')
         result = self.vip.rpc.call('platform.actuator', 'request_cancel_schedule', \
                                     self._agent_id, task_id).get(timeout=10)
         #_log.debug("task_id: " + task_id)
