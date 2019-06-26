@@ -124,6 +124,7 @@ class SmartHub(Agent):
     _shDevicesPP_th = [ 0.95, 0.95, 0.95, 0.95, 0.95, 0.95, 0.95, 0.95, 0.95]
     _price_point_previous = 0.4 
     _price_point_current = 0.4
+    _price_point_new = 0.45
     
     #downstream energy demand and deviceId
     _ds_ed = []
@@ -172,6 +173,9 @@ class SmartHub(Agent):
         self.publishDeviceThPP();
         self.publishSensorData();
         self.publishCurrentPP();
+        
+        #perodically process new pricing point
+        self.core.periodic(10, self.processNewPricePoint, wait=None)
         
         #perodically publish device state to volttron bus
         self.core.periodic(self._period_read_data, self.publishDeviceState, wait=None)
@@ -641,18 +645,36 @@ class SmartHub(Agent):
             
         new_price_point = message[0]
         _log.debug ( "*** New Price Point: {0:.2f} ***".format(new_price_point))
+
+        self._price_point_new = new_price_point
         
         if self._price_point_current != new_price_point:
-            self.processNewPricePoint(new_price_point)
+            self.processNewPricePoint()
+        return
+        
+    def processNewPricePoint(self):
+        if self._price_point_current != self._price_point_new:
+            _log.info ( "*** New Price Point: {0:.2f} ***".format(self._price_point_new))
+            result = {}
+            #get schedule for testing relays
+            task_id = str(randint(0, 99999999))
+            #_log.debug("task_id: " + task_id)
+            result = self._get_schedule(task_id)
             
-    def processNewPricePoint(self, new_price_point):
-        self._price_point_previous = self._price_point_current
-        self._price_point_current = new_price_point
+            if result['result'] == 'SUCCESS':
+                self._price_point_previous = self._price_point_current
+                self._price_point_current = self._price_point_new
+
+                self.applyPricingPolicy(SH_DEVICE_LED, SCHEDULE_AVLB)
+                self.applyPricingPolicy(SH_DEVICE_FAN, SCHEDULE_AVLB)
+            else :
+                _log.error("unable to processNewPricePoint()")
+                
+            #cancel the schedule
+            self._cancel_schedule(task_id)
+        return
         
-        self.applyPricingPolicy(SH_DEVICE_LED)
-        self.applyPricingPolicy(SH_DEVICE_FAN)
-        
-    def applyPricingPolicy(self, deviceId):
+    def applyPricingPolicy(self, deviceId, schdExist):
         _log.debug("applyPricingPolicy()")
         shDevicesPP_th = self._shDevicesPP_th[deviceId]
         if self._price_point_current > shDevicesPP_th: 
@@ -662,7 +684,7 @@ class SmartHub(Agent):
                             + '({0:.2f}), '.format(shDevicesPP_th) \
                             + 'Switching-Off Power' \
                             )
-                self.setShDeviceState(deviceId, SH_DEVICE_STATE_OFF, SCHEDULE_NOT_AVLB)
+                self.setShDeviceState(deviceId, SH_DEVICE_STATE_OFF, schdExist)
             #else:
                 #do nothing
         else:
@@ -671,7 +693,7 @@ class SmartHub(Agent):
                         + '({0:.2f}), '.format(shDevicesPP_th) \
                         + 'Switching-On Power' \
                         )
-            self.setShDeviceState(deviceId, SH_DEVICE_STATE_ON, SCHEDULE_NOT_AVLB)
+            self.setShDeviceState(deviceId, SH_DEVICE_STATE_ON, schdExist)
             
         return
         
