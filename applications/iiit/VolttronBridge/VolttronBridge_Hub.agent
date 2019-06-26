@@ -10,6 +10,6 @@
     "sh_port": 8080,
     "energyDemand_topic": "smarthub/energydemand",
     "energyDemand_topic_ds": "smartstrip/energydemand",
-    "pricePoint_topic_us": "zone/pricepoint",
+    "pricePoint_topic_us": "zonecontroller/pricepoint",
     "pricePoint_topic": "smarthub/pricepoint"
 }
