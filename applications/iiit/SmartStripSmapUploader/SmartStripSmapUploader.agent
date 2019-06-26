@@ -5,7 +5,7 @@
     "ss_id": "SmartStrip-61",
     "ss_main_topic": "smartstrip",
     "vb_main_topic": "smarthub", 
-    "smap_root": "http://chomp.lbl.gov/",
+    "smap_root": "http://cbs.iiit.ac.in/smap/",
     "api_key": "u606HlEFHTeVLfpBQZkNF232wChljnLHCKBY",
     "source_data": "CBERD Flexlab Data V2",
     "time_zone": "Etc/UTC"
