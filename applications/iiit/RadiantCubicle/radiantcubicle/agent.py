@@ -45,6 +45,7 @@ SCHEDULE_NOT_AVLB = 0
 
 E_UNKNOWN_STATE = -2
 E_UNKNOWN_LEVEL = -3
+E_UNKNOWN_CCE   = -4
 
 RC_AUTO_CNTRL_ON = 1
 RC_AUTO_CNTRL_OFF = 0
@@ -98,6 +99,9 @@ class RadiantCubicle(Agent):
                       r'^/RadiantCubicle',
                       "rpc_from_net").get(timeout=10)
         
+        #perodically publish total energy demand to volttron bus
+        self.core.periodic(self._period_read_data, self.publishTed, wait=None)
+        
         #perodically process new pricing point
         self.core.periodic(10, self.processNewPricePoint, wait=None)
         
@@ -123,6 +127,7 @@ class RadiantCubicle(Agent):
         self._period_read_data = self.config['period_read_data']
         self._price_point_previous = self.config['default_base_price']
         self._price_point_current = self.config['default_base_price']
+        self._deviceId = self.config.get('deviceId', 'RadiantCubicle-61')
         return
         
     def _configGetPoints(self):
@@ -311,6 +316,29 @@ class RadiantCubicle(Agent):
             
         return
         
+    def rpc_getRcCalcCoolingEnergy(self):
+        task_id = str(randint(0, 99999999))
+        result = self._getTaskSchedule(task_id)
+        if result['result'] == 'SUCCESS':
+            try:
+                coolingEnergy = self.vip.rpc.call(
+                        'platform.actuator','get_point',
+                        'iiit/cbs/radiantcubicle/RC_CCE').get(timeout=10)
+                return coolingEnergy
+            except gevent.Timeout:
+                _log.exception("Expection: gevent.Timeout in rpc_getRcCalcCoolingEnergy()")
+                return E_UNKNOWN_CCE
+            except Exception as e:
+                _log.exception ("Expection: Could not contact actuator. Is it running?")
+                print(e)
+                return E_UNKNOWN_CCE
+            finally:
+                #cancel the schedule
+                self._cancelSchedule(task_id)
+        else:
+            _log.debug('schedule NOT available')
+        return E_UNKNOWN_CCE
+        
     def rpc_getRcTspLevel(self):
         try:
             device_level = self.vip.rpc.call(
@@ -353,6 +381,43 @@ class RadiantCubicle(Agent):
         pubMsg = [state,{'units': 'On/Off', 'tz': 'UTC', 'type': 'int'}]
         self.publishToBus(pubTopic, pubMsg)
         return
+
+    def publishTed(self):
+        ted = self.rpc_getRcCalcCoolingEnergy()
+        self._ted = ted
+        _log.info( "*** New TED: {0:.2f}, publishing to bus ***".format(ted))
+        pubTopic = self.energyDemand_topic
+        pubTopic = self.energyDemand_topic + "/" + self._deviceId
+        _log.debug("TED pubTopic: " + pubTopic)
+        pubMsg = [ted,
+                    {'units': 'W', 'tz': 'UTC', 'type': 'float'}]
+        self.publishToBus(pubTopic, pubMsg)
+        return
+        
+    def _calculatePredictedTed(self):
+        #_log.debug('_calculatePredictedTed()')
+        
+        #get actual tsp from device
+        tsp = self._rcTspLevel
+        if tsp == 22.0 :
+            ted = 350
+        elif tsp == 23.0 :
+            ted = 325
+        elif tsp == 24.0 :
+            ted = 300
+        elif tsp == 25.0 :
+            ted = 275
+        elif tsp == 26.0 :
+            ted = 250
+        elif tsp == 27.0 :
+            ted = 225
+        elif tsp == 28.0 :
+            ted = 200
+        elif tsp == 29.0 :
+            ted = 150
+        else :
+            ted = 100
+        return ted
 
     def publishToBus(self, pubTopic, pubMsg):
         #_log.debug('_publishToBus()')
