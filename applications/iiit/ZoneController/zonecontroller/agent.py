@@ -68,7 +68,7 @@ class ZoneController(Agent):
     _price_point_current = 0.4 
     _price_point_new = 0.45
 
-    _rmTspLevel = 25
+    _rmTsp = 25
     
     #downstream energy demand and deviceId
     _ds_ed = []
@@ -145,19 +145,19 @@ class ZoneController(Agent):
     def _runBMSTest(self):
         _log.debug("Running : _runBMS Commu Test()...")
         
-        _log.debug('change level 26')
+        _log.debug('change tsp 26')
         self.setRmTsp(26.0)
         time.sleep(10)
         
-        _log.debug('change level 27')
+        _log.debug('change tsp 27')
         self.setRmTsp(27.0)
         time.sleep(10)
         
-        _log.debug('change level 28')
+        _log.debug('change tsp 28')
         self.setRmTsp(28.0)
         time.sleep(10)
         
-        _log.debug('change level 29')
+        _log.debug('change tsp 29')
         self.setRmTsp(29.0)
         time.sleep(10)
         
@@ -215,12 +215,12 @@ class ZoneController(Agent):
             tsp = 22.0
         return tsp
     
-    # change rc surface temperature set point
-    def setRcTspLevel(self, level):
-        #_log.debug('setRcTspLevel()')
+    # change ambient temperature set point
+    def setRmTsp(self, tsp):
+        #_log.debug('setRmTsp()')
         
-        if self._isclose(level, self._rmTspLevel, 1e-03):
-            _log.debug('same level, do nothing')
+        if self._isclose(tsp, self._rmTsp, 1e-03):
+            _log.debug('same tsp, do nothing')
             return
             
         task_id = str(randint(0, 99999999))
@@ -232,12 +232,12 @@ class ZoneController(Agent):
                     'set_point',
                     self._agent_id, 
                     'iiit/cbs/zonecontroller/RM_TSP',
-                    level).get(timeout=10)
-                self.updateRcTspLevel(level)
+                    tsp).get(timeout=10)
+                self.updateRmTsp(tsp)
             except gevent.Timeout:
-                _log.exception("Expection: gevent.Timeout in setRcTspLevel()")
+                _log.exception("Expection: gevent.Timeout in setRmTsp()")
             except Exception as e:
-                _log.exception ("Expection: changing device level")
+                _log.exception ("Expection: changing ambient tsp")
                 print(e)
             finally:
                 #cancel the schedule
@@ -247,15 +247,15 @@ class ZoneController(Agent):
         return
         
     def updateRmTsp(self, tsp):
-        #_log.debug('updateRmTspLevel()')
+        #_log.debug('updateRmTsp()')
         _log.debug('tsp {0:0.1f}'.format( tsp))
         
-        rm_tsp = self.rpc_getRmTspLevel()
+        rm_tsp = self.rpc_getRmTsp()
         
         #check if the tsp really updated at the h/w, only then proceed with new tsp
         if self._isclose(tsp, rm_tsp, 1e-03):
-            self._rmTspLevel = tsp
-            self.publishRmTspLevel(tsp)
+            self._rmTsp = tsp
+            self.publishRmTsp(tsp)
             
         _log.debug('Current TSP: ' + "{0:0.1f}".format( rm_tsp))
         return
@@ -290,7 +290,7 @@ class ZoneController(Agent):
                     'iiit/cbs/zonecontroller/RM_TSP').get(timeout=10)
             return rm_tsp
         except gevent.Timeout:
-            _log.exception("Expection: gevent.Timeout in rpc_getShDeviceLevel()")
+            _log.exception("Expection: gevent.Timeout in rpc_getRmTsp()")
             return E_UNKNOWN_TSP
         except Exception as e:
             _log.exception ("Expection: Could not contact actuator. Is it running?")
@@ -300,7 +300,7 @@ class ZoneController(Agent):
         
     def publishRmTsp(self, tsp):
         #_log.debug('publishRmTsp()')
-        pubTopic = self.root_topic+"/rc_tsp_level"
+        pubTopic = self.root_topic+"/rm_tsp"
         pubMsg = [tsp,{'units': 'celcius', 'tz': 'UTC', 'type': 'float'}]
         self.publishToBus(pubTopic, pubMsg)
         return
@@ -329,7 +329,7 @@ class ZoneController(Agent):
         #_log.debug('_calculatePredictedTed()')
         
         #get actual tsp from device
-        tsp = self._rcTspLevel
+        tsp = self._rmTsp
         if tsp == 22.0 :
             ted = 6500
         elif tsp == 23.0 :
