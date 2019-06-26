@@ -112,8 +112,6 @@ class ZoneController(Agent):
         self.vip.rpc.call(MASTER_WEB, 'register_agent_route',
                       r'^/RadiantCubicle',
                       "rpc_from_net").get(timeout=10)
-
-        
         return
 
     @Core.receiver('onstop')
@@ -247,7 +245,6 @@ class ZoneController(Agent):
         else:
             _log.debug('schedule NOT available')
         return
-    
         
     def updateRmTsp(self, tsp):
         #_log.debug('updateRmTspLevel()')
@@ -263,7 +260,7 @@ class ZoneController(Agent):
         _log.debug('Current TSP: ' + "{0:0.1f}".format( rm_tsp))
         return
         
-        def rpc_getRmCalcCoolingEnergy(self):
+    def rpc_getRmCalcCoolingEnergy(self):
         task_id = str(randint(0, 99999999))
         result = self._getTaskSchedule(task_id)
         if result['result'] == 'SUCCESS':
