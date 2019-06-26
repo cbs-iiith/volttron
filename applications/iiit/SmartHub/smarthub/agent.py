@@ -31,6 +31,8 @@ from volttron.platform.jsonrpc import (
         UNABLE_TO_UNREGISTER_INSTANCE, UNAVAILABLE_PLATFORM, INVALID_PARAMS,
         UNAVAILABLE_AGENT)
 
+from random import randint
+
 import settings
 
 import time
@@ -150,15 +152,15 @@ class SmartHub(Agent):
     def startup(self, sender, **kwargs):
         self.runSmartHubTest()
         
-        time.sleep(10) #yeild for a movement
+        #time.sleep(10) #yeild for a movement
         
         _log.debug('switch on debug led')
         self.setShDeviceState(SH_DEVICE_LED_DEBUG, SH_DEVICE_STATE_ON, SCHEDULE_NOT_AVLB)
-        time.sleep(1) #yeild for a movement
+        #time.sleep(1) #yeild for a movement
 
         #get the latest values (states/levels) from h/w
         self.getInitialHwState()
-        time.sleep(1) #yeild for a movement
+        #time.sleep(1) #yeild for a movement
 
         #apply pricing policy for default values
         self.applyPricingPolicy(SH_DEVICE_LED)
@@ -252,6 +254,7 @@ class SmartHub(Agent):
         return   
     def testLedDebug(self):
         _log.debug('switch on debug led')
+        
         self.setShDeviceState(SH_DEVICE_LED_DEBUG, SH_DEVICE_STATE_ON, SCHEDULE_NOT_AVLB)
         time.sleep(1)
 
@@ -293,6 +296,10 @@ class SmartHub(Agent):
         self.setShDeviceLevel(SH_DEVICE_LED, 0.9, SCHEDULE_NOT_AVLB)
         time.sleep(1)
         
+        _log.debug('change led level 0.4')        
+        self.setShDeviceLevel(SH_DEVICE_LED, 0.4, SCHEDULE_NOT_AVLB)
+        time.sleep(1)
+        
         _log.debug('switch off led')
         self.setShDeviceState(SH_DEVICE_LED, SH_DEVICE_STATE_OFF, SCHEDULE_NOT_AVLB)
         time.sleep(1)
@@ -313,6 +320,10 @@ class SmartHub(Agent):
 
         _log.debug('change fan level 0.9')        
         self.setShDeviceLevel(SH_DEVICE_FAN, 0.9, SCHEDULE_NOT_AVLB)
+        time.sleep(1)
+        
+        _log.debug('change fan level 0.4')        
+        self.setShDeviceLevel(SH_DEVICE_FAN, 0.4, SCHEDULE_NOT_AVLB)
         time.sleep(1)
         
         _log.debug('switch off fan')
@@ -348,7 +359,8 @@ class SmartHub(Agent):
         
         return
     def testSensors_2(self):
-        result = self._getTaskSchedule('testSensors_2', 300)
+        task_id = str(randint(0, 99999999))
+        result = self._getTaskSchedule(task_id, 300)
         try:
             if result['result'] == 'SUCCESS':
                 _log.debug('test lux sensor')
@@ -374,12 +386,17 @@ class SmartHub(Agent):
             _log.exception ("Expection: no task schdl for testSensors_2()")
             #print(e)
             return
+        finally:
+            #cancel the schedule
+            self._cancel_schedule(task_id)
+
             
         return
         
     def getInitialHwState(self):
         #_log.debug("getInitialHwState()")
-        result = self._getTaskSchedule('getInitialHwState', 300)
+        task_id = str(randint(0, 99999999))
+        result = self._getTaskSchedule(task_id, 300)
         try:
             if result['result'] == 'SUCCESS':
                 self._shDevicesState[SH_DEVICE_LED] = self.getShDeviceState(SH_DEVICE_LED, SCHEDULE_AVLB)
@@ -390,7 +407,10 @@ class SmartHub(Agent):
             _log.exception ("Expection: no task schdl for getInitialHwState()")
             #print(e)
             return
-            
+        finally:
+            #cancel the schedule
+            self._cancel_schedule(task_id)
+        
         return
         
     def getShDeviceState(self, deviceId, schdExist):
@@ -402,7 +422,8 @@ class SmartHub(Agent):
         if schdExist == SCHEDULE_AVLB: 
             state = self.rpc_getShDeviceState(deviceId);
         elif schdExist == SCHEDULE_NOT_AVLB:
-            result = self._getTaskSchedule('getShDeviceState_' + str(deviceId))
+            task_id = str(randint(0, 99999999))
+            result = self._getTaskSchedule(task_id)
             try:
                 if result['result'] == 'SUCCESS':
                     state = self.rpc_getShDeviceState(deviceId);
@@ -410,6 +431,9 @@ class SmartHub(Agent):
                 _log.exception ("Expection: no task schdl for getting device state")
                 #print(e)
                 return state
+            finally:
+                #cancel the schedule
+                self._cancel_schedule(task_id)
         else:
             #do notthing
             _log.exception ("not a valid param - schdExist: " + schdExist)
@@ -427,7 +451,8 @@ class SmartHub(Agent):
         if schdExist == SCHEDULE_AVLB: 
             level = self.rpc_getShDeviceLevel(deviceId);
         elif schdExist == SCHEDULE_NOT_AVLB:
-            result = self._getTaskSchedule('getShDeviceLevel_' + str(deviceId))
+            task_id = str(randint(0, 99999999))
+            result = self._getTaskSchedule(task_id)
             try:
                 if result['result'] == 'SUCCESS':
                     level = self.rpc_getShDeviceLevel(deviceId);
@@ -435,6 +460,9 @@ class SmartHub(Agent):
                 _log.exception ("Expection: no task schdl for getting device level")
                 #print(e)
                 return level
+            finally:
+                #cancel the schedule
+                self._cancel_schedule(task_id)
         else:
             #do notthing
             _log.exception ("Expection: not a valid param - schdExist: " + schdExist)
@@ -455,7 +483,8 @@ class SmartHub(Agent):
         if schdExist == SCHEDULE_AVLB: 
             self.rpc_setShDeviceState(deviceId, state);
         elif schdExist == SCHEDULE_NOT_AVLB:
-            result = self._getTaskSchedule('setShDeviceState_' + str(deviceId))
+            task_id = str(randint(0, 99999999))
+            result = self._getTaskSchedule(task_id)
             try:
                 if result['result'] == 'SUCCESS':
                     self.rpc_setShDeviceState(deviceId, state);
@@ -463,6 +492,9 @@ class SmartHub(Agent):
                 _log.exception ("Expection: no task schdl for changing device state")
                 #print(e)
                 return
+            finally:
+                #cancel the schedule
+                self._cancel_schedule(task_id)
         else:
             #do notthing
             _log.exception ("not a valid param - schdExist: " + schdExist)
@@ -482,7 +514,8 @@ class SmartHub(Agent):
         if schdExist == SCHEDULE_AVLB: 
             self.rpc_setShDeviceLevel(deviceId, level);
         elif schdExist == SCHEDULE_NOT_AVLB:
-            result = self._getTaskSchedule('setShDeviceLevel_' + str(deviceId))
+            task_id = str(randint(0, 99999999))
+            result = self._getTaskSchedule(task_id)
             try:
                 if result['result'] == 'SUCCESS':
                     self.rpc_setShDeviceLevel(deviceId, level);
@@ -490,6 +523,9 @@ class SmartHub(Agent):
                 _log.exception ("Expection: no task schdl for changing device level")
                 #print(e)
                 return
+            finally:
+                #cancel the schedule
+                self._cancel_schedule(task_id)
         else:
             #do notthing
             _log.exception ("Expection: not a valid param - schdExist: " + schdExist)
@@ -514,7 +550,8 @@ class SmartHub(Agent):
         
     def publishSensorData(self) :
         #_log.debug('publishSensorData()')
-        result = self._getTaskSchedule('publishSensorData', 300)
+        task_id = str(randint(0, 99999999))
+        result = self._getTaskSchedule(task_id, 300)
         #print(result)
         try:
             if result['result'] == 'SUCCESS':
@@ -524,7 +561,9 @@ class SmartHub(Agent):
                 temp_level = self.getShDeviceLevel(SH_DEVICE_S_TEMP, SCHEDULE_AVLB)
                 co2_level = self.getShDeviceLevel(SH_DEVICE_S_CO2, SCHEDULE_AVLB)
                 pir_level = self.getShDeviceLevel(SH_DEVICE_S_PIR, SCHEDULE_AVLB)
-                time.sleep(1)  #yeild for a movement
+                #time.sleep(1)  #yeild for a movement
+                #cancel the schedule
+                self._cancel_schedule(task_id)
                 
                 _log.debug("lux Level: " + "{0:0.4f}".format(lux_level) \
                             + ", rh Level: " + "{0:0.4f}".format(rh_level) \
@@ -552,8 +591,10 @@ class SmartHub(Agent):
             _log.exception ("Expection: no task schdl for publishSensorData()")
             self.core.periodic(self._period_read_data, self.publishSensorData, wait=None)
             #print(e)
-            return        
-        
+            return
+        finally:
+                #cancel the schedule
+                self._cancel_schedule(task_id)
         return
         
     def publishDeviceState(self) :
@@ -729,8 +770,9 @@ class SmartHub(Agent):
             end = str(datetime.datetime.now() 
                     + datetime.timedelta(milliseconds=self.time_ms))
                     
+            device = 'iiit/cbs/smarthub'
             msg = [
-                    ['iiit/cbs/smarthub',start,end]
+                    [device,start,end]
                     ]
             result = self.vip.rpc.call(
                     'platform.actuator', 
@@ -742,13 +784,22 @@ class SmartHub(Agent):
             #print("schedule result", result)
         except gevent.Timeout:
             _log.exception("Expection: gevent.Timeout in _getTaskSchedule()")
-            return
+            return result
         except Exception as e:
             _log.exception ("Expection: Could not contact actuator. Is it running?")
-            #print(e)
-            return        
+            print(e)
+            print result
+            return result
         return result
-        
+
+    def _cancel_schedule(self, task_id):
+        #_log.debug('_cancel_schedule')
+        result = self.vip.rpc.call('platform.actuator', 'request_cancel_schedule', \
+                                    self._agent_id, task_id).get(timeout=10)
+        #_log.debug("task_id: " + task_id)
+        #_log.debug(result)
+        return
+
     def _updateShDeviceState(self, deviceId, endPoint, state):
         #_log.debug('_updateShDeviceState()')
         headers = { 'requesterID': self._agent_id, }
