@@ -787,7 +787,8 @@ class SmartHub(Agent):
     def _getTaskSchedule(self, taskId, time_ms=None):
         #_log.debug("_getTaskSchedule()")
         self.time_ms = 600 if time_ms is None else time_ms
-        try: 
+        try:
+            result = {}
             start = str(datetime.datetime.now())
             end = str(datetime.datetime.now() 
                     + datetime.timedelta(milliseconds=self.time_ms))
@@ -805,13 +806,11 @@ class SmartHub(Agent):
                     msg).get(timeout=10)
         except gevent.Timeout:
             _log.exception("Expection: gevent.Timeout in _getTaskSchedule()")
-            return result
         except Exception as e:
             _log.exception ("Expection: Could not contact actuator. Is it running?")
             print(e)
-            print result
+        finally:
             return result
-        return result
 
     def _cancelSchedule(self, task_id):
         #_log.debug('_cancelSchedule')

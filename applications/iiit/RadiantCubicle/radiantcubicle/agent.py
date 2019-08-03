@@ -264,6 +264,7 @@ class RadiantCubicle(Agent):
         result = self._getTaskSchedule(task_id)
 
         if result['result'] == 'SUCCESS':
+            result = {}
             try:
                 #_log.debug('schl avlb')
                 result = self.vip.rpc.call(
@@ -438,6 +439,7 @@ class RadiantCubicle(Agent):
         #_log.debug("_getTaskSchedule()")
         self.time_ms = 600 if time_ms is None else time_ms
         try: 
+            result = {}
             start = str(datetime.datetime.now())
             end = str(datetime.datetime.now() 
                     + datetime.timedelta(milliseconds=self.time_ms))
@@ -458,8 +460,8 @@ class RadiantCubicle(Agent):
         except Exception as e:
             _log.exception ("Could not contact actuator. Is it running?")
             print(e)
-            print result
-        return result
+        finally:
+            return result
 
     def _cancelSchedule(self, task_id):
         #_log.debug('_cancelSchedule')
