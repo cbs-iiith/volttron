@@ -84,7 +84,7 @@ class SmartStrip(Agent):
     _plugConnected = [ 0, 0, 0, 0]
     _plugActivePwr = [0.0, 0.0, 0.0, 0.0]
     _plug_tag_id = ['7FC000007FC00000', '7FC000007FC00000', '7FC000007FC00000', '7FC000007FC00000']
-    _plug_pricepoint_th = [0.25, 0.5, 0.75, 0.95]
+    _plug_pricepoint_th = [0.35, 0.5, 0.75, 0.95]
     _price_point_previous = 0.4 
     _price_point_current = 0.4 
     _price_point_new = 0.45
@@ -115,6 +115,10 @@ class SmartStrip(Agent):
 
     @Core.receiver('onstart')
     def startup(self, sender, **kwargs):
+        _log.info("yeild 30s for volttron platform to initiate properly...")
+        time.sleep(30) #yeild for a movement
+        _log.info("Starting SmartStrip...")
+
         self.runSmartStripTest()
         self.switchLedDebug(LED_ON)
 
