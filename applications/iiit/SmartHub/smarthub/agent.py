@@ -151,8 +151,9 @@ class SmartHub(Agent):
         return
     @Core.receiver('onstart')            
     def startup(self, sender, **kwargs):
-        _log.info("yeild 30s for volttron platform to initiate")
+        _log.info("yeild 30s for volttron platform to initiate properly...")
         time.sleep(30) #yeild for a movement
+        _log.info("Starting SmartHub...")
         self.runSmartHubTest()
         
         #time.sleep(10) #yeild for a movement

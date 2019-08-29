@@ -451,7 +451,7 @@ class RadiantCubicle(Agent):
             result = self.vip.rpc.call(
                     'platform.actuator', 
                     'request_new_schedule',
-                    self._agent_id,                 #requested id
+                    self._agent_id,
                     task_id,
                     'HIGH',
                     msg).get(timeout=10)
