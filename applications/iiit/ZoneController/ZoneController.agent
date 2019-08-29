@@ -4,9 +4,9 @@
     "message": "iSPACE - ZoneController Agent",
     "deviceId": "ZoneController-250",
     "period_read_data": 30,
-    "topic_root": "zonecontroller",
-    "topic_price_point": "zonecontroller/pricepoint",
-    "topic_energy_demand": "zonecontroller/energydemand",
+    "topic_root": "zone",
+    "topic_price_point": "zone/pricepoint",
+    "topic_energy_demand": "zone/energydemand",
     "topic_energy_demand_ds": "smarthub/energydemand",
     "default_base_price": 0.2,
     "price_point_latest": 0.2

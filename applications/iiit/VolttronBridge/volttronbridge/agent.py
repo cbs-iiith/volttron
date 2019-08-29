@@ -75,9 +75,9 @@ def volttronbridge(config_path, **kwargs):
     agent_id = config['agentid']
     
     energyDemand_topic      = config.get('energyDemand_topic', \
-                                            'zone/energydemand')  
+                                            'zone/energydemand')
     energyDemand_topic_ds   = config.get('energyDemand_topic_ds', \
-                                            'smarthub/energydemand')  
+                                            'smarthub/energydemand')
                                             
     pricePoint_topic_us     = config.get('pricePoint_topic_us', \
                                             'building/pricepoint')

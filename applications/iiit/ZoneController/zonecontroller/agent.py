@@ -134,9 +134,9 @@ class ZoneController(Agent):
         return
         
     def _configGetPoints(self):
-        self.root_topic              = self.config.get('topic_root', 'zonecontroller')
+        self.root_topic              = self.config.get('topic_root', 'zone')
         self.energyDemand_topic     = self.config.get('topic_energy_demand', \
-                                            'zonecontroller/energydemand')
+                                            'zone/energydemand')
         self.topic_price_point      = self.config.get('topic_price_point', \
                                             'topic_price_point')
         self.energyDemand_topic_ds  = self.config.get('topic_energy_demand_ds', \

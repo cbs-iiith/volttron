@@ -6,8 +6,8 @@
     "deviceId": "ZoneController-250",
     "zone_ip_addr":  "192.168.1.250", 
     "zone_port": 8082,
-    "energyDemand_topic": "zonecontroller/energydemand",
+    "energyDemand_topic": "zone/energydemand",
     "energyDemand_topic_ds": "smarthub/energydemand",
     "pricePoint_topic_us": "building/pricepoint",
-    "pricePoint_topic": "zonecontroller/pricepoint"
+    "pricePoint_topic": "zone/pricepoint"
 }
