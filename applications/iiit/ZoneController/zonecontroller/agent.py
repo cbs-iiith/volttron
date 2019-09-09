@@ -94,7 +94,10 @@ class ZoneController(Agent):
 
     @Core.receiver('onstart')
     def startup(self, sender, **kwargs):
-        
+        _log.info("yeild 30s for volttron platform to initiate properly...")
+        time.sleep(30) #yeild for a movement
+        _log.info("Starting ZoneController...")
+
         self._runBMSTest()
         
         #perodically publish total energy demand to volttron bus
