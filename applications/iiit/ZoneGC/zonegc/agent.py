@@ -66,7 +66,7 @@ def zonegc(config_path, **kwargs):
         def onNewPrice(self, peer, sender, bus,  topic, headers, message):
             #new zone price point
             bd_pp = message[0]
-            _log.debug ( "*** New Price Point: {0:.2f} ***".format(zn_pp))
+            _log.debug ( "*** New Price Point: {0:.2f} ***".format(bd_pp))
             
             if True:
             #if self._current_bd_pp != bd_pp:
