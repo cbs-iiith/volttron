@@ -237,7 +237,7 @@ class ZoneController(Agent):
                     'platform.actuator', 
                     'set_point',
                     self._agent_id, 
-                    'iiit/cbs/zone/RM_TSP',
+                    'iiit/cbs/zonecontroller/RM_TSP',
                     tsp).get(timeout=10)
                 self.updateRmTsp(tsp)
             except gevent.Timeout:
@@ -273,7 +273,7 @@ class ZoneController(Agent):
             try:
                 coolingEnergy = self.vip.rpc.call(
                         'platform.actuator','get_point',
-                        'iiit/cbs/zone/RM_CCE').get(timeout=10)
+                        'iiit/cbs/zonecontroller/RM_CCE').get(timeout=10)
                 return coolingEnergy
             except gevent.Timeout:
                 _log.exception("Expection: gevent.Timeout in rpc_getRmCalcCoolingEnergy()")
@@ -293,7 +293,7 @@ class ZoneController(Agent):
         try:
             rm_tsp = self.vip.rpc.call(
                     'platform.actuator','get_point',
-                    'iiit/cbs/zone/RM_TSP').get(timeout=10)
+                    'iiit/cbs/zonecontroller/RM_TSP').get(timeout=10)
             return rm_tsp
         except gevent.Timeout:
             _log.exception("Expection: gevent.Timeout in rpc_getRmTsp()")
