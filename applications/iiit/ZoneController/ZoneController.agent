@@ -7,7 +7,7 @@
     "topic_root": "zone",
     "topic_price_point": "zone/pricepoint",
     "topic_energy_demand": "zone/energydemand",
-    "topic_energy_demand_ds": "smarthub/energydemand",
+    "topic_energy_demand_ds": "ds/energydemand",
     "default_base_price": 0.2,
     "price_point_latest": 0.2
 }

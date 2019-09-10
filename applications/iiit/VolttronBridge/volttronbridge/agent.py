@@ -104,8 +104,8 @@ def volttronbridge(config_path, **kwargs):
             self._agent_id = config['agentid']
             
             self._usConnected = False
-            self._bridge_host = config.get('bridge_host', 'ZONE')
-            self._deviceId    = config.get('deviceId', 'Zone-1')
+            self._bridge_host = config.get('bridge_host', 'LEVEL_HEAD')
+            self._deviceId    = config.get('deviceId', 'Building-1')
                     
             #we want to post ds only if there is change in price point
             self._price_point_current   = 0
@@ -120,37 +120,23 @@ def volttronbridge(config_path, **kwargs):
             
             self._us_retrycount = 0
             
-            self._this_ip_addr    = config.get('ip_addr', "192.168.1.250")
+            self._this_ip_addr    = config.get('ip_addr', "192.168.1.51")
             self._this_port       = int(config.get('port', 8082))
             
-            if self._bridge_host == 'ZONE':
+            if self._bridge_host != 'LEVEL_TAILEND':
                 _log.debug(self._bridge_host)
                 
-                #downstream volttron instances (SmartHubs)
+                #downstream volttron instances
                 #post price point to these instances
                 self._ds_voltBr = []
                 self._ds_deviceId = []
                 self._ds_retrycount = []
                 
-            elif self._bridge_host == 'HUB':
+            if self._bridge_host != 'LEVEL_HEAD':
                 _log.debug(self._bridge_host)
                 
-                #upstream volttron instance (Zone)
-                self._us_ip_addr      = config.get('us_ip_addr', "192.168.1.250")
-                self._us_port         = int(config.get('us_port', 8082))
-                _log.debug('self._us_ip_addr: ' + self._us_ip_addr + ' self._us_port: ' + str(self._us_port))
-                
-                #downstream volttron instances (SmartStrips)
-                #post price point to these instances
-                self._ds_voltBr = []
-                self._ds_deviceId = []
-                self._ds_retrycount = []
-                
-            elif self._bridge_host == 'STRIP':
-                _log.debug(self._bridge_host)
-                
-                #upstream volttron instance (Smart Hub)
-                self._us_ip_addr      = config.get('us_ip_addr', "192.168.1.61")
+                #upstream volttron instance
+                self._us_ip_addr      = config.get('us_ip_addr', "192.168.1.51")
                 self._us_port         = int(config.get('us_port', 8082))
                 _log.debug('self._us_ip_addr: ' + self._us_ip_addr + ' self._us_port: ' + str(self._us_port))
                 
@@ -167,8 +153,9 @@ def volttronbridge(config_path, **kwargs):
                     r'^/VolttronBridge', \
 #                    self.core.identity, \
                     "rpc_from_net").get(timeout=30)
-
-            if self._bridge_host == 'ZONE' or self._bridge_host == 'HUB' :
+                    
+            #subscribe to price point so that it can be posted to downstream
+            if self._bridge_host != 'LEVEL_TAILEND':
                 _log.debug("subscribing to pricePoint_topic: " + pricePoint_topic)
                 self.vip.pubsub.subscribe("pubsub", \
                                             pricePoint_topic, \
@@ -178,15 +165,16 @@ def volttronbridge(config_path, **kwargs):
                 self._ds_deviceId[:] = []
                 self._ds_retrycount[:] = []
                 
-
-            if self._bridge_host == 'HUB' or self._bridge_host == 'STRIP' :
+            #subscribe to energy demand so that it can be posted to upstream
+            if self._bridge_host != 'LEVEL_HEAD':
                 _log.debug("subscribing to energyDemand_topic: " + energyDemand_topic)
                 self.vip.pubsub.subscribe("pubsub", \
                                             energyDemand_topic, \
                                             self.onNewEnergyDemand \
                                             )
                                             
-            if self._bridge_host == 'HUB' or self._bridge_host == 'STRIP' :
+            #register to upstream
+            if self._bridge_host != 'LEVEL_HEAD':
                 url_root = 'http://' + self._us_ip_addr + ':' + str(self._us_port) + '/VolttronBridge'
                 _log.debug("registering with upstream VolttronBridge: " + url_root)
                 self._usConnected = self._registerToUsBridge(url_root, self._discovery_address, self._deviceId)
@@ -205,16 +193,12 @@ def volttronbridge(config_path, **kwargs):
             _log.debug('onstop()')
             self._us_retrycount = 0
             
-            if self._bridge_host == 'ZONE' or self._bridge_host == 'HUB' :
+            if self._bridge_host != 'LEVEL_TAILEND':
                 del self._ds_voltBr[:]
                 del self._ds_deviceId[:]
                 del self._ds_retrycount[:]
                 
-            if self._bridge_host == 'ZONE':
-                _log.debug(self._bridge_host)
-                #do nothing
-                
-            elif self._bridge_host == 'HUB' or self._bridge_host == 'STRIP':
+            if self._bridge_host != 'LEVEL_HEAD':
                 _log.debug(self._bridge_host)
                 if self._usConnected:
                     _log.debug("unregistering with upstream VolttronBridge")
@@ -285,7 +269,7 @@ def volttronbridge(config_path, **kwargs):
         
         #price point on local bus published, post it to all downstream bridges
         def onNewPrice(self, peer, sender, bus,  topic, headers, message):
-            if self._bridge_host == 'STRIP':
+            if self._bridge_host == 'LEVEL_TAILEND':
                 return
                 
             new_price_point = message[0]
@@ -303,7 +287,7 @@ def volttronbridge(config_path, **kwargs):
             
         #energy demand on local bus published, post it to upstream bridge
         def onNewEnergyDemand(self, peer, sender, bus,  topic, headers, message):
-            if self._bridge_host == 'ZONE':
+            if self._bridge_host == 'LEVEL_HEAD':
                 #do nothing
                 return
                 

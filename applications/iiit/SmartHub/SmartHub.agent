@@ -6,5 +6,5 @@
     "topic_root": 'smarthub',
     "topic_price_point": "smarthub/pricepoint",
     "topic_energy_demand": "smarthub/energydemand",
-    "topic_energy_demand_ds": "smartstrip/energydemand"
+    "topic_energy_demand_ds": "ds/energydemand"
 }

@@ -2,7 +2,7 @@
     "exec":"volttronbridge-0.2-py2.7.egg --config \"%c\"--sub\"%s\"--pub \"%p\"",  
     "agentid": "VolttronBridge",
     "message": "I am Volttron Bridge Agent",
-    "bridge_host": "BUILDING",
+    "bridge_host": "LEVEL_HEAD",
     "deviceId": "BuildingController-11",
     "_comment": "upstream VolttronBridge ip address and port are not used at building level",
     "us_ip_addr":  "notused", 
@@ -10,7 +10,7 @@
     "ip_addr":  "192.168.1.11", 
     "port": 8080,
     "energyDemand_topic": "building/energydemand",
-    "energyDemand_topic_ds": "zone/energydemand",
+    "energyDemand_topic_ds": "ds/energydemand",
     "pricePoint_topic_us": "notused/pricepoint",
     "pricePoint_topic": "building/pricepoint"
 }

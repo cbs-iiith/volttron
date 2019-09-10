@@ -6,7 +6,7 @@
     "period_read_data": 30,
     "topic_root": "radiantcubicle",
     "topic_price_point": "smarthub/pricepoint",
-    "topic_energy_demand": "smartstrip/energydemand",
+    "topic_energy_demand": "ds/energydemand",
     "default_base_price": 0.2,
     "price_point_latest": 0.2
 }
