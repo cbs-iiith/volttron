@@ -15,7 +15,7 @@ import datetime
 import logging
 import sys
 import uuid
-#import cPickle
+
 
 from volttron.platform.vip.agent import Agent, Core, PubSub, compat, RPC
 from volttron.platform.agent import utils
@@ -38,16 +38,6 @@ import gevent.event
 
 import requests
 import json
-
-'''
-from applications.lbnl.LPDM.BaseAgent.base.topics import *
-
-from lpdm_event import LpdmConnectDeviceEvent, LpdmPowerEvent
-from device.simulated.eud import Eud
-
-
-GRID_CONTROLLER_ID = "grid_controller_1"
-'''
 
 utils.setup_logging()
 _log = logging.getLogger(__name__)
@@ -130,11 +120,11 @@ def volttronbridge(config_path, **kwargs):
             
             self._us_retrycount = 0
             
+            self._this_ip_addr    = config.get('ip_addr', "192.168.1.250")
+            self._this_port       = int(config.get('port', 8082))
+            
             if self._bridge_host == 'ZONE':
                 _log.debug(self._bridge_host)
-                
-                self._this_ip_addr    = config.get('zone_ip_addr', "192.168.1.250")
-                self._this_port       = int(config.get('zone_port', 8082))
                 
                 #downstream volttron instances (SmartHubs)
                 #post price point to these instances
@@ -146,13 +136,10 @@ def volttronbridge(config_path, **kwargs):
                 _log.debug(self._bridge_host)
                 
                 #upstream volttron instance (Zone)
-                self._up_ip_addr      = config.get('zone_ip_addr', "192.168.1.250")
-                self._up_port         = int(config.get('zone_port', 8082))
-                _log.debug('self._up_ip_addr: ' + self._up_ip_addr + ' self._up_port: ' + str(self._up_port))
+                self._us_ip_addr      = config.get('us_ip_addr', "192.168.1.250")
+                self._us_port         = int(config.get('us_port', 8082))
+                _log.debug('self._us_ip_addr: ' + self._us_ip_addr + ' self._us_port: ' + str(self._us_port))
                 
-                self._this_ip_addr    = config.get('sh_ip_addr', "192.168.1.61")
-                self._this_port       = int(config.get('sh_port', 8082))
-
                 #downstream volttron instances (SmartStrips)
                 #post price point to these instances
                 self._ds_voltBr = []
@@ -163,12 +150,9 @@ def volttronbridge(config_path, **kwargs):
                 _log.debug(self._bridge_host)
                 
                 #upstream volttron instance (Smart Hub)
-                self._up_ip_addr      = config.get('sh_ip_addr', "192.168.1.61")
-                self._up_port         = int(config.get('sh_port', 8082))
-                _log.debug('self._up_ip_addr: ' + self._up_ip_addr + ' self._up_port: ' + str(self._up_port))
-                
-                self._this_ip_addr      = config.get('ss_ip_addr', "192.168.1.71")
-                self._this_port         = int(config.get('ss_port', 8082))
+                self._us_ip_addr      = config.get('us_ip_addr', "192.168.1.61")
+                self._us_port         = int(config.get('us_port', 8082))
+                _log.debug('self._us_ip_addr: ' + self._us_ip_addr + ' self._us_port: ' + str(self._us_port))
                 
             self._discovery_address = self._this_ip_addr + ':' + str(self._this_port)
             _log.debug('self._discovery_address: ' + self._discovery_address)
@@ -203,7 +187,7 @@ def volttronbridge(config_path, **kwargs):
                                             )
                                             
             if self._bridge_host == 'HUB' or self._bridge_host == 'STRIP' :
-                url_root = 'http://' + self._up_ip_addr + ':' + str(self._up_port) + '/VolttronBridge'
+                url_root = 'http://' + self._us_ip_addr + ':' + str(self._us_port) + '/VolttronBridge'
                 _log.debug("registering with upstream VolttronBridge: " + url_root)
                 self._usConnected = self._registerToUsBridge(url_root, self._discovery_address, self._deviceId)
                 
@@ -234,7 +218,7 @@ def volttronbridge(config_path, **kwargs):
                 _log.debug(self._bridge_host)
                 if self._usConnected:
                     _log.debug("unregistering with upstream VolttronBridge")
-                    url_root = 'http://' + self._up_ip_addr + ':' + str(self._up_port) + '/VolttronBridge'
+                    url_root = 'http://' + self._us_ip_addr + ':' + str(self._us_port) + '/VolttronBridge'
                     result = self.do_rpc(url_root, 'rpc_unregisterDsBridge', \
                                         {'discovery_address': self._discovery_address, \
                                             'deviceId': self._deviceId \
@@ -304,14 +288,6 @@ def volttronbridge(config_path, **kwargs):
             if self._bridge_host == 'STRIP':
                 return
                 
-            '''
-            message = cPickle.loads(message)
-            with open("/tmp/bridge_on_new_price", "a") as f:
-                f.write("Headers {h}\n".format(h=headers))
-                f.write(str(message) + "\n")
-                
-            new_price_point = message.value
-            '''
             new_price_point = message[0]
             #'''
             _log.debug ( "*** New Price Point: {0:.2f} ***".format(new_price_point))
@@ -343,7 +319,7 @@ def volttronbridge(config_path, **kwargs):
             self._ed_current = newEnergyDemand
             '''
             _log.debug("posting new energy demand to upstream VolttronBridge")
-            url_root = 'http://' + self._up_ip_addr + ':' + str(self._up_port) + '/VolttronBridge'
+            url_root = 'http://' + self._us_ip_addr + ':' + str(self._us_port) + '/VolttronBridge'
             
             #check for upstream connection, if not retry once
             if not self._usConnected:
@@ -422,13 +398,6 @@ def volttronbridge(config_path, **kwargs):
             self._ds_deviceId.insert(index, deviceId)
             self._ds_retrycount.insert(index, 0)
             
-            '''
-            headers = {"FROM" : deviceId, "TO" : GRID_CONTROLLER_ID}
-            topic = ADD_END_USE_DEVICE_TOPIC.format(id = GRID_CONTROLLER_ID)
-            message = LpdmConnectDeviceEvent(deviceId, "eud", Eud)
-            message = cPickle.dumps(message)
-            self.vip.pubsub.publish("pubsub", topic, headers, message)
-            '''
             _log.debug('registered!!!')
             return True
             
@@ -474,12 +443,6 @@ def volttronbridge(config_path, **kwargs):
                     #'''
                     pubMsg = [newEnergyDemand,{'units': 'W', 'tz': 'UTC', 'type': 'float'}]
                     self._publishToBus(pubTopic, pubMsg)
-                    '''
-                    headers = {"FROM" : deviceId, "TO" : GRID_CONTROLLER_ID}                    
-                    message = LpdmPowerEvent(deviceId, GRID_CONTROLLER_ID, time.time(), newEnergyDemand)
-                    message = cPickle.dumps(message)
-                    self.vip.pubsub.publish("pubsub", pubTopic, headers, message)
-                    '''
                     self._ds_retrycount[index] = 0
                     _log.debug("...Done!!!")
                     return True
