@@ -76,7 +76,7 @@ def smarthubsmapuploader(config_path, **kwargs):
             _log.info(config['message'])
             self._agent_id = config['agentid']
             
-            self.sh_id          = config.get('sh_id', 'SmartHub-61')
+            self.sh_id          = config.get('sh_id', 'SmartHub-62')
             self.smap_root      = config.get('smap_root', SMAP_ROOT)
             self.api_key        = config.get('api_key', API_KEY)
             self.source_data    = config.get('source_data', SOURCE_NAME)
@@ -222,7 +222,7 @@ def smarthubsmapuploader(config_path, **kwargs):
                 
                 smap_post(self.smap_root, self.api_key, topic, units, reading_type, readings, self.source_data, self.time_zone)
                 return
-            elif 'smartstrip/energydemand' in topic:
+            elif 'ds/energydemand' in topic:
                 #downstream smart strips energy demand
                 _log.debug('smapPostSSData() - Energy Demand - SmartStrip - (DownStream) - YET TO IMPLEMENT!!!!!')
                 return
@@ -256,7 +256,7 @@ def smarthubsmapuploader(config_path, **kwargs):
                 
                 smap_post(self.smap_root, self.api_key, topic, units, reading_type, readings, self.source_data, self.time_zone)
                 return
-            elif 'zone/pricepoint' in topic:
+            elif 'us/pricepoint' in topic:
                 _log.debug('shSmapPostData() - PricePoint - Zone (Upstream)')
                 
                 topic = "/SmartHub/" + self.sh_id + "/pricepoint/zone"

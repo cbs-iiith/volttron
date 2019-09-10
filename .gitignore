@@ -6,7 +6,6 @@
 .metadata
 parser.out
 node_modules
-applications
 .cache
 .idea
 /env/

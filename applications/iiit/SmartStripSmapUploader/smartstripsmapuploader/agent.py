@@ -75,7 +75,7 @@ def smartstripsmapuploader(config_path, **kwargs):
             _log.info(config['message'])
             self._agent_id = config['agentid']
             
-            self.ss_id          = config.get('ss_id', 'SmartStrip-61')
+            self.ss_id          = config.get('ss_id', 'SmartStrip-72')
             self.smap_root      = config.get('smap_root', SMAP_ROOT)
             self.api_key        = config.get('api_key', API_KEY)
             self.source_data    = config.get('source_data', SOURCE_NAME)
@@ -181,7 +181,7 @@ def smartstripsmapuploader(config_path, **kwargs):
 
                 smap_post(self.smap_root, self.api_key, topic, units, reading_type, readings, self.source_data, self.time_zone)
                 return
-            elif 'smarthub/pricepoint' in topic:
+            elif 'us/pricepoint' in topic:
                 _log.debug('smapPostSSData() - PricePoint - Smarthub (Upstream)')
                 
                 topic = "/SmartStrip/" + self.ss_id + "/pricepoint/smarthub"
