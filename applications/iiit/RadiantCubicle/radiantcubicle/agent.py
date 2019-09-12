@@ -92,7 +92,10 @@ class RadiantCubicle(Agent):
 
     @Core.receiver('onstart')
     def startup(self, sender, **kwargs):
-        
+        _log.info("yeild 30s for volttron platform to initiate properly...")
+        time.sleep(30) #yeild for a movement
+        _log.info("Starting RadiantCubicle...")
+
         self._runSmartStripTest()
         
         self.vip.rpc.call(MASTER_WEB, 'register_agent_route',
