@@ -96,7 +96,10 @@ class RadiantCubicle(Agent):
         time.sleep(30) #yeild for a movement
         _log.info("Starting RadiantCubicle...")
 
-        self._runSmartStripTest()
+        self._runRadiantCubicleTest()
+        
+        _log.debug('switch ON RC_AUTO_CNTRL')
+        self.setRcAutoCntrl(RC_AUTO_CNTRL_ON)
         
         self.vip.rpc.call(MASTER_WEB, 'register_agent_route',
                       r'^/RadiantCubicle',
@@ -142,8 +145,8 @@ class RadiantCubicle(Agent):
         return
 
 
-    def _runSmartStripTest(self):
-        _log.debug("Running : _runSmartStripTest()...")
+    def _runRadiantCubicleTest(self):
+        _log.debug("Running : _runRadiantCubicleTest()...")
         
         _log.debug('change level 26')
         self.setRcTspLevel(26.0)
