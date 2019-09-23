@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*- {{{
 # vim: set fenc=utf-8 ft=python sw=4 ts=4 sts=4 et:
 #
-# Copyright (c) 2017, IIIT-Hyderabad
+# Copyright (c) 2019, Sam Babu, Godithi.
 # All rights reserved.
 #
 #
@@ -39,7 +39,7 @@ SH_DEVICE_S_PIR = 8
 
 utils.setup_logging()
 _log = logging.getLogger(__name__)
-__version__ = '0.1'
+__version__ = '0.2'
 
 def DatetimeFromValue(ts):
     ''' Utility for dealing with time

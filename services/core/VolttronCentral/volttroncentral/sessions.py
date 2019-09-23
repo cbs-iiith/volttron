@@ -3,7 +3,7 @@ import os
 import uuid
 from copy import deepcopy
 
-from zmq.utils import jsonapi
+from volttron.platform.agent import json as jsonapi
 
 class SessionHandler:
     """A handler for dealing with authentication of sessions
@@ -23,6 +23,10 @@ class SessionHandler:
         self._session_tokens = {}
         self._authenticator = authenticator
         self._stored_session_path = None
+
+    def clear(self):
+        self._sessions.clear()
+        self._session_tokens.clear()
 
     def authenticate(self, username, password, ip):
         """Authenticates a user with the authenticator.
@@ -60,25 +64,29 @@ class SessionHandler:
         return False
 
     def _store_session(self):
-        if not self._stored_session_path:
-            self._get_auth_storage()
-
-        with open(self._stored_session_path, 'wb') as file:
-            file.write(jsonapi.dumps(self._sessions))
-
+        # Disable the storing of sessions to disk.
+        return
+        # if not self._stored_session_path:
+        #     self._get_auth_storage()
+        #
+        # with open(self._stored_session_path, 'wb') as file:
+        #     file.write(jsonapi.dumps(self._sessions))
 
     def _load_auths(self):
-        if not self._stored_session_path:
-            self._get_auth_storage()
-        try:
-            with open(self._stored_session_path) as file:
-                self._sessions = jsonapi.loads(file.read())
-
-            self._session_tokens.clear()
-            for k, v in self._sessions.items():
-                self._session_tokens[v['token']] = v
-        except IOError:
-            pass
+        self._sessions = {}
+        return
+        #
+        # if not self._stored_session_path:
+        #     self._get_auth_storage()
+        # try:
+        #     with open(self._stored_session_path) as file:
+        #         self._sessions = jsonapi.loads(file.read())
+        #
+        #     self._session_tokens.clear()
+        #     for k, v in self._sessions.items():
+        #         self._session_tokens[v['token']] = v
+        # except IOError:
+        #     pass
 
     def _get_auth_storage(self):
         if not os.environ.get('VOLTTRON_HOME', None):

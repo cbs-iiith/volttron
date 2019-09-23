@@ -3,57 +3,40 @@
 # -*- coding: utf-8 -*- {{{
 # vim: set fenc=utf-8 ft=python sw=4 ts=4 sts=4 et:
 #
-# Copyright (c) 2015, Battelle Memorial Institute
-# All rights reserved.
+# Copyright 2017, Battelle Memorial Institute.
 #
-# Redistribution and use in source and binary forms, with or without
-# modification, are permitted provided that the following conditions are met:
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
 #
-# 1. Redistributions of source code must retain the above copyright notice, this
-#    list of conditions and the following disclaimer.
-# 2. Redistributions in binary form must reproduce the above copyright notice,
-#    this list of conditions and the following disclaimer in the documentation
-#    and/or other materials provided with the distribution.
+# http://www.apache.org/licenses/LICENSE-2.0
 #
-# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
-# ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-# WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-# DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR
-# ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
-# (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
-# LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
-# ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-# (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-# SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 #
-# The views and conclusions contained in the software and documentation are those
-# of the authors and should not be interpreted as representing official policies,
-# either expressed or implied, of the FreeBSD Project.
-#
-
-# This material was prepared as an account of work sponsored by an
-# agency of the United States Government.  Neither the United States
-# Government nor the United States Department of Energy, nor Battelle,
-# nor any of their employees, nor any jurisdiction or organization
-# that has cooperated in the development of these materials, makes
-# any warranty, express or implied, or assumes any legal liability
-# or responsibility for the accuracy, completeness, or usefulness or
-# any information, apparatus, product, software, or process disclosed,
-# or represents that its use would not infringe privately owned rights.
-#
-# Reference herein to any specific commercial product, process, or
-# service by trade name, trademark, manufacturer, or otherwise does
-# not necessarily constitute or imply its endorsement, recommendation,
-# r favoring by the United States Government or any agency thereof,
-# or Battelle Memorial Institute. The views and opinions of authors
-# expressed herein do not necessarily state or reflect those of the
+# This material was prepared as an account of work sponsored by an agency of
+# the United States Government. Neither the United States Government nor the
+# United States Department of Energy, nor Battelle, nor any of their
+# employees, nor any jurisdiction or organization that has cooperated in the
+# development of these materials, makes any warranty, express or
+# implied, or assumes any legal liability or responsibility for the accuracy,
+# completeness, or usefulness or any information, apparatus, product,
+# software, or process disclosed, or represents that its use would not infringe
+# privately owned rights. Reference herein to any specific commercial product,
+# process, or service by trade name, trademark, manufacturer, or otherwise
+# does not necessarily constitute or imply its endorsement, recommendation, or
+# favoring by the United States Government or any agency thereof, or
+# Battelle Memorial Institute. The views and opinions of authors expressed
+# herein do not necessarily state or reflect those of the
 # United States Government or any agency thereof.
 #
-# PACIFIC NORTHWEST NATIONAL LABORATORY
-# operated by BATTELLE for the UNITED STATES DEPARTMENT OF ENERGY
+# PACIFIC NORTHWEST NATIONAL LABORATORY operated by
+# BATTELLE for the UNITED STATES DEPARTMENT OF ENERGY
 # under Contract DE-AC05-76RL01830
-
-#}}}
+# }}}
 
 #This is based on example code from the pymodbus source.
 
@@ -84,11 +67,16 @@ parser = argparse.ArgumentParser(description='Run a test pymodbus driver')
 parser.add_argument('config', help='device registry configuration')
 parser.add_argument('interface', help='interface address')
 parser.add_argument('--port', default=5020, type=int, help='port for device to listen on')
+parser.add_argument('--no-daemon', help='do not create a daemon process', action='store_true')
+parser.add_argument('--debug-output', help='Get info about values written to and read from registers', action='store_true')
 args = parser.parse_args()
 
 logging.basicConfig()
 log = logging.getLogger()
-log.setLevel(logging.DEBUG)
+log.setLevel(logging.DEBUG if args.debug_output else logging.INFO)
+
+modbus_logger = logging.getLogger("pymodbus")
+modbus_logger.setLevel(logging.WARNING)
 
 MODBUS_REGISTER_SIZE = 2
 
@@ -107,6 +95,42 @@ class Register(object):
     def get_register_type(self):
         '''Get (type, read_only) tuple'''
         return self.register_type, self.read_only
+
+
+def log_callback(address, values):
+    log.debug("Address: {} Values: {}".format(address, [hex(v) for v in values]))
+
+class CallbackSequentialDataBlock(ModbusSequentialDataBlock):
+    ''' A datablock that stores the new value in memory
+    and passes the operation to a message queue for further
+    processing.
+    '''
+
+    def __init__(self, callback, *args, **kwargs):
+        '''
+        '''
+        super(CallbackSequentialDataBlock, self).__init__(*args, **kwargs)
+        self.callback = callback
+
+    def setValues(self, address, values):
+        ''' Sets the requested values of the datastore
+
+        :param address: The starting address
+        :param values: The new values to be set
+        '''
+        super(CallbackSequentialDataBlock, self).setValues(address, values)
+        self.callback(address, values)
+
+    def getValues(self, address, count=1):
+        ''' Sets the requested values of the datastore
+
+        :param address: The starting address
+        :param values: The new values to be set
+        '''
+        results = super(CallbackSequentialDataBlock, self).getValues(address, count)
+        self.callback(address, results)
+        return results
+
 
 class DeviceAbstraction(object):
     def __init__(self, config_file):
@@ -163,40 +187,52 @@ class DeviceAbstraction(object):
     
     def get_server_context(self):        
         start, end = self.register_ranges[('bit',True)]
-        count = end - start + 1
+        if start is None:
+            di = None
+        else:
+            count = end - start + 1
         
-        #See http://www.modbus.org/docs/Modbus_Application_Protocol_V1_1b3.pdf
-        # section 4.4 about this nonsense.
-        start += 1 
-        print "bit", True, start, count
-        di = ModbusSequentialDataBlock(start, [0]*count)
-        
+            #See http://www.modbus.org/docs/Modbus_Application_Protocol_V1_1b3.pdf
+            # section 4.4 about this nonsense.
+            start += 1
+            log.debug( "{} Read only: {} Address: {} Count: {}".format("bit", True, start, count))
+            di = CallbackSequentialDataBlock(log_callback, start, [0]*count)
+
         start, end = self.register_ranges[('bit',False)]
-        count = end - start + 1
+        if start is None:
+            co = None
+        else:
+            count = end - start + 1
         
-        #See http://www.modbus.org/docs/Modbus_Application_Protocol_V1_1b3.pdf
-        # section 4.4 about this nonsense.
-        start += 1 
-        print "bit", False, start, count
-        co = ModbusSequentialDataBlock(start, [0]*count)
+            #See http://www.modbus.org/docs/Modbus_Application_Protocol_V1_1b3.pdf
+            # section 4.4 about this nonsense.
+            start += 1
+            log.debug("{} Read only: {} Address: {} Count: {}".format("bit", False, start, count))
+            co = CallbackSequentialDataBlock(log_callback, start, [0]*count)
         
         start, end = self.register_ranges[('byte',True)]
-        count = end - start + 1
+        if start is None:
+            ir = None
+        else:
+            count = end - start + 1
         
-        #See http://www.modbus.org/docs/Modbus_Application_Protocol_V1_1b3.pdf
-        # section 4.4 about this nonsense.
-        start += 1 
-        print "byte", True, start, count
-        ir = ModbusSequentialDataBlock(start, [0]*count)
+            #See http://www.modbus.org/docs/Modbus_Application_Protocol_V1_1b3.pdf
+            # section 4.4 about this nonsense.
+            start += 1
+            log.debug("{} Read only: {} Address: {} Count: {}".format("byte", True, start, count))
+            ir = CallbackSequentialDataBlock(log_callback, start, [0]*count)
         
         start, end = self.register_ranges[('byte',False)]
-        count = end - start + 1
+        if start is None:
+            hr = None
+        else:
+            count = end - start + 1
         
-        #See http://www.modbus.org/docs/Modbus_Application_Protocol_V1_1b3.pdf
-        # section 4.4 about this nonsense.
-        start += 1 
-        print "byte", False, start, count
-        hr = ModbusSequentialDataBlock(start, [0]*count)
+            #See http://www.modbus.org/docs/Modbus_Application_Protocol_V1_1b3.pdf
+            # section 4.4 about this nonsense.
+            start += 1
+            log.debug("{} Read only: {} Address: {} Count: {}".format("byte", False, start, count))
+            hr = CallbackSequentialDataBlock(log_callback, start, [0]*count)
         
         store = ModbusSlaveContext(
             di = di,
@@ -224,7 +260,8 @@ identity.MajorMinorRevision = '1.0'
 abstraction = DeviceAbstraction(args.config)
 
 #Create the deamon as soon as we've loaded the device configuration.
-createDaemon()
+if not args.no_daemon:
+    createDaemon()
     
 context = abstraction.get_server_context()
 

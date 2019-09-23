@@ -1,0 +1,12 @@
+{
+    "exec":"radiantcubicle-0.2-py2.7.egg --config \"%c\"--sub\"%s\"--pub \"%p\"",  
+    "agentid": "RadiantCubicle",
+    "message": "iSPACE - RadiantCubicle Agent",
+    "deviceId": "RadiantCubicle-62",
+    "period_read_data": 30,
+    "topic_root": "radiantcubicle",
+    "topic_price_point": "smarthub/pricepoint",
+    "topic_energy_demand": "ds/energydemand",
+    "default_base_price": 0.2,
+    "price_point_latest": 0.2
+}

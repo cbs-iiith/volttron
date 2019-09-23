@@ -1,0 +1,13 @@
+{
+    "exec":"zonecontroller-0.2-py2.7.egg --config \"%c\"--sub\"%s\"--pub \"%p\"",  
+    "agentid": "ZoneController",
+    "message": "iSPACE - ZoneController Agent",
+    "deviceId": "ZoneController-51",
+    "period_read_data": 30,
+    "topic_root": "zone",
+    "topic_price_point": "zone/pricepoint",
+    "topic_energy_demand": "zone/energydemand",
+    "topic_energy_demand_ds": "ds/energydemand",
+    "default_base_price": 0.2,
+    "price_point_latest": 0.2
+}

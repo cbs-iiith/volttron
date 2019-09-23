@@ -1,13 +1,10 @@
 {
-    "exec":"smarthub-0.1-py2.7.egg --config \"%c\"--sub\"%s\"--pub \"%p\"",  
+    "exec":"smarthub-0.2-py2.7.egg --config \"%c\"--sub\"%s\"--pub \"%p\"",  
     "agentid": "SmartHub",
-    "message": "I am SmartHub Agent",
-    "location": "loc1",
-    "campus": "iiit",
-    "building": "cbs",
-    "period_read_data": 10,
+    "message": "iSPACE - SmartHub Agent",
+    "period_read_data": 30,
     "topic_root": 'smarthub',
     "topic_price_point": "smarthub/pricepoint",
     "topic_energy_demand": "smarthub/energydemand",
-    "topic_energy_demand_ds": "smartstrip/energydemand"
+    "topic_energy_demand_ds": "ds/energydemand"
 }

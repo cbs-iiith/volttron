@@ -93,8 +93,8 @@ def schedule_example(config_path, **kwargs):
     
     
     
-        @PubSub.subscribe('pubsub', topics.ACTUATOR_SCHEDULE_ANNOUNCE(campus='iiit',
-                                             building='cbs',unit='smarthub'))
+        @PubSub.subscribe('pubsub', topics.ACTUATOR_SCHEDULE_ANNOUNCE(campus='campus',
+                                             building='building',unit='unit'))
         def actuate(self, peer, sender, bus,  topic, headers, message):
             print ("response:",topic,headers,message)
             if headers[headers_mod.REQUESTER_ID] != agent_id:
@@ -106,10 +106,10 @@ def schedule_example(config_path, **kwargs):
                         'requesterID': agent_id,
                        }
             self.vip.pubsub.publish(
-            'pubsub', topics.ACTUATOR_SET(campus='iiit',
-                                             building='cbs',unit='smarthub',
-                                             point='LEDLight1'),
-                                     headers, 1)
+            'pubsub', topics.ACTUATOR_SET(campus='campus',
+                                             building='building',unit='unit',
+                                             point='point'),
+                                     headers, str(0.0))
     
         
         def publish_schedule(self):
@@ -127,7 +127,7 @@ def schedule_example(config_path, **kwargs):
     
     
             msg = [
-                   ['iiit/cbs/smarthub',start,end]
+                   ['campus/building/unit',start,end]
                    #Could add more devices
     #                 ["campus/building/device1", #First time slot.
     #                  "2014-1-31 12:27:00",     #Start of time slot.
@@ -150,7 +150,7 @@ def schedule_example(config_path, **kwargs):
                 end = str(datetime.datetime.now() + datetime.timedelta(minutes=1))
     
                 msg = [
-                   ['iiit/cbs/smarthub',start,end]
+                   ['campus/building/unit3',start,end]
                    ]
                 result = self.vip.rpc.call(
                                            'platform.actuator', 
@@ -171,8 +171,8 @@ def schedule_example(config_path, **kwargs):
                                            'platform.actuator', 
                                            'set_point',
                                            agent_id, 
-                                           'iiit/cbs/smarthub/LEDLight1',
-                                           1).get(timeout=10)
+                                           'campus/building/unit3/some_point',
+                                           '0.0').get(timeout=10)
                     print("Set result", result)
             except Exception as e:
                 print ("Expected to fail since there is no real device to set")

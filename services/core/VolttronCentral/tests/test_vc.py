@@ -1,13 +1,6 @@
-import os
-import tempfile
-
-import gevent
 import pytest
-import requests
 
-from volttron.platform.keystore import KeyStore
 from volttron.platform.web import DiscoveryInfo
-from volttrontesting.fixtures.vc_fixtures import PLATFORM_AGENT_CONFIG
 
 
 def validate_instances(wrapper1, wrapper2):
@@ -29,7 +22,7 @@ def test_platform_responds_to_discover_endpoint(pa_instance):
     info = DiscoveryInfo.request_discovery_info(wrapper.bind_web_address)
 
     assert wrapper.bind_web_address == info.discovery_address
-    assert wrapper.publickey == info.serverkey
+    assert wrapper.serverkey == info.serverkey
 
 
 @pytest.mark.vc
@@ -49,6 +42,7 @@ def test_publickey_retrieval(vc_instance, pa_instance):
     """
     vc_wrapper, vc_uuid, jsonrpc = vc_instance
     pa_wrapper, pa_uuid = pa_instance
+
     vc_info = DiscoveryInfo.request_discovery_info(
         vc_wrapper.bind_web_address)
     pa_info = DiscoveryInfo.request_discovery_info(
@@ -170,5 +164,4 @@ def onmessage(self, peer, sender, bus, topic, headers, message):
     #     print("vc authfile: {}".format(f.read()))
     # peers = agent.vip.peerlist().get(timeout=2)
     # assert "volttron.central" in peers
-
 

@@ -1,0 +1,12 @@
+{
+    "exec":"smartstripsmapuploader-0.2-py2.7.egg --config \"%c\"--sub\"%s\"--pub \"%p\"",  
+    "agentid": "SmartStripSmapUploader",
+    "message": "I am Smart Strip Smap Uploader Agent",
+    "ss_id": "SmartStrip-73",
+    "ss_main_topic": "smartstrip",
+    "vb_main_topic": "us", 
+    "smap_root": "http://cbs.iiit.ac.in/smap/",
+    "api_key": "u606HlEFHTeVLfpBQZkNF232wChljnLHCKBY",
+    "source_data": "CBERD Flexlab Data V2",
+    "time_zone": "Etc/UTC"
+}
