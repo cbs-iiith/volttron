@@ -1,3 +1,16 @@
+# -*- coding: utf-8 -*- {{{
+# vim: set fenc=utf-8 ft=python sw=4 ts=4 sts=4 et:
+#
+# Copyright (c) 2019, Sam Babu, Godithi.
+# All rights reserved.
+#
+#
+# IIIT Hyderabad
+
+#}}}
+
+#Sam
+
 import requests
 import sys
 import json

@@ -5,7 +5,9 @@
 .svn
 .metadata
 parser.out
-/.idea
+node_modules
+.cache
+.idea
 /env/
 /Agents/*/{build,dist}/
 /Agents/*.egg
@@ -18,6 +20,7 @@ parser.out
 /config/
 /docs/build/*
 /docs/source/apidocs
+volttron.log
 *.out
 *.log
 *.bak

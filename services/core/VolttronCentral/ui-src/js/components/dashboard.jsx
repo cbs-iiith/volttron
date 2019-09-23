@@ -7,7 +7,11 @@ var platformChartStore = require('../stores/platform-chart-store');
 var PlatformChart = require('./platform-chart');
 
 var Dashboard = React.createClass({
-    getInitialState: getStateFromStores,
+    getInitialState: function () {
+        var state = getStateFromStores();
+
+        return state;
+    },
     componentDidMount: function () {
         platformChartStore.addChangeListener(this._onStoreChange);
     },
@@ -17,6 +21,9 @@ var Dashboard = React.createClass({
     _onStoreChange: function () {
         this.setState(getStateFromStores());
     },
+    _reloadPage: function () {
+        location.reload(true);
+    },
     render: function () {
         
         var pinnedCharts = this.state.platformCharts; 
@@ -24,9 +31,9 @@ var Dashboard = React.createClass({
         var platformCharts = [];
 
         pinnedCharts.forEach(function (pinnedChart) {
-            if (pinnedChart.data.length > 0)
+            if (pinnedChart.series.length > 0)
             {
-                var platformChart = <PlatformChart chart={pinnedChart} chartKey={pinnedChart.chartKey} hideControls={true}/>
+                var platformChart = <PlatformChart key={pinnedChart.chartKey} chart={pinnedChart} chartKey={pinnedChart.chartKey} hideControls={true}/>
                 platformCharts.push(platformChart);
             }
         });        
@@ -34,7 +41,7 @@ var Dashboard = React.createClass({
         if (pinnedCharts.length === 0) {
             platformCharts = (
                 <p className="empty-help">
-                    Pin a platform chart to have it appear on the dashboard
+                    Pin a chart to have it appear on the dashboard
                 </p>
             );
         }

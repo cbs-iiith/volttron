@@ -1,65 +1,50 @@
 # -*- coding: utf-8 -*- {{{
 # vim: set fenc=utf-8 ft=python sw=4 ts=4 sts=4 et:
-
-# Copyright (c) 2015, Battelle Memorial Institute
-# All rights reserved.
 #
-# Redistribution and use in source and binary forms, with or without
-# modification, are permitted provided that the following conditions
-# are met:
+# Copyright 2017, Battelle Memorial Institute.
 #
-# 1. Redistributions of source code must retain the above copyright
-#    notice, this list of conditions and the following disclaimer.
-# 2. Redistributions in binary form must reproduce the above copyright
-#    notice, this list of conditions and the following disclaimer in
-#    the documentation and/or other materials provided with the
-#    distribution.
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
 #
-# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
-# "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
-# LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
-# A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
-# OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
-# SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
-# LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
-# DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
-# THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-# (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-# OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+# http://www.apache.org/licenses/LICENSE-2.0
 #
-# The views and conclusions contained in the software and documentation
-# are those of the authors and should not be interpreted as representing
-# official policies, either expressed or implied, of the FreeBSD
-# Project.
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 #
-# This material was prepared as an account of work sponsored by an
-# agency of the United States Government.  Neither the United States
-# Government nor the United States Department of Energy, nor Battelle,
-# nor any of their employees, nor any jurisdiction or organization that
-# has cooperated in the development of these materials, makes any
-# warranty, express or implied, or assumes any legal liability or
-# responsibility for the accuracy, completeness, or usefulness or any
-# information, apparatus, product, software, or process disclosed, or
-# represents that its use would not infringe privately owned rights.
-#
-# Reference herein to any specific commercial product, process, or
-# service by trade name, trademark, manufacturer, or otherwise does not
-# necessarily constitute or imply its endorsement, recommendation, or
+# This material was prepared as an account of work sponsored by an agency of
+# the United States Government. Neither the United States Government nor the
+# United States Department of Energy, nor Battelle, nor any of their
+# employees, nor any jurisdiction or organization that has cooperated in the
+# development of these materials, makes any warranty, express or
+# implied, or assumes any legal liability or responsibility for the accuracy,
+# completeness, or usefulness or any information, apparatus, product,
+# software, or process disclosed, or represents that its use would not infringe
+# privately owned rights. Reference herein to any specific commercial product,
+# process, or service by trade name, trademark, manufacturer, or otherwise
+# does not necessarily constitute or imply its endorsement, recommendation, or
 # favoring by the United States Government or any agency thereof, or
-# Battelle Memorial Institute. The views and opinions of authors
-# expressed herein do not necessarily state or reflect those of the
+# Battelle Memorial Institute. The views and opinions of authors expressed
+# herein do not necessarily state or reflect those of the
 # United States Government or any agency thereof.
 #
-# PACIFIC NORTHWEST NATIONAL LABORATORY
-# operated by BATTELLE for the UNITED STATES DEPARTMENT OF ENERGY
+# PACIFIC NORTHWEST NATIONAL LABORATORY operated by
+# BATTELLE for the UNITED STATES DEPARTMENT OF ENERGY
 # under Contract DE-AC05-76RL01830
-#}}}
+# }}}
 
 import sys
 import argparse
+import traceback
 from csv import DictWriter
+import json
+from os.path import basename
 from bacpypes.debugging import bacpypes_debugging, ModuleLogger
-from bacpypes.app import LocalDeviceObject, BIPSimpleApplication
+from bacpypes.app import BIPSimpleApplication
+from bacpypes.service.device import LocalDeviceObject
 from bacpypes.consolelogging import ConfigArgumentParser
 from bacpypes.pdu import Address, GlobalBroadcast
 from bacpypes.core import run, stop
@@ -119,19 +104,13 @@ class SynchronousApplication(BIPSimpleApplication):
         self.expected_device_id = expected_device_id
         self._request = request
         
-        _log.debug("SAM:11")
-        _log.debug(expected_device_id)
         self.request(request)
-        request.debug_contents()
-
-        _log.debug("SAM:12")
         run()
         return self.apdu
     
 def get_iam(app, device_id, target_address = None):
     request = WhoIsRequest()
-    _log.debug("SAM:2")
-
+    
     request.deviceInstanceRangeLowLimit = device_id
     request.deviceInstanceRangeHighLimit = device_id
     
@@ -139,11 +118,7 @@ def get_iam(app, device_id, target_address = None):
         request.pduDestination = Address(target_address)
     else:
         request.pduDestination = GlobalBroadcast()
-
-    _log.debug("SAM:3")
-    _log.debug(request.pduDestination)
-    request.debug_contents()
-
+        
     result = app.make_request(request, expected_device_id=device_id)
     
     return result
@@ -173,26 +148,26 @@ def read_prop(app, address, obj_type, obj_inst, prop_id, index=None):
     return value
 
 
-def process_device_object_reference(app, address, obj_type, index, property_name, max_range_report, config_writer):
-    objectCount = read_prop(app, address, obj_type, index, property_name, index=0)
-    
-    for object_index in xrange(1,objectCount+1):
-        _log.debug('property_name index = ' + repr(object_index))
-        
-        object_reference = read_prop(app, 
-                                address, 
-                                obj_type, 
-                                index, 
-                                property_name,
-                                index=object_index)
-        
-        #Skip references to objects on other devices.
-        if object_reference.deviceIdentifier is not None:
-            continue
-        
-        sub_obj_type, sub_obj_index = object_reference.objectIdentifier
-        
-        process_object(app, address, sub_obj_type, sub_obj_index, max_range_report, config_writer)
+# def process_device_object_reference(app, address, obj_type, index, property_name, max_range_report, config_writer):
+#     objectCount = _read_prop(app, address, obj_type, index, property_name, index=0)
+#
+#     for object_index in xrange(1,objectCount+1):
+#         _log.debug('property_name index = ' + repr(object_index))
+#
+#         object_reference = _read_prop(app,
+#                                 address,
+#                                 obj_type,
+#                                 index,
+#                                 property_name,
+#                                 index=object_index)
+#
+#         #Skip references to objects on other devices.
+#         if object_reference.deviceIdentifier is not None:
+#             continue
+#
+#         sub_obj_type, sub_obj_index = object_reference.objectIdentifier
+#
+#         process_object(app, address, sub_obj_type, sub_obj_index, max_range_report, config_writer)
 
 def process_object(app, address, obj_type, index, max_range_report, config_writer):
     _log.debug('obj_type = ' + repr(obj_type))
@@ -200,17 +175,17 @@ def process_object(app, address, obj_type, index, max_range_report, config_write
     
     writable = 'FALSE'
     
-    subondinate_list_property = get_datatype(obj_type, 'subordinateList')
-    if subondinate_list_property is not None:
-        _log.debug('Processing StructuredViewObject')
-        process_device_object_reference(app, address, obj_type, index, 'subordinateList', max_range_report, config_writer)
-        return
-    
-    subondinate_list_property = get_datatype(obj_type, 'zoneMembers')
-    if subondinate_list_property is not None:
-        _log.debug('Processing LifeSafetyZoneObject')
-        process_device_object_reference(app, address, obj_type, index, 'zoneMembers', max_range_report, config_writer)
-        return
+    # subondinate_list_property = get_datatype(obj_type, 'subordinateList')
+    # if subondinate_list_property is not None:
+    #     _log.debug('Processing StructuredViewObject')
+    #     process_device_object_reference(app, address, obj_type, index, 'subordinateList', max_range_report, config_writer)
+    #     return
+    #
+    # subondinate_list_property = get_datatype(obj_type, 'zoneMembers')
+    # if subondinate_list_property is not None:
+    #     _log.debug('Processing LifeSafetyZoneObject')
+    #     process_device_object_reference(app, address, obj_type, index, 'zoneMembers', max_range_report, config_writer)
+    #     return
     
     present_value_type = get_datatype(obj_type, 'presentValue')
     if present_value_type is None:
@@ -224,22 +199,27 @@ def process_object(app, address, obj_type, index, max_range_report, config_write
                                            Real,
                                            Double)):
         _log.debug('presenValue is an unsupported type: ' + repr(present_value_type))
-        return 
-    
+        return
+
+    object_name = "NO NAME! PLEASE NAME THIS."
     try:
         object_name = read_prop(app, address, obj_type, index, "objectName")
         _log.debug('object name = ' + object_name)
     except TypeError:
-        object_name = "NO NAME! PLEASE NAME THIS."
+        pass
+    except:
+        _log.debug(traceback.format_exc())
         
 #         _log.debug('  object type = ' + obj_type)
 #         _log.debug('  object index = ' + str(index))
-    
+
+    object_notes = ''
     try:
         object_notes = read_prop(app, address, obj_type, index, "description")
-        
     except TypeError:
-        object_notes = ''
+        pass
+    except:
+        _log.debug(traceback.format_exc())
         
     object_units_details = ''
     
@@ -265,6 +245,8 @@ def process_object(app, address, obj_type, index, max_range_report, config_write
                 pass
             except ValueError:
                 pass
+            except:
+                _log.debug(traceback.format_exc())
     
         if not object_notes:
             enum_strings=[]
@@ -286,6 +268,8 @@ def process_object(app, address, obj_type, index, max_range_report, config_write
                 object_units_details = 'State count: {}'.format(state_count)
             except TypeError:
                 pass
+            except:
+                _log.debug(traceback.format_exc())
             
             try:
                 enum_strings=[]
@@ -308,16 +292,21 @@ def process_object(app, address, obj_type, index, max_range_report, config_write
                     pass
                 except ValueError:
                     pass
+                except:
+                    _log.debug(traceback.format_exc())
                 
         elif obj_type == 'loop':
             object_units = 'Loop'
         else:
             object_units = 'UNKNOWN UNITS'        
     else:
+        object_units = 'UNKNOWN UNITS'
         try:
             object_units = read_prop(app, address, obj_type, index, "units")
         except TypeError:
-            object_units = 'UNKNOWN UNITS'
+            pass
+        except:
+            _log.debug(traceback.format_exc())
             
         if isinstance(object_units, (int, long)):
             object_units = 'UNKNOWN UNIT ENUM VALUE: ' + str(object_units)
@@ -335,9 +324,9 @@ def process_object(app, address, obj_type, index, max_range_report, config_write
                 try:
                     min_value = read_prop(app, address, obj_type, index, "minPresValue")
                     max_value = read_prop(app, address, obj_type, index, "maxPresValue")
-                    
-                    has_min = min_value > -max_range_report
-                    has_max = max_value <  max_range_report
+
+                    has_min = (min_value is not None) and (min_value > -max_range_report)
+                    has_max = (max_value is not None) and (max_value < max_range_report)
                     
                     if has_min and has_max:
                         object_units_details = '{min:.2f} to {max:.2f}'.format(min=min_value, max=max_value)
@@ -350,6 +339,8 @@ def process_object(app, address, obj_type, index, max_range_report, config_write
                     #object_units_details = '{min} to {max}'.format(min=min_value, max=max_value)            
                 except TypeError:
                     pass
+                except:
+                    _log.debug(traceback.format_exc())
             
             if obj_type != 'analogInput':
                 try:
@@ -361,6 +352,8 @@ def process_object(app, address, obj_type, index, max_range_report, config_write
                     pass
                 except ValueError:
                     pass
+                except:
+                    _log.debug(traceback.format_exc())
    
     _log.debug('  object units = ' + str(object_units))
     _log.debug('  object units details = ' + str(object_units_details))
@@ -388,11 +381,15 @@ def main():
     arg_parser.add_argument("--address",
                             help="Address of target device, may be needed to help route initial request to device." )
     
-    arg_parser.add_argument("--out-file", type=argparse.FileType('wb'),
-                            help="Optional output file for configuration",
+    arg_parser.add_argument("--registry-out-file", type=argparse.FileType('wb'),
+                            help="Output registry to CSV file",
                             default=sys.stdout )
+
+    arg_parser.add_argument("--driver-out-file", type=argparse.FileType('wb'),
+                            help="Output driver configuration to JSON file.",
+                            default=sys.stdout)
     
-    arg_parser.add_argument("--max_range_report", nargs='?', type=float,
+    arg_parser.add_argument("--max-range-report", nargs='?', type=float,
                             help='Affects how very large numbers are reported in the "Unit Details" column of the output. ' 
                             'Does not affect driver behavior.',
                             default=1.0e+20 )
@@ -417,8 +414,7 @@ def main():
     _log.debug("starting build")
     
     result = get_iam(this_application, args.device_id, args.address)
-    _log.debug("SAM:1")
-
+    
 #     request = WhoIsRequest()
 #     request.pduDestination = target_address
 #     result = this_application.make_request(request, expect_confirmation = False)
@@ -433,19 +429,32 @@ def main():
 #         raise DecodingError("invalid object type")
 
     target_address = result.pduSource
+    device_id = result.iAmDeviceIdentifier[1]
     
     _log.debug('pduSource = ' + repr(result.pduSource))
     _log.debug('iAmDeviceIdentifier = ' + str(result.iAmDeviceIdentifier))
     _log.debug('maxAPDULengthAccepted = ' + str(result.maxAPDULengthAccepted))
     _log.debug('segmentationSupported = ' + str(result.segmentationSupported))
     _log.debug('vendorID = ' + str(result.vendorID))
-    
-    device_id = result.iAmDeviceIdentifier[1]
+
+    config_file_name = basename(args.registry_out_file.name)
+
+    config = {
+        "driver_config":{"device_address":str(target_address),
+                         "device_id": device_id},
+        "driver_type":"bacnet",
+        "registry_config":"config://registry_configs/{}".format(config_file_name)
+    }
+
+    json.dump(config, args.driver_out_file,indent=4)
     
     try:
         device_name = read_prop(this_application, target_address, "device", device_id, "objectName")
         _log.debug('device_name = ' + str(device_name))
     except TypeError:
+        _log.debug('device missing objectName')
+    
+    try:
         device_description = read_prop(this_application, target_address, "device", device_id, "description")
         _log.debug('description = ' + str(device_description))
     except TypeError:
@@ -453,7 +462,7 @@ def main():
     
     
     
-    config_writer = DictWriter(args.out_file, 
+    config_writer = DictWriter(args.registry_out_file,
                                ('Reference Point Name',
                                 'Volttron Point Name',
                                 'Units',
@@ -488,8 +497,12 @@ def main():
                                 index=object_index)
         
         obj_type, index = bac_object
-        
-        process_object(this_application, target_address, obj_type, index, args.max_range_report, config_writer)
+
+        try:
+            process_object(this_application, target_address, obj_type, index, args.max_range_report, config_writer)
+        except:
+            _log.debug("Unexpected error processing object: {} {}".format(obj_type, index))
+            _log.debug(traceback.format_exc())
         
         
         

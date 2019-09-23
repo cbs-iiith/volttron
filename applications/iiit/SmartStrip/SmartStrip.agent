@@ -1,26 +1,7 @@
 {
-    "exec":"smartstrip-0.1-py2.7.egg --config \"%c\"--sub\"%s\"--pub \"%p\"",  
+    "exec":"smartstrip-0.2-py2.7.egg --config \"%c\"--sub\"%s\"--pub \"%p\"",  
     "agentid": "SmartStrip",
-    "message": "I am SmartStrip Agent",
-    "location": "loc1",
-    "campus": "iiit",
-    "building": "cbs",
-    "plugs": {
-        "plug_1":{
-            "id": 1,
-            "name":"plug 1",
-            "description": "plug 1 - 240V 3A",
-            "connected": "false",
-            "connected_tag_id": 0
-        },
-        "plug_2":{
-            "id": 2,
-            "name":"plug 2",
-            "description": "plug 2 - 240V 3A",
-            "connected": "false",
-            "connected_tag_id": 0
-        }
-    },
+    "message": "iSPACE - SmartStrip Agent",
     "tag_ids": [
         "0D07321E00000097",
         "0D115D1E00000000",
@@ -46,14 +27,24 @@
         "0DF7191F000000E2",
         "20BDFA00000048FF",
         "C39C3601000010FF",
+        "0D831E13000000E5",
+        "0D530813000000C1",
+        "0DA55D1300000046",
+        "0D4D2213000000CC",
+        "0DCA2C0C000000A3",
+        "0DFF2C1300000007",
+        "0DC8180B000000D0",
+        "0D53F012000000D6",
+        "0D8036130000007A",
+        "0D630B1300000062",
         "0D285F1300000065"
     ],
 
-    "period_read_data": 10,
+    "period_read_data": 30,
     "topic_root": "smartstrip",
     "topic_price_point": "smartstrip/pricepoint",
     "topic_energy_demand": "smartstrip/energydemand",
     "default_base_price": 0.2,
-    "plug_pricepoint_th": [0.25, 0.5, 0.75, 0.95],
+    "plug_pricepoint_th": [0.35, 0.5, 0.75, 0.95],
     "price_point_latest": 0.2
 }

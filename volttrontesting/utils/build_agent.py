@@ -11,9 +11,10 @@ def build_agent(platform, identity=None):
     The agent identity will be set.  If the identity is set to None
     then a random identity will be created.
     """
-
+    os.environ['VOLTTRON_HOME'] = platform.volttron_home
     agent = platform.build_agent(identity)
     gevent.sleep(0.1) # switch context for a bit
+    os.environ.pop('VOLTTRON_HOME')
     return agent
 
 
@@ -24,16 +25,16 @@ def build_agent_with_key(platform, identity=None):
      identity will be set.  If the identity is set to None then a random
      identity will be created.
     """
-
+    os.environ['VOLTTRON_HOME'] = platform.volttron_home
     keys = KeyStore(os.path.join(platform.volttron_home,
                                           identity + '.keys'))
     keys.generate()
     agent = platform.build_agent(identity=identity,
                                   serverkey=platform.publickey,
-                                  publickey=keys.public(),
-                                  secretkey=keys.secret())
+                                  publickey=keys.public,
+                                  secretkey=keys.secret)
     # Make publickey easily accessible for these tests
-    agent.publickey = keys.public()
+    agent.publickey = keys.public
     gevent.sleep(0.1) # switch context for a bit
-
+    os.environ.pop('VOLTTRON_HOME')
     return agent
