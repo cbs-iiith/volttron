@@ -583,11 +583,12 @@ class SmartStrip(Agent):
                 self.updateLedDebugState(state)
             except gevent.Timeout:
                 _log.exception("Expection: gevent.Timeout in switchLedDebug()")
-                return
+            except RemoteError as re:
+                _log.exception("Expection: RemoteError in switchLedDebug()")
+                print(re)
             except Exception as e:
-                _log.exception ("Expection: setting ledDebug")
-                #print(e)
-                return
+                _log.exception ("Expection: Could not contact actuator. Is it running?")
+                print(e)
             finally:
                 #cancel the schedule
                 self._cancelSchedule(task_id)
@@ -640,6 +641,7 @@ class SmartStrip(Agent):
             _log.exception("Expection: gevent.Timeout in rpc_switchRelay()")
             #return E_UNKNOWN_STATE
         except RemoteError as re:
+            _log.exception("Expection: RemoteError in rpc_switchRelay()")
             print(re)
             #return E_UNKNOWN_STATE
         except Exception as e:
@@ -659,9 +661,10 @@ class SmartStrip(Agent):
                     'platform.actuator','get_point',
                     'iiit/cbs/smartstrip/LEDDebug').get(timeout=10)
         except gevent.Timeout:
-            _log.exception("Expection: gevent.Timeout in rpc_switchRelay()")
+            _log.exception("Expection: gevent.Timeout in updateLedDebugState()")
             ledDebug_status = E_UNKNOWN_STATE
         except RemoteError as re:
+            _log.exception("Expection: RemoteError in updateLedDebugState()")
             print(re)
             ledDebug_status = E_UNKNOWN_STATE
         except Exception as e:
@@ -672,9 +675,9 @@ class SmartStrip(Agent):
         if state == int(ledDebug_status):
             self._ledDebugState = state
 
-        if self._ledDebugState == LED_ON:
+        if state == LED_ON:
             _log.info('Current State: LED Debug is ON!!!')
-        elif self._ledDebugState == LED_OFF::
+        elif state == LED_OFF::
             _log.info('Current State: LED Debug is OFF!!!')
         else:
             _log.info('Current State: LED Debug STATE UNKNOWN!!!')
@@ -690,6 +693,7 @@ class SmartStrip(Agent):
             _log.exception("Expection: gevent.Timeout in rpc_switchRelay()")
             relay_status = E_UNKNOWN_STATE
         except RemoteError as re:
+            _log.exception("Expection: RemoteError in rpc_switchRelay()")
             print(re)
             relay_status = E_UNKNOWN_STATE
         except Exception as e:
@@ -701,9 +705,9 @@ class SmartStrip(Agent):
             self._plugRelayState[plugID] = state
             self.publishRelayState(plugID, state)
 
-        if self._plugRelayState[plugID] == RELAY_ON:
+        if state == RELAY_ON:
             _log.info('Current State: Plug ' + str(plugID+1) + ' Relay Switched ON!!!')
-        elif self._plugRelayState[plugID] == RELAY_OFF:
+        elif state == RELAY_OFF:
             _log.info('Current State: Plug ' + str(plugID+1) + ' Relay Switched OFF!!!')
         else :
             _log.info('Current State: Plug ' + str(plugID+1) + ' Relay STATE UNKNOWN!!!')
