@@ -31,6 +31,8 @@ utils.setup_logging()
 _log = logging.getLogger(__name__)
 __version__ = '0.2'
 
+#checking if a floating point value is “numerically zero” by checking if it is lower than epsilon
+EPSILON = 1e-03
 
 def buildinggc(config_path, **kwargs):
 
@@ -69,10 +71,13 @@ def buildinggc(config_path, **kwargs):
             gd_pp = message[0]
             _log.debug ( "*** New Price Point: {0:.2f} ***".format(gd_pp))
             
-            if True:
-            #if self._current_gd_pp != gd_pp:
-                bd_pp = self._computeNewPrice(gd_pp)
-                self._post_price(bd_pp)
+            if self._isclose(self._current_gd_pp, gd_pp, EPSILON):
+                _log.debug('no change in price, do nothing')
+                return
+                
+            bd_pp = self._computeNewPrice(gd_pp)
+            self._post_price(bd_pp)
+            return
 
         def _computeNewPrice(self, new_price):
             _log.debug('_computeNewPrice()')
@@ -104,6 +109,10 @@ def buildinggc(config_path, **kwargs):
                 return
             return
             
+        #refer to http://stackoverflow.com/questions/5595425/what-is-the-best-way-to-compare-floats-for-almost-equality-in-python
+        #comparing floats is mess
+        def _isclose(self, a, b, rel_tol=1e-09, abs_tol=0.0):
+            return abs(a-b) <= max(rel_tol * max(abs(a), abs(b)), abs_tol)
 
     Agent.__name__ = 'BuildingGC_Agent'
     return BuildingGC(**kwargs)

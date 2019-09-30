@@ -40,6 +40,10 @@ import struct
 import gevent
 import gevent.event
 
+utils.setup_logging()
+_log = logging.getLogger(__name__)
+__version__ = '0.2'
+
 SH_DEVICE_STATE_ON = 1
 SH_DEVICE_STATE_OFF = 0
 
@@ -75,10 +79,8 @@ SMARTHUB_BASE_ENERGY    = 2.0
 SMARTHUB_FAN_ENERGY     = 6.0
 SMARTHUB_LED_ENERGY     = 3.0
 
-
-utils.setup_logging()
-_log = logging.getLogger(__name__)
-__version__ = '0.2'
+#checking if a floating point value is “numerically zero” by checking if it is lower than epsilon
+EPSILON = 1e-03
 
 def DatetimeFromValue(ts):
     ''' Utility for dealing with time
@@ -176,9 +178,6 @@ class SmartHub(Agent):
         self.publishDeviceThPP();
         self.publishSensorData();
         self.publishCurrentPP();
-        
-        #perodically process new pricing point
-        self.core.periodic(10, self.processNewPricePoint, wait=None)
         
         #perodically publish device state to volttron bus
         self.core.periodic(self._period_read_data, self.publishDeviceState, wait=None)
@@ -514,7 +513,7 @@ class SmartHub(Agent):
             _log.exception ("Expection: not a valid device to change level, deviceId: " + str(deviceId))
             return
             
-        if self._isclose(level, self._shDevicesLevel[deviceId], 1e-03):
+        if self._isclose(level, self._shDevicesLevel[deviceId], EPSILON):
             _log.debug('same level, do nothing')
             return
 
@@ -637,7 +636,7 @@ class SmartHub(Agent):
     def publishCurrentPP(self) :
         #_log.debug('publishCurrentPP()')
         _log.debug("current price point: " + "{0:0.4f}".format(float(self._price_point_current)))
-                    
+        
         pubMsg = [self._price_point_current,{'units': 'cent', 'tz': 'UTC', 'type': 'float'}]
         self._publishToBus(self.topic_price_point, pubMsg)
         
@@ -648,33 +647,34 @@ class SmartHub(Agent):
             
         new_price_point = message[0]
         _log.debug ( "*** New Price Point: {0:.2f} ***".format(new_price_point))
-
-        self._price_point_new = new_price_point
         
-        if self._price_point_current != new_price_point:
-            self.processNewPricePoint()
+        if self._isclose(self._price_point_current, new_price_point, EPSILON):
+            _log.debug('no change in price, do nothing')
+            return
+            
+        self._price_point_new = new_price_point
+        self.processNewPricePoint()
         return
         
     def processNewPricePoint(self):
-        if self._price_point_current != self._price_point_new:
-            _log.info ( "*** New Price Point: {0:.2f} ***".format(self._price_point_new))
-            #result = {}
-            #get schedule for testing relays
-            task_id = str(randint(0, 99999999))
-            #_log.debug("task_id: " + task_id)
-            result = self._getTaskSchedule(task_id)
+        #_log.info ( "*** New Price Point: {0:.2f} ***".format(self._price_point_new))
+        #result = {}
+        #get schedule for testing relays
+        task_id = str(randint(0, 99999999))
+        #_log.debug("task_id: " + task_id)
+        result = self._getTaskSchedule(task_id)
+        
+        if result['result'] == 'SUCCESS':
+            self._price_point_previous = self._price_point_current
+            self._price_point_current = self._price_point_new
             
-            if result['result'] == 'SUCCESS':
-                self._price_point_previous = self._price_point_current
-                self._price_point_current = self._price_point_new
-
-                self.applyPricingPolicy(SH_DEVICE_LED, SCHEDULE_AVLB)
-                self.applyPricingPolicy(SH_DEVICE_FAN, SCHEDULE_AVLB)
-            else :
-                _log.error("unable to processNewPricePoint()")
-                
-            #cancel the schedule
-            self._cancelSchedule(task_id)
+            self.applyPricingPolicy(SH_DEVICE_LED, SCHEDULE_AVLB)
+            self.applyPricingPolicy(SH_DEVICE_FAN, SCHEDULE_AVLB)
+        else :
+            _log.error("unable to processNewPricePoint()")
+            
+        #cancel the schedule
+        self._cancelSchedule(task_id)
         return
         
     def applyPricingPolicy(self, deviceId, schdExist):
@@ -846,7 +846,7 @@ class SmartHub(Agent):
         _log.debug('level {0:0.4f}'.format( level))
         device_level = self.rpc_getShDeviceLevel(deviceId)
         #check if the level really updated at the h/w, only then proceed with new level
-        if self._isclose(level, device_level, 1e-03):
+        if self._isclose(level, device_level, EPSILON):
             self._shDevicesLevel[deviceId] = level
             self._publishShDeviceLevel(deviceId, level)
             
@@ -1096,11 +1096,6 @@ class SmartHub(Agent):
             print(e)
             return jsonrpc.json_error('NA', UNHANDLED_EXCEPTION, e)
             
-    #refer to http://stackoverflow.com/questions/5595425/what-is-the-best-way-to-compare-floats-for-almost-equality-in-python
-    #comparing floats is mess
-    def _isclose(self, a, b, rel_tol=1e-09, abs_tol=0.0):
-        return abs(a-b) <= max(rel_tol * max(abs(a), abs(b)), abs_tol)
-    
     #calculate the local energy demand
     def _calculateLocalEd(self):
         #_log.debug('_calculateLocalEd()')
@@ -1160,6 +1155,11 @@ class SmartHub(Agent):
             self._ds_ed.insert(idx, 0.0)
         return self._ds_deviceId.index(deviceID)
         
+    #refer to http://stackoverflow.com/questions/5595425/what-is-the-best-way-to-compare-floats-for-almost-equality-in-python
+    #comparing floats is mess
+    def _isclose(self, a, b, rel_tol=1e-09, abs_tol=0.0):
+        return abs(a-b) <= max(rel_tol * max(abs(a), abs(b)), abs_tol)
+
 def main(argv=sys.argv):
     '''Main method called by the eggsecutable.'''
     try:

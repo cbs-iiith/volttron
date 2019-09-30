@@ -31,6 +31,8 @@ utils.setup_logging()
 _log = logging.getLogger(__name__)
 __version__ = '0.2'
 
+#checking if a floating point value is “numerically zero” by checking if it is lower than epsilon
+EPSILON = 1e-03
 
 def zonegc(config_path, **kwargs):
 
@@ -68,10 +70,13 @@ def zonegc(config_path, **kwargs):
             bd_pp = message[0]
             _log.debug ( "*** New Price Point: {0:.2f} ***".format(bd_pp))
             
-            if True:
-            #if self._current_bd_pp != bd_pp:
-                zn_pp = self._computeNewPrice(bd_pp)
-                self._post_price(zn_pp)
+            if self._isclose(self._current_bd_pp, bd_pp, EPSILON):
+                _log.debug('no change in price, do nothing')
+                return
+            
+            zn_pp = self._computeNewPrice(bd_pp)
+            self._post_price(zn_pp)
+            return
 
         def _computeNewPrice(self, new_price):
             _log.debug('_computeNewPrice()')
@@ -103,6 +108,10 @@ def zonegc(config_path, **kwargs):
                 return
             return
             
+        #refer to http://stackoverflow.com/questions/5595425/what-is-the-best-way-to-compare-floats-for-almost-equality-in-python
+        #comparing floats is mess
+        def _isclose(self, a, b, rel_tol=1e-09, abs_tol=0.0):
+            return abs(a-b) <= max(rel_tol * max(abs(a), abs(b)), abs_tol)
 
     Agent.__name__ = 'ZoneGC_Agent'
     return ZoneGC(**kwargs)

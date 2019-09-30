@@ -40,6 +40,10 @@ import struct
 import gevent
 import gevent.event
 
+utils.setup_logging()
+_log = logging.getLogger(__name__)
+__version__ = '0.2'
+
 LED_ON = 1
 LED_OFF = 0
 RELAY_ON = 1
@@ -55,9 +59,8 @@ SCHEDULE_NOT_AVLB = 0
 # smartstrip base peak energy (200mA * 12V)
 SMARTSTRIP_BASE_ENERGY = 2
 
-utils.setup_logging()
-_log = logging.getLogger(__name__)
-__version__ = '0.2'
+#checking if a floating point value is “numerically zero” by checking if it is lower than epsilon
+EPSILON = 1e-03
 
 def DatetimeFromValue(ts):
     ''' Utility for dealing with time
@@ -130,10 +133,6 @@ class SmartStrip(Agent):
 
         #perodically publish total energy demand to volttron bus
         self.core.periodic(self._period_read_data, self.publishTed, wait=None)
-        
-        #perodically process new pricing point
-        self.core.periodic(10, self.processNewPricePoint, wait=None)
-        
 
         #subscribing to topic_price_point
         self.vip.pubsub.subscribe("pubsub", self.topic_price_point, self.onNewPrice)
@@ -465,37 +464,37 @@ class SmartStrip(Agent):
             message = compat.unpack_legacy_message(headers, message)
 
         new_price_point = message[0]
-        #_log.info ( "*** New Price Point: {0:.2f} ***".format(new_price_point))
-
-        self._price_point_new = new_price_point
+        _log.info ( "*** New Price Point: {0:.2f} ***".format(new_price_point))
         
-        if self._price_point_current != new_price_point:
-        #if True:
-            self.processNewPricePoint()
+        if self._isclose(self._price_point_current, new_price_point, EPSILON):
+            _log.debug('no change in price, do nothing')
+            return
+            
+        self._price_point_new = new_price_point
+        self.processNewPricePoint()
         return
         
     def processNewPricePoint(self):
-        if self._price_point_current != self._price_point_new:
-            _log.info ( "*** New Price Point: {0:.2f} ***".format(self._price_point_new))
-            result = {}
-            #get schedule for testing relays
-            task_id = str(randint(0, 99999999))
-            #_log.debug("task_id: " + task_id)
-            result = self._getTaskSchedule(task_id)
-            
-            if result['result'] == 'SUCCESS':
-                self._price_point_previous = self._price_point_current
-                self._price_point_current = self._price_point_new
+        #_log.info ( "*** New Price Point: {0:.2f} ***".format(self._price_point_new))
+        result = {}
+        #get schedule for testing relays
+        task_id = str(randint(0, 99999999))
+        #_log.debug("task_id: " + task_id)
+        result = self._getTaskSchedule(task_id)
+        
+        if result['result'] == 'SUCCESS':
+            self._price_point_previous = self._price_point_current
+            self._price_point_current = self._price_point_new
 
-                self.applyPricingPolicy(PLUG_ID_1, SCHEDULE_AVLB)
-                self.applyPricingPolicy(PLUG_ID_2, SCHEDULE_AVLB)
-                self.applyPricingPolicy(PLUG_ID_3, SCHEDULE_AVLB)
-                self.applyPricingPolicy(PLUG_ID_4, SCHEDULE_AVLB)
-            else :
-                _log.error("unable to processNewPricePoint()")
-                
-            #cancel the schedule
-            self._cancelSchedule(task_id)
+            self.applyPricingPolicy(PLUG_ID_1, SCHEDULE_AVLB)
+            self.applyPricingPolicy(PLUG_ID_2, SCHEDULE_AVLB)
+            self.applyPricingPolicy(PLUG_ID_3, SCHEDULE_AVLB)
+            self.applyPricingPolicy(PLUG_ID_4, SCHEDULE_AVLB)
+        else :
+            _log.error("unable to processNewPricePoint()")
+            
+        #cancel the schedule
+        self._cancelSchedule(task_id)
         return
 
     def applyPricingPolicy(self, plugID, schdExist):
@@ -826,6 +825,10 @@ class SmartStrip(Agent):
         #_log.debug(result)
         return
 
+    #refer to http://stackoverflow.com/questions/5595425/what-is-the-best-way-to-compare-floats-for-almost-equality-in-python
+    #comparing floats is mess
+    def _isclose(self, a, b, rel_tol=1e-09, abs_tol=0.0):
+        return abs(a-b) <= max(rel_tol * max(abs(a), abs(b)), abs_tol)
 
 def main(argv=sys.argv):
     '''Main method called by the eggsecutable.'''

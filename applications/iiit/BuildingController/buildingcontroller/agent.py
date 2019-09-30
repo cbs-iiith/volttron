@@ -40,15 +40,18 @@ import struct
 import gevent
 import gevent.event
 
+utils.setup_logging()
+_log = logging.getLogger(__name__)
+__version__ = '0.2'
+
 SCHEDULE_AVLB = 1
 SCHEDULE_NOT_AVLB = 0
 
 E_UNKNOWN_CCE = -4
 E_UNKNOWN_TSP = -5
 
-utils.setup_logging()
-_log = logging.getLogger(__name__)
-__version__ = '0.2'
+#checking if a floating point value is “numerically zero” by checking if it is lower than epsilon
+EPSILON = 1e-03
 
 def DatetimeFromValue(ts):
     ''' Utility for dealing with time
@@ -103,9 +106,6 @@ class BuildingController(Agent):
         #perodically publish total energy demand to volttron bus
         self.core.periodic(self._period_read_data, self.publishTed, wait=None)
         
-        #perodically process new pricing point
-        self.core.periodic(10, self.processNewPricePoint, wait=None)
-        
         #subscribing to topic_price_point
         self.vip.pubsub.subscribe("pubsub", self.topic_price_point, self.onNewPrice)
         
@@ -158,21 +158,21 @@ class BuildingController(Agent):
             message = compat.unpack_legacy_message(headers, message)
 
         new_price_point = message[0]
-        #_log.info ( "*** New Price Point: {0:.2f} ***".format(new_price_point))
-
-        self._price_point_new = new_price_point
+        _log.info ( "*** New Price Point: {0:.2f} ***".format(new_price_point))
         
-        if self._price_point_current != new_price_point:
-        #if True:
-            self.processNewPricePoint()
+        if self._isclose(self._price_point_current, new_price_point, EPSILON):
+            _log.debug('no change in price, do nothing')
+            return
+            
+        self._price_point_new = new_price_point
+        self.processNewPricePoint()
         return
         
     def processNewPricePoint(self):
-        if self._price_point_current != self._price_point_new:
-            _log.info ( "*** New Price Point: {0:.2f} ***".format(self._price_point_new))
-            self._price_point_previous = self._price_point_current
-            self._price_point_current = self._price_point_new
-            self.applyPricingPolicy()
+        #_log.info ( "*** New Price Point: {0:.2f} ***".format(self._price_point_new))
+        self._price_point_previous = self._price_point_current
+        self._price_point_current = self._price_point_new
+        self.applyPricingPolicy()
         return
 
     def applyPricingPolicy(self):
@@ -255,11 +255,6 @@ class BuildingController(Agent):
         #_log.debug(result)
         return
         
-    #refer to http://stackoverflow.com/questions/5595425/what-is-the-best-way-to-compare-floats-for-almost-equality-in-python
-    #comparing floats is mess
-    def _isclose(self, a, b, rel_tol=1e-09, abs_tol=0.0):
-        return abs(a-b) <= max(rel_tol * max(abs(a), abs(b)), abs_tol)
-        
     def onDsEd(self, peer, sender, bus,  topic, headers, message):
         if sender == 'pubsub.compat':
             message = compat.unpack_legacy_message(headers, message)
@@ -278,8 +273,10 @@ class BuildingController(Agent):
             self._ds_ed.insert(idx, 0.0)
         return self._ds_deviceId.index(deviceID)
 
-
-
+    #refer to http://stackoverflow.com/questions/5595425/what-is-the-best-way-to-compare-floats-for-almost-equality-in-python
+    #comparing floats is mess
+    def _isclose(self, a, b, rel_tol=1e-09, abs_tol=0.0):
+        return abs(a-b) <= max(rel_tol * max(abs(a), abs(b)), abs_tol)
 
 def main(argv=sys.argv):
     '''Main method called by the eggsecutable.'''
