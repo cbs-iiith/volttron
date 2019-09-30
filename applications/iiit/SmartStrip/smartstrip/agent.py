@@ -583,9 +583,9 @@ class SmartStrip(Agent):
                 self.updateLedDebugState(state)
             except gevent.Timeout:
                 _log.exception("Expection: gevent.Timeout in switchLedDebug()")
-            except RemoteError as re:
-                _log.exception("Expection: RemoteError in switchLedDebug()")
-                print(re)
+            #except RemoteError as re:
+            #    _log.exception("Expection: RemoteError in switchLedDebug()")
+            #    print(re)
             except Exception as e:
                 _log.exception ("Expection: Could not contact actuator. Is it running?")
                 print(e)
