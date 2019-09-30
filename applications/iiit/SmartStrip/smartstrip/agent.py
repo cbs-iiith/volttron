@@ -677,7 +677,7 @@ class SmartStrip(Agent):
 
         if state == LED_ON:
             _log.info('Current State: LED Debug is ON!!!')
-        elif state == LED_OFF::
+        elif state == LED_OFF:
             _log.info('Current State: LED Debug is OFF!!!')
         else:
             _log.info('Current State: LED Debug STATE UNKNOWN!!!')
