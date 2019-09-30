@@ -583,9 +583,6 @@ class SmartStrip(Agent):
                 self.updateLedDebugState(state)
             except gevent.Timeout:
                 _log.exception("Expection: gevent.Timeout in switchLedDebug()")
-            #except RemoteError as re:
-            #    _log.exception("Expection: RemoteError in switchLedDebug()")
-            #    print(re)
             except Exception as e:
                 _log.exception ("Expection: Could not contact actuator. Is it running?")
                 print(e)
@@ -640,13 +637,9 @@ class SmartStrip(Agent):
         except gevent.Timeout:
             _log.exception("Expection: gevent.Timeout in rpc_switchRelay()")
             #return E_UNKNOWN_STATE
-        except RemoteError as re:
-            _log.exception("Expection: RemoteError in rpc_switchRelay()")
-            print(re)
-            #return E_UNKNOWN_STATE
         except Exception as e:
-            _log.exception ("Expection: Could not contact actuator. Is it running?")
-            #print(e)
+            _log.exception ("Expection: in rpc_switchRelay() Could not contact actuator. Is it running?")
+            print(e)
             #return E_UNKNOWN_STATE
 
         #_log.debug('OK call updatePlug1RelayState()')
@@ -663,13 +656,9 @@ class SmartStrip(Agent):
         except gevent.Timeout:
             _log.exception("Expection: gevent.Timeout in updateLedDebugState()")
             ledDebug_status = E_UNKNOWN_STATE
-        except RemoteError as re:
-            _log.exception("Expection: RemoteError in updateLedDebugState()")
-            print(re)
-            ledDebug_status = E_UNKNOWN_STATE
         except Exception as e:
-            _log.exception ("Expection: Could not contact actuator. Is it running?")
-            #print(e)
+            _log.exception ("Expection: in updateLedDebugState() Could not contact actuator. Is it running?")
+            print(e)
             ledDebug_status = E_UNKNOWN_STATE
 
         if state == int(ledDebug_status):
@@ -690,15 +679,11 @@ class SmartStrip(Agent):
                     'platform.actuator','get_point',
                     'iiit/cbs/smartstrip/Plug' + str(plugID+1) + 'Relay').get(timeout=10)
         except gevent.Timeout:
-            _log.exception("Expection: gevent.Timeout in rpc_switchRelay()")
-            relay_status = E_UNKNOWN_STATE
-        except RemoteError as re:
-            _log.exception("Expection: RemoteError in rpc_switchRelay()")
-            print(re)
+            _log.exception("Expection: gevent.Timeout in updatePlugRelayState()")
             relay_status = E_UNKNOWN_STATE
         except Exception as e:
-            _log.exception ("Expection: Could not contact actuator. Is it running?")
-            #print(e)
+            _log.exception ("Expection: in updatePlugRelayState() Could not contact actuator. Is it running?")
+            print(e)
             relay_status = E_UNKNOWN_STATE
 
         if state == int(relay_status):
