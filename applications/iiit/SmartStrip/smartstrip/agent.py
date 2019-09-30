@@ -857,15 +857,21 @@ class SmartStrip(Agent):
         except gevent.Timeout:
             _log.exception("Expection: gevent.Timeout in _getTaskSchedule()")
         except Exception as e:
-            _log.exception ("Could not contact actuator. Is it running?")
+            _log.exception ("Expection: in _getTaskSchedule() Could not contact actuator. Is it running?")
             print(e)
         finally:
             return result
 
     def _cancelSchedule(self, task_id):
         #_log.debug('_cancelSchedule')
-        result = self.vip.rpc.call('platform.actuator', 'request_cancel_schedule', \
-                                    self._agent_id, task_id).get(timeout=10)
+        try:
+            result = self.vip.rpc.call('platform.actuator', 'request_cancel_schedule', \
+                                        self._agent_id, task_id).get(timeout=10)
+        except gevent.Timeout:
+            _log.exception("Expection: gevent.Timeout in _cancelSchedule()")
+        except Exception as e:
+            _log.exception ("Expection: in _cancelSchedule() Could not contact actuator. Is it running?")
+            print(e)
         #_log.debug("task_id: " + task_id)
         #_log.debug(result)
         return
