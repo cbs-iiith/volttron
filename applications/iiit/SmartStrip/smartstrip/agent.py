@@ -56,6 +56,10 @@ DEFAULT_TAG_ID = '7FC000007FC00000'
 SCHEDULE_AVLB = 1
 SCHEDULE_NOT_AVLB = 0
 
+E_UNKNOWN_DEVICE = -1
+E_UNKNOWN_STATE = -2
+E_UNKNOWN_LEVEL = -3
+
 # smartstrip base peak energy (200mA * 12V)
 SMARTSTRIP_BASE_ENERGY = 2
 
@@ -625,13 +629,24 @@ class SmartStrip(Agent):
         return
 
     def rpc_switchRelay(self, plugID, state):
-        result = self.vip.rpc.call(
-                'platform.actuator', 
-                'set_point',
-                self._agent_id, 
-                'iiit/cbs/smartstrip/Plug' + str(plugID+1) + 'Relay',
-                state).get(timeout=10)
-        
+        try:
+            result = self.vip.rpc.call(
+                    'platform.actuator', 
+                    'set_point',
+                    self._agent_id, 
+                    'iiit/cbs/smartstrip/Plug' + str(plugID+1) + 'Relay',
+                    state).get(timeout=10)
+        except gevent.Timeout:
+            _log.exception("Expection: gevent.Timeout in rpc_switchRelay()")
+            #return E_UNKNOWN_STATE
+        except RemoteError as re:
+            print(re)
+            #return E_UNKNOWN_STATE
+        except Exception as e:
+            _log.exception ("Expection: Could not contact actuator. Is it running?")
+            #print(e)
+            #return E_UNKNOWN_STATE
+
         #_log.debug('OK call updatePlug1RelayState()')
         self.updatePlugRelayState(plugID, state)
         return
@@ -639,24 +654,48 @@ class SmartStrip(Agent):
     def updateLedDebugState(self, state):
         _log.debug('updateLedDebugState()')
         headers = { 'requesterID': self._agent_id, }
-        ledDebug_status = self.vip.rpc.call(
-                'platform.actuator','get_point',
-                'iiit/cbs/smartstrip/LEDDebug').get(timeout=10)
+        try:
+            ledDebug_status = self.vip.rpc.call(
+                    'platform.actuator','get_point',
+                    'iiit/cbs/smartstrip/LEDDebug').get(timeout=10)
+        except gevent.Timeout:
+            _log.exception("Expection: gevent.Timeout in rpc_switchRelay()")
+            ledDebug_status = E_UNKNOWN_STATE
+        except RemoteError as re:
+            print(re)
+            ledDebug_status = E_UNKNOWN_STATE
+        except Exception as e:
+            _log.exception ("Expection: Could not contact actuator. Is it running?")
+            #print(e)
+            ledDebug_status = E_UNKNOWN_STATE
 
         if state == int(ledDebug_status):
             self._ledDebugState = state
 
         if self._ledDebugState == LED_ON:
             _log.info('Current State: LED Debug is ON!!!')
-        else:
+        elif self._ledDebugState == LED_OFF::
             _log.info('Current State: LED Debug is OFF!!!')
+        else:
+            _log.info('Current State: LED Debug STATE UNKNOWN!!!')
 
     def updatePlugRelayState(self, plugID, state):
         #_log.debug('updatePlug1RelayState()')
         headers = { 'requesterID': self._agent_id, }
-        relay_status = self.vip.rpc.call(
-                'platform.actuator','get_point',
-                'iiit/cbs/smartstrip/Plug' + str(plugID+1) + 'Relay').get(timeout=10)
+        try:
+            relay_status = self.vip.rpc.call(
+                    'platform.actuator','get_point',
+                    'iiit/cbs/smartstrip/Plug' + str(plugID+1) + 'Relay').get(timeout=10)
+        except gevent.Timeout:
+            _log.exception("Expection: gevent.Timeout in rpc_switchRelay()")
+            relay_status = E_UNKNOWN_STATE
+        except RemoteError as re:
+            print(re)
+            relay_status = E_UNKNOWN_STATE
+        except Exception as e:
+            _log.exception ("Expection: Could not contact actuator. Is it running?")
+            #print(e)
+            relay_status = E_UNKNOWN_STATE
 
         if state == int(relay_status):
             self._plugRelayState[plugID] = state
@@ -664,8 +703,10 @@ class SmartStrip(Agent):
 
         if self._plugRelayState[plugID] == RELAY_ON:
             _log.info('Current State: Plug ' + str(plugID+1) + ' Relay Switched ON!!!')
-        else:
+        elif self._plugRelayState[plugID] == RELAY_OFF:
             _log.info('Current State: Plug ' + str(plugID+1) + ' Relay Switched OFF!!!')
+        else :
+            _log.info('Current State: Plug ' + str(plugID+1) + ' Relay STATE UNKNOWN!!!')
 
     def publishMeterData(self, pubTopic, fVolatge, fCurrent, fActivePower):
         pubMsg = [{'voltage':fVolatge, 'current':fCurrent,
