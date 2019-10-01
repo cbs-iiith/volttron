@@ -211,7 +211,7 @@ class PricePoint(Agent):
         return
 
     def post_price(self, new_price):
-        _log.debug('post_price()')
+        #_log.debug('post_price()')
         #Create messages for specific points
         pricepoint_message = [new_price,{'units': 'F', 'tz': 'UTC', 'type': 'float'}]
 
