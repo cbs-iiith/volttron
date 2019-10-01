@@ -307,10 +307,12 @@ def volttronbridge(config_path, **kwargs):
                 self._usConnected = self._registerToUsBridge(url_root,\
                                                                 self._discovery_address,\
                                                                 self._deviceId)
-                _log.debug('_usConnected: ' + str(self._usConnected))
                 if not self._usConnected:
+                    _log.debug('_usConnected: ' + str(self._usConnected))
                     _log.debug('Failed to register, May be upstream bridge is not running!!!')
                     return
+                    
+            _log.debug('_usConnected: ' + str(self._usConnected))
 
             #we want to post to us only if there is change in energy demand
             if self._isclose(self._ed_current, newEnergyDemand, EPSILON):
