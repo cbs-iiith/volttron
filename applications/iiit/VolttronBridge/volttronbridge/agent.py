@@ -317,11 +317,11 @@ def volttronbridge(config_path, **kwargs):
             _log.debug('_usConnected: ' + str(self._usConnected))
 
             #we want to post to us only if there is change in energy demand
-            if !re_post and self._isclose(self._ed_current, newEnergyDemand, EPSILON):
+            if re_post != True and self._isclose(self._ed_current, newEnergyDemand, EPSILON):
                 _log.debug('No change in energy demand, do nothing')
                 return
 
-            _log.debug("posting new energy demand to upstream VolttronBridge")
+            _log.debug("posting energy demand to upstream VolttronBridge")
             success = self.do_rpc(url_root, 'rpc_postEnergyDemand', \
                             {'discovery_address': self._discovery_address, \
                                 'deviceId': self._deviceId, \
