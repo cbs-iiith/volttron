@@ -301,8 +301,9 @@ def volttronbridge(config_path, **kwargs):
             url_root = 'http://' + self._us_ip_addr + ':' + str(self._us_port) + '/VolttronBridge'
             
             #check for upstream connection, if not retry once
+            _log.debug('check us connection...')
             if not self._usConnected:
-                _log.debug('Trying to register once...')
+                _log.debug('not connected, Trying to register once...')
                 self._usConnected = self._registerToUsBridge(url_root,\
                                                                 self._discovery_address,\
                                                                 self._deviceId)
