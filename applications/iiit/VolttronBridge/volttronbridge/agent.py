@@ -303,7 +303,9 @@ def volttronbridge(config_path, **kwargs):
             
             #check for upstream connection, if not retry once
             _log.debug('check us connection...')
-            if not self._usConnected:
+            #ping us to confirm
+            ping_success = self.do_rpc(url_root, 'rpc_ping')
+            if ping_success and not self._usConnected:
                 _log.debug('not connected, Trying to register once...')
                 self._usConnected = self._registerToUsBridge(url_root,\
                                                                 self._discovery_address,\
