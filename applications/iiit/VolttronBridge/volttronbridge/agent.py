@@ -411,6 +411,7 @@ def volttronbridge(config_path, **kwargs):
             self._us_last_pp_previous = self._us_last_pp_current
             self._us_last_pp_current = newPricePoint
             #post to bus
+            _log.debug('post to bus...')
             pubTopic =  pricePoint_topic_us
             pubMsg = [newPricePoint,{'units': 'cents', 'tz': 'UTC', 'type': 'float'}]
             self._publishToBus(pubTopic, pubMsg)
