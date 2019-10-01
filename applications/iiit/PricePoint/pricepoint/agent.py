@@ -157,11 +157,12 @@ class PricePoint(Agent):
 
     @RPC.export
     def updatePricePoint(self, newPricePoint):
+        _log.debug('received New Price Point: {0:.2f} !!!'.format(newPricePoint))
+        
         if self._isclose(newPricePoint, self._price_point_previous, EPSILON) :
             _log.debug('no change in price, do nothing')
             return False
             
-        _log.debug('New Price Point: {0:.2f} !!!'.format(newPricePoint))
         self.post_price(newPricePoint)
         self._price_point_previous = newPricePoint
         return True
