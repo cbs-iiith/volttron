@@ -52,50 +52,96 @@ def smartstripgc(config_path, **kwargs):
             _log.info(config['message'])
             self._agent_id = config['agentid']
             
-            self._current_sh_pp = 0
+            self._current_pp_us = 0
             
-            self.topic_price_point_us = config.get('pricePoint_topic_us', 'smarthub/pricepoint')
-            self.topic_price_point = config.get('pricePoint_topic', 'smartstrip/pricepoint')
+            self._max_time_bid_ed       = int(config.get('max_time_bid_ed', 10))
+            
+            self.topic_bid_ed           = config.get("bid_ed_topic", "smartstrip/bid_energydemand")
+            self.topic_bid_ed_ds        = config.get("bid_ed_topic_ds", "ds/bid_energydemand")
+            self.topic_lm_us            = config.get("lm_topic_us", "us/lm_pricepoint")
+            self.topic_lm               = config.get("lm_topic", "smartstrip/lm")
+            self.topic_ed               = config.get("energyDemand_topic", "smartstrip/energydemand")
+            self.topic_ed_ds            = config.get("energyDemand_topic_ds", "ds/energydemand")
+            self.topic_price_point_us   = config.get('pricePoint_topic_us', 'smarthub/pricepoint')
+            self.topic_price_point      = config.get('pricePoint_topic', 'smartstrip/pricepoint')
             return
 
         @Core.receiver('onstart')            
         def startup(self, sender, **kwargs):
             _log.debug('startup()')
             #subscribing to topic_price_point_us
-            self.vip.pubsub.subscribe("pubsub", self.topic_price_point_us, self.onNewPrice)
+            self.vip.pubsub.subscribe("pubsub", self.topic_price_point_us, self.on_new_pp_us)
+            
+            #subscribing to topic lagrange multiplier (lm) from us
+            self.vip.pubsub.subscribe("pubsub", self.topic_lm_us, self.on_new_lm_us)
             return
 
-        def onNewPrice(self, peer, sender, bus,  topic, headers, message):
+        #received new lagrange multiplier (lamda) from us
+        def on_new_lm_us(self, peer, sender, bus,  topic, headers, message):
+            _log.debug("on_new_lm_us()")
+            if sender == 'pubsub.compat':
+                message = compat.unpack_legacy_message(headers, message)
+                
+            #new lagrange multiplier
+            lm_us = message[0]
+            _log.debug ( "*** New lagrange multiplier: {0:.2f} ***".format(lm_us))
+            self._current_lm_us = lm_us
+            
+            if self._isclose(self._current_pp_us, lm_us, EPSILON):
+                _log.debug('New Optimal Price Point!!!')
+                self._post_price(lm_us)
+                return
+            
+            #not a lamda star
+            #compute new lm
+            #post the lm to local bus so that local device & ds device can compute the bid_ed
+            lm = _compute_new_lm(lm_us)
+            _post_lm(lm)
+            return
+            
+        #reveived new price point from us
+        def on_new_pp_us(self, peer, sender, bus,  topic, headers, message):
+            _log.debug("on_new_pp_us()")
             if sender == 'pubsub.compat':
                 message = compat.unpack_legacy_message(headers, message)
                 
             #new hub price point
-            sh_pp = message[0]
-            _log.debug ( "*** New Price Point: {0:.2f} ***".format(sh_pp))
+            pp_us = message[0]
+            _log.debug ( "*** New Price Point: {0:.2f} ***".format(pp_us))
             
-            if self._isclose(self._current_sh_pp, sh_pp, EPSILON):
-                _log.debug('no change in price, do nothing')
+            if self._isclose(self._current_lm_us, pp_us, EPSILON) or \
+                not self._isclose(self._current_pp_us, pp_us, EPSILON):
+                _log.debug('New Optimal Price Point!!!')
+                self._current_pp_us = pp_us
+                self._post_price(pp_us)
                 return
                 
-            ss_pp = self._computeNewPrice(sh_pp)
-            self._post_price(ss_pp)
             return
 
-        def _computeNewPrice(self, new_price):
-            _log.debug('_computeNewPrice()')
+        def _compute_new_lm(self, new_price):
+            _log.debug('_compute_new_lm()')
             #TODO: implement the algorithm to compute the new price
             #      based on predicted demand, etc.
             return new_price
 
-        def _post_price(self, ss_pp):
-            _log.debug('_post_price()')
+        def _post_lm(self, lm_us):
+            _log.debug('_post_lm()')
             #post to bus
-            pubTopic =  self.topic_price_point
-            pubMsg = [ss_pp,{'units': 'cents', 'tz': 'UTC', 'type': 'float'}]
+            pubTopic =  self.topic_lm
+            pubMsg = [pp_us,{'units': 'cents', 'tz': 'UTC', 'type': 'float'}]
             _log.debug('publishing to local bus topic: ' + pubTopic)
             self._publishToBus(pubTopic, pubMsg)
             return
-            
+
+        def _post_price(self, pp_us):
+            _log.debug('_post_price()')
+            #post to bus
+            pubTopic =  self.topic_price_point
+            pubMsg = [pp_us,{'units': 'cents', 'tz': 'UTC', 'type': 'float'}]
+            _log.debug('publishing to local bus topic: ' + pubTopic)
+            self._publishToBus(pubTopic, pubMsg)
+            return
+
         def _publishToBus(self, pubTopic, pubMsg):
             #_log.debug('_publishToBus()')
             now = datetime.datetime.utcnow().isoformat(' ') + 'Z'
@@ -111,7 +157,7 @@ def smartstripgc(config_path, **kwargs):
                 return
             return
             
-            #refer to http://stackoverflow.com/questions/5595425/what-is-the-best-way-to-compare-floats-for-almost-equality-in-python
+        #refer to http://stackoverflow.com/questions/5595425/what-is-the-best-way-to-compare-floats-for-almost-equality-in-python
         #comparing floats is mess
         def _isclose(self, a, b, rel_tol=1e-09, abs_tol=0.0):
             return abs(a-b) <= max(rel_tol * max(abs(a), abs(b)), abs_tol)
