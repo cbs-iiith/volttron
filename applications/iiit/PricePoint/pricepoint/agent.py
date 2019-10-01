@@ -129,11 +129,11 @@ class PricePoint(Agent):
         return self._processMessage(message)
 
     def _processMessage(self, message):
-        _log.debug('processResponse()')
+        #_log.debug('processResponse()')
         result = False
         try:
             rpcdata = jsonrpc.JsonRpcData.parse(message)
-            _log.debug('rpc method: {}'.format(rpcdata.method))
+            #_log.debug('rpc method: {}'.format(rpcdata.method))
             
             if rpcdata.method == "rpc_updatePricePoint":
                 args = {'newPricePoint': rpcdata.params['newPricePoint']}
