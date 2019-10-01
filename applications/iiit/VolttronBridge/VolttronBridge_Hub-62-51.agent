@@ -9,8 +9,8 @@
     "us_port": 8080,
     "ip_addr":  "192.168.1.62",
     "port": 8080,
-    "_comment_ed":"energy_demand"
-    "_comment_lm":"lagrange_multiplier"
+    "_comment_ed":"energy_demand",
+    "_comment_lm":"lagrange_multiplier",
     "bid_ed_topic": "smarthub/bid_energydemand",
     "bid_ed_topic_ds": "ds/bid_energydemand",
     "lm_topic_us": "us/lm_pricepoint",

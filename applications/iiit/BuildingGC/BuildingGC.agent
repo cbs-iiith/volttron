@@ -3,8 +3,8 @@
     "agentid": "BuildingGC",
     "message": "I am Building Grid Controller Agent",
     "period_read_price_point": 5,
-    "_comment_ed":"energy_demand"
-    "_comment_lm":"lagrange_multiplier"
+    "_comment_ed":"energy_demand",
+    "_comment_lm":"lagrange_multiplier",
     "bid_ed_topic": "building/bid_energydemand",
     "bid_ed_topic_ds": "ds/bid_energydemand",
     "lm_topic_us": "notused/lm_pricepoint",
