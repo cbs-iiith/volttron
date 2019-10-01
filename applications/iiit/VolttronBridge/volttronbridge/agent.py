@@ -297,6 +297,7 @@ def volttronbridge(config_path, **kwargs):
             
             self._ed_previous = self._ed_current
             self._ed_current = newEnergyDemand
+            re_post = False
             
             url_root = 'http://' + self._us_ip_addr + ':' + str(self._us_port) + '/VolttronBridge'
             
