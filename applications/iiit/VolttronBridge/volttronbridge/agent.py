@@ -318,7 +318,7 @@ def volttronbridge(config_path, **kwargs):
             _log.debug('_usConnected: ' + str(self._usConnected))
 
             #we want to post to us only if there is change in energy demand
-            if self._isclose(self._ed_current, newEnergyDemand, EPSILON) and re_post == False:
+            if self._isclose(self._ed_current, self._ed_previous, EPSILON) and re_post == False:
                 _log.debug('No change in energy demand, do nothing')
                 return
 
