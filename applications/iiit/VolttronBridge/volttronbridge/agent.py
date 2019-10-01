@@ -298,7 +298,6 @@ def volttronbridge(config_path, **kwargs):
             self._ed_previous = self._ed_current
             self._ed_current = newEnergyDemand
             
-            _log.debug("posting new energy demand to upstream VolttronBridge")
             url_root = 'http://' + self._us_ip_addr + ':' + str(self._us_port) + '/VolttronBridge'
             
             #check for upstream connection, if not retry once
@@ -317,6 +316,7 @@ def volttronbridge(config_path, **kwargs):
                 _log.debug('No change in energy demand, do nothing')
                 return
 
+            _log.debug("posting new energy demand to upstream VolttronBridge")
             success = self.do_rpc(url_root, 'rpc_postEnergyDemand', \
                             {'discovery_address': self._discovery_address, \
                                 'deviceId': self._deviceId, \
