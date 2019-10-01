@@ -400,7 +400,7 @@ def volttronbridge(config_path, **kwargs):
             _log.debug('unregistered!!!')
             return True
             
-        #post the new new price point from us to the local-us-bus        
+        #post the new price point from us to the local-us-bus        
         def _postPricePoint(self, discovery_address, deviceId, newPricePoint):
             _log.debug ( "*** New Price Point(us): {0:.2f} ***".format(newPricePoint))
             #we want to post to bus only if there is change in previous us price point
@@ -411,7 +411,7 @@ def volttronbridge(config_path, **kwargs):
             self._us_last_pp_previous = self._us_last_pp_current
             self._us_last_pp_current = newPricePoint
             #post to bus
-            _log.debug('post to bus...')
+            _log.debug('post the new price point from us to the local-us-bus')
             pubTopic =  pricePoint_topic_us
             pubMsg = [newPricePoint,{'units': 'cents', 'tz': 'UTC', 'type': 'float'}]
             self._publishToBus(pubTopic, pubMsg)
