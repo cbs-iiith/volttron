@@ -652,6 +652,7 @@ class SmartHub(Agent):
             _log.debug('no change in price, do nothing')
             return
             
+        _log.debug ( "process new price point")
         self._price_point_new = new_price_point
         self.processNewPricePoint()
         return
@@ -712,13 +713,9 @@ class SmartHub(Agent):
         except gevent.Timeout:
             _log.exception("Expection: gevent.Timeout in rpc_getShDeviceState()")
             return E_UNKNOWN_STATE
-        except RemoteError as re:
-            _log.exception("Expection: RemoteError in rpc_getShDeviceState()")
-            print(re)
-            return E_UNKNOWN_STATE
         except Exception as e:
-            _log.exception ("Expection: Could not contact actuator. Is it running?")
-            #print(e)
+            _log.exception ("Expection: in rpc_getShDeviceState() Could not contact actuator. Is it running?")
+            print(e)
             return E_UNKNOWN_STATE
         return int(device_level)
         
@@ -738,8 +735,8 @@ class SmartHub(Agent):
             _log.exception("Expection: gevent.Timeout in rpc_setShDeviceState()")
             return
         except Exception as e:
-            _log.exception ("Expection: Could not contact actuator. Is it running?")
-            #print(e)
+            _log.exception ("Expection: in rpc_setShDeviceState() Could not contact actuator. Is it running?")
+            print(e)
             return
         self._updateShDeviceState(deviceId, endPoint,state)
         return
@@ -760,8 +757,8 @@ class SmartHub(Agent):
             _log.exception("Expection: gevent.Timeout in rpc_getShDeviceLevel()")
             return E_UNKNOWN_LEVEL
         except Exception as e:
-            _log.exception ("Expection: Could not contact actuator. Is it running?")
-            #print(e)
+            _log.exception ("Expection: in rpc_getShDeviceLevel() Could not contact actuator. Is it running?")
+            print(e)
             return E_UNKNOWN_LEVEL
         return E_UNKNOWN_LEVEL
         
@@ -784,11 +781,11 @@ class SmartHub(Agent):
             _log.exception("Expection: gevent.Timeout in rpc_setShDeviceLevel()")
             return
         except Exception as e:
-            _log.exception ("Expection: Could not contact actuator. Is it running?")
-            #print(e)
+            _log.exception ("Expection: in rpc_setShDeviceLevel() Could not contact actuator. Is it running?")
+            print(e)
             return
             
-    def _getTaskSchedule(self, taskId, time_ms=None):
+    def _getTaskSchedule(self, task_id, time_ms=None):
         #_log.debug("_getTaskSchedule()")
         self.time_ms = 600 if time_ms is None else time_ms
         try:
@@ -805,7 +802,7 @@ class SmartHub(Agent):
                     'platform.actuator', 
                     'request_new_schedule',
                     self._agent_id, 
-                    taskId,
+                    task_id,
                     'HIGH',
                     msg).get(timeout=10)
         except gevent.Timeout:
