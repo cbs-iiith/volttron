@@ -448,6 +448,7 @@ class SmartStrip(Agent):
                             '(tag id: ',
                             newTagId, ')'))
                     self.publishTagId(plugID, newTagId)
+                    #TODO: bug with new unauthorised tag id, switch-off power if its already swithched-on
 
         else:
             #no device connected condition, new tag id is DEFAULT_TAG_ID
