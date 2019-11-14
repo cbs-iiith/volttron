@@ -49,6 +49,7 @@ SCHEDULE_NOT_AVLB = 0
 
 E_UNKNOWN_CCE = -4
 E_UNKNOWN_TSP = -5
+E_UNKNOWN_LSP = -6
 
 #checking if a floating point value is “numerically zero” by checking if it is lower than epsilon
 EPSILON = 1e-03
@@ -72,6 +73,7 @@ class ZoneController(Agent):
     _price_point_new = 0.45
 
     _rmTsp = 25
+    _rmLsp = 100
     
     #downstream energy demand and deviceId
     _ds_ed = []
@@ -196,9 +198,17 @@ class ZoneController(Agent):
 
     def applyPricingPolicy(self):
         _log.debug("applyPricingPolicy()")
+        
+        #apply for ambient ac
         tsp = self.getNewTsp(self._price_point_current)
         _log.debug('New Setpoint: {0:0.1f}'.format( tsp))
         self.setRmTsp(tsp)
+        
+        #apply for ambient lightinh
+        lsp = self.getNewLsp(self._price_point_current)
+        _log.debug('New Setpoint: {0:0.1f}'.format( lsp))
+        self.setRmLsp(lsp)
+        
         return
     
     #compute new TSP
@@ -222,7 +232,25 @@ class ZoneController(Agent):
         else :
             tsp = 22.0
         return tsp
-    
+        
+    #compute new LSP
+    def getNewLsp(self, pp):
+        if pp >= 0.9 :
+            lsp = 00.0
+        elif pp >= 0.8 :
+            lsp = 15.0
+        elif pp >= 0.7 :
+            lsp = 30.0
+        elif pp >= 0.6 :
+            lsp = 45.0
+        elif pp >= 0.5 :
+            lsp = 60.0
+        elif pp >= 0.4 :
+            lsp = 75.0
+        else :
+            lsp = 100.0
+        return lsp
+        
     # change ambient temperature set point
     def setRmTsp(self, tsp):
         #_log.debug('setRmTsp()')
@@ -255,6 +283,38 @@ class ZoneController(Agent):
             _log.debug('schedule NOT available')
         return
         
+    # change ambient light set point
+    def setRmLsp(self, lsp):
+        #_log.debug('setRmLsp()')
+        
+        if self._isclose(lsp, self._rmLsp, EPSILON):
+            _log.debug('same lsp, do nothing')
+            return
+            
+        task_id = str(randint(0, 99999999))
+        result = self._getTaskSchedule(task_id)
+        if result['result'] == 'SUCCESS':
+            result = {}
+            try:
+                result = self.vip.rpc.call(
+                    'platform.actuator', 
+                    'set_point',
+                    self._agent_id, 
+                    'iiit/cbs/zonecontroller/RM_LSP',
+                    lsp).get(timeout=10)
+                self.updateRmLsp(lsp)
+            except gevent.Timeout:
+                _log.exception("Expection: gevent.Timeout in setRmLsp()")
+            except Exception as e:
+                _log.exception ("Expection: changing ambient lsp")
+                print(e)
+            finally:
+                #cancel the schedule
+                self._cancelSchedule(task_id)
+        else:
+            _log.debug('schedule NOT available')
+        return
+
     def updateRmTsp(self, tsp):
         #_log.debug('updateRmTsp()')
         _log.debug('tsp {0:0.1f}'.format( tsp))
@@ -269,6 +329,30 @@ class ZoneController(Agent):
         _log.debug('Current TSP: ' + "{0:0.1f}".format( rm_tsp))
         return
         
+    def updateRmLsp(self, lsp):
+        #_log.debug('updateRmLsp()')
+        _log.debug('lsp {0:0.1f}'.format( lsp))
+        
+        rm_lsp = self.rpc_getRmLsp()
+        
+        #check if the lsp really updated at the h/w, only then proceed with new lsp
+        if self._isclose(lsp, rm_lsp, EPSILON):
+            self._rmLsp = lsp
+            self.publishRmLsp(lsp)
+            
+        _log.debug('Current LSP: ' + "{0:0.1f}".format( rm_lsp))
+        return
+
+    #For given light setpoint(lsp), returns the lighting power in watts
+    #refer to excel sheet "Philips CFL Power Chart.xlsx"
+    def _get_rm_light_power(self, lsp):
+        if lsp < 0:
+            return 65
+        elif lsp > 10:
+            return 145
+        else
+            return ((8 * lsp) + 65)
+    
     def rpc_getRmCalcCoolingEnergy(self):
         task_id = str(randint(0, 99999999))
         result = self._getTaskSchedule(task_id)
@@ -307,6 +391,21 @@ class ZoneController(Agent):
             return E_UNKNOWN_TSP
         return E_UNKNOWN_TSP
         
+    def rpc_getRmLsp(self):
+        try:
+            rm_lsp = self.vip.rpc.call(
+                    'platform.actuator','get_point',
+                    'iiit/cbs/zonecontroller/RM_LSP').get(timeout=10)
+            return rm_lsp
+        except gevent.Timeout:
+            _log.exception("Expection: gevent.Timeout in rpc_getRmLsp()")
+            return E_UNKNOWN_LSP
+        except Exception as e:
+            _log.exception ("Expection: Could not contact actuator. Is it running?")
+            print(e)
+            return E_UNKNOWN_LSP
+        return E_UNKNOWN_LSP
+
     def publishRmTsp(self, tsp):
         #_log.debug('publishRmTsp()')
         pubTopic = self.root_topic+"/rm_tsp"
@@ -314,10 +413,20 @@ class ZoneController(Agent):
         self.publishToBus(pubTopic, pubMsg)
         return
         
+    def publishRmLsp(self, lsp):
+        #_log.debug('publishRmLsp()')
+        pubTopic = self.root_topic+"/rm_lsp"
+        pubMsg = [tsp,{'units': '%', 'tz': 'UTC', 'type': 'float'}]
+        self.publishToBus(pubTopic, pubMsg)
+        return
+
     def _calculateTed(self):
         #_log.debug('_calculateTed()')
         
-        ted = self.rpc_getRmCalcCoolingEnergy()
+        #zone lighting + ac
+        ted = self.rpc_getRmCalcCoolingEnergy() + self._get_rm_light_power()
+        
+        #ted from ds devices associated with the zone
         for ed in self._ds_ed:
             ted = ted + ed
         
