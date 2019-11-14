@@ -171,6 +171,18 @@ class ZoneController(Agent):
         self.setRmTsp(29.0)
         time.sleep(10)
         
+        _log.debug('change lsp 25')
+        self.setRmLsp(25.0)
+        time.sleep(10)
+        
+        _log.debug('change lsp 75')
+        self.setRmLsp(75.0)
+        time.sleep(10)
+        
+        _log.debug('change lsp 100')
+        self.setRmLsp(100.0)
+        time.sleep(10)
+
         _log.debug("EOF Testing")
         return
         
@@ -190,23 +202,26 @@ class ZoneController(Agent):
         return
         
     def processNewPricePoint(self):
+        if self._isclose(self._price_point_current, self._price_point_new, EPSILON):
+            return
+            
         #_log.info ( "*** New Price Point: {0:.2f} ***".format(self._price_point_new))
         self._price_point_previous = self._price_point_current
-        self._price_point_current = self._price_point_new
         self.applyPricingPolicy()
+        self._price_point_current = self._price_point_new
         return
 
     def applyPricingPolicy(self):
         _log.debug("applyPricingPolicy()")
         
         #apply for ambient ac
-        tsp = self.getNewTsp(self._price_point_current)
-        _log.debug('New Setpoint: {0:0.1f}'.format( tsp))
+        tsp = self.getNewTsp(self._price_point_new)
+        _log.debug('New Ambient AC Setpoint: {0:0.1f}'.format( tsp))
         self.setRmTsp(tsp)
         
         #apply for ambient lightinh
-        lsp = self.getNewLsp(self._price_point_current)
-        _log.debug('New Setpoint: {0:0.1f}'.format( lsp))
+        lsp = self.getNewLsp(self._price_point_new)
+        _log.debug('New Ambient Lighting Setpoint: {0:0.1f}'.format( lsp))
         self.setRmLsp(lsp)
         
         return
@@ -321,7 +336,7 @@ class ZoneController(Agent):
         
         rm_tsp = self.rpc_getRmTsp()
         
-        #check if the tsp really updated at the h/w, only then proceed with new tsp
+        #check if the tsp really updated at the bms, only then proceed with new tsp
         if self._isclose(tsp, rm_tsp, EPSILON):
             self._rmTsp = tsp
             self.publishRmTsp(tsp)
@@ -335,7 +350,7 @@ class ZoneController(Agent):
         
         rm_lsp = self.rpc_getRmLsp()
         
-        #check if the lsp really updated at the h/w, only then proceed with new lsp
+        #check if the lsp really updated at the bms, only then proceed with new lsp
         if self._isclose(lsp, rm_lsp, EPSILON):
             self._rmLsp = lsp
             self.publishRmLsp(lsp)
@@ -350,7 +365,7 @@ class ZoneController(Agent):
             return 65
         elif lsp > 10:
             return 145
-        else
+        else:
             return ((8 * lsp) + 65)
     
     def rpc_getRmCalcCoolingEnergy(self):
@@ -416,7 +431,7 @@ class ZoneController(Agent):
     def publishRmLsp(self, lsp):
         #_log.debug('publishRmLsp()')
         pubTopic = self.root_topic+"/rm_lsp"
-        pubMsg = [tsp,{'units': '%', 'tz': 'UTC', 'type': 'float'}]
+        pubMsg = [lsp,{'units': '%', 'tz': 'UTC', 'type': 'float'}]
         self.publishToBus(pubTopic, pubMsg)
         return
 
@@ -424,7 +439,7 @@ class ZoneController(Agent):
         #_log.debug('_calculateTed()')
         
         #zone lighting + ac
-        ted = self.rpc_getRmCalcCoolingEnergy() + self._get_rm_light_power()
+        ted = self.rpc_getRmCalcCoolingEnergy() + self._get_rm_light_power(self._rmLsp)
         
         #ted from ds devices associated with the zone
         for ed in self._ds_ed:
