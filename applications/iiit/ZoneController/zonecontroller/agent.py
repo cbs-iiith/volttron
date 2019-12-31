@@ -40,6 +40,8 @@ import struct
 import gevent
 import gevent.event
 
+import math
+
 utils.setup_logging()
 _log = logging.getLogger(__name__)
 __version__ = '0.2'
@@ -89,6 +91,7 @@ class ZoneController(Agent):
         self.config = utils.load_config(config_path)
         self._configGetPoints()
         self._configGetInitValues()
+        self._configGetPriceFucntions()
         return
 
     @Core.receiver('onsetup')
@@ -150,8 +153,15 @@ class ZoneController(Agent):
         self.energyDemand_topic_ds  = self.config.get('topic_energy_demand_ds', \
                                             'ds/energydemand')
         return
-
-
+        
+    def _configGetPriceFucntions(self):
+        _log.debug("_configGetPriceFucntions()")
+        
+        self.pf_ac  = self.config.get('pf_ac')
+        self.pf_light  = self.config.get('pf_light')
+        
+        return
+        
     def _runBMSTest(self):
         _log.debug("Running : _runBMS Commu Test()...")
         
@@ -225,46 +235,35 @@ class ZoneController(Agent):
         self.setRmLsp(lsp)
         
         return
-    
+        
     #compute new TSP
     def getNewTsp(self, pp):
-        if pp >= 0.9 :
-            tsp = 30.0
-        elif pp >= 0.8 :
-            tsp = 29.0
-        elif pp >= 0.7 :
-            tsp = 28.0
-        elif pp >= 0.6 :
-            tsp = 27.0
-        elif pp >= 0.5 :
-            tsp = 26.0
-        elif pp >= 0.4 :
-            tsp = 25.0
-        elif pp >= 0.3 :
-            tsp = 24.0
-        elif pp >= 0.2 :
-            tsp = 23.0
-        else :
-            tsp = 22.0
-        return tsp
+        pf_idx = self.pf_ac['pf_idx']
+        pf_roundup = self.pf_ac['v']
+        pf_constants = self.pf_ac['pf_constants']
+        
+        a = pf_constants[pf_idx]['a']
+        b = pf_constants[pf_idx]['b']
+        c = pf_constants[pf_idx]['c']
+        
+        tsp = a*pp**2 + b*pp + c
+        return self._mround(tsp, pf_roundup)
         
     #compute new LSP
     def getNewLsp(self, pp):
-        if pp >= 0.9 :
-            lsp = 00.0
-        elif pp >= 0.8 :
-            lsp = 15.0
-        elif pp >= 0.7 :
-            lsp = 30.0
-        elif pp >= 0.6 :
-            lsp = 45.0
-        elif pp >= 0.5 :
-            lsp = 60.0
-        elif pp >= 0.4 :
-            lsp = 75.0
-        else :
-            lsp = 100.0
-        return lsp
+        pf_idx = self.pf_light['pf_idx']
+        pf_roundup = self.pf_light['v']
+        pf_constants = self.pf_light['pf_constants']
+        
+        a = pf_constants[pf_idx]['a']
+        b = pf_constants[pf_idx]['b']
+        c = pf_constants[pf_idx]['c']
+        
+        lsp = a*pp**2 + b*pp + c
+        return self._mround(lsp, pf_roundup)
+        
+    def _mround(self, num, multipleOf):
+        return math.floor((num + multipleOf / 2) / multipleOf) * multipleOf
         
     # change ambient temperature set point
     def setRmTsp(self, tsp):

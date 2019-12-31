@@ -9,5 +9,21 @@
     "topic_energy_demand": "zone/energydemand",
     "topic_energy_demand_ds": "ds/energydemand",
     "default_base_price": 0.2,
-    "price_point_latest": 0.2
+    "price_point_latest": 0.2,
+    
+    #price functions(pf) of the form ax2 + bx + c, v --> roundup, and pf_idx --> default pf_constants
+    "pf_ac": {
+        "v":0.5,
+        "pf_idx":0,
+        "pf_constants": [
+            {"a": 7.5, "b": -1.5, "c": 24}
+        ]
+    },
+    "pf_light": {
+        "v":5,
+        "pf_idx":0,
+        "pf_constants":[
+            {"a": -35, "b": -35, "c": 100}
+        ]
+    }
 }
