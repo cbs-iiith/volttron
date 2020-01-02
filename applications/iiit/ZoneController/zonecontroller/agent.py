@@ -40,7 +40,7 @@ import struct
 import gevent
 import gevent.event
 
-import math
+from application.iiit.ispace_utils import mround, publish_to_bus, get_task_schdl, cancel_task_schdl, isclose
 
 utils.setup_logging()
 _log = logging.getLogger(__name__)
@@ -203,7 +203,7 @@ class ZoneController(Agent):
         new_price_point = message[0]
         _log.info ( "*** New Price Point: {0:.2f} ***".format(new_price_point))
         
-        if self._isclose(self._price_point_current, new_price_point, EPSILON):
+        if isclose(self._price_point_current, new_price_point, EPSILON):
             _log.debug('no change in price, do nothing')
             return
         
@@ -212,7 +212,7 @@ class ZoneController(Agent):
         return
         
     def processNewPricePoint(self):
-        if self._isclose(self._price_point_current, self._price_point_new, EPSILON):
+        if isclose(self._price_point_current, self._price_point_new, EPSILON):
             return
             
         #_log.info ( "*** New Price Point: {0:.2f} ***".format(self._price_point_new))
@@ -247,7 +247,7 @@ class ZoneController(Agent):
         c = pf_coefficients[pf_idx]['c']
         
         tsp = a*pp**2 + b*pp + c
-        return self._mround(tsp, pf_roundup)
+        return mround(tsp, pf_roundup)
         
     #compute new LSP
     def getNewLsp(self, pp):
@@ -260,21 +260,18 @@ class ZoneController(Agent):
         c = pf_coefficients[pf_idx]['c']
         
         lsp = a*pp**2 + b*pp + c
-        return self._mround(lsp, pf_roundup)
-        
-    def _mround(self, num, multipleOf):
-        return math.floor((num + multipleOf / 2) / multipleOf) * multipleOf
+        return mround(lsp, pf_roundup)
         
     # change ambient temperature set point
     def setRmTsp(self, tsp):
         #_log.debug('setRmTsp()')
         
-        if self._isclose(tsp, self._rmTsp, EPSILON):
+        if isclose(tsp, self._rmTsp, EPSILON):
             _log.debug('same tsp, do nothing')
             return
             
         task_id = str(randint(0, 99999999))
-        result = self._getTaskSchedule(task_id)
+        result = get_task_schdl(self._agent_id, task_id,'iiit/cbs/zonecontroller')
         if result['result'] == 'SUCCESS':
             result = {}
             try:
@@ -292,7 +289,7 @@ class ZoneController(Agent):
                 print(e)
             finally:
                 #cancel the schedule
-                self._cancelSchedule(task_id)
+                cancel_task_schdl(self._agent_id, task_id)
         else:
             _log.debug('schedule NOT available')
         return
@@ -301,12 +298,12 @@ class ZoneController(Agent):
     def setRmLsp(self, lsp):
         #_log.debug('setRmLsp()')
         
-        if self._isclose(lsp, self._rmLsp, EPSILON):
+        if isclose(lsp, self._rmLsp, EPSILON):
             _log.debug('same lsp, do nothing')
             return
             
         task_id = str(randint(0, 99999999))
-        result = self._getTaskSchedule(task_id)
+        result = get_task_schdl(self._agent_id, task_id,'iiit/cbs/zonecontroller')
         if result['result'] == 'SUCCESS':
             result = {}
             try:
@@ -324,7 +321,7 @@ class ZoneController(Agent):
                 print(e)
             finally:
                 #cancel the schedule
-                self._cancelSchedule(task_id)
+                cancel_task_schdl(self._agent_id, task_id)
         else:
             _log.debug('schedule NOT available')
         return
@@ -336,7 +333,7 @@ class ZoneController(Agent):
         rm_tsp = self.rpc_getRmTsp()
         
         #check if the tsp really updated at the bms, only then proceed with new tsp
-        if self._isclose(tsp, rm_tsp, EPSILON):
+        if isclose(tsp, rm_tsp, EPSILON):
             self._rmTsp = tsp
             self.publishRmTsp(tsp)
             
@@ -350,7 +347,7 @@ class ZoneController(Agent):
         rm_lsp = self.rpc_getRmLsp()
         
         #check if the lsp really updated at the bms, only then proceed with new lsp
-        if self._isclose(lsp, rm_lsp, EPSILON):
+        if isclose(lsp, rm_lsp, EPSILON):
             self._rmLsp = lsp
             self.publishRmLsp(lsp)
             
@@ -369,7 +366,7 @@ class ZoneController(Agent):
     
     def rpc_getRmCalcCoolingEnergy(self):
         task_id = str(randint(0, 99999999))
-        result = self._getTaskSchedule(task_id)
+        result = get_task_schdl(self._agent_id, task_id,'iiit/cbs/zonecontroller')
         if result['result'] == 'SUCCESS':
             try:
                 coolingEnergy = self.vip.rpc.call(
@@ -385,7 +382,7 @@ class ZoneController(Agent):
                 return E_UNKNOWN_CCE
             finally:
                 #cancel the schedule
-                self._cancelSchedule(task_id)
+                cancel_task_schdl(self._agent_id, task_id)
         else:
             _log.debug('schedule NOT available')
         return E_UNKNOWN_CCE
@@ -424,14 +421,14 @@ class ZoneController(Agent):
         #_log.debug('publishRmTsp()')
         pubTopic = self.root_topic+"/rm_tsp"
         pubMsg = [tsp,{'units': 'celcius', 'tz': 'UTC', 'type': 'float'}]
-        self.publishToBus(pubTopic, pubMsg)
+        publish_to_bus(pubTopic, pubMsg)
         return
         
     def publishRmLsp(self, lsp):
         #_log.debug('publishRmLsp()')
         pubTopic = self.root_topic+"/rm_lsp"
         pubMsg = [lsp,{'units': '%', 'tz': 'UTC', 'type': 'float'}]
-        self.publishToBus(pubTopic, pubMsg)
+        publish_to_bus(pubTopic, pubMsg)
         return
 
     def _calculateTed(self):
@@ -454,7 +451,7 @@ class ZoneController(Agent):
         _log.debug("TED pubTopic: " + pubTopic)
         pubMsg = [ted,
                     {'units': 'W', 'tz': 'UTC', 'type': 'float'}]
-        self.publishToBus(pubTopic, pubMsg)
+        publish_to_bus(pubTopic, pubMsg)
         return
         
     def _calculatePredictedTed(self):
@@ -462,76 +459,25 @@ class ZoneController(Agent):
         #TODO: Sam
         #get actual tsp from device
         tsp = self._rmTsp
-        if self._isclose(tsp, 22.0, EPSILON):
+        if isclose(tsp, 22.0, EPSILON):
             ted = 6500
-        elif self._isclose(tsp, 23.0, EPSILON):
+        elif isclose(tsp, 23.0, EPSILON):
             ted = 6000
-        elif self._isclose(tsp, 24.0, EPSILON):
+        elif isclose(tsp, 24.0, EPSILON):
             ted = 5500
-        elif self._isclose(tsp, 25.0, EPSILON):
+        elif isclose(tsp, 25.0, EPSILON):
             ted = 5000
-        elif self._isclose(tsp, 26.0, EPSILON):
+        elif isclose(tsp, 26.0, EPSILON):
             ted = 4500
-        elif self._isclose(tsp, 27.0, EPSILON):
+        elif isclose(tsp, 27.0, EPSILON):
             ted = 4000
-        elif self._isclose(tsp, 28.0, EPSILON):
+        elif isclose(tsp, 28.0, EPSILON):
             ted = 2000
-        elif self._isclose(tsp, 29.0, EPSILON):
+        elif isclose(tsp, 29.0, EPSILON):
             ted = 1000
         else :
             ted = 500
         return ted
-
-    def publishToBus(self, pubTopic, pubMsg):
-        #_log.debug('_publishToBus()')
-        now = datetime.datetime.utcnow().isoformat(' ') + 'Z'
-        headers = {headers_mod.DATE: now}
-
-        #Publish messages
-        try:
-            self.vip.pubsub.publish('pubsub', pubTopic, headers, pubMsg).get(timeout=10)
-        except gevent.Timeout:
-            _log.warning("Expection: gevent.Timeout in _publishToBus()")
-        except Exception as e:
-            _log.warning("Expection: _publishToBus?")
-            print(e)
-        return
-
-    def _getTaskSchedule(self, task_id, time_ms=None):
-        #_log.debug("_getTaskSchedule()")
-        self.time_ms = 600 if time_ms is None else time_ms
-        try:
-            result = {}
-            start = str(datetime.datetime.now())
-            end = str(datetime.datetime.now() 
-                    + datetime.timedelta(milliseconds=self.time_ms))
-
-            device = 'iiit/cbs/zonecontroller'
-            msg = [
-                    [device,start,end]
-                    ]
-            result = self.vip.rpc.call(
-                    'platform.actuator', 
-                    'request_new_schedule',
-                    self._agent_id,                 #requested id
-                    task_id,
-                    'HIGH',
-                    msg).get(timeout=10)
-        except gevent.Timeout:
-            _log.exception("Expection: gevent.Timeout in _getTaskSchedule()")
-        except Exception as e:
-            _log.exception ("Could not contact actuator. Is it running?")
-            print(e)
-            print result
-        return result
-
-    def _cancelSchedule(self, task_id):
-        #_log.debug('_cancelSchedule')
-        result = self.vip.rpc.call('platform.actuator', 'request_cancel_schedule', \
-                                    self._agent_id, task_id).get(timeout=10)
-        #_log.debug("task_id: " + task_id)
-        #_log.debug(result)
-        return
         
     def onDsEd(self, peer, sender, bus,  topic, headers, message):
         if sender == 'pubsub.compat':
@@ -550,11 +496,6 @@ class ZoneController(Agent):
             idx = self._ds_deviceId.index(deviceID)
             self._ds_ed.insert(idx, 0.0)
         return self._ds_deviceId.index(deviceID)
-
-    #refer to http://stackoverflow.com/questions/5595425/what-is-the-best-way-to-compare-floats-for-almost-equality-in-python
-    #comparing floats is mess
-    def _isclose(self, a, b, rel_tol=1e-09, abs_tol=0.0):
-        return abs(a-b) <= max(rel_tol * max(abs(a), abs(b)), abs_tol)
 
 def main(argv=sys.argv):
     '''Main method called by the eggsecutable.'''
