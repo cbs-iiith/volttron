@@ -84,6 +84,7 @@ class RadiantCubicle(Agent):
         self.config = utils.load_config(config_path)
         self._configGetPoints()
         self._configGetInitValues()
+        self._configGetPriceFucntions()
         return
 
     @Core.receiver('onsetup')
@@ -146,6 +147,11 @@ class RadiantCubicle(Agent):
                                             'topic_price_point')
         return
 
+    def _configGetPriceFucntions(self):
+        _log.debug("_configGetPriceFucntions()")
+        self.pf_rc  = self.config.get('pf_rc')
+        return
+        
 
     def _runRadiantCubicleTest(self):
         _log.debug("Running : _runRadiantCubicleTest()...")
@@ -208,26 +214,20 @@ class RadiantCubicle(Agent):
     
     #compute new TSP
     def getNewTsp(self, pp):
-        if pp >= 0.9 :
-            tsp = 22.0
-        elif pp >= 0.8 :
-            tsp = 23.0
-        elif pp >= 0.7 :
-            tsp = 24.0
-        elif pp >= 0.6 :
-            tsp = 25.0
-        elif pp >= 0.5 :
-            tsp = 26.0
-        elif pp >= 0.4 :
-            tsp = 27.0
-        elif pp >= 0.3 :
-            tsp = 28.0
-        elif pp >= 0.2 :
-            tsp = 29.0
-        else :
-            tsp = 30.0
-        return tsp
-    
+        if pp < 0: pp = 0
+        elsif pp > 1: pp = 1
+        
+        pf_idx = self.pf_rc['pf_idx']
+        pf_roundup = self.pf_rc['v']
+        pf_coefficients = self.pf_rc['pf_coefficients']
+        
+        a = pf_coefficients[pf_idx]['a']
+        b = pf_coefficients[pf_idx]['b']
+        c = pf_coefficients[pf_idx]['c']
+        
+        tsp = a*pp**2 + b*pp + c
+        return mround(tsp, pf_roundup)
+        
     # change rc surface temperature set point
     def setRcTspLevel(self, level):
         #_log.debug('setRcTspLevel()')
