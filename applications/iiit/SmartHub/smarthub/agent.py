@@ -142,6 +142,7 @@ class SmartHub(Agent):
         self.config = utils.load_config(config_path)
         self._configGetPoints()
         self._configGetInitValues()
+        self._configGetPriceFucntions()
         
         return
 
@@ -239,8 +240,8 @@ class SmartHub(Agent):
 
     def _configGetInitValues(self):
         self._period_read_data = self.config['period_read_data']
-        
         return
+        
     def _configGetPoints(self):
         self.topic_root = self.config.get('topic_root', 'smarthub')
         self.topic_price_point = self.config.get('topic_price_point', \
@@ -250,6 +251,12 @@ class SmartHub(Agent):
         self.energyDemand_topic_ds  = self.config.get('topic_energy_demand_ds', \
                                             'smartstrip/energydemand')
         return
+        
+    def _configGetPriceFucntions(self):
+        _log.debug("_configGetPriceFucntions()")
+        self.pf_sh_fan  = self.config.get('pf_sh_fan')
+        return
+        
     def runSmartHubTest(self):
         _log.debug("Running : runSmartHubTest()...")
         
@@ -698,8 +705,22 @@ class SmartHub(Agent):
                         + 'Switching-On Power' \
                         )
             self.setShDeviceState(deviceId, SH_DEVICE_STATE_ON, schdExist)
-            
+            if deviceId == SH_DEVICE_FAN:
+                self.setShDeviceLevel(SH_DEVICE_FAN, getNewFanSpeed(self._price_point_current), schdExist)
         return
+        
+    #compute new Fan Speed from fan price functions
+    def getNewFanLevel(self, pp):
+        pf_idx = self.pf_sh_fan['pf_idx']
+        pf_roundup = self.pf_sh_fan['v']
+        pf_coefficients = self.pf_sh_fan['pf_coefficients']
+        
+        a = pf_coefficients[pf_idx]['a']
+        b = pf_coefficients[pf_idx]['b']
+        c = pf_coefficients[pf_idx]['c']
+        
+        speed = a*pp**2 + b*pp + c
+        return mround(speed, pf_roundup)
         
     def rpc_getShDeviceState(self, deviceId):
         if not self._validDeviceAction(deviceId,AT_GET_STATE):
@@ -788,34 +809,6 @@ class SmartHub(Agent):
             #print(e)
             return
             
-    def _getTaskSchedule(self, taskId, time_ms=None):
-        #_log.debug("_getTaskSchedule()")
-        self.time_ms = 600 if time_ms is None else time_ms
-        try:
-            result = {}
-            start = str(datetime.datetime.now())
-            end = str(datetime.datetime.now() 
-                    + datetime.timedelta(milliseconds=self.time_ms))
-                    
-            device = 'iiit/cbs/smarthub'
-            msg = [
-                    [device,start,end]
-                    ]
-            result = self.vip.rpc.call(
-                    'platform.actuator', 
-                    'request_new_schedule',
-                    self._agent_id, 
-                    taskId,
-                    'HIGH',
-                    msg).get(timeout=10)
-        except gevent.Timeout:
-            _log.exception("Expection: gevent.Timeout in _getTaskSchedule()")
-        except Exception as e:
-            _log.exception ("Expection: Could not contact actuator. Is it running?")
-            print(e)
-        finally:
-            return result
-
     def _updateShDeviceState(self, deviceId, endPoint, state):
         #_log.debug('_updateShDeviceState()')
         headers = { 'requesterID': self._agent_id, }
