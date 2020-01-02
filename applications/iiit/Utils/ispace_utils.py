@@ -38,7 +38,7 @@ def publish_to_bus(self, topic, msg):
         return
     return
 
-def get_task_schdl(self, agent_id, task_id, device, time_ms=None):
+def get_task_schdl(self, task_id, device, time_ms=None):
     #_log.debug("get_task_schdl()")
     self.time_ms = 600 if time_ms is None else time_ms
     try:
@@ -53,7 +53,7 @@ def get_task_schdl(self, agent_id, task_id, device, time_ms=None):
         result = self.vip.rpc.call(
                 'platform.actuator', 
                 'request_new_schedule',
-                agent_id, 
+                self._agent_id, 
                 task_id,
                 'HIGH',
                 msg).get(timeout=10)
@@ -65,20 +65,20 @@ def get_task_schdl(self, agent_id, task_id, device, time_ms=None):
     finally:
         return result
 
-def cancel_task_schdl(self, agent_id, task_id):
+def cancel_task_schdl(self, task_id):
     #_log.debug('cancel_task_schdl()')
     result = self.vip.rpc.call('platform.actuator', 'request_cancel_schedule', \
-                                agent_id, task_id).get(timeout=10)
+                                self._agent_id, task_id).get(timeout=10)
     #_log.debug("task_id: " + task_id)
     #_log.debug(result)
     return
 
-def mround(self, num, multipleOf):
+def mround(num, multipleOf):
     #_log.debug('mround()')
     return math.floor((num + multipleOf / 2) / multipleOf) * multipleOf
 
 #refer to http://stackoverflow.com/questions/5595425/what-is-the-best-way-to-compare-floats-for-almost-equality-in-python
 #comparing floats is mess
-def isclose(self, a, b, rel_tol=1e-09, abs_tol=0.0):
-    #_log.debug('mround()')
+def isclose(a, b, rel_tol=1e-09, abs_tol=0.0):
+    #_log.debug('isclose()')
     return abs(a-b) <= max(rel_tol * max(abs(a), abs(b)), abs_tol)

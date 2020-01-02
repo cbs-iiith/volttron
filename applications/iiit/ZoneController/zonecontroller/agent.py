@@ -40,7 +40,7 @@ import struct
 import gevent
 import gevent.event
 
-from application.iiit.ispace_utils import mround, publish_to_bus, get_task_schdl, cancel_task_schdl, isclose
+from ispace_utils import mround, publish_to_bus, get_task_schdl, cancel_task_schdl, isclose
 
 utils.setup_logging()
 _log = logging.getLogger(__name__)
@@ -421,14 +421,14 @@ class ZoneController(Agent):
         #_log.debug('publishRmTsp()')
         pubTopic = self.root_topic+"/rm_tsp"
         pubMsg = [tsp,{'units': 'celcius', 'tz': 'UTC', 'type': 'float'}]
-        publish_to_bus(pubTopic, pubMsg)
+        publish_to_bus(self, pubTopic, pubMsg)
         return
         
     def publishRmLsp(self, lsp):
         #_log.debug('publishRmLsp()')
         pubTopic = self.root_topic+"/rm_lsp"
         pubMsg = [lsp,{'units': '%', 'tz': 'UTC', 'type': 'float'}]
-        publish_to_bus(pubTopic, pubMsg)
+        publish_to_bus(self, pubTopic, pubMsg)
         return
 
     def _calculateTed(self):
@@ -451,7 +451,7 @@ class ZoneController(Agent):
         _log.debug("TED pubTopic: " + pubTopic)
         pubMsg = [ted,
                     {'units': 'W', 'tz': 'UTC', 'type': 'float'}]
-        publish_to_bus(pubTopic, pubMsg)
+        publish_to_bus(self, pubTopic, pubMsg)
         return
         
     def _calculatePredictedTed(self):
