@@ -40,6 +40,8 @@ import struct
 import gevent
 import gevent.event
 
+from ispace_utils import mround, publish_to_bus, get_task_schdl, cancel_task_schdl, isclose
+
 SCHEDULE_AVLB = 1
 SCHEDULE_NOT_AVLB = 0
 
@@ -230,12 +232,12 @@ class RadiantCubicle(Agent):
     def setRcTspLevel(self, level):
         #_log.debug('setRcTspLevel()')
         
-        if self._isclose(level, self._rcTspLevel, 1e-03):
+        if isclose(level, self._rcTspLevel):
             _log.debug('same level, do nothing')
             return
             
         task_id = str(randint(0, 99999999))
-        result = self._getTaskSchedule(task_id)
+        result = get_task_schdl(self, task_id,'iiit/cbs/radiantcubicle')
         if result['result'] == 'SUCCESS':
             try:
                 result = self.vip.rpc.call(
@@ -252,7 +254,7 @@ class RadiantCubicle(Agent):
                 print(e)
             finally:
                 #cancel the schedule
-                self._cancelSchedule(task_id)
+                cancel_task_schdl(self, task_id)
         else:
             _log.debug('schedule NOT available')
         return
@@ -267,7 +269,7 @@ class RadiantCubicle(Agent):
         #get schedule to setRcAutoCntrl
         task_id = str(randint(0, 99999999))
         #_log.debug("task_id: " + task_id)
-        result = self._getTaskSchedule(task_id)
+        result = get_task_schdl(self, task_id,'iiit/cbs/radiantcubicle')
 
         if result['result'] == 'SUCCESS':
             result = {}
@@ -288,7 +290,7 @@ class RadiantCubicle(Agent):
                 print(e)
             finally:
                 #cancel the schedule
-                self._cancelSchedule(task_id)
+                cancel_task_schdl(self, task_id)
         else:
             _log.debug('schedule NOT available')
         return
@@ -300,7 +302,7 @@ class RadiantCubicle(Agent):
         device_level = self.rpc_getRcTspLevel()
         
         #check if the level really updated at the h/w, only then proceed with new level
-        if self._isclose(level, device_level, 1e-03):
+        if isclose(level, device_level):
             self._rcTspLevel = level
             self.publishRcTspLevel(level)
             
@@ -325,7 +327,7 @@ class RadiantCubicle(Agent):
         
     def rpc_getRcCalcCoolingEnergy(self):
         task_id = str(randint(0, 99999999))
-        result = self._getTaskSchedule(task_id)
+        result = get_task_schdl(self, task_id,'iiit/cbs/radiantcubicle')
         if result['result'] == 'SUCCESS':
             try:
                 coolingEnergy = self.vip.rpc.call(
@@ -341,7 +343,7 @@ class RadiantCubicle(Agent):
                 return E_UNKNOWN_CCE
             finally:
                 #cancel the schedule
-                self._cancelSchedule(task_id)
+                cancel_task_schdl(self, task_id)
         else:
             _log.debug('schedule NOT available')
         return E_UNKNOWN_CCE
@@ -379,14 +381,14 @@ class RadiantCubicle(Agent):
     def publishRcTspLevel(self, level):
         #_log.debug('publishRcTspLevel()')
         pubTopic = self.root_topic+"/rc_tsp_level"
-        pubMsg = [level,{'units': 'celcius', 'tz': 'UTC', 'type': 'float'}]
-        self.publishToBus(pubTopic, pubMsg)
+        pubMsg = [level, {'units': 'celcius', 'tz': 'UTC', 'type': 'float'}]
+        publish_to_bus(self, pubTopic, pubMsg)
         return
         
     def publishRcAutoCntrlState(self, state):
         pubTopic = self.root_topic+"/rc_auto_cntrl_state"
-        pubMsg = [state,{'units': 'On/Off', 'tz': 'UTC', 'type': 'int'}]
-        self.publishToBus(pubTopic, pubMsg)
+        pubMsg = [state, {'units': 'On/Off', 'tz': 'UTC', 'type': 'int'}]
+        publish_to_bus(self, pubTopic, pubMsg)
         return
 
     def publishTed(self):
@@ -396,9 +398,8 @@ class RadiantCubicle(Agent):
         pubTopic = self.energyDemand_topic
         pubTopic = self.energyDemand_topic + "/" + self._deviceId
         _log.debug("TED pubTopic: " + pubTopic)
-        pubMsg = [ted,
-                    {'units': 'W', 'tz': 'UTC', 'type': 'float'}]
-        self.publishToBus(pubTopic, pubMsg)
+        pubMsg = [ted, {'units': 'W', 'tz': 'UTC', 'type': 'float'}]
+        publish_to_bus(self, pubTopic, pubMsg)
         return
         
     def _calculatePredictedTed(self):
@@ -425,63 +426,7 @@ class RadiantCubicle(Agent):
         else :
             ted = 100
         return ted
-
-    def publishToBus(self, pubTopic, pubMsg):
-        #_log.debug('_publishToBus()')
-        now = datetime.datetime.utcnow().isoformat(' ') + 'Z'
-        headers = {headers_mod.DATE: now}
-
-        #Publish messages
-        try:
-            self.vip.pubsub.publish('pubsub', pubTopic, headers, pubMsg).get(timeout=10)
-        except gevent.Timeout:
-            _log.warning("Expection: gevent.Timeout in _publishToBus()")
-        except Exception as e:
-            _log.warning("Expection: _publishToBus?")
-            print(e)
-        return
-
-    def _getTaskSchedule(self, task_id, time_ms=None):
-        #_log.debug("_getTaskSchedule()")
-        self.time_ms = 600 if time_ms is None else time_ms
-        try: 
-            result = {}
-            start = str(datetime.datetime.now())
-            end = str(datetime.datetime.now() 
-                    + datetime.timedelta(milliseconds=self.time_ms))
-
-            device = 'iiit/cbs/radiantcubicle'
-            msg = [
-                    [device,start,end]
-                    ]
-            result = self.vip.rpc.call(
-                    'platform.actuator', 
-                    'request_new_schedule',
-                    self._agent_id,
-                    task_id,
-                    'HIGH',
-                    msg).get(timeout=10)
-        except gevent.Timeout:
-            _log.exception("Expection: gevent.Timeout in _getTaskSchedule()")
-        except Exception as e:
-            _log.exception ("Could not contact actuator. Is it running?")
-            print(e)
-        finally:
-            return result
-
-    def _cancelSchedule(self, task_id):
-        #_log.debug('_cancelSchedule')
-        result = self.vip.rpc.call('platform.actuator', 'request_cancel_schedule', \
-                                    self._agent_id, task_id).get(timeout=10)
-        #_log.debug("task_id: " + task_id)
-        #_log.debug(result)
-        return
         
-    #refer to http://stackoverflow.com/questions/5595425/what-is-the-best-way-to-compare-floats-for-almost-equality-in-python
-    #comparing floats is mess
-    def _isclose(self, a, b, rel_tol=1e-09, abs_tol=0.0):
-        return abs(a-b) <= max(rel_tol * max(abs(a), abs(b)), abs_tol)
-
 
 
 def main(argv=sys.argv):

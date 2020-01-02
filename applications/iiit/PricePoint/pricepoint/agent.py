@@ -38,6 +38,8 @@ import settings
 
 import time
 
+from ispace_utils import publish_to_bus
+
 utils.setup_logging()
 _log = logging.getLogger(__name__)
 __version__ = '0.2'
@@ -75,7 +77,6 @@ class PricePoint(Agent):
 
     @Core.receiver('onstart')            
     def startup(self, sender, **kwargs):
-        #self.core.periodic(self.period_read_price_point, self.update_price_point, wait=None)
         self.vip.rpc.call(MASTER_WEB, 'register_agent_route',
                       r'^/PricePoint',
                       "rpc_from_net").get(timeout=10)    
@@ -102,16 +103,6 @@ class PricePoint(Agent):
 
     def _configGetPoints(self):
         self.topic_price_point      = self.config.get('topic_price_point', 'zone/pricepoint')
-        return
-
-    def update_price_point(self):
-        '''
-        read the new price and publish it to the bus
-        '''
-        #_log.debug('update_price_point()')
-        #self.fake_price_points()
-        #self.price_from_net()
-        self.price_from_smartstrip_bacnet()
         return
 
     def fake_price_points(self):
@@ -157,74 +148,15 @@ class PricePoint(Agent):
         #if newPricePoint != self._price_point_previous :
         if True:
             _log.debug('New Price Point: {0:.2f} !!!'.format(newPricePoint))
-            self.post_price(newPricePoint)
+            pubTopic = self.topic_price_point
+            pubMsg = [newPricePoint, {'units': 'cents', 'tz': 'UTC', 'type': 'float'}]
+            _log.debug('publishing to local bus topic: ' + pubTopic)
+            publish_to_bus(self, pubTopic, pubMsg)
             self._price_point_previous = newPricePoint
             return True
         else :
             _log.debug('No change in price')
             return False
-
-    def price_from_smartstrip_bacnet(self):
-        #_log.debug('price_from_smartstrip_bacnet()')
-        result = {}
-        task_id = str(randint(0, 99999999))
-
-        try: 
-            start = str(datetime.datetime.now())
-            end = str(datetime.datetime.now() 
-                    + datetime.timedelta(seconds=10))
-
-            msg = [
-                    ['iiit/cbs/smartstrip',start,end]
-                    ]
-            result = self.vip.rpc.call(
-                    'platform.actuator', 
-                    'request_new_schedule',
-                    self._agent_id, 
-                    task_id,
-                    'LOW',
-                    msg).get(timeout=10)
-        except gevent.Timeout:
-            _log.exception("Expection: gevent.Timeout in price_from_smartstrip_bacnet()")
-            return result
-        except Exception as e:
-            _log.exception ("Could not contact actuator. Is it running?")
-            #print(e)
-            return
-        if result['result'] == 'SUCCESS':
-            try:
-                new_price_reading = self.vip.rpc.call(
-                        'platform.actuator','get_point',
-                        'iiit/cbs/smartstrip/PricePoint').get(timeout=10)
-                #_log.debug('...time')
-                self.updatePricePoint(newPricePoint)
-                
-            except Exception as e:
-                _log.exception ("Exception: reading price point")
-                #print(e)
-                return
-            finally:
-                result = self.vip.rpc.call('platform.actuator', 'request_cancel_schedule', \
-                                self._agent_id, task_id).get(timeout=10)
-        return
-
-    def post_price(self, new_price):
-        _log.debug('post_price()')
-        #Create messages for specific points
-        pricepoint_message = [new_price,{'units': 'F', 'tz': 'UTC', 'type': 'float'}]
-
-        #Create timestamp
-        #now = datetime.utcnow().isoformat(' ') + 'Z'
-        now = str(datetime.datetime.now())
-        headers = {
-                headers_mod.DATE: now
-                }
-
-        _log.info('Publishing new price point: {0:.2f}'.format(new_price))
-        #Publish messages            
-        self.vip.pubsub.publish(
-                'pubsub', self.topic_price_point, headers, pricepoint_message)
-        #_log.debug('after pub')
 
 
 def main(argv=sys.argv):

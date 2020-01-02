@@ -40,6 +40,8 @@ import struct
 import gevent
 import gevent.event
 
+from ispace_utils import publish_to_bus
+
 SCHEDULE_AVLB = 1
 SCHEDULE_NOT_AVLB = 0
 
@@ -199,66 +201,9 @@ class BuildingController(Agent):
         _log.info( "*** New TED: {0:.2f}, publishing to bus ***".format(ted))
         pubTopic = self.energyDemand_topic
         _log.debug("TED pubTopic: " + pubTopic)
-        pubMsg = [ted,
-                    {'units': 'W', 'tz': 'UTC', 'type': 'float'}]
-        self.publishToBus(pubTopic, pubMsg)
+        pubMsg = [ted, {'units': 'W', 'tz': 'UTC', 'type': 'float'}]
+        publish_to_bus(self, pubTopic, pubMsg)
         return
-        
-    def publishToBus(self, pubTopic, pubMsg):
-        #_log.debug('_publishToBus()')
-        now = datetime.datetime.utcnow().isoformat(' ') + 'Z'
-        headers = {headers_mod.DATE: now}
-
-        #Publish messages
-        try:
-            self.vip.pubsub.publish('pubsub', pubTopic, headers, pubMsg).get(timeout=10)
-        except gevent.Timeout:
-            _log.warning("Expection: gevent.Timeout in _publishToBus()")
-        except Exception as e:
-            _log.warning("Expection: _publishToBus?")
-            print(e)
-        return
-
-    def _getTaskSchedule(self, task_id, time_ms=None):
-        #_log.debug("_getTaskSchedule()")
-        self.time_ms = 600 if time_ms is None else time_ms
-        try:
-            result = {}
-            start = str(datetime.datetime.now())
-            end = str(datetime.datetime.now() 
-                    + datetime.timedelta(milliseconds=self.time_ms))
-
-            device = 'iiit/cbs/buildingcontroller'
-            msg = [
-                    [device,start,end]
-                    ]
-            result = self.vip.rpc.call(
-                    'platform.actuator', 
-                    'request_new_schedule',
-                    self._agent_id,                 #requested id
-                    task_id,
-                    'HIGH',
-                    msg).get(timeout=10)
-        except gevent.Timeout:
-            _log.exception("Expection: gevent.Timeout in _getTaskSchedule()")
-        except Exception as e:
-            _log.exception ("Could not contact actuator. Is it running?")
-            print(e)
-            print result
-        return result
-
-    def _cancelSchedule(self, task_id):
-        #_log.debug('_cancelSchedule')
-        result = self.vip.rpc.call('platform.actuator', 'request_cancel_schedule', \
-                                    self._agent_id, task_id).get(timeout=10)
-        #_log.debug("task_id: " + task_id)
-        #_log.debug(result)
-        return
-        
-    #refer to http://stackoverflow.com/questions/5595425/what-is-the-best-way-to-compare-floats-for-almost-equality-in-python
-    #comparing floats is mess
-    def _isclose(self, a, b, rel_tol=1e-09, abs_tol=0.0):
-        return abs(a-b) <= max(rel_tol * max(abs(a), abs(b)), abs_tol)
         
     def onDsEd(self, peer, sender, bus,  topic, headers, message):
         if sender == 'pubsub.compat':

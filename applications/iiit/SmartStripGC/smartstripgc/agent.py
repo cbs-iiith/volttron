@@ -27,6 +27,8 @@ import time
 import gevent
 import gevent.event
 
+from ispace_utils import publish_to_bus
+
 utils.setup_logging()
 _log = logging.getLogger(__name__)
 __version__ = '0.2'
@@ -74,7 +76,15 @@ def smartstripgc(config_path, **kwargs):
             if True:
             #if self._current_sh_pp != sh_pp:
                 ss_pp = self._computeNewPrice(sh_pp)
-                self._post_price(ss_pp)
+                pubTopic =  self.topic_price_point
+                pubMsg = [ss_pp, {'units': 'cents', 'tz': 'UTC', 'type': 'float'}]
+                _log.debug('publishing to local bus topic: ' + pubTopic)
+                publish_to_bus(self, pubTopic, pubMsg)
+                return True
+            else :
+                _log.debug('No change in price')
+                return False
+                
 
         def _computeNewPrice(self, new_price):
             _log.debug('_computeNewPrice()')
@@ -82,30 +92,6 @@ def smartstripgc(config_path, **kwargs):
             #      based on predicted demand, etc.
             return new_price
 
-        def _post_price(self, ss_pp):
-            _log.debug('_post_price()')
-            #post to bus
-            pubTopic =  self.topic_price_point
-            pubMsg = [ss_pp,{'units': 'cents', 'tz': 'UTC', 'type': 'float'}]
-            _log.debug('publishing to local bus topic: ' + pubTopic)
-            self._publishToBus(pubTopic, pubMsg)
-            return
-            
-        def _publishToBus(self, pubTopic, pubMsg):
-            #_log.debug('_publishToBus()')
-            now = datetime.datetime.utcnow().isoformat(' ') + 'Z'
-            headers = {headers_mod.DATE: now}
-            #Publish messages
-            try:
-                self.vip.pubsub.publish('pubsub', pubTopic, headers, pubMsg).get(timeout=10)
-            except gevent.Timeout:
-                _log.warning("Expection: gevent.Timeout in _publishToBus()")
-                return
-            except Exception as e:
-                _log.warning("Expection: _publishToBus?")
-                return
-            return
-            
     Agent.__name__ = 'SmartStripGC_Agent'
     return SmartStripGC(**kwargs)
 

@@ -40,6 +40,8 @@ import struct
 import gevent
 import gevent.event
 
+from ispace_utils import mround, publish_to_bus, get_task_schdl, cancel_task_schdl, isclose
+
 SH_DEVICE_STATE_ON = 1
 SH_DEVICE_STATE_OFF = 0
 
@@ -367,7 +369,7 @@ class SmartHub(Agent):
         return
     def testSensors_2(self):
         task_id = str(randint(0, 99999999))
-        result = self._getTaskSchedule(task_id, 300)
+        result = get_task_schdl(self, task_id, 'iiit/cbs/smarthub', 300)
         try:
             if result['result'] == 'SUCCESS':
                 _log.debug('test lux sensor')
@@ -395,15 +397,14 @@ class SmartHub(Agent):
             return
         finally:
             #cancel the schedule
-            self._cancelSchedule(task_id)
-
+            cancel_task_schdl(self, task_id)
             
         return
         
     def getInitialHwState(self):
         #_log.debug("getInitialHwState()")
         task_id = str(randint(0, 99999999))
-        result = self._getTaskSchedule(task_id, 300)
+        result = get_task_schdl(self, task_id, 'iiit/cbs/smarthub', 300)
         try:
             if result['result'] == 'SUCCESS':
                 self._shDevicesState[SH_DEVICE_LED] = self.getShDeviceState(SH_DEVICE_LED, SCHEDULE_AVLB)
@@ -416,7 +417,7 @@ class SmartHub(Agent):
             return
         finally:
             #cancel the schedule
-            self._cancelSchedule(task_id)
+            cancel_task_schdl(self, task_id)
         
         return
         
@@ -430,7 +431,7 @@ class SmartHub(Agent):
             state = self.rpc_getShDeviceState(deviceId);
         elif schdExist == SCHEDULE_NOT_AVLB:
             task_id = str(randint(0, 99999999))
-            result = self._getTaskSchedule(task_id)
+            result = get_task_schdl(self, task_id, 'iiit/cbs/smarthub')
             try:
                 if result['result'] == 'SUCCESS':
                     state = self.rpc_getShDeviceState(deviceId);
@@ -440,7 +441,7 @@ class SmartHub(Agent):
                 return state
             finally:
                 #cancel the schedule
-                self._cancelSchedule(task_id)
+                cancel_task_schdl(self, task_id)
         else:
             #do notthing
             _log.exception ("not a valid param - schdExist: " + schdExist)
@@ -459,7 +460,7 @@ class SmartHub(Agent):
             level = self.rpc_getShDeviceLevel(deviceId);
         elif schdExist == SCHEDULE_NOT_AVLB:
             task_id = str(randint(0, 99999999))
-            result = self._getTaskSchedule(task_id)
+            result = get_task_schdl(self, task_id, 'iiit/cbs/smarthub')
             try:
                 if result['result'] == 'SUCCESS':
                     level = self.rpc_getShDeviceLevel(deviceId);
@@ -469,7 +470,7 @@ class SmartHub(Agent):
                 return level
             finally:
                 #cancel the schedule
-                self._cancelSchedule(task_id)
+                cancel_task_schdl(self, task_id)
         else:
             #do notthing
             _log.exception ("Expection: not a valid param - schdExist: " + schdExist)
@@ -491,7 +492,7 @@ class SmartHub(Agent):
             self.rpc_setShDeviceState(deviceId, state);
         elif schdExist == SCHEDULE_NOT_AVLB:
             task_id = str(randint(0, 99999999))
-            result = self._getTaskSchedule(task_id)
+            result = get_task_schdl(self, task_id, 'iiit/cbs/smarthub')
             try:
                 if result['result'] == 'SUCCESS':
                     self.rpc_setShDeviceState(deviceId, state);
@@ -501,7 +502,7 @@ class SmartHub(Agent):
                 return
             finally:
                 #cancel the schedule
-                self._cancelSchedule(task_id)
+                cancel_task_schdl(self, task_id)
         else:
             #do notthing
             _log.exception ("not a valid param - schdExist: " + schdExist)
@@ -514,7 +515,7 @@ class SmartHub(Agent):
             _log.exception ("Expection: not a valid device to change level, deviceId: " + str(deviceId))
             return
             
-        if self._isclose(level, self._shDevicesLevel[deviceId], 1e-03):
+        if isclose(level, self._shDevicesLevel[deviceId]):
             _log.debug('same level, do nothing')
             return
 
@@ -522,7 +523,7 @@ class SmartHub(Agent):
             self.rpc_setShDeviceLevel(deviceId, level);
         elif schdExist == SCHEDULE_NOT_AVLB:
             task_id = str(randint(0, 99999999))
-            result = self._getTaskSchedule(task_id)
+            result = get_task_schdl(self, task_id, 'iiit/cbs/smarthub')
             try:
                 if result['result'] == 'SUCCESS':
                     self.rpc_setShDeviceLevel(deviceId, level);
@@ -532,7 +533,7 @@ class SmartHub(Agent):
                 return
             finally:
                 #cancel the schedule
-                self._cancelSchedule(task_id)
+                cancel_task_schdl(self, task_id)
         else:
             #do notthing
             _log.exception ("Expection: not a valid param - schdExist: " + schdExist)
@@ -558,7 +559,7 @@ class SmartHub(Agent):
     def publishSensorData(self) :
         #_log.debug('publishSensorData()')
         task_id = str(randint(0, 99999999))
-        result = self._getTaskSchedule(task_id, 300)
+        result = get_task_schdl(self, task_id, 'iiit/cbs/smarthub', 300)
         #print(result)
         try:
             if result['result'] == 'SUCCESS':
@@ -570,7 +571,7 @@ class SmartHub(Agent):
                 pir_level = self.getShDeviceLevel(SH_DEVICE_S_PIR, SCHEDULE_AVLB)
                 #time.sleep(1)  #yeild for a movement
                 #cancel the schedule
-                self._cancelSchedule(task_id)
+                cancel_task_schdl(self, task_id)
                 
                 _log.debug("lux Level: " + "{0:0.4f}".format(lux_level) \
                             + ", rh Level: " + "{0:0.4f}".format(rh_level) \
@@ -592,7 +593,7 @@ class SmartHub(Agent):
                                 'pirlevel':{'units': 'bool', 'tz': 'UTC', 'type': 'int'} \
                             } \
                             ]
-                self._publishToBus(pubTopic, pubMsg)
+                publish_to_bus(self, pubTopic, pubMsg)
         
         except Exception as e:
             _log.exception ("Expection: no task schdl for publishSensorData()")
@@ -601,7 +602,7 @@ class SmartHub(Agent):
             return
         finally:
                 #cancel the schedule
-                self._cancelSchedule(task_id)
+                cancel_task_schdl(self, task_id)
         return
         
     def publishDeviceState(self) :
@@ -638,8 +639,8 @@ class SmartHub(Agent):
         #_log.debug('publishCurrentPP()')
         _log.debug("current price point: " + "{0:0.4f}".format(float(self._price_point_current)))
                     
-        pubMsg = [self._price_point_current,{'units': 'cent', 'tz': 'UTC', 'type': 'float'}]
-        self._publishToBus(self.topic_price_point, pubMsg)
+        pubMsg = [self._price_point_current, {'units': 'cent', 'tz': 'UTC', 'type': 'float'}]
+        publish_to_bus(self, self.topic_price_point, pubMsg)
         
         
     def onNewPrice(self, peer, sender, bus,  topic, headers, message):
@@ -662,7 +663,7 @@ class SmartHub(Agent):
             #get schedule for testing relays
             task_id = str(randint(0, 99999999))
             #_log.debug("task_id: " + task_id)
-            result = self._getTaskSchedule(task_id)
+            result = get_task_schdl(self, task_id, 'iiit/cbs/smarthub')
             
             if result['result'] == 'SUCCESS':
                 self._price_point_previous = self._price_point_current
@@ -674,7 +675,7 @@ class SmartHub(Agent):
                 _log.error("unable to processNewPricePoint()")
                 
             #cancel the schedule
-            self._cancelSchedule(task_id)
+            cancel_task_schdl(self, task_id)
         return
         
     def applyPricingPolicy(self, deviceId, schdExist):
@@ -815,14 +816,6 @@ class SmartHub(Agent):
         finally:
             return result
 
-    def _cancelSchedule(self, task_id):
-        #_log.debug('_cancelSchedule')
-        result = self.vip.rpc.call('platform.actuator', 'request_cancel_schedule', \
-                                    self._agent_id, task_id).get(timeout=10)
-        #_log.debug("task_id: " + task_id)
-        #_log.debug(result)
-        return
-
     def _updateShDeviceState(self, deviceId, endPoint, state):
         #_log.debug('_updateShDeviceState()')
         headers = { 'requesterID': self._agent_id, }
@@ -846,7 +839,7 @@ class SmartHub(Agent):
         _log.debug('level {0:0.4f}'.format( level))
         device_level = self.rpc_getShDeviceLevel(deviceId)
         #check if the level really updated at the h/w, only then proceed with new level
-        if self._isclose(level, device_level, 1e-03):
+        if isclose(level, device_level):
             self._shDevicesLevel[deviceId] = level
             self._publishShDeviceLevel(deviceId, level)
             
@@ -859,8 +852,8 @@ class SmartHub(Agent):
             _log.exception ("not a valid device to pub state, deviceId: " + str(deviceId))
             return
         pubTopic = self._getPubTopic(deviceId, AT_PUB_STATE)
-        pubMsg = [state,{'units': 'On/Off', 'tz': 'UTC', 'type': 'int'}]
-        self._publishToBus(pubTopic, pubMsg)
+        pubMsg = [state, {'units': 'On/Off', 'tz': 'UTC', 'type': 'int'}]
+        publish_to_bus(self, pubTopic, pubMsg)
         
         return
         
@@ -870,8 +863,8 @@ class SmartHub(Agent):
             _log.exception ("Expection: not a valid device to pub level, deviceId: " + str(deviceId))
             return
         pubTopic = self._getPubTopic(deviceId, AT_PUB_LEVEL)
-        pubMsg = [level,{'units': 'duty', 'tz': 'UTC', 'type': 'float'}]
-        self._publishToBus(pubTopic, pubMsg)
+        pubMsg = [level, {'units': 'duty', 'tz': 'UTC', 'type': 'float'}]
+        publish_to_bus(self, pubTopic, pubMsg)
         
         return
         
@@ -880,24 +873,9 @@ class SmartHub(Agent):
             _log.exception ("Expection: not a valid device to pub level, deviceId: " + str(deviceId))
             return
         pubTopic = self._getPubTopic(deviceId, AT_PUB_THPP)
-        pubMsg = [thPP,{'units': 'cent', 'tz': 'UTC', 'type': 'float'}]
-        self._publishToBus(pubTopic, pubMsg)
+        pubMsg = [thPP, {'units': 'cent', 'tz': 'UTC', 'type': 'float'}]
+        publish_to_bus(self, pubTopic, pubMsg)
         
-        return
-    
-    def _publishToBus(self, pubTopic, pubMsg):
-        #_log.debug('_publishToBus()')
-        now = datetime.datetime.utcnow().isoformat(' ') + 'Z'
-        headers = {headers_mod.DATE: now}
-        #Publish messages
-        try:
-            self.vip.pubsub.publish('pubsub', pubTopic, headers, pubMsg).get(timeout=10)
-        except gevent.Timeout:
-            _log.warning("Expection: gevent.Timeout in _publishToBus()")
-            return
-        except Exception as e:
-            _log.warning("Expection: _publishToBus?")
-            return
         return
         
     def _getPubTopic(self, deviceId, actionType):
@@ -1096,11 +1074,6 @@ class SmartHub(Agent):
             print(e)
             return jsonrpc.json_error('NA', UNHANDLED_EXCEPTION, e)
             
-    #refer to http://stackoverflow.com/questions/5595425/what-is-the-best-way-to-compare-floats-for-almost-equality-in-python
-    #comparing floats is mess
-    def _isclose(self, a, b, rel_tol=1e-09, abs_tol=0.0):
-        return abs(a-b) <= max(rel_tol * max(abs(a), abs(b)), abs_tol)
-    
     #calculate the local energy demand
     def _calculateLocalEd(self):
         #_log.debug('_calculateLocalEd()')
@@ -1136,8 +1109,7 @@ class SmartHub(Agent):
         self._ted = ted
         _log.debug ( "*** New TED: {0:.2f}, publishing to bus ***".format(ted))
         pubTopic = self.energyDemand_topic
-        pubMsg = [ted,
-                    {'units': 'W', 'tz': 'UTC', 'type': 'float'}]
+        pubMsg = [ted, {'units': 'W', 'tz': 'UTC', 'type': 'float'}]
         self._publishToBus(pubTopic, pubMsg)
         return  
         
