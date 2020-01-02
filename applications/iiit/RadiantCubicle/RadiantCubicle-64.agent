@@ -10,11 +10,16 @@
     "default_base_price": 0.2,
     "price_point_latest": 0.2,
     
-    #price functions(pf) of the form ax2 + bx + c, v --> roundup, and pf_idx --> default pf_constants
+    #price functions(pf), quadratic functions of the form f(x) = ax2 + bx + c, 
+    #             where a,b,c are coefficients of the quadratic function,
+    #                   f(x) --> setpoint,
+    #                   x --> price point,
+    #                   pf_roundup --> roundup, and 
+    #                   pf_idx --> default pf_coefficients
     "pf_rc": {
-        "v":0.5,
+        "pf_roundup":0.5,
         "pf_idx":1,
-        "pf_constants": [
+        "pf_coefficients": [
             {"a": 1, "b": -3.5, "c": 25},
             {"a": 1, "b": -3.5, "c": 24},
             {"a": 1, "b": -3.5, "c": 23}

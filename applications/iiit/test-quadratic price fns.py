@@ -47,6 +47,13 @@ def i_tsp(a, b, c, v):
     print('100%: ', mround(a*pp*pp + b*pp + c, v))
     return
 
+#price functions(pf), quadratic functions of the form f(x) = ax2 + bx + c, 
+#             where a,b,c are coefficients of the quadratic function,
+#                   f(x) --> setpoint,
+#                   x --> price point,
+#                   pf_roundup --> roundup, and 
+#                   pf_idx --> default pf_coefficients
+
 print("RM_LSP")
 a = -35
 b = -35

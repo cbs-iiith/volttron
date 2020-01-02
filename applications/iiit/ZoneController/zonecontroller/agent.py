@@ -157,8 +157,8 @@ class ZoneController(Agent):
     def _configGetPriceFucntions(self):
         _log.debug("_configGetPriceFucntions()")
         
-        self.pf_ac  = self.config.get('pf_ac')
-        self.pf_light  = self.config.get('pf_light')
+        self.pf_zn_ac  = self.config.get('pf_zn_ac')
+        self.pf_zn_light  = self.config.get('pf_zn_light')
         
         return
         
@@ -238,26 +238,26 @@ class ZoneController(Agent):
         
     #compute new TSP
     def getNewTsp(self, pp):
-        pf_idx = self.pf_ac['pf_idx']
-        pf_roundup = self.pf_ac['v']
-        pf_constants = self.pf_ac['pf_constants']
+        pf_idx = self.pf_zn_ac['pf_idx']
+        pf_roundup = self.pf_zn_ac['v']
+        pf_coefficients = self.pf_zn_ac['pf_coefficients']
         
-        a = pf_constants[pf_idx]['a']
-        b = pf_constants[pf_idx]['b']
-        c = pf_constants[pf_idx]['c']
+        a = pf_coefficients[pf_idx]['a']
+        b = pf_coefficients[pf_idx]['b']
+        c = pf_coefficients[pf_idx]['c']
         
         tsp = a*pp**2 + b*pp + c
         return self._mround(tsp, pf_roundup)
         
     #compute new LSP
     def getNewLsp(self, pp):
-        pf_idx = self.pf_light['pf_idx']
-        pf_roundup = self.pf_light['v']
-        pf_constants = self.pf_light['pf_constants']
+        pf_idx = self.pf_zn_light['pf_idx']
+        pf_roundup = self.pf_zn_light['v']
+        pf_coefficients = self.pf_zn_light['pf_coefficients']
         
-        a = pf_constants[pf_idx]['a']
-        b = pf_constants[pf_idx]['b']
-        c = pf_constants[pf_idx]['c']
+        a = pf_coefficients[pf_idx]['a']
+        b = pf_coefficients[pf_idx]['b']
+        c = pf_coefficients[pf_idx]['c']
         
         lsp = a*pp**2 + b*pp + c
         return self._mround(lsp, pf_roundup)
