@@ -709,8 +709,11 @@ class SmartHub(Agent):
                 self.setShDeviceLevel(SH_DEVICE_FAN, getNewFanSpeed(self._price_point_current), schdExist)
         return
         
-    #compute new Fan Speed from fan price functions
+    #compute new Fan Speed from price functions
     def getNewFanLevel(self, pp):
+        if pp < 0: pp = 0
+        if pp > 1: pp = 1
+        
         pf_idx = self.pf_sh_fan['pf_idx']
         pf_roundup = self.pf_sh_fan['v']
         pf_coefficients = self.pf_sh_fan['pf_coefficients']

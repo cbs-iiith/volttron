@@ -233,8 +233,11 @@ class ZoneController(Agent):
         
         return
         
-    #compute new TSP
+    #compute new zone temperature setpoint from price functions
     def getNewTsp(self, pp):
+        if pp < 0: pp = 0
+        if pp > 1: pp = 1
+        
         pf_idx = self.pf_zn_ac['pf_idx']
         pf_roundup = self.pf_zn_ac['v']
         pf_coefficients = self.pf_zn_ac['pf_coefficients']
@@ -246,8 +249,11 @@ class ZoneController(Agent):
         tsp = a*pp**2 + b*pp + c
         return mround(tsp, pf_roundup)
         
-    #compute new LSP
+    #compute new zone lighting setpoint from price functions
     def getNewLsp(self, pp):
+        if pp < 0: pp = 0
+        if pp > 1: pp = 1
+        
         pf_idx = self.pf_zn_light['pf_idx']
         pf_roundup = self.pf_zn_light['v']
         pf_coefficients = self.pf_zn_light['pf_coefficients']

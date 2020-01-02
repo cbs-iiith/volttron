@@ -215,7 +215,7 @@ class RadiantCubicle(Agent):
     #compute new TSP
     def getNewTsp(self, pp):
         if pp < 0: pp = 0
-        elsif pp > 1: pp = 1
+        if pp > 1: pp = 1
         
         pf_idx = self.pf_rc['pf_idx']
         pf_roundup = self.pf_rc['v']
