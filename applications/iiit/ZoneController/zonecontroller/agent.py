@@ -271,7 +271,7 @@ class ZoneController(Agent):
             return
             
         task_id = str(randint(0, 99999999))
-        result = get_task_schdl(self._agent_id, task_id,'iiit/cbs/zonecontroller')
+        result = get_task_schdl(self, task_id,'iiit/cbs/zonecontroller')
         if result['result'] == 'SUCCESS':
             result = {}
             try:
@@ -289,7 +289,7 @@ class ZoneController(Agent):
                 print(e)
             finally:
                 #cancel the schedule
-                cancel_task_schdl(self._agent_id, task_id)
+                cancel_task_schdl(self, task_id)
         else:
             _log.debug('schedule NOT available')
         return
@@ -303,7 +303,7 @@ class ZoneController(Agent):
             return
             
         task_id = str(randint(0, 99999999))
-        result = get_task_schdl(self._agent_id, task_id,'iiit/cbs/zonecontroller')
+        result = get_task_schdl(self, task_id,'iiit/cbs/zonecontroller')
         if result['result'] == 'SUCCESS':
             result = {}
             try:
@@ -321,7 +321,7 @@ class ZoneController(Agent):
                 print(e)
             finally:
                 #cancel the schedule
-                cancel_task_schdl(self._agent_id, task_id)
+                cancel_task_schdl(self, task_id)
         else:
             _log.debug('schedule NOT available')
         return
@@ -366,7 +366,7 @@ class ZoneController(Agent):
     
     def rpc_getRmCalcCoolingEnergy(self):
         task_id = str(randint(0, 99999999))
-        result = get_task_schdl(self._agent_id, task_id,'iiit/cbs/zonecontroller')
+        result = get_task_schdl(self, task_id,'iiit/cbs/zonecontroller')
         if result['result'] == 'SUCCESS':
             try:
                 coolingEnergy = self.vip.rpc.call(
@@ -382,7 +382,7 @@ class ZoneController(Agent):
                 return E_UNKNOWN_CCE
             finally:
                 #cancel the schedule
-                cancel_task_schdl(self._agent_id, task_id)
+                cancel_task_schdl(self, task_id)
         else:
             _log.debug('schedule NOT available')
         return E_UNKNOWN_CCE
