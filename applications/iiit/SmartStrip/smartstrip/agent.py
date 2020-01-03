@@ -746,7 +746,7 @@ class SmartStrip(Agent):
         #_log.debug('_calculateTed()')
         ted = SMARTSTRIP_BASE_ENERGY
         for idx, plugState in enumerate(self._plugRelayState):
-            if plugState == RELAY_ON AND idx != self._sh_plug_id:
+            if plugState == RELAY_ON and idx != self._sh_plug_id:
                 ted = ted + self._plugActivePwr[idx]
         return ted
 
