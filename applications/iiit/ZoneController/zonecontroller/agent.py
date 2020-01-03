@@ -238,7 +238,7 @@ class ZoneController(Agent):
         pp = 0 if pp < 0 else 1 if pp > 1 else pp
         
         pf_idx = self.pf_zn_ac['pf_idx']
-        pf_roundup = self.pf_zn_ac['v']
+        pf_roundup = self.pf_zn_ac['pf_roundup']
         pf_coefficients = self.pf_zn_ac['pf_coefficients']
         
         a = pf_coefficients[pf_idx]['a']
@@ -253,7 +253,7 @@ class ZoneController(Agent):
         pp = 0 if pp < 0 else 1 if pp > 1 else pp
         
         pf_idx = self.pf_zn_light['pf_idx']
-        pf_roundup = self.pf_zn_light['v']
+        pf_roundup = self.pf_zn_light['pf_roundup']
         pf_coefficients = self.pf_zn_light['pf_coefficients']
         
         a = pf_coefficients[pf_idx]['a']

@@ -714,7 +714,7 @@ class SmartHub(Agent):
         pp = 0 if pp < 0 else 1 if pp > 1 else pp
         
         pf_idx = self.pf_sh_fan['pf_idx']
-        pf_roundup = self.pf_sh_fan['v']
+        pf_roundup = self.pf_sh_fan['pf_roundup']
         pf_coefficients = self.pf_sh_fan['pf_coefficients']
         
         a = pf_coefficients[pf_idx]['a']

@@ -217,7 +217,7 @@ class RadiantCubicle(Agent):
         pp = 0 if pp < 0 else 1 if pp > 1 else pp
         
         pf_idx = self.pf_rc['pf_idx']
-        pf_roundup = self.pf_rc['v']
+        pf_roundup = self.pf_rc['pf_roundup']
         pf_coefficients = self.pf_rc['pf_coefficients']
         
         a = pf_coefficients[pf_idx]['a']
