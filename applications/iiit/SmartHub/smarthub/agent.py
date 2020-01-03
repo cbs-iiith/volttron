@@ -706,7 +706,9 @@ class SmartHub(Agent):
                         )
             self.setShDeviceState(deviceId, SH_DEVICE_STATE_ON, schdExist)
             if deviceId == SH_DEVICE_FAN:
-                self.setShDeviceLevel(SH_DEVICE_FAN, self.getNewFanSpeed(self._price_point_current), schdExist)
+                fan_speed = self.getNewFanSpeed(self._price_point_current)/100
+                _log.info ( "*** New Fan Speed: {0:.4f} ***".format(fan_speed))
+                self.setShDeviceLevel(SH_DEVICE_FAN, fan_speed, schdExist)
         return
         
     #compute new Fan Speed from price functions
