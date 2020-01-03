@@ -20,8 +20,8 @@ from datetime import timedelta
 
 authentication=None
 
-#WAIT_TIME_SECONDS = 10             # 10 sec
-WAIT_TIME_SECONDS = 5 * 60         # 5 min
+WAIT_TIME_SECONDS = 10             # 10 sec
+#WAIT_TIME_SECONDS = 5 * 60         # 5 min
 #WAIT_TIME_SECONDS = 15 * 60        # 15 min
 #WAIT_TIME_SECONDS = 30 * 60        # 30 min
 #WAIT_TIME_SECONDS = 1 * 60 * 60    # 1 hour
