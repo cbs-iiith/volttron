@@ -40,13 +40,14 @@ import struct
 import gevent
 import gevent.event
 
-from ispace_utils import publish_to_bus
+from ispace_utils import publish_to_bus, get_task_schdl, cancel_task_schdl, isclose
 
 SCHEDULE_AVLB = 1
 SCHEDULE_NOT_AVLB = 0
 
 E_UNKNOWN_CCE = -4
 E_UNKNOWN_TSP = -5
+E_UNKNOWN_BPP = -7
 
 utils.setup_logging()
 _log = logging.getLogger(__name__)
@@ -100,7 +101,7 @@ class BuildingController(Agent):
         time.sleep(30) #yeild for a movement
         _log.info("Starting BuildingController...")
         
-        self._runTest()
+        self._runBMSTest()
         
         #perodically publish total energy demand to volttron bus
         self.core.periodic(self._period_read_data, self.publishTed, wait=None)
@@ -149,9 +150,20 @@ class BuildingController(Agent):
         return
 
 
-    def _runTest(self):
-        _log.debug("Running : Test()...")
-        
+    def _runBMSTest(self):
+        _log.debug("Running : _runBMS Commu Test()...")
+        _log.debug('change pp .10')
+        self.setRmTsp(0.10)
+        time.sleep(10)
+
+        _log.debug('change pp .75')
+        self.setRmTsp(0.75)
+        time.sleep(10)
+
+        _log.debug('change pp .25')
+        self.setRmTsp(0.25)
+        time.sleep(10)
+
         _log.debug("EOF Testing")
         return
         
@@ -174,6 +186,7 @@ class BuildingController(Agent):
             _log.info ( "*** New Price Point: {0:.2f} ***".format(self._price_point_new))
             self._price_point_previous = self._price_point_current
             self._price_point_current = self._price_point_new
+            self.publishPriceToBMS()
             self.applyPricingPolicy()
         return
 
@@ -182,6 +195,67 @@ class BuildingController(Agent):
         #control the energy demand of devices at building level accordingly
         return
         
+    # change rc surface temperature set point
+    def publishPriceToBMS(self, pp):
+        _log.debug('publishPriceToBMS()')
+        task_id = str(randint(0, 99999999))
+        result = get_task_schdl(self, task_id,'iiit/cbs/buildingcontroller')
+        if result['result'] == 'SUCCESS':
+            try:
+                result = self.vip.rpc.call(
+                    'platform.actuator', 
+                    'set_point',
+                    self._agent_id, 
+                    'iiit/cbs/buildingcontroller/Building_PricePoint',
+                    self._price_point_current).get(timeout=10)
+                self.updateBuildingPP(self._price_point_current)
+            except gevent.Timeout:
+                _log.exception("Expection: gevent.Timeout in publishPriceToBMS()")
+            except Exception as e:
+                _log.exception ("Expection: changing device level")
+                print(e)
+            finally:
+                #cancel the schedule
+                cancel_task_schdl(self, task_id)
+        else:
+            _log.debug('schedule NOT available')
+        return
+
+    def updateBuildingPP(self, pp):
+        #_log.debug('updateRmTsp()')
+        _log.debug('building_pp {0:0.1f}'.format( pp))
+        
+        building_pp = self.rpc_getBuildingPP()
+        
+        #check if the pp really updated at the bms, only then proceed with new pp
+        if isclose(pp, building_pp):
+            self.publishBuildingPP(pp)
+            
+        _log.debug('Current Building PP: ' + "{0:0.1f}".format( pp))
+        return
+
+    def publishBuildingPP(self, pp):
+        #_log.debug('publishBuildingPP()')
+        pubTopic = self.root_topic+"/Building_PricePoint"
+        pubMsg = [pp, {'units': 'cents', 'tz': 'UTC', 'type': 'float'}]
+        publish_to_bus(self, pubTopic, pubMsg)
+        return
+
+    def rpc_getBuildingPP(self):
+        try:
+            pp = self.vip.rpc.call(
+                    'platform.actuator','get_point',
+                    'iiit/cbs/buildingcontroller/Building_PricePoint').get(timeout=10)
+            return pp
+        except gevent.Timeout:
+            _log.exception("Expection: gevent.Timeout in rpc_getBuildingPP()")
+            return E_UNKNOWN_BPP
+        except Exception as e:
+            _log.exception ("Expection: Could not contact actuator. Is it running?")
+            print(e)
+            return E_UNKNOWN_BPP
+        return E_UNKNOWN_BPP
+
     def rpc_getBuildingLevelEnergy(self):
         #compute the energy of the other devices which are at building level
         return 0
