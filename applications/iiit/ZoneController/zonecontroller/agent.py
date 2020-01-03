@@ -52,6 +52,7 @@ SCHEDULE_NOT_AVLB = 0
 E_UNKNOWN_CCE = -4
 E_UNKNOWN_TSP = -5
 E_UNKNOWN_LSP = -6
+E_UNKNOWN_CLE = -9
 
 def DatetimeFromValue(ts):
     ''' Utility for dealing with time
@@ -354,17 +355,30 @@ class ZoneController(Agent):
             
         _log.debug('Current LSP: ' + "{0:0.1f}".format( rm_lsp))
         return
-
-    #For given light setpoint(lsp), returns the lighting power in watts
-    #refer to excel sheet "Philips CFL Power Chart.xlsx"
-    def _get_rm_light_power(self, lsp):
-        if lsp < 0:
-            return 65
-        elif lsp > 10:
-            return 145
+        
+    def rpc_getRmCalcLightEnergy(self):
+        task_id = str(randint(0, 99999999))
+        result = get_task_schdl(self, task_id,'iiit/cbs/zonecontroller')
+        if result['result'] == 'SUCCESS':
+            try:
+                lightEnergy = self.vip.rpc.call(
+                        'platform.actuator','get_point',
+                        'iiit/cbs/zonecontroller/RM_LIGHT_CALC_PWR').get(timeout=10)
+                return lightEnergy
+            except gevent.Timeout:
+                _log.exception("Expection: gevent.Timeout in rpc_getRmCalcLightEnergy()")
+                return E_UNKNOWN_CLE
+            except Exception as e:
+                _log.exception ("Expection: Could not contact actuator. Is it running?")
+                print(e)
+                return E_UNKNOWN_CLE
+            finally:
+                #cancel the schedule
+                cancel_task_schdl(self, task_id)
         else:
-            return ((8 * lsp) + 65)
-    
+            _log.debug('schedule NOT available')
+        return E_UNKNOWN_CLE
+        
     def rpc_getRmCalcCoolingEnergy(self):
         task_id = str(randint(0, 99999999))
         result = get_task_schdl(self, task_id,'iiit/cbs/zonecontroller')
@@ -387,7 +401,7 @@ class ZoneController(Agent):
         else:
             _log.debug('schedule NOT available')
         return E_UNKNOWN_CCE
-
+        
     def rpc_getRmTsp(self):
         try:
             rm_tsp = self.vip.rpc.call(
@@ -436,7 +450,9 @@ class ZoneController(Agent):
         #_log.debug('_calculateTed()')
         
         #zone lighting + ac
-        ted = self.rpc_getRmCalcCoolingEnergy() + self._get_rm_light_power(self._rmLsp)
+        cce = self.rpc_getRmCalcCoolingEnergy()
+        cle = self.rpc_getRmCalcLightEnergy() 
+        ted = (0 if cce==E_UNKNOWN_CCE else cce) + (0 if cle==E_UNKNOWN_CLE else cle)
         
         #ted from ds devices associated with the zone
         for ed in self._ds_ed:
