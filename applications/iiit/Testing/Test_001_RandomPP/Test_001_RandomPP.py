@@ -56,25 +56,25 @@ def post_random_price():
     #random price between 0-1
     no_digit = 4
     pp = math.floor(random.random()*10**no_digit)/10**no_digit
-    print('Time: ' + str(time.ctime()) + ' PricePoint: ' + str(pp))
+    print "Time: " + str(time.ctime()) + "; PricePoint: " + str(pp) +";",
     try:
         response = do_rpc("rpc_updatePricePoint", {'newPricePoint': pp})
-        #print('response: ' +str(response))
+        #print "response: " +str(response),
         if response.ok:
             success = response.json()['result']
             #print(success)
             if success:
-                print('new price updated')
+                print "new price updated"
             else:
-                print("new price notupdated")
+                print "new price NOT updated"
         else:
-            print('do_rpc pricepoint response not ok')
+            print "do_rpc pricepoint response NOT OK"
     except KeyError:
         error = response.json()['error']
         print (error)
     except Exception as e:
         #print (e)
-        print('do_rpc() unhandled exception, most likely server is down')
+        print "do_rpc() unhandled exception, most likely server is down"
     return
     
 class Job(threading.Thread):
@@ -108,7 +108,7 @@ if __name__ == '__main__':
           try:
               time.sleep(1)
           except ProgramKilled:
-              print "Program killed: running cleanup code"
+              print "\nProgram killed: running cleanup code"
               job.stop()
               break
               
