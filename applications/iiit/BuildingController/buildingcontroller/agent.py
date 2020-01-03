@@ -153,15 +153,15 @@ class BuildingController(Agent):
     def _runBMSTest(self):
         _log.debug("Running : _runBMS Commu Test()...")
         _log.debug('change pp .10')
-        self.setRmTsp(0.10)
+        self.publishPriceToBMS(0.10)
         time.sleep(10)
 
         _log.debug('change pp .75')
-        self.setRmTsp(0.75)
+        self.publishPriceToBMS(0.75)
         time.sleep(10)
 
         _log.debug('change pp .25')
-        self.setRmTsp(0.25)
+        self.publishPriceToBMS(0.25)
         time.sleep(10)
 
         _log.debug("EOF Testing")
@@ -186,7 +186,7 @@ class BuildingController(Agent):
             _log.info ( "*** New Price Point: {0:.2f} ***".format(self._price_point_new))
             self._price_point_previous = self._price_point_current
             self._price_point_current = self._price_point_new
-            self.publishPriceToBMS()
+            self.publishPriceToBMS(self._price_point_current)
             self.applyPricingPolicy()
         return
 
@@ -207,8 +207,8 @@ class BuildingController(Agent):
                     'set_point',
                     self._agent_id, 
                     'iiit/cbs/buildingcontroller/Building_PricePoint',
-                    self._price_point_current).get(timeout=10)
-                self.updateBuildingPP(self._price_point_current)
+                    pp).get(timeout=10)
+                self.updateBuildingPP(pp)
             except gevent.Timeout:
                 _log.exception("Expection: gevent.Timeout in publishPriceToBMS()")
             except Exception as e:
