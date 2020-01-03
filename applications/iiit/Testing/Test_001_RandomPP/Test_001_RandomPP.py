@@ -56,6 +56,7 @@ def post_random_price():
     #random price between 0-1
     no_digit = 2
     pp = math.floor(random.random()*10**no_digit)/10**no_digit
+    pp = .94 if pp>.94 else pp
     print "Time: " + str(time.ctime()) + "; PricePoint: " + str(pp) +";",
     try:
         response = do_rpc("rpc_updatePricePoint", {'newPricePoint': pp})
