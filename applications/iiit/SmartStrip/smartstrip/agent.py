@@ -174,6 +174,7 @@ class SmartStrip(Agent):
         self._price_point_previous = self.config['default_base_price']
         self._price_point_current = self.config['default_base_price']
         self._plug_pricepoint_th = self.config['plug_pricepoint_th']
+        self._sh_plug_id = self.config.get('smarthub_plug', 4) - 1
         return
 
     def _configGetPoints(self):
@@ -743,12 +744,10 @@ class SmartStrip(Agent):
     #calculate the total energy demand (TED)
     def _calculateTed(self):
         #_log.debug('_calculateTed()')
-
         ted = SMARTSTRIP_BASE_ENERGY
         for idx, plugState in enumerate(self._plugRelayState):
-            if plugState == RELAY_ON:
+            if plugState == RELAY_ON AND idx != self._sh_plug_id:
                 ted = ted + self._plugActivePwr[idx]
-
         return ted
 
     def publishTed(self):

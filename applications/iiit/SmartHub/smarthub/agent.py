@@ -1093,19 +1093,12 @@ class SmartHub(Agent):
         
     def publishTed(self):
         #_log.debug('publishTed()')
-        
-        ted = self._calculateTed()
-        
-        '''
-        #only publish if change in ted
-        if self._ted == ted:
-            return
-        '''
-        self._ted = ted
-        _log.debug ( "*** New TED: {0:.2f}, publishing to bus ***".format(ted))
+        self._ted = self._calculateTed()
+        _log.info( "*** New TED: {0:.2f}, publishing to bus ***".format(self._ted))
         pubTopic = self.energyDemand_topic
-        pubMsg = [ted, {'units': 'W', 'tz': 'UTC', 'type': 'float'}]
-        self._publishToBus(pubTopic, pubMsg)
+        #_log.debug("TED pubTopic: " + pubTopic)
+        pubMsg = [self._ted, {'units': 'W', 'tz': 'UTC', 'type': 'float'}]
+        publish_to_bus(self, pubTopic, pubMsg)
         return  
         
     def onDsEd(self, peer, sender, bus,  topic, headers, message):
