@@ -20,8 +20,8 @@ from datetime import timedelta
 
 authentication=None
 
-WAIT_TIME_SECONDS = 10             # 10 sec
-#WAIT_TIME_SECONDS = 5 * 60         # 5 min
+#WAIT_TIME_SECONDS = 10             # 10 sec
+WAIT_TIME_SECONDS = 5 * 60         # 5 min
 #WAIT_TIME_SECONDS = 15 * 60        # 15 min
 #WAIT_TIME_SECONDS = 30 * 60        # 30 min
 #WAIT_TIME_SECONDS = 1 * 60 * 60    # 1 hour
@@ -54,7 +54,7 @@ def do_rpc(method, params=None ):
     
 def post_random_price():
     #random price between 0-1
-    no_digit = 4
+    no_digit = 2
     pp = math.floor(random.random()*10**no_digit)/10**no_digit
     print "Time: " + str(time.ctime()) + "; PricePoint: " + str(pp) +";",
     try:
