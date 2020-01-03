@@ -541,6 +541,7 @@ class SmartStrip(Agent):
 
 
     def tagAuthorised(self, tagID):
+        return True
         for authTagID in self._tag_ids :
             if tagID == authTagID:
                 return True
