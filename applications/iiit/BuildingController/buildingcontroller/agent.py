@@ -223,7 +223,7 @@ class BuildingController(Agent):
 
     def updateBuildingPP(self, pp):
         #_log.debug('updateRmTsp()')
-        _log.debug('building_pp {0:0.1f}'.format( pp))
+        _log.debug('building_pp {0:0.2f}'.format( pp))
         
         building_pp = self.rpc_getBuildingPP()
         
@@ -231,7 +231,7 @@ class BuildingController(Agent):
         if isclose(pp, building_pp):
             self.publishBuildingPP(pp)
             
-        _log.debug('Current Building PP: ' + "{0:0.1f}".format( pp))
+        _log.debug('Current Building PP: ' + "{0:0.2f}".format( pp))
         return
 
     def publishBuildingPP(self, pp):
