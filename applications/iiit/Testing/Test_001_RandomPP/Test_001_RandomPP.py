@@ -62,7 +62,6 @@ def post_random_price():
         #print "response: " +str(response),
         if response.ok:
             success = response.json()['result']
-            #print(success)
             if success:
                 print "new price updated"
             else:
@@ -87,16 +86,13 @@ class Job(threading.Thread):
         self.args = args
         self.kwargs = kwargs
         
-    def set_interval(interval):
-        self.interval = interval
-        
     def stop(self):
-                self.stopped.set()
-                self.join()
+        self.stopped.set()
+        self.join()
     def run(self):
-            self.execute(*self.args, **self.kwargs)         #execute once
-            while not self.stopped.wait(self.interval.total_seconds()):
-                self.execute(*self.args, **self.kwargs)
+        self.execute(*self.args, **self.kwargs)         #execute once
+        while not self.stopped.wait(self.interval.total_seconds()):
+            self.execute(*self.args, **self.kwargs)
                 
 if __name__ == '__main__':
     signal.signal(signal.SIGTERM, signal_handler)
