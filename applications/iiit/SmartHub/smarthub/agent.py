@@ -710,7 +710,7 @@ class SmartHub(Agent):
         return
         
     #compute new Fan Speed from price functions
-    def getNewFanLevel(self, pp):
+    def getNewFanSpeed(self, pp):
         pp = 0 if pp < 0 else 1 if pp > 1 else pp
         
         pf_idx = self.pf_sh_fan['pf_idx']
