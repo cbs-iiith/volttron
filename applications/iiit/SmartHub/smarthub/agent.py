@@ -73,9 +73,9 @@ AT_GET_THPP     = 327
 AT_SET_THPP     = 328
 AT_PUB_THPP     = 329
 
-SMARTHUB_BASE_ENERGY    = 2.0
-SMARTHUB_FAN_ENERGY     = 6.0
-SMARTHUB_LED_ENERGY     = 3.0
+SMARTHUB_BASE_ENERGY    = 10.0
+SMARTHUB_FAN_ENERGY     = 2.0
+SMARTHUB_LED_ENERGY     = 10.0
 
 
 utils.setup_logging()
@@ -1077,7 +1077,7 @@ class SmartHub(Agent):
         
         ed = SMARTHUB_BASE_ENERGY
         if self._shDevicesState[SH_DEVICE_LED] == SH_DEVICE_STATE_ON:
-            ed = ed + SMARTHUB_LED_ENERGY
+            ed = ed + (SMARTHUB_LED_ENERGY * self._shDevicesLevel[SH_DEVICE_LED])
         if self._shDevicesState[SH_DEVICE_FAN] == SH_DEVICE_STATE_ON:
             ed = ed + SMARTHUB_FAN_ENERGY
     
