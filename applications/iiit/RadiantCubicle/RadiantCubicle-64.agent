@@ -18,11 +18,11 @@
     #                   pf_idx --> default pf_coefficients
     "pf_rc": {
         "pf_roundup":0.5,
-        "pf_idx":1,
+        "pf_idx":0,
         "pf_coefficients": [
-            {"a": 1, "b": -3.5, "c": 25},
+            {"a": 1, "b": -3.5, "c": 23},
             {"a": 1, "b": -3.5, "c": 24},
-            {"a": 1, "b": -3.5, "c": 23}
+            {"a": 1, "b": -3.5, "c": 25}
         ]
     }
 }
