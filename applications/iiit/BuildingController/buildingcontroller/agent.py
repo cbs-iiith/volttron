@@ -42,6 +42,9 @@ import gevent.event
 
 from ispace_utils import publish_to_bus, get_task_schdl, cancel_task_schdl, isclose
 
+#checking if a floating point value is “numerically zero” by checking if it is lower than epsilon
+EPSILON = 1e-03
+
 SCHEDULE_AVLB = 1
 SCHEDULE_NOT_AVLB = 0
 
@@ -228,7 +231,7 @@ class BuildingController(Agent):
         building_pp = self.rpc_getBuildingPP()
         
         #check if the pp really updated at the bms, only then proceed with new pp
-        if isclose(pp, building_pp):
+        if isclose(pp, building_pp, EPSILON):
             self.publishBuildingPP(pp)
             
         _log.debug('Current Building PP: ' + "{0:0.2f}".format( pp))

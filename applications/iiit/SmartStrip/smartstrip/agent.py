@@ -42,6 +42,9 @@ import gevent.event
 
 from ispace_utils import mround, publish_to_bus, get_task_schdl, cancel_task_schdl, isclose
 
+#checking if a floating point value is “numerically zero” by checking if it is lower than epsilon
+EPSILON = 1e-03
+
 LED_ON = 1
 LED_OFF = 0
 RELAY_ON = 1
@@ -472,13 +475,13 @@ class SmartStrip(Agent):
 
         self._price_point_new = new_price_point
         
-        if self._price_point_current != new_price_point:
+        if not isclose(self._price_point_current, new_price_point, EPSILON):
         #if True:
             self.processNewPricePoint()
         return
         
     def processNewPricePoint(self):
-        if self._price_point_current != self._price_point_new:
+        if not isclose(self._price_point_current, self._price_point_new, EPSILON):
             _log.info ( "*** New Price Point: {0:.2f} ***".format(self._price_point_new))
             result = {}
             #get schedule for testing relays

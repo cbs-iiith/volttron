@@ -42,6 +42,9 @@ import gevent.event
 
 from ispace_utils import mround, publish_to_bus, get_task_schdl, cancel_task_schdl, isclose
 
+#checking if a floating point value is “numerically zero” by checking if it is lower than epsilon
+EPSILON = 1e-03
+
 SCHEDULE_AVLB = 1
 SCHEDULE_NOT_AVLB = 0
 
@@ -231,7 +234,7 @@ class RadiantCubicle(Agent):
     def setRcTspLevel(self, level):
         #_log.debug('setRcTspLevel()')
         
-        if isclose(level, self._rcTspLevel):
+        if isclose(level, self._rcTspLevel, EPSILON):
             _log.debug('same level, do nothing')
             return
             
@@ -301,7 +304,7 @@ class RadiantCubicle(Agent):
         device_level = self.rpc_getRcTspLevel()
         
         #check if the level really updated at the h/w, only then proceed with new level
-        if isclose(level, device_level):
+        if isclose(level, device_level, EPSILON):
             self._rcTspLevel = level
             self.publishRcTspLevel(level)
             

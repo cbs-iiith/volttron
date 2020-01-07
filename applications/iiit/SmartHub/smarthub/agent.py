@@ -42,6 +42,9 @@ import gevent.event
 
 from ispace_utils import mround, publish_to_bus, get_task_schdl, cancel_task_schdl, isclose
 
+#checking if a floating point value is “numerically zero” by checking if it is lower than epsilon
+EPSILON = 1e-03
+
 SH_DEVICE_STATE_ON = 1
 SH_DEVICE_STATE_OFF = 0
 
@@ -522,7 +525,7 @@ class SmartHub(Agent):
             _log.exception ("Expection: not a valid device to change level, deviceId: " + str(deviceId))
             return
             
-        if isclose(level, self._shDevicesLevel[deviceId]):
+        if isclose(level, self._shDevicesLevel[deviceId], EPSILON):
             _log.debug('same level, do nothing')
             return
 
@@ -836,7 +839,7 @@ class SmartHub(Agent):
         _log.debug('level {0:0.4f}'.format( level))
         device_level = self.rpc_getShDeviceLevel(deviceId)
         #check if the level really updated at the h/w, only then proceed with new level
-        if isclose(level, device_level, 0.25):
+        if isclose(level, device_level, EPSILON):
             _log.debug('same value!!!')
             self._shDevicesLevel[deviceId] = level
             self._publishShDeviceLevel(deviceId, level)

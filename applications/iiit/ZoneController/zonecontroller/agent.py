@@ -42,6 +42,9 @@ import gevent.event
 
 from ispace_utils import mround, publish_to_bus, get_task_schdl, cancel_task_schdl, isclose
 
+#checking if a floating point value is “numerically zero” by checking if it is lower than epsilon
+EPSILON = 1e-03
+
 utils.setup_logging()
 _log = logging.getLogger(__name__)
 __version__ = '0.2'
@@ -201,7 +204,7 @@ class ZoneController(Agent):
         new_price_point = message[0]
         _log.info ( "*** New Price Point: {0:.2f} ***".format(new_price_point))
         
-        if isclose(self._price_point_current, new_price_point):
+        if isclose(self._price_point_current, new_price_point, EPSILON):
             _log.debug('no change in price, do nothing')
             return
         
@@ -210,7 +213,7 @@ class ZoneController(Agent):
         return
         
     def processNewPricePoint(self):
-        if isclose(self._price_point_current, self._price_point_new):
+        if isclose(self._price_point_current, self._price_point_new, EPSILON):
             return
             
         #_log.info ( "*** New Price Point: {0:.2f} ***".format(self._price_point_new))
@@ -268,7 +271,7 @@ class ZoneController(Agent):
     def setRmTsp(self, tsp):
         #_log.debug('setRmTsp()')
         
-        if isclose(tsp, self._rmTsp):
+        if isclose(tsp, self._rmTsp, EPSILON):
             _log.debug('same tsp, do nothing')
             return
             
@@ -300,7 +303,7 @@ class ZoneController(Agent):
     def setRmLsp(self, lsp):
         #_log.debug('setRmLsp()')
         
-        if isclose(lsp, self._rmLsp):
+        if isclose(lsp, self._rmLsp, EPSILON):
             _log.debug('same lsp, do nothing')
             return
             
@@ -335,7 +338,7 @@ class ZoneController(Agent):
         rm_tsp = self.rpc_getRmTsp()
         
         #check if the tsp really updated at the bms, only then proceed with new tsp
-        if isclose(tsp, rm_tsp):
+        if isclose(tsp, rm_tsp, EPSILON):
             self._rmTsp = tsp
             self.publishRmTsp(tsp)
             
@@ -349,7 +352,7 @@ class ZoneController(Agent):
         rm_lsp = self.rpc_getRmLsp()
         
         #check if the lsp really updated at the bms, only then proceed with new lsp
-        if isclose(lsp, rm_lsp):
+        if isclose(lsp, rm_lsp, EPSILON):
             self._rmLsp = lsp
             self.publishRmLsp(lsp)
             
@@ -475,21 +478,21 @@ class ZoneController(Agent):
         #TODO: Sam
         #get actual tsp from device
         tsp = self._rmTsp
-        if isclose(tsp, 22.0):
+        if isclose(tsp, 22.0, EPSILON):
             ted = 6500
-        elif isclose(tsp, 23.0):
+        elif isclose(tsp, 23.0, EPSILON):
             ted = 6000
-        elif isclose(tsp, 24.0):
+        elif isclose(tsp, 24.0, EPSILON):
             ted = 5500
-        elif isclose(tsp, 25.0):
+        elif isclose(tsp, 25.0, EPSILON):
             ted = 5000
-        elif isclose(tsp, 26.0):
+        elif isclose(tsp, 26.0, EPSILON):
             ted = 4500
-        elif isclose(tsp, 27.0):
+        elif isclose(tsp, 27.0, EPSILON):
             ted = 4000
-        elif isclose(tsp, 28.0):
+        elif isclose(tsp, 28.0, EPSILON):
             ted = 2000
-        elif isclose(tsp, 29.0):
+        elif isclose(tsp, 29.0, EPSILON):
             ted = 1000
         else :
             ted = 500
