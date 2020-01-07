@@ -73,8 +73,8 @@ AT_GET_THPP     = 327
 AT_SET_THPP     = 328
 AT_PUB_THPP     = 329
 
-SMARTHUB_BASE_ENERGY    = 10.0
-SMARTHUB_FAN_ENERGY     = 2.0
+SMARTHUB_BASE_ENERGY    = 8.0
+SMARTHUB_FAN_ENERGY     = 7.0
 SMARTHUB_LED_ENERGY     = 10.0
 
 
@@ -836,7 +836,8 @@ class SmartHub(Agent):
         _log.debug('level {0:0.4f}'.format( level))
         device_level = self.rpc_getShDeviceLevel(deviceId)
         #check if the level really updated at the h/w, only then proceed with new level
-        if isclose(level, device_level):
+        if isclose(level, device_level, 0.25):
+            _log.debug('same value!!!')
             self._shDevicesLevel[deviceId] = level
             self._publishShDeviceLevel(deviceId, level)
             
@@ -1079,7 +1080,7 @@ class SmartHub(Agent):
         if self._shDevicesState[SH_DEVICE_LED] == SH_DEVICE_STATE_ON:
             ed = ed + (SMARTHUB_LED_ENERGY * self._shDevicesLevel[SH_DEVICE_LED])
         if self._shDevicesState[SH_DEVICE_FAN] == SH_DEVICE_STATE_ON:
-            ed = ed + SMARTHUB_FAN_ENERGY
+            ed = ed + (SMARTHUB_FAN_ENERGY * self._shDevicesLevel[SH_DEVICE_FAN])
     
         return ed
     
