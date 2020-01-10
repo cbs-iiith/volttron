@@ -39,11 +39,19 @@ import gevent.event
 import requests
 import json
 
-from ispace_utils import publish_to_bus
+from ispace_utils import publish_to_bus, isclose
 
 utils.setup_logging()
 _log = logging.getLogger(__name__)
 __version__ = '0.2'
+
+#checking if a floating point value is "numerically zero" by checking if it is lower than epsilon
+EPSILON = 1e-03
+
+#if the rpc connection fails to post for more than MAX_RETRIES, 
+#then it is assumed that the dest is down
+#in case of ds posts, the retry count is reset when the ds registers again
+MAX_RETRIES = 5
 
 def DatetimeFromValue(ts):
     ''' Utility for dealing with time
@@ -55,11 +63,6 @@ def DatetimeFromValue(ts):
     elif not isinstance(ts, datetime):
         raise ValueError('Unknown timestamp value')
     return ts
-
-#if the rpc connection fails to post for more than MAX_RETRIES, 
-#then it is assumed that the dest is down
-#in case of ds posts, the retry count is reset when the ds registers again
-MAX_RETRIES = 5
 
 def volttronbridge(config_path, **kwargs):
 
@@ -275,16 +278,14 @@ def volttronbridge(config_path, **kwargs):
                 return
                 
             new_price_point = message[0]
-            #'''
             _log.debug ( "*** New Price Point: {0:.2f} ***".format(new_price_point))
             
-            '''
             #we want to post to ds only if there is change in price point
-            if self._price_point_current != new_price_point:
-                self._processNewPricePoint(new_price_point)
-            '''
+            if isclose(self._price_point_current, new_price_point, EPSILON):
+                _log.debug('no change in price, do nothing')
+                return
+                
             self._processNewPricePoint(new_price_point)
-            
             return
             
         #energy demand on local bus published, post it to upstream bridge
@@ -296,28 +297,34 @@ def volttronbridge(config_path, **kwargs):
             newEnergyDemand = message[0]
             _log.debug ( "*** New Energy Demand: {0:.4f} ***".format(newEnergyDemand))
             
-            '''
-            #we want to post to us only if there is change in energy demand
-            if self._ed_current == newEnergyDemand:
-                return
-                
             self._ed_previous = self._ed_current
             self._ed_current = newEnergyDemand
-            '''
-            _log.debug("posting new energy demand to upstream VolttronBridge")
+            re_post = False
+            
             url_root = 'http://' + self._us_ip_addr + ':' + str(self._us_port) + '/VolttronBridge'
             
             #check for upstream connection, if not retry once
+            _log.debug('check us connection...')
             if not self._usConnected:
-                _log.debug('Trying to register once...')
+                _log.debug('not connected, Trying to register once...')
                 self._usConnected = self._registerToUsBridge(url_root,\
                                                                 self._discovery_address,\
                                                                 self._deviceId)
-                _log.debug('_usConnected: ' + str(self._usConnected))
                 if not self._usConnected:
+                    _log.debug('_usConnected: ' + str(self._usConnected))
                     _log.debug('Failed to register, May be upstream bridge is not running!!!')
                     return
+                else:
+                    re_post = True
+                    
+            _log.debug('_usConnected: ' + str(self._usConnected))
 
+            #we want to post to us only if there is change in energy demand
+            if isclose(self._ed_current, self._ed_previous, EPSILON) and re_post == False:
+                _log.debug('No change in energy demand, do nothing')
+                return
+
+            _log.debug("posting energy demand to upstream VolttronBridge")
             success = self.do_rpc(url_root, 'rpc_postEnergyDemand', \
                             {'discovery_address': self._discovery_address, \
                                 'deviceId': self._deviceId, \
@@ -401,23 +408,23 @@ def volttronbridge(config_path, **kwargs):
             _log.debug('unregistered!!!')
             return True
             
-        #post the new new price point from us to the local-us-bus        
+        #post the new price point from us to the local-us-bus        
         def _postPricePoint(self, discovery_address, deviceId, newPricePoint):
             _log.debug ( "*** New Price Point(us): {0:.2f} ***".format(newPricePoint))
             #we want to post to bus only if there is change in previous us price point
-            if True:
-            #if self._us_last_pp_current != newPricePoint:
-                self._us_last_pp_previous = self._us_last_pp_current
-                self._us_last_pp_current = newPricePoint
-                #post to bus
-                pubTopic =  pricePoint_topic_us
-                pubMsg = [newPricePoint,{'units': 'cents', 'tz': 'UTC', 'type': 'float'}]
-                publish_to_bus(self, pubTopic, pubMsg)
-                return True
-            else:
+            if isclose(self._us_last_pp_current, newPricePoint,  EPSILON):
                 _log.debug('no change in price, do nothing')
-                return True
+                return False
                 
+            self._us_last_pp_previous = self._us_last_pp_current
+            self._us_last_pp_current = newPricePoint
+            #post to bus
+            _log.debug('post the new price point from us to the local-us-bus')
+            pubTopic =  pricePoint_topic_us
+            pubMsg = [newPricePoint,{'units': 'cents', 'tz': 'UTC', 'type': 'float'}]
+            publish_to_bus(self, pubTopic, pubMsg)
+            return True
+            
         #post the new energy demand from ds to the local bus
         def _postEnergyDemand(self, discovery_address, deviceId, newEnergyDemand):
             _log.debug ( "*** New Energy Demand: {0:.4f} ***".format(newEnergyDemand) +'from: ' + deviceId)
@@ -472,7 +479,6 @@ def volttronbridge(config_path, **kwargs):
             
     Agent.__name__ = 'VolttronBridge_Agent'
     return VolttronBridge(**kwargs)
-
 
 def main(argv=sys.argv):
     '''Main method called by the eggsecutable.'''
