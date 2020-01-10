@@ -675,7 +675,7 @@ class SmartHub(Agent):
         if isclose(self._price_point_current, self._price_point_new, EPSILON):
             return
             
-        self._pp_failed = False     #any process that failed to apply pp need to set this flag True
+        self._pp_failed = False     #any process that failed to apply pp sets this flag True
         task_id = str(randint(0, 99999999))
         result = get_task_schdl(self, task_id, 'iiit/cbs/smarthub')
         if result['result'] != 'SUCCESS':
@@ -710,6 +710,8 @@ class SmartHub(Agent):
                             + 'Switching-Off Power' \
                             )
                 self.setShDeviceState(deviceId, SH_DEVICE_STATE_OFF, schdExist)
+                if not self._shDevicesState[deviceId] == SH_DEVICE_STATE_OFF:
+                    self._pp_failed = True
             #else:
                 #do nothing
         else:
@@ -719,10 +721,16 @@ class SmartHub(Agent):
                         + 'Switching-On Power' \
                         )
             self.setShDeviceState(deviceId, SH_DEVICE_STATE_ON, schdExist)
+            if not self._shDevicesState[deviceId] == SH_DEVICE_STATE_ON:
+                self._pp_failed = True
+                
             if deviceId == SH_DEVICE_FAN:
                 fan_speed = self.getNewFanSpeed(self._price_point_current)/100
                 _log.info ( "*** New Fan Speed: {0:.4f} ***".format(fan_speed))
                 self.setShDeviceLevel(SH_DEVICE_FAN, fan_speed, schdExist)
+                if not isclose(fan_speed, self._shDevicesLevel[deviceId], EPSILON):
+                    self._pp_failed = True
+
         return
         
     #compute new Fan Speed from price functions

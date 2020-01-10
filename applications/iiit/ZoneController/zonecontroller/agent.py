@@ -228,7 +228,7 @@ class ZoneController(Agent):
         if isclose(self._price_point_current, self._price_point_new, EPSILON):
             return
             
-        self._pp_failed = False     #any process that failed to apply pp need to set this flag True
+        self._pp_failed = False     #any process that failed to apply pp sets this flag True
         self._price_point_previous = self._price_point_current
         self.applyPricingPolicy()
         
@@ -247,12 +247,15 @@ class ZoneController(Agent):
         tsp = self.getNewTsp(self._price_point_new)
         _log.debug('New Ambient AC Setpoint: {0:0.1f}'.format( tsp))
         self.setRmTsp(tsp)
-        
+        if not isclose(tsp, self._rmTsp, EPSILON):
+            self._pp_failed = True
+            
         #apply for ambient lightinh
         lsp = self.getNewLsp(self._price_point_new)
         _log.debug('New Ambient Lighting Setpoint: {0:0.1f}'.format( lsp))
         self.setRmLsp(lsp)
-        
+        if not isclose(tsp, self._rmLsp, EPSILON):
+            self._pp_failed = True
         return
         
     #compute new zone temperature setpoint from price functions

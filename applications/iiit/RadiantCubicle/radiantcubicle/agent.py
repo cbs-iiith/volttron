@@ -216,7 +216,7 @@ class RadiantCubicle(Agent):
         if isclose(self._price_point_current, self._price_point_new, EPSILON):
             return
             
-        self._pp_failed = False     #any process that failed to apply pp need to set this flag True
+        self._pp_failed = False     #any process that failed to apply pp sets this flag True
         self._price_point_previous = self._price_point_current
         self.applyPricingPolicy()
         
@@ -233,6 +233,8 @@ class RadiantCubicle(Agent):
         tsp = self.getNewTsp(self._price_point_current)
         _log.debug('New Setpoint: {0:0.1f}'.format( tsp))
         self.setRcTspLevel(tsp)
+        if not isclose(tsp, self._rcTspLevel, EPSILON):
+            self._pp_failed = True
         return
     
     #compute new TSP

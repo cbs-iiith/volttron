@@ -201,10 +201,11 @@ class BuildingController(Agent):
         if isclose(self._price_point_current, self._price_point_new, EPSILON):
             return
             
-        self._pp_failed = False     #any process that failed to apply pp need to set this flag True
+        self._pp_failed = False     #any process that failed to apply pp sets this flag True
         self._price_point_previous = self._price_point_current
         self.publishPriceToBMS(self._price_point_current)
-        self.applyPricingPolicy()
+        if not self._pp_failed:
+            self.applyPricingPolicy()
         
         if self._pp_failed:
             _log.error("unable to processNewPricePoint(), will try again in " + self._period_process_pp)
@@ -216,7 +217,7 @@ class BuildingController(Agent):
 
     def applyPricingPolicy(self):
         _log.debug("applyPricingPolicy()")
-        #control the energy demand of devices at building level accordingly
+        #TODO: control the energy demand of devices at building level accordingly
         return
         
     # change rc surface temperature set point
@@ -254,6 +255,8 @@ class BuildingController(Agent):
         #check if the pp really updated at the bms, only then proceed with new pp
         if isclose(pp, building_pp, EPSILON):
             self.publishBuildingPP(pp)
+        else:
+            self._pp_failed = True
             
         _log.debug('Current Building PP: ' + "{0:0.2f}".format( pp))
         return

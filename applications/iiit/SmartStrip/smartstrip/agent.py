@@ -498,7 +498,7 @@ class SmartStrip(Agent):
         if isclose(self._price_point_current, self._price_point_new, EPSILON):
             return
             
-        self._pp_failed = False     #any process that failed to apply pp need to set this flag True
+        self._pp_failed = False     #any process that failed to apply pp sets this flag True
         #get schedule for testing relays
         task_id = str(randint(0, 99999999))
         #_log.debug("task_id: " + task_id)
@@ -534,6 +534,9 @@ class SmartStrip(Agent):
                         '({0:.2f}), '.format(plug_pp_th),
                         'Switching-Off Power'))
                 self.switchRelay(plugID, RELAY_OFF, schdExist)
+                if not self._plugRelayState[plugID] == RELAY_OFF:
+                    self._pp_failed = True
+
             #else:
                 #do nothing
         else:
@@ -543,6 +546,8 @@ class SmartStrip(Agent):
                         '({0:.2f}), '.format(plug_pp_th),
                         'Switching-On Power'))
                 self.switchRelay(plugID, RELAY_ON, schdExist)
+                if not self._plugRelayState[plugID] == RELAY_ON:
+                    self._pp_failed = True
             #else:
                 #do nothing
         return
