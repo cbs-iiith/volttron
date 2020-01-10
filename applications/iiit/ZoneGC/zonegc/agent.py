@@ -33,7 +33,6 @@ utils.setup_logging()
 _log = logging.getLogger(__name__)
 __version__ = '0.2'
 
-
 def zonegc(config_path, **kwargs):
 
     config = utils.load_config(config_path)

@@ -19,8 +19,6 @@ import random
 
 from volttron.platform.vip.agent import Agent, Core, PubSub, compat, RPC
 from volttron.platform.agent import utils
-from volttron.platform.messaging import headers as headers_mod
-
 from volttron.platform.messaging import topics, headers as headers_mod
 
 import time

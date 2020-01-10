@@ -42,6 +42,10 @@ import gevent.event
 
 from ispace_utils import mround, publish_to_bus, get_task_schdl, cancel_task_schdl, isclose
 
+utils.setup_logging()
+_log = logging.getLogger(__name__)
+__version__ = '0.2'
+
 #checking if a floating point value is “numerically zero” by checking if it is lower than epsilon
 EPSILON = 1e-03
 
@@ -79,22 +83,6 @@ AT_PUB_THPP     = 329
 SMARTHUB_BASE_ENERGY    = 8.0
 SMARTHUB_FAN_ENERGY     = 7.0
 SMARTHUB_LED_ENERGY     = 10.0
-
-
-utils.setup_logging()
-_log = logging.getLogger(__name__)
-__version__ = '0.2'
-
-def DatetimeFromValue(ts):
-    ''' Utility for dealing with time
-    '''
-    if isinstance(ts, (int, long)):
-        return datetime.utcfromtimestamp(ts)
-    elif isinstance(ts, float):
-        return datetime.utcfromtimestamp(ts)
-    elif not isinstance(ts, datetime):
-        raise ValueError('Unknown timestamp value')
-    return ts
 
 def smarthub(config_path, **kwargs):
     config = utils.load_config(config_path)

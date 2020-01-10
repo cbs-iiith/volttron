@@ -33,28 +33,13 @@ from volttron.platform.jsonrpc import (
         UNAVAILABLE_AGENT)
 
 from random import randint
-
 import settings
-
 import time
-
 from ispace_utils import publish_to_bus
 
 utils.setup_logging()
 _log = logging.getLogger(__name__)
 __version__ = '0.2'
-
-def DatetimeFromValue(ts):
-    ''' Utility for dealing with time
-    '''
-    if isinstance(ts, (int, long)):
-        return datetime.utcfromtimestamp(ts)
-    elif isinstance(ts, float):
-        return datetime.utcfromtimestamp(ts)
-    elif not isinstance(ts, datetime):
-        raise ValueError('Unknown timestamp value')
-    return ts
-
 
 class PricePoint(Agent):
 

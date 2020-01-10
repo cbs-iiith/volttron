@@ -18,8 +18,6 @@ import uuid
 
 from volttron.platform.vip.agent import Agent, Core, PubSub, compat, RPC
 from volttron.platform.agent import utils
-from volttron.platform.messaging import headers as headers_mod
-
 from volttron.platform.messaging import topics, headers as headers_mod
 from volttron.platform.agent.known_identities import (
     MASTER_WEB, VOLTTRON_CENTRAL, VOLTTRON_CENTRAL_PLATFORM)
@@ -32,9 +30,7 @@ from volttron.platform.jsonrpc import (
         UNAVAILABLE_AGENT)
 
 from random import randint
-
 import settings
-
 import time
 import struct
 import gevent
@@ -42,12 +38,12 @@ import gevent.event
 
 from ispace_utils import mround, publish_to_bus, get_task_schdl, cancel_task_schdl, isclose
 
-#checking if a floating point value is “numerically zero” by checking if it is lower than epsilon
-EPSILON = 1e-03
-
 utils.setup_logging()
 _log = logging.getLogger(__name__)
 __version__ = '0.2'
+
+#checking if a floating point value is “numerically zero” by checking if it is lower than epsilon
+EPSILON = 1e-03
 
 SCHEDULE_AVLB = 1
 SCHEDULE_NOT_AVLB = 0
@@ -56,17 +52,6 @@ E_UNKNOWN_CCE = -4
 E_UNKNOWN_TSP = -5
 E_UNKNOWN_LSP = -6
 E_UNKNOWN_CLE = -9
-
-def DatetimeFromValue(ts):
-    ''' Utility for dealing with time
-    '''
-    if isinstance(ts, (int, long)):
-        return datetime.utcfromtimestamp(ts)
-    elif isinstance(ts, float):
-        return datetime.utcfromtimestamp(ts)
-    elif not isinstance(ts, datetime):
-        raise ValueError('Unknown timestamp value')
-    return ts
 
 class ZoneController(Agent):
     '''Zone Controller

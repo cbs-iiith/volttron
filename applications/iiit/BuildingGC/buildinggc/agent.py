@@ -19,8 +19,6 @@ import random
 
 from volttron.platform.vip.agent import Agent, Core, PubSub, compat, RPC
 from volttron.platform.agent import utils
-from volttron.platform.messaging import headers as headers_mod
-
 from volttron.platform.messaging import topics, headers as headers_mod
 
 import time
@@ -32,7 +30,6 @@ from ispace_utils import publish_to_bus
 utils.setup_logging()
 _log = logging.getLogger(__name__)
 __version__ = '0.2'
-
 
 def buildinggc(config_path, **kwargs):
 

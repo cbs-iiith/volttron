@@ -16,11 +16,8 @@ import logging
 import sys
 import uuid
 
-
 from volttron.platform.vip.agent import Agent, Core, PubSub, compat, RPC
 from volttron.platform.agent import utils
-from volttron.platform.messaging import headers as headers_mod
-
 from volttron.platform.messaging import topics, headers as headers_mod
 from volttron.platform.agent.known_identities import (
     MASTER_WEB, VOLTTRON_CENTRAL, VOLTTRON_CENTRAL_PLATFORM)
@@ -35,7 +32,6 @@ from volttron.platform.jsonrpc import (
 import time
 import gevent
 import gevent.event
-
 import requests
 import json
 
@@ -52,17 +48,6 @@ EPSILON = 1e-03
 #then it is assumed that the dest is down
 #in case of ds posts, the retry count is reset when the ds registers again
 MAX_RETRIES = 5
-
-def DatetimeFromValue(ts):
-    ''' Utility for dealing with time
-    '''
-    if isinstance(ts, (int, long)):
-        return datetime.utcfromtimestamp(ts)
-    elif isinstance(ts, float):
-        return datetime.utcfromtimestamp(ts)
-    elif not isinstance(ts, datetime):
-        raise ValueError('Unknown timestamp value')
-    return ts
 
 def volttronbridge(config_path, **kwargs):
 
