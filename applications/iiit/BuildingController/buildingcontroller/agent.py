@@ -70,6 +70,8 @@ def DatetimeFromValue(ts):
 class BuildingController(Agent):
     '''Building Controller
     '''
+    _pp_failed = False
+    
     _price_point_previous = 0.4 
     _price_point_current = 0.4 
     _price_point_new = 0.45
@@ -106,11 +108,19 @@ class BuildingController(Agent):
         
         self._runBMSTest()
         
+        #TODO: get the latest values (states/levels) from h/w
+        #self.getInitialHwState()
+        #time.sleep(1) #yeild for a movement
+        
+        #TODO: apply pricing policy for default values
+        
+        #TODO: publish initial data to volttron bus
+        
         #perodically publish total energy demand to volttron bus
         self.core.periodic(self._period_read_data, self.publishTed, wait=None)
         
-        #perodically process new pricing point
-        self.core.periodic(10, self.processNewPricePoint, wait=None)
+        #perodically process new pricing point that keeps trying to apply the new pp till success
+        self.core.periodic(self._period_process_pp, self.processNewPricePoint, wait=None)
         
         #subscribing to topic_price_point
         self.vip.pubsub.subscribe("pubsub", self.topic_price_point, self.onNewPrice)
@@ -137,9 +147,10 @@ class BuildingController(Agent):
         return
 
     def _configGetInitValues(self):
-        self._period_read_data = self.config['period_read_data']
-        self._price_point_previous = self.config['default_base_price']
-        self._price_point_current = self.config['default_base_price']
+        self._period_read_data = self.config('period_read_data', 30)
+        self._period_process_pp = self.config.get('period_process_pp', 10)
+        self._price_point_previous = self.config.get('default_base_price', 0.2)
+        self._price_point_current = self.config.get('price_point_latest', 0.2)
         return
         
     def _configGetPoints(self):
@@ -173,24 +184,34 @@ class BuildingController(Agent):
     def onNewPrice(self, peer, sender, bus,  topic, headers, message):
         if sender == 'pubsub.compat':
             message = compat.unpack_legacy_message(headers, message)
-
+            
         new_price_point = message[0]
-        #_log.info ( "*** New Price Point: {0:.2f} ***".format(new_price_point))
-
-        self._price_point_new = new_price_point
+        _log.info ( "*** New Price Point: {0:.2f} ***".format(new_price_point))
         
-        if self._price_point_current != new_price_point:
-        #if True:
-            self.processNewPricePoint()
+        if isclose(self._price_point_current, new_price_point, EPSILON):
+            _log.debug('no change in price, do nothing')
+            return
+            
+        self._price_point_new = new_price_point
+        self.processNewPricePoint()
         return
         
+    #this is a perodic function that keeps trying to apply the new pp till success
     def processNewPricePoint(self):
-        if self._price_point_current != self._price_point_new:
-            _log.info ( "*** New Price Point: {0:.2f} ***".format(self._price_point_new))
-            self._price_point_previous = self._price_point_current
-            self._price_point_current = self._price_point_new
-            self.publishPriceToBMS(self._price_point_current)
-            self.applyPricingPolicy()
+        if isclose(self._price_point_current, self._price_point_new, EPSILON):
+            return
+            
+        self._pp_failed = False     #any process that failed to apply pp need to set this flag True
+        self._price_point_previous = self._price_point_current
+        self.publishPriceToBMS(self._price_point_current)
+        self.applyPricingPolicy()
+        
+        if self._pp_failed:
+            _log.error("unable to processNewPricePoint(), will try again in " + self._period_process_pp)
+            return
+        _log.info("*** New Price Point processed.")
+        self._price_point_current = self._price_point_new
+        
         return
 
     def applyPricingPolicy(self):

@@ -108,6 +108,8 @@ def smarthub(config_path, **kwargs):
 class SmartHub(Agent):
     '''Smart Hub
     '''
+    _pp_failed = False
+    
     _taskID_LedDebug = 1
     _ledDebugState = 0
     
@@ -160,18 +162,12 @@ class SmartHub(Agent):
         _log.info("yeild 30s for volttron platform to initiate properly...")
         time.sleep(30) #yeild for a movement
         _log.info("Starting SmartHub...")
+        
         self.runSmartHubTest()
         
-        #time.sleep(10) #yeild for a movement
-        
-        _log.debug('switch on debug led')
-        self.setShDeviceState(SH_DEVICE_LED_DEBUG, SH_DEVICE_STATE_ON, SCHEDULE_NOT_AVLB)
-        #time.sleep(1) #yeild for a movement
-
         #get the latest values (states/levels) from h/w
         self.getInitialHwState()
-        #time.sleep(1) #yeild for a movement
-
+        
         #apply pricing policy for default values
         self.applyPricingPolicy(SH_DEVICE_LED, SCHEDULE_NOT_AVLB)
         self.applyPricingPolicy(SH_DEVICE_FAN, SCHEDULE_NOT_AVLB)
@@ -183,12 +179,12 @@ class SmartHub(Agent):
         self.publishSensorData();
         self.publishCurrentPP();
         
-        #perodically process new pricing point
-        self.core.periodic(10, self.processNewPricePoint, wait=None)
+        #perodically process new pricing point that keeps trying to apply the new pp till success
+        self.core.periodic(self._period_process_pp, self.processNewPricePoint, wait=None)
         
         #perodically publish device state to volttron bus
         self.core.periodic(self._period_read_data, self.publishDeviceState, wait=None)
-
+        
         #perodically publish device level to volttron bus
         self.core.periodic(self._period_read_data, self.publishDeviceLevel, wait=None)
         
@@ -206,14 +202,17 @@ class SmartHub(Agent):
         
         #subscribing to ds energy demand, vb publishes ed from registered ds to this topic
         self.vip.pubsub.subscribe("pubsub", self.energyDemand_topic_ds, self.onDsEd)
-
+        
         self.vip.rpc.call(MASTER_WEB, 'register_agent_route', \
                             r'^/SmartHub', \
 #                            self.core.identity, \
                             "rpc_from_net").get(timeout=30)
         self._voltState = 1
         
-        return  
+        _log.debug('switch on debug led')
+        self.setShDeviceState(SH_DEVICE_LED_DEBUG, SH_DEVICE_STATE_ON, SCHEDULE_NOT_AVLB)
+        return
+        
     @Core.receiver('onstop')
     def onstop(self, sender, **kwargs):
         _log.debug('onstop()')
@@ -242,7 +241,10 @@ class SmartHub(Agent):
         return
 
     def _configGetInitValues(self):
-        self._period_read_data = self.config['period_read_data']
+        self._period_read_data = self.config('period_read_data', 30)
+        self._period_process_pp = self.config.get('period_process_pp', 10)
+        self._price_point_previous = self.config.get('default_base_price', 0.2)
+        self._price_point_current = self.config.get('price_point_latest', 0.2)
         return
         
     def _configGetPoints(self):
@@ -651,41 +653,50 @@ class SmartHub(Agent):
                     
         pubMsg = [self._price_point_current, {'units': 'cent', 'tz': 'UTC', 'type': 'float'}]
         publish_to_bus(self, self.topic_price_point, pubMsg)
-        
+        return
         
     def onNewPrice(self, peer, sender, bus,  topic, headers, message):
         if sender == 'pubsub.compat':
             message = compat.unpack_legacy_message(headers, message)
             
         new_price_point = message[0]
-        _log.debug ( "*** New Price Point: {0:.2f} ***".format(new_price_point))
-
-        self._price_point_new = new_price_point
+        _log.info ( "*** New Price Point: {0:.2f} ***".format(new_price_point))
         
-        if self._price_point_current != new_price_point:
-            self.processNewPricePoint()
+        if isclose(self._price_point_current, new_price_point, EPSILON):
+            _log.debug('no change in price, do nothing')
+            return
+            
+        self._price_point_new = new_price_point
+        self.processNewPricePoint()
         return
         
+    #this is a perodic function that keeps trying to apply the new pp till success
     def processNewPricePoint(self):
-        if self._price_point_current != self._price_point_new:
-            _log.info ( "*** New Price Point: {0:.2f} ***".format(self._price_point_new))
-            #result = {}
-            #get schedule for testing relays
-            task_id = str(randint(0, 99999999))
-            #_log.debug("task_id: " + task_id)
-            result = get_task_schdl(self, task_id, 'iiit/cbs/smarthub')
+        if isclose(self._price_point_current, self._price_point_new, EPSILON):
+            return
             
-            if result['result'] == 'SUCCESS':
-                self._price_point_previous = self._price_point_current
-                self._price_point_current = self._price_point_new
-
-                self.applyPricingPolicy(SH_DEVICE_LED, SCHEDULE_AVLB)
-                self.applyPricingPolicy(SH_DEVICE_FAN, SCHEDULE_AVLB)
-            else :
-                _log.error("unable to processNewPricePoint()")
-                
-            #cancel the schedule
-            cancel_task_schdl(self, task_id)
+        self._pp_failed = False     #any process that failed to apply pp need to set this flag True
+        task_id = str(randint(0, 99999999))
+        result = get_task_schdl(self, task_id, 'iiit/cbs/smarthub')
+        if result['result'] != 'SUCCESS':
+            self._pp_failed = True
+        
+        if self._pp_failed:
+            _log.error("unable to processNewPricePoint(), will try again in " + self._period_process_pp)
+            return
+            
+        self._price_point_previous = self._price_point_current
+        self.applyPricingPolicy(SH_DEVICE_LED, SCHEDULE_AVLB)
+        self.applyPricingPolicy(SH_DEVICE_FAN, SCHEDULE_AVLB)
+        #cancel the schedule
+        cancel_task_schdl(self, task_id)
+        
+        if self._pp_failed:
+            _log.error("unable to processNewPricePoint(), will try again in " + self._period_process_pp)
+            return
+        _log.info("*** New Price Point processed.")
+        self._price_point_current = self._price_point_new
+        
         return
         
     def applyPricingPolicy(self, deviceId, schdExist):

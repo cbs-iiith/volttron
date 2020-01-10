@@ -78,6 +78,8 @@ def DatetimeFromValue(ts):
 class SmartStrip(Agent):
     '''Smart Strip with 2 plug
     '''
+    _pp_failed = False
+    
     _taskID_LedDebug = 1
     _taskID_Plug1Relay = 2
     _taskID_Plug2Relay = 3
@@ -123,29 +125,37 @@ class SmartStrip(Agent):
         _log.info("yeild 30s for volttron platform to initiate properly...")
         time.sleep(30) #yeild for a movement
         _log.info("Starting SmartStrip...")
-
+        
         self.runSmartStripTest()
-        self.switchLedDebug(LED_ON)
-
+        
+        #TODO: get the latest values (states/levels) from h/w
+        #self.getInitialHwState()
+        #time.sleep(1) #yeild for a movement
+        
+        #TODO: apply pricing policy for default values
+        
+        #TODO: publish initial data to volttron bus
+        
         #perodically read the meter data & connected tag ids from h/w
         self.core.periodic(self._period_read_data, self.getData, wait=None)
-
+        
         #perodically publish plug threshold price point to volttron bus
         self.core.periodic(self._period_read_data, self.publishPlugThPP, wait=None)
-
+        
         #perodically publish total energy demand to volttron bus
         self.core.periodic(self._period_read_data, self.publishTed, wait=None)
         
-        #perodically process new pricing point
-        self.core.periodic(10, self.processNewPricePoint, wait=None)
+        #perodically process new pricing point that keeps trying to apply the new pp till success
+        self.core.periodic(self._period_process_pp, self.processNewPricePoint, wait=None)
         
-
         #subscribing to topic_price_point
         self.vip.pubsub.subscribe("pubsub", self.topic_price_point, self.onNewPrice)
-
+        
         self.vip.rpc.call(MASTER_WEB, 'register_agent_route',
                       r'^/SmartStrip',
                       "rpc_from_net").get(timeout=10)
+                      
+        self.switchLedDebug(LED_ON)
         return
 
     @Core.receiver('onstop')
@@ -172,10 +182,11 @@ class SmartStrip(Agent):
         return
 
     def _configGetInitValues(self):
+        self._period_read_data = self.config('period_read_data', 30)
+        self._period_process_pp = self.config.get('period_process_pp', 10)
+        self._price_point_previous = self.config.get('default_base_price', 0.2)
+        self._price_point_current = self.config.get('price_point_latest', 0.2)
         self._tag_ids = self.config['tag_ids']
-        self._period_read_data = self.config['period_read_data']
-        self._price_point_previous = self.config['default_base_price']
-        self._price_point_current = self.config['default_base_price']
         self._plug_pricepoint_th = self.config['plug_pricepoint_th']
         self._sh_plug_id = self.config.get('smarthub_plug', 4) - 1
         return
@@ -466,43 +477,52 @@ class SmartStrip(Agent):
                 self._plugConnected[plugID] = 0
                 self.switchRelay(plugID, RELAY_OFF, SCHEDULE_AVLB)
         return
-
+        
     def onNewPrice(self, peer, sender, bus,  topic, headers, message):
         if sender == 'pubsub.compat':
             message = compat.unpack_legacy_message(headers, message)
-
+            
         new_price_point = message[0]
-        #_log.info ( "*** New Price Point: {0:.2f} ***".format(new_price_point))
-
-        self._price_point_new = new_price_point
+        _log.info ( "*** New Price Point: {0:.2f} ***".format(new_price_point))
         
-        if not isclose(self._price_point_current, new_price_point, EPSILON):
-        #if True:
-            self.processNewPricePoint()
+        if isclose(self._price_point_current, new_price_point, EPSILON):
+            _log.debug('no change in price, do nothing')
+            return
+            
+        self._price_point_new = new_price_point
+        self.processNewPricePoint()
         return
         
+    #this is a perodic function that keeps trying to apply the new pp till success
     def processNewPricePoint(self):
-        if not isclose(self._price_point_current, self._price_point_new, EPSILON):
-            _log.info ( "*** New Price Point: {0:.2f} ***".format(self._price_point_new))
-            result = {}
-            #get schedule for testing relays
-            task_id = str(randint(0, 99999999))
-            #_log.debug("task_id: " + task_id)
-            result = get_task_schdl(self, task_id,'iiit/cbs/smartstrip')
+        if isclose(self._price_point_current, self._price_point_new, EPSILON):
+            return
             
-            if result['result'] == 'SUCCESS':
-                self._price_point_previous = self._price_point_current
-                self._price_point_current = self._price_point_new
-
-                self.applyPricingPolicy(PLUG_ID_1, SCHEDULE_AVLB)
-                self.applyPricingPolicy(PLUG_ID_2, SCHEDULE_AVLB)
-                self.applyPricingPolicy(PLUG_ID_3, SCHEDULE_AVLB)
-                self.applyPricingPolicy(PLUG_ID_4, SCHEDULE_AVLB)
-            else :
-                _log.error("unable to processNewPricePoint()")
-                
-            #cancel the schedule
-            cancel_task_schdl(self, task_id)
+        self._pp_failed = False     #any process that failed to apply pp need to set this flag True
+        #get schedule for testing relays
+        task_id = str(randint(0, 99999999))
+        #_log.debug("task_id: " + task_id)
+        result = get_task_schdl(self, task_id,'iiit/cbs/smartstrip')
+        if result['result'] != 'SUCCESS':
+            self._pp_failed = True 
+        
+        if self._pp_failed:
+            _log.error("unable to processNewPricePoint(), will try again in " + self._period_process_pp)
+            return
+        self._price_point_previous = self._price_point_current
+        self.applyPricingPolicy(PLUG_ID_1, SCHEDULE_AVLB)
+        self.applyPricingPolicy(PLUG_ID_2, SCHEDULE_AVLB)
+        self.applyPricingPolicy(PLUG_ID_3, SCHEDULE_AVLB)
+        self.applyPricingPolicy(PLUG_ID_4, SCHEDULE_AVLB)
+        #cancel the schedule
+        cancel_task_schdl(self, task_id)
+        
+        if self._pp_failed:
+            _log.error("unable to processNewPricePoint(), will try again in " + self._period_process_pp)
+            return
+        _log.info("*** New Price Point processed.")
+        self._price_point_current = self._price_point_new
+        
         return
 
     def applyPricingPolicy(self, plugID, schdExist):

@@ -4,6 +4,7 @@
     "message": "iSPACE - BuildingController Agent",
     "deviceId": "BuildingController-11",
     "period_read_data": 30,
+    "period_process_pp": 10,
     "topic_root": "building",
     "topic_price_point": "building/pricepoint",
     "topic_energy_demand": "building/energydemand",

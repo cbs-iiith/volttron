@@ -4,6 +4,7 @@
     "message": "iSPACE - ZoneController Agent",
     "deviceId": "ZoneController-52",
     "period_read_data": 30,
+    "period_process_pp": 10,
     "topic_root": "zone",
     "topic_price_point": "zone/pricepoint",
     "topic_energy_demand": "zone/energydemand",
