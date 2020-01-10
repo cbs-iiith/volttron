@@ -40,18 +40,21 @@ import struct
 import gevent
 import gevent.event
 
-utils.setup_logging()
-_log = logging.getLogger(__name__)
-__version__ = '0.2'
+from ispace_utils import publish_to_bus, get_task_schdl, cancel_task_schdl, isclose
+
+#checking if a floating point value is “numerically zero” by checking if it is lower than epsilon
+EPSILON = 1e-03
 
 SCHEDULE_AVLB = 1
 SCHEDULE_NOT_AVLB = 0
 
 E_UNKNOWN_CCE = -4
 E_UNKNOWN_TSP = -5
+E_UNKNOWN_BPP = -7
 
-#checking if a floating point value is “numerically zero” by checking if it is lower than epsilon
-EPSILON = 1e-03
+utils.setup_logging()
+_log = logging.getLogger(__name__)
+__version__ = '0.2'
 
 def DatetimeFromValue(ts):
     ''' Utility for dealing with time
@@ -101,10 +104,13 @@ class BuildingController(Agent):
         time.sleep(30) #yeild for a movement
         _log.info("Starting BuildingController...")
         
-        self._runTest()
+        self._runBMSTest()
         
         #perodically publish total energy demand to volttron bus
         self.core.periodic(self._period_read_data, self.publishTed, wait=None)
+        
+        #perodically process new pricing point
+        self.core.periodic(10, self.processNewPricePoint, wait=None)
         
         #subscribing to topic_price_point
         self.vip.pubsub.subscribe("pubsub", self.topic_price_point, self.onNewPrice)
@@ -147,9 +153,20 @@ class BuildingController(Agent):
         return
 
 
-    def _runTest(self):
-        _log.debug("Running : Test()...")
-        
+    def _runBMSTest(self):
+        _log.debug("Running : _runBMS Commu Test()...")
+        _log.debug('change pp .10')
+        self.publishPriceToBMS(0.10)
+        time.sleep(10)
+
+        _log.debug('change pp .75')
+        self.publishPriceToBMS(0.75)
+        time.sleep(10)
+
+        _log.debug('change pp .25')
+        self.publishPriceToBMS(0.25)
+        time.sleep(10)
+
         _log.debug("EOF Testing")
         return
         
@@ -158,21 +175,22 @@ class BuildingController(Agent):
             message = compat.unpack_legacy_message(headers, message)
 
         new_price_point = message[0]
-        _log.info ( "*** New Price Point: {0:.2f} ***".format(new_price_point))
-        
-        if self._isclose(self._price_point_current, new_price_point, EPSILON):
-            _log.debug('no change in price, do nothing')
-            return
-            
+        #_log.info ( "*** New Price Point: {0:.2f} ***".format(new_price_point))
+
         self._price_point_new = new_price_point
-        self.processNewPricePoint()
+        
+        if self._price_point_current != new_price_point:
+        #if True:
+            self.processNewPricePoint()
         return
         
     def processNewPricePoint(self):
-        #_log.info ( "*** New Price Point: {0:.2f} ***".format(self._price_point_new))
-        self._price_point_previous = self._price_point_current
-        self._price_point_current = self._price_point_new
-        self.applyPricingPolicy()
+        if self._price_point_current != self._price_point_new:
+            _log.info ( "*** New Price Point: {0:.2f} ***".format(self._price_point_new))
+            self._price_point_previous = self._price_point_current
+            self._price_point_current = self._price_point_new
+            self.publishPriceToBMS(self._price_point_current)
+            self.applyPricingPolicy()
         return
 
     def applyPricingPolicy(self):
@@ -180,6 +198,67 @@ class BuildingController(Agent):
         #control the energy demand of devices at building level accordingly
         return
         
+    # change rc surface temperature set point
+    def publishPriceToBMS(self, pp):
+        _log.debug('publishPriceToBMS()')
+        task_id = str(randint(0, 99999999))
+        result = get_task_schdl(self, task_id,'iiit/cbs/buildingcontroller')
+        if result['result'] == 'SUCCESS':
+            try:
+                result = self.vip.rpc.call(
+                    'platform.actuator', 
+                    'set_point',
+                    self._agent_id, 
+                    'iiit/cbs/buildingcontroller/Building_PricePoint',
+                    pp).get(timeout=10)
+                self.updateBuildingPP(pp)
+            except gevent.Timeout:
+                _log.exception("Expection: gevent.Timeout in publishPriceToBMS()")
+            except Exception as e:
+                _log.exception ("Expection: changing device level")
+                print(e)
+            finally:
+                #cancel the schedule
+                cancel_task_schdl(self, task_id)
+        else:
+            _log.debug('schedule NOT available')
+        return
+
+    def updateBuildingPP(self, pp):
+        #_log.debug('updateRmTsp()')
+        _log.debug('building_pp {0:0.2f}'.format( pp))
+        
+        building_pp = self.rpc_getBuildingPP()
+        
+        #check if the pp really updated at the bms, only then proceed with new pp
+        if isclose(pp, building_pp, EPSILON):
+            self.publishBuildingPP(pp)
+            
+        _log.debug('Current Building PP: ' + "{0:0.2f}".format( pp))
+        return
+
+    def publishBuildingPP(self, pp):
+        #_log.debug('publishBuildingPP()')
+        pubTopic = self.root_topic+"/Building_PricePoint"
+        pubMsg = [pp, {'units': 'cents', 'tz': 'UTC', 'type': 'float'}]
+        publish_to_bus(self, pubTopic, pubMsg)
+        return
+
+    def rpc_getBuildingPP(self):
+        try:
+            pp = self.vip.rpc.call(
+                    'platform.actuator','get_point',
+                    'iiit/cbs/buildingcontroller/Building_PricePoint').get(timeout=10)
+            return pp
+        except gevent.Timeout:
+            _log.exception("Expection: gevent.Timeout in rpc_getBuildingPP()")
+            return E_UNKNOWN_BPP
+        except Exception as e:
+            _log.exception ("Expection: Could not contact actuator. Is it running?")
+            print(e)
+            return E_UNKNOWN_BPP
+        return E_UNKNOWN_BPP
+
     def rpc_getBuildingLevelEnergy(self):
         #compute the energy of the other devices which are at building level
         return 0
@@ -199,60 +278,8 @@ class BuildingController(Agent):
         _log.info( "*** New TED: {0:.2f}, publishing to bus ***".format(ted))
         pubTopic = self.energyDemand_topic
         _log.debug("TED pubTopic: " + pubTopic)
-        pubMsg = [ted,
-                    {'units': 'W', 'tz': 'UTC', 'type': 'float'}]
-        self.publishToBus(pubTopic, pubMsg)
-        return
-        
-    def publishToBus(self, pubTopic, pubMsg):
-        #_log.debug('_publishToBus()')
-        now = datetime.datetime.utcnow().isoformat(' ') + 'Z'
-        headers = {headers_mod.DATE: now}
-
-        #Publish messages
-        try:
-            self.vip.pubsub.publish('pubsub', pubTopic, headers, pubMsg).get(timeout=10)
-        except gevent.Timeout:
-            _log.warning("Expection: gevent.Timeout in _publishToBus()")
-        except Exception as e:
-            _log.warning("Expection: _publishToBus?")
-            print(e)
-        return
-
-    def _getTaskSchedule(self, task_id, time_ms=None):
-        #_log.debug("_getTaskSchedule()")
-        self.time_ms = 600 if time_ms is None else time_ms
-        try:
-            result = {}
-            start = str(datetime.datetime.now())
-            end = str(datetime.datetime.now() 
-                    + datetime.timedelta(milliseconds=self.time_ms))
-
-            device = 'iiit/cbs/buildingcontroller'
-            msg = [
-                    [device,start,end]
-                    ]
-            result = self.vip.rpc.call(
-                    'platform.actuator', 
-                    'request_new_schedule',
-                    self._agent_id,                 #requested id
-                    task_id,
-                    'HIGH',
-                    msg).get(timeout=10)
-        except gevent.Timeout:
-            _log.exception("Expection: gevent.Timeout in _getTaskSchedule()")
-        except Exception as e:
-            _log.exception ("Could not contact actuator. Is it running?")
-            print(e)
-            print result
-        return result
-
-    def _cancelSchedule(self, task_id):
-        #_log.debug('_cancelSchedule')
-        result = self.vip.rpc.call('platform.actuator', 'request_cancel_schedule', \
-                                    self._agent_id, task_id).get(timeout=10)
-        #_log.debug("task_id: " + task_id)
-        #_log.debug(result)
+        pubMsg = [ted, {'units': 'W', 'tz': 'UTC', 'type': 'float'}]
+        publish_to_bus(self, pubTopic, pubMsg)
         return
         
     def onDsEd(self, peer, sender, bus,  topic, headers, message):
@@ -273,10 +300,8 @@ class BuildingController(Agent):
             self._ds_ed.insert(idx, 0.0)
         return self._ds_deviceId.index(deviceID)
 
-    #refer to http://stackoverflow.com/questions/5595425/what-is-the-best-way-to-compare-floats-for-almost-equality-in-python
-    #comparing floats is mess
-    def _isclose(self, a, b, rel_tol=1e-09, abs_tol=0.0):
-        return abs(a-b) <= max(rel_tol * max(abs(a), abs(b)), abs_tol)
+
+
 
 def main(argv=sys.argv):
     '''Main method called by the eggsecutable.'''

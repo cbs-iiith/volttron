@@ -40,6 +40,11 @@ import struct
 import gevent
 import gevent.event
 
+from ispace_utils import mround, publish_to_bus, get_task_schdl, cancel_task_schdl, isclose
+
+#checking if a floating point value is “numerically zero” by checking if it is lower than epsilon
+EPSILON = 1e-03
+
 utils.setup_logging()
 _log = logging.getLogger(__name__)
 __version__ = '0.2'
@@ -50,9 +55,7 @@ SCHEDULE_NOT_AVLB = 0
 E_UNKNOWN_CCE = -4
 E_UNKNOWN_TSP = -5
 E_UNKNOWN_LSP = -6
-
-#checking if a floating point value is “numerically zero” by checking if it is lower than epsilon
-EPSILON = 1e-03
+E_UNKNOWN_CLE = -9
 
 def DatetimeFromValue(ts):
     ''' Utility for dealing with time
@@ -89,6 +92,7 @@ class ZoneController(Agent):
         self.config = utils.load_config(config_path)
         self._configGetPoints()
         self._configGetInitValues()
+        self._configGetPriceFucntions()
         return
 
     @Core.receiver('onsetup')
@@ -150,8 +154,15 @@ class ZoneController(Agent):
         self.energyDemand_topic_ds  = self.config.get('topic_energy_demand_ds', \
                                             'ds/energydemand')
         return
-
-
+        
+    def _configGetPriceFucntions(self):
+        _log.debug("_configGetPriceFucntions()")
+        
+        self.pf_zn_ac  = self.config.get('pf_zn_ac')
+        self.pf_zn_light  = self.config.get('pf_zn_light')
+        
+        return
+        
     def _runBMSTest(self):
         _log.debug("Running : _runBMS Commu Test()...")
         
@@ -171,6 +182,18 @@ class ZoneController(Agent):
         self.setRmTsp(29.0)
         time.sleep(10)
         
+        _log.debug('change lsp 25')
+        self.setRmLsp(25.0)
+        time.sleep(10)
+        
+        _log.debug('change lsp 75')
+        self.setRmLsp(75.0)
+        time.sleep(10)
+        
+        _log.debug('change lsp 100')
+        self.setRmLsp(100.0)
+        time.sleep(10)
+
         _log.debug("EOF Testing")
         return
         
@@ -181,7 +204,7 @@ class ZoneController(Agent):
         new_price_point = message[0]
         _log.info ( "*** New Price Point: {0:.2f} ***".format(new_price_point))
         
-        if self._isclose(self._price_point_current, new_price_point, EPSILON):
+        if isclose(self._price_point_current, new_price_point, EPSILON):
             _log.debug('no change in price, do nothing')
             return
         
@@ -190,77 +213,70 @@ class ZoneController(Agent):
         return
         
     def processNewPricePoint(self):
+        if isclose(self._price_point_current, self._price_point_new, EPSILON):
+            return
+            
         #_log.info ( "*** New Price Point: {0:.2f} ***".format(self._price_point_new))
         self._price_point_previous = self._price_point_current
-        self._price_point_current = self._price_point_new
         self.applyPricingPolicy()
+        self._price_point_current = self._price_point_new
         return
 
     def applyPricingPolicy(self):
         _log.debug("applyPricingPolicy()")
         
         #apply for ambient ac
-        tsp = self.getNewTsp(self._price_point_current)
-        _log.debug('New Setpoint: {0:0.1f}'.format( tsp))
+        tsp = self.getNewTsp(self._price_point_new)
+        _log.debug('New Ambient AC Setpoint: {0:0.1f}'.format( tsp))
         self.setRmTsp(tsp)
         
         #apply for ambient lightinh
-        lsp = self.getNewLsp(self._price_point_current)
-        _log.debug('New Setpoint: {0:0.1f}'.format( lsp))
+        lsp = self.getNewLsp(self._price_point_new)
+        _log.debug('New Ambient Lighting Setpoint: {0:0.1f}'.format( lsp))
         self.setRmLsp(lsp)
         
         return
-    
-    #compute new TSP
-    def getNewTsp(self, pp):
-        if pp >= 0.9 :
-            tsp = 30.0
-        elif pp >= 0.8 :
-            tsp = 29.0
-        elif pp >= 0.7 :
-            tsp = 28.0
-        elif pp >= 0.6 :
-            tsp = 27.0
-        elif pp >= 0.5 :
-            tsp = 26.0
-        elif pp >= 0.4 :
-            tsp = 25.0
-        elif pp >= 0.3 :
-            tsp = 24.0
-        elif pp >= 0.2 :
-            tsp = 23.0
-        else :
-            tsp = 22.0
-        return tsp
         
-    #compute new LSP
+    #compute new zone temperature setpoint from price functions
+    def getNewTsp(self, pp):
+        pp = 0 if pp < 0 else 1 if pp > 1 else pp
+        
+        pf_idx = self.pf_zn_ac['pf_idx']
+        pf_roundup = self.pf_zn_ac['pf_roundup']
+        pf_coefficients = self.pf_zn_ac['pf_coefficients']
+        
+        a = pf_coefficients[pf_idx]['a']
+        b = pf_coefficients[pf_idx]['b']
+        c = pf_coefficients[pf_idx]['c']
+        
+        tsp = a*pp**2 + b*pp + c
+        return mround(tsp, pf_roundup)
+        
+    #compute new zone lighting setpoint from price functions
     def getNewLsp(self, pp):
-        if pp >= 0.9 :
-            lsp = 00.0
-        elif pp >= 0.8 :
-            lsp = 15.0
-        elif pp >= 0.7 :
-            lsp = 30.0
-        elif pp >= 0.6 :
-            lsp = 45.0
-        elif pp >= 0.5 :
-            lsp = 60.0
-        elif pp >= 0.4 :
-            lsp = 75.0
-        else :
-            lsp = 100.0
-        return lsp
+        pp = 0 if pp < 0 else 1 if pp > 1 else pp
+        
+        pf_idx = self.pf_zn_light['pf_idx']
+        pf_roundup = self.pf_zn_light['pf_roundup']
+        pf_coefficients = self.pf_zn_light['pf_coefficients']
+        
+        a = pf_coefficients[pf_idx]['a']
+        b = pf_coefficients[pf_idx]['b']
+        c = pf_coefficients[pf_idx]['c']
+        
+        lsp = a*pp**2 + b*pp + c
+        return mround(lsp, pf_roundup)
         
     # change ambient temperature set point
     def setRmTsp(self, tsp):
         #_log.debug('setRmTsp()')
         
-        if self._isclose(tsp, self._rmTsp, EPSILON):
+        if isclose(tsp, self._rmTsp, EPSILON):
             _log.debug('same tsp, do nothing')
             return
             
         task_id = str(randint(0, 99999999))
-        result = self._getTaskSchedule(task_id)
+        result = get_task_schdl(self, task_id,'iiit/cbs/zonecontroller')
         if result['result'] == 'SUCCESS':
             result = {}
             try:
@@ -278,7 +294,7 @@ class ZoneController(Agent):
                 print(e)
             finally:
                 #cancel the schedule
-                self._cancelSchedule(task_id)
+                cancel_task_schdl(self, task_id)
         else:
             _log.debug('schedule NOT available')
         return
@@ -287,12 +303,12 @@ class ZoneController(Agent):
     def setRmLsp(self, lsp):
         #_log.debug('setRmLsp()')
         
-        if self._isclose(lsp, self._rmLsp, EPSILON):
+        if isclose(lsp, self._rmLsp, EPSILON):
             _log.debug('same lsp, do nothing')
             return
             
         task_id = str(randint(0, 99999999))
-        result = self._getTaskSchedule(task_id)
+        result = get_task_schdl(self, task_id,'iiit/cbs/zonecontroller')
         if result['result'] == 'SUCCESS':
             result = {}
             try:
@@ -310,7 +326,7 @@ class ZoneController(Agent):
                 print(e)
             finally:
                 #cancel the schedule
-                self._cancelSchedule(task_id)
+                cancel_task_schdl(self, task_id)
         else:
             _log.debug('schedule NOT available')
         return
@@ -321,8 +337,8 @@ class ZoneController(Agent):
         
         rm_tsp = self.rpc_getRmTsp()
         
-        #check if the tsp really updated at the h/w, only then proceed with new tsp
-        if self._isclose(tsp, rm_tsp, EPSILON):
+        #check if the tsp really updated at the bms, only then proceed with new tsp
+        if isclose(tsp, rm_tsp, EPSILON):
             self._rmTsp = tsp
             self.publishRmTsp(tsp)
             
@@ -335,27 +351,40 @@ class ZoneController(Agent):
         
         rm_lsp = self.rpc_getRmLsp()
         
-        #check if the lsp really updated at the h/w, only then proceed with new lsp
-        if self._isclose(lsp, rm_lsp, EPSILON):
+        #check if the lsp really updated at the bms, only then proceed with new lsp
+        if isclose(lsp, rm_lsp, EPSILON):
             self._rmLsp = lsp
             self.publishRmLsp(lsp)
             
         _log.debug('Current LSP: ' + "{0:0.1f}".format( rm_lsp))
         return
-
-    #For given light setpoint(lsp), returns the lighting power in watts
-    #refer to excel sheet "Philips CFL Power Chart.xlsx"
-    def _get_rm_light_power(self, lsp):
-        if lsp < 0:
-            return 65
-        elif lsp > 10:
-            return 145
-        else
-            return ((8 * lsp) + 65)
-    
+        
+    def rpc_getRmCalcLightEnergy(self):
+        task_id = str(randint(0, 99999999))
+        result = get_task_schdl(self, task_id,'iiit/cbs/zonecontroller')
+        if result['result'] == 'SUCCESS':
+            try:
+                lightEnergy = self.vip.rpc.call(
+                        'platform.actuator','get_point',
+                        'iiit/cbs/zonecontroller/RM_LIGHT_CALC_PWR').get(timeout=10)
+                return lightEnergy
+            except gevent.Timeout:
+                _log.exception("Expection: gevent.Timeout in rpc_getRmCalcLightEnergy()")
+                return E_UNKNOWN_CLE
+            except Exception as e:
+                _log.exception ("Expection: Could not contact actuator. Is it running?")
+                print(e)
+                return E_UNKNOWN_CLE
+            finally:
+                #cancel the schedule
+                cancel_task_schdl(self, task_id)
+        else:
+            _log.debug('schedule NOT available')
+        return E_UNKNOWN_CLE
+        
     def rpc_getRmCalcCoolingEnergy(self):
         task_id = str(randint(0, 99999999))
-        result = self._getTaskSchedule(task_id)
+        result = get_task_schdl(self, task_id,'iiit/cbs/zonecontroller')
         if result['result'] == 'SUCCESS':
             try:
                 coolingEnergy = self.vip.rpc.call(
@@ -371,11 +400,11 @@ class ZoneController(Agent):
                 return E_UNKNOWN_CCE
             finally:
                 #cancel the schedule
-                self._cancelSchedule(task_id)
+                cancel_task_schdl(self, task_id)
         else:
             _log.debug('schedule NOT available')
         return E_UNKNOWN_CCE
-
+        
     def rpc_getRmTsp(self):
         try:
             rm_tsp = self.vip.rpc.call(
@@ -409,22 +438,24 @@ class ZoneController(Agent):
     def publishRmTsp(self, tsp):
         #_log.debug('publishRmTsp()')
         pubTopic = self.root_topic+"/rm_tsp"
-        pubMsg = [tsp,{'units': 'celcius', 'tz': 'UTC', 'type': 'float'}]
-        self.publishToBus(pubTopic, pubMsg)
+        pubMsg = [tsp, {'units': 'celcius', 'tz': 'UTC', 'type': 'float'}]
+        publish_to_bus(self, pubTopic, pubMsg)
         return
         
     def publishRmLsp(self, lsp):
         #_log.debug('publishRmLsp()')
         pubTopic = self.root_topic+"/rm_lsp"
-        pubMsg = [tsp,{'units': '%', 'tz': 'UTC', 'type': 'float'}]
-        self.publishToBus(pubTopic, pubMsg)
+        pubMsg = [lsp, {'units': '%', 'tz': 'UTC', 'type': 'float'}]
+        publish_to_bus(self, pubTopic, pubMsg)
         return
 
     def _calculateTed(self):
         #_log.debug('_calculateTed()')
         
         #zone lighting + ac
-        ted = self.rpc_getRmCalcCoolingEnergy() + self._get_rm_light_power()
+        cce = self.rpc_getRmCalcCoolingEnergy()
+        cle = self.rpc_getRmCalcLightEnergy() 
+        ted = (0 if cce==E_UNKNOWN_CCE else cce) + (0 if cle==E_UNKNOWN_CLE else cle)
         
         #ted from ds devices associated with the zone
         for ed in self._ds_ed:
@@ -433,14 +464,13 @@ class ZoneController(Agent):
         return ted
 
     def publishTed(self):
-        ted = self._calculateTed()
-        self._ted = ted
-        _log.info( "*** New TED: {0:.2f}, publishing to bus ***".format(ted))
+        #_log.debug('publishTed()')
+        self._ted = self._calculateTed()
+        _log.info( "*** New TED: {0:.2f}, publishing to bus ***".format(self._ted))
         pubTopic = self.energyDemand_topic
-        _log.debug("TED pubTopic: " + pubTopic)
-        pubMsg = [ted,
-                    {'units': 'W', 'tz': 'UTC', 'type': 'float'}]
-        self.publishToBus(pubTopic, pubMsg)
+        #_log.debug("TED pubTopic: " + pubTopic)
+        pubMsg = [self._ted, {'units': 'W', 'tz': 'UTC', 'type': 'float'}]
+        publish_to_bus(self, pubTopic, pubMsg)
         return
         
     def _calculatePredictedTed(self):
@@ -448,76 +478,25 @@ class ZoneController(Agent):
         #TODO: Sam
         #get actual tsp from device
         tsp = self._rmTsp
-        if self._isclose(tsp, 22.0, EPSILON):
+        if isclose(tsp, 22.0, EPSILON):
             ted = 6500
-        elif self._isclose(tsp, 23.0, EPSILON):
+        elif isclose(tsp, 23.0, EPSILON):
             ted = 6000
-        elif self._isclose(tsp, 24.0, EPSILON):
+        elif isclose(tsp, 24.0, EPSILON):
             ted = 5500
-        elif self._isclose(tsp, 25.0, EPSILON):
+        elif isclose(tsp, 25.0, EPSILON):
             ted = 5000
-        elif self._isclose(tsp, 26.0, EPSILON):
+        elif isclose(tsp, 26.0, EPSILON):
             ted = 4500
-        elif self._isclose(tsp, 27.0, EPSILON):
+        elif isclose(tsp, 27.0, EPSILON):
             ted = 4000
-        elif self._isclose(tsp, 28.0, EPSILON):
+        elif isclose(tsp, 28.0, EPSILON):
             ted = 2000
-        elif self._isclose(tsp, 29.0, EPSILON):
+        elif isclose(tsp, 29.0, EPSILON):
             ted = 1000
         else :
             ted = 500
         return ted
-
-    def publishToBus(self, pubTopic, pubMsg):
-        #_log.debug('_publishToBus()')
-        now = datetime.datetime.utcnow().isoformat(' ') + 'Z'
-        headers = {headers_mod.DATE: now}
-
-        #Publish messages
-        try:
-            self.vip.pubsub.publish('pubsub', pubTopic, headers, pubMsg).get(timeout=10)
-        except gevent.Timeout:
-            _log.warning("Expection: gevent.Timeout in _publishToBus()")
-        except Exception as e:
-            _log.warning("Expection: _publishToBus?")
-            print(e)
-        return
-
-    def _getTaskSchedule(self, task_id, time_ms=None):
-        #_log.debug("_getTaskSchedule()")
-        self.time_ms = 600 if time_ms is None else time_ms
-        try:
-            result = {}
-            start = str(datetime.datetime.now())
-            end = str(datetime.datetime.now() 
-                    + datetime.timedelta(milliseconds=self.time_ms))
-
-            device = 'iiit/cbs/zonecontroller'
-            msg = [
-                    [device,start,end]
-                    ]
-            result = self.vip.rpc.call(
-                    'platform.actuator', 
-                    'request_new_schedule',
-                    self._agent_id,                 #requested id
-                    task_id,
-                    'HIGH',
-                    msg).get(timeout=10)
-        except gevent.Timeout:
-            _log.exception("Expection: gevent.Timeout in _getTaskSchedule()")
-        except Exception as e:
-            _log.exception ("Could not contact actuator. Is it running?")
-            print(e)
-            print result
-        return result
-
-    def _cancelSchedule(self, task_id):
-        #_log.debug('_cancelSchedule')
-        result = self.vip.rpc.call('platform.actuator', 'request_cancel_schedule', \
-                                    self._agent_id, task_id).get(timeout=10)
-        #_log.debug("task_id: " + task_id)
-        #_log.debug(result)
-        return
         
     def onDsEd(self, peer, sender, bus,  topic, headers, message):
         if sender == 'pubsub.compat':
@@ -536,11 +515,6 @@ class ZoneController(Agent):
             idx = self._ds_deviceId.index(deviceID)
             self._ds_ed.insert(idx, 0.0)
         return self._ds_deviceId.index(deviceID)
-
-    #refer to http://stackoverflow.com/questions/5595425/what-is-the-best-way-to-compare-floats-for-almost-equality-in-python
-    #comparing floats is mess
-    def _isclose(self, a, b, rel_tol=1e-09, abs_tol=0.0):
-        return abs(a-b) <= max(rel_tol * max(abs(a), abs(b)), abs_tol)
 
 def main(argv=sys.argv):
     '''Main method called by the eggsecutable.'''

@@ -38,12 +38,11 @@ import settings
 
 import time
 
+from ispace_utils import publish_to_bus
+
 utils.setup_logging()
 _log = logging.getLogger(__name__)
 __version__ = '0.2'
-
-#checking if a floating point value is “numerically zero” by checking if it is lower than epsilon
-EPSILON = 1e-03
 
 def DatetimeFromValue(ts):
     ''' Utility for dealing with time
@@ -78,7 +77,6 @@ class PricePoint(Agent):
 
     @Core.receiver('onstart')            
     def startup(self, sender, **kwargs):
-        #self.core.periodic(self.period_read_price_point, self.update_price_point, wait=None)
         self.vip.rpc.call(MASTER_WEB, 'register_agent_route',
                       r'^/PricePoint',
                       "rpc_from_net").get(timeout=10)    
@@ -107,16 +105,6 @@ class PricePoint(Agent):
         self.topic_price_point      = self.config.get('topic_price_point', 'zone/pricepoint')
         return
 
-    def update_price_point(self):
-        '''
-        read the new price and publish it to the bus
-        '''
-        #_log.debug('update_price_point()')
-        #self.fake_price_points()
-        #self.price_from_net()
-        self.price_from_smartstrip_bacnet()
-        return
-
     def fake_price_points(self):
         #Make a random price point
         _log.debug('fake_price_points()')
@@ -129,11 +117,11 @@ class PricePoint(Agent):
         return self._processMessage(message)
 
     def _processMessage(self, message):
-        #_log.debug('processResponse()')
+        _log.debug('processResponse()')
         result = False
         try:
             rpcdata = jsonrpc.JsonRpcData.parse(message)
-            #_log.debug('rpc method: {}'.format(rpcdata.method))
+            _log.debug('rpc method: {}'.format(rpcdata.method))
             
             if rpcdata.method == "rpc_updatePricePoint":
                 args = {'newPricePoint': rpcdata.params['newPricePoint']}
@@ -157,82 +145,19 @@ class PricePoint(Agent):
 
     @RPC.export
     def updatePricePoint(self, newPricePoint):
-        _log.debug('received New Price Point: {0:.2f} !!!'.format(newPricePoint))
-        
-        if self._isclose(newPricePoint, self._price_point_previous, EPSILON) :
-            _log.debug('no change in price, do nothing')
+        #if newPricePoint != self._price_point_previous :
+        if True:
+            _log.debug('New Price Point: {0:.2f} !!!'.format(newPricePoint))
+            pubTopic = self.topic_price_point
+            pubMsg = [newPricePoint, {'units': 'cents', 'tz': 'UTC', 'type': 'float'}]
+            _log.debug('publishing to local bus topic: ' + pubTopic)
+            publish_to_bus(self, pubTopic, pubMsg)
+            self._price_point_previous = newPricePoint
+            return True
+        else :
+            _log.debug('No change in price')
             return False
-            
-        self.post_price(newPricePoint)
-        self._price_point_previous = newPricePoint
-        return True
 
-    def price_from_smartstrip_bacnet(self):
-        #_log.debug('price_from_smartstrip_bacnet()')
-        result = {}
-        task_id = str(randint(0, 99999999))
-
-        try: 
-            start = str(datetime.datetime.now())
-            end = str(datetime.datetime.now() 
-                    + datetime.timedelta(seconds=10))
-
-            msg = [
-                    ['iiit/cbs/smartstrip',start,end]
-                    ]
-            result = self.vip.rpc.call(
-                    'platform.actuator', 
-                    'request_new_schedule',
-                    self._agent_id, 
-                    task_id,
-                    'LOW',
-                    msg).get(timeout=10)
-        except gevent.Timeout:
-            _log.exception("Expection: gevent.Timeout in price_from_smartstrip_bacnet()")
-            return result
-        except Exception as e:
-            _log.exception ("Could not contact actuator. Is it running?")
-            #print(e)
-            return
-        if result['result'] == 'SUCCESS':
-            try:
-                new_price_reading = self.vip.rpc.call(
-                        'platform.actuator','get_point',
-                        'iiit/cbs/smartstrip/PricePoint').get(timeout=10)
-                #_log.debug('...time')
-                self.updatePricePoint(newPricePoint)
-                
-            except Exception as e:
-                _log.exception ("Exception: reading price point")
-                #print(e)
-                return
-            finally:
-                result = self.vip.rpc.call('platform.actuator', 'request_cancel_schedule', \
-                                self._agent_id, task_id).get(timeout=10)
-        return
-
-    def post_price(self, new_price):
-        #_log.debug('post_price()')
-        #Create messages for specific points
-        pricepoint_message = [new_price,{'units': 'F', 'tz': 'UTC', 'type': 'float'}]
-
-        #Create timestamp
-        #now = datetime.utcnow().isoformat(' ') + 'Z'
-        now = str(datetime.datetime.now())
-        headers = {
-                headers_mod.DATE: now
-                }
-
-        _log.info('Publishing new price point: {0:.2f}'.format(new_price))
-        #Publish messages            
-        self.vip.pubsub.publish(
-                'pubsub', self.topic_price_point, headers, pricepoint_message)
-        #_log.debug('after pub')
-        
-    #refer to http://stackoverflow.com/questions/5595425/what-is-the-best-way-to-compare-floats-for-almost-equality-in-python
-    #comparing floats is mess
-    def _isclose(self, a, b, rel_tol=1e-09, abs_tol=0.0):
-        return abs(a-b) <= max(rel_tol * max(abs(a), abs(b)), abs_tol)
 
 def main(argv=sys.argv):
     '''Main method called by the eggsecutable.'''
