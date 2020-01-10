@@ -29,7 +29,7 @@ from ispace_utils import publish_to_bus
 
 utils.setup_logging()
 _log = logging.getLogger(__name__)
-__version__ = '0.2'
+__version__ = '0.3'
 
 def buildinggc(config_path, **kwargs):
 

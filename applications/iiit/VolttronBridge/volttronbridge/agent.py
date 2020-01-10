@@ -39,7 +39,7 @@ from ispace_utils import publish_to_bus, isclose
 
 utils.setup_logging()
 _log = logging.getLogger(__name__)
-__version__ = '0.2'
+__version__ = '0.3'
 
 #checking if a floating point value is "numerically zero" by checking if it is lower than epsilon
 EPSILON = 1e-03

@@ -26,7 +26,7 @@ import json
 
 utils.setup_logging()
 _log = logging.getLogger(__name__)
-__version__ = '0.2'
+__version__ = '0.3'
 
 SH_DEVICE_LED_DEBUG = 0
 SH_DEVICE_LED = 1

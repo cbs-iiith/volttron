@@ -31,7 +31,7 @@ from ispace_utils import publish_to_bus
 
 utils.setup_logging()
 _log = logging.getLogger(__name__)
-__version__ = '0.2'
+__version__ = '0.3'
 
 def smartstripgc(config_path, **kwargs):
 

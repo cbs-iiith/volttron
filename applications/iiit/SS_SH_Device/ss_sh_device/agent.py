@@ -27,7 +27,7 @@ import gevent.event
 
 utils.setup_logging()
 _log = logging.getLogger(__name__)
-__version__ = '0.2'
+__version__ = '0.3'
 
 MAX_RETRIES = 5
 MAX_THPP = 1
