@@ -2,3 +2,4 @@ Point Name,Volttron Point Name,Units,Unit Details,BACnet Object Type,Property,Wr
 RM1_RC2_AUTO_CNTRL,RC_AUTO_CNTRL,Enum,0-1 (default 0),binaryOutput,presentValue,TRUE,4,"Room 1 - Radiant Cubicle 2 - Auto Control (0 - Off, 1- On)"
 RM1_RC2_SP,RC_TSP,celcius,(default 25),analogOutput,presentValue,TRUE,2,"Room 1 - Radiant Cubicle 2 - Surface Temperature Setpoint (20-30)"
 RM1_RC2_CCE,RC_CCE,Watts,,analogInput,presentValue,FALSE,7,"Room 1 - Radiant Cubicle 2 - Calculated Cooling Energy (Watts)"
+RM1_RC2_CCE_ELEC,RC_CCE_ELEC,Watts,,analogInput,presentValue,FALSE,23,"Room 1 - Radiant Cubicle 2 - Calculated Cooling Energy Electrical  (RM1_RC2_CCE / COP)"

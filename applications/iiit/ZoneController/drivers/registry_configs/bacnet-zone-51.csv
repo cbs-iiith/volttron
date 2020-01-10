@@ -1,3 +1,5 @@
 Point Name,Volttron Point Name,Units,Unit Details,BACnet Object Type,Property,Writable,Index,Notes
 RM1_TEMP_SP,RM_TSP,celcius,(default 25),analogOutput,presentValue,TRUE,8,"Room 1 - ambient SP (20-30 Celcius)"
 RM1_CCE,RM_CCE,Watts,,analogInput,presentValue,FALSE,4,"Room 1 - Calculated Cooling Energy"
+RM1_LIGHT_SP,RM_LSP,percent,(default 100),analogOutput,presentValue,TRUE,14,"Room 1 - ambient Light SP (0%-100%)"
+RM1_LIGHT_CALC_PWR,RM_LIGHT_CALC_PWR,Watts,,analogInput,presentValue,FALSE,11,"Room 1 - Calculated Light Power"

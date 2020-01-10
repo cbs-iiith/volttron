@@ -39,6 +39,8 @@ import gevent.event
 import requests
 import json
 
+from ispace_utils import publish_to_bus
+
 utils.setup_logging()
 _log = logging.getLogger(__name__)
 __version__ = '0.2'
@@ -410,7 +412,7 @@ def volttronbridge(config_path, **kwargs):
                 #post to bus
                 pubTopic =  pricePoint_topic_us
                 pubMsg = [newPricePoint,{'units': 'cents', 'tz': 'UTC', 'type': 'float'}]
-                self._publishToBus(pubTopic, pubMsg)
+                publish_to_bus(self, pubTopic, pubMsg)
                 return True
             else:
                 _log.debug('no change in price, do nothing')
@@ -424,29 +426,13 @@ def volttronbridge(config_path, **kwargs):
                 if self._ds_deviceId[index] == deviceId:
                     #post to bus
                     pubTopic = energyDemand_topic_ds + "/" + deviceId
-                    #'''
                     pubMsg = [newEnergyDemand,{'units': 'W', 'tz': 'UTC', 'type': 'float'}]
-                    self._publishToBus(pubTopic, pubMsg)
+                    publish_to_bus(self, pubTopic, pubMsg)
                     self._ds_retrycount[index] = 0
                     _log.debug("...Done!!!")
                     return True
             _log.debug("...Failed!!!")
             return False
-            
-        def _publishToBus(self, pubTopic, pubMsg):
-            #_log.debug('_publishToBus()')
-            now = datetime.datetime.utcnow().isoformat(' ') + 'Z'
-            headers = {headers_mod.DATE: now}
-            #Publish messages
-            try:
-                self.vip.pubsub.publish('pubsub', pubTopic, headers, pubMsg).get(timeout=10)
-            except gevent.Timeout:
-                _log.warning("Expection: gevent.Timeout in _publishToBus()")
-                return
-            except Exception as e:
-                _log.warning("Expection: _publishToBus?")
-                return
-            return
             
         def do_rpc(self, url_root, method, params=None ):
             #_log.debug('do_rpc()')
