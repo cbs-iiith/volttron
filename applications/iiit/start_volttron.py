@@ -14,6 +14,7 @@
 import subprocess
 import time
 import os
+import shutil
 
 logFile         = "/home/bsrc-sam/volttron/volttron.log"
 pathPython      = "/home/bsrc-sam/volttron/env/bin/python"
@@ -28,5 +29,6 @@ subprocess.Popen([pathPython, pathVolttron, "-vv", "-l", logFile])
 
 while True:
     if os.path.getsize(logFile) > MAX_LOG_SIZE:
+        shutil.move(logFile, logFile+'.bak')
         os.remove(logFile)
     time.sleep(30)

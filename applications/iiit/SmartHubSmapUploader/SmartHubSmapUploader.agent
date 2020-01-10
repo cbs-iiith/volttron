@@ -5,8 +5,8 @@
     "sh_id": "SmartHub-62",
     "sh_main_topic": "smarthub",
     "vb_main_topic": "us", 
-    "smap_root": "http://cbs.iiit.ac.in/smap/",
-    "api_key": "u606HlEFHTeVLfpBQZkNF232wChljnLHCKBY",
-    "source_data": "CBERD Flexlab Data V2",
+    "smap_root": "http://192.168.1.4:8000/",
+    "api_key": "HkZAJQNor9DM5LPFDhAwbrgL8Vg0jSut02Ka",
+    "source_data": "ispace",
     "time_zone": "Etc/UTC"
 }
