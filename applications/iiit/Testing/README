@@ -1,0 +1,5 @@
+
+cd applications/iiit/Testing
+sudo python Test_001_RandomPP/Test_001_RandomPP.py > log/Test_001_RandomPP.log 2>&1 &
+
+

@@ -6,5 +6,21 @@
     "topic_root": 'smarthub',
     "topic_price_point": "smarthub/pricepoint",
     "topic_energy_demand": "smarthub/energydemand",
-    "topic_energy_demand_ds": "ds/energydemand"
+    "topic_energy_demand_ds": "ds/energydemand",
+    
+    #price functions(pf), quadratic functions of the form f(x) = ax2 + bx + c, 
+    #             where a,b,c are coefficients of the quadratic function,
+    #                   f(x) --> setpoint,
+    #                   x --> price point,
+    #                   pf_roundup --> roundup, and 
+    #                   pf_idx --> default pf_coefficients
+    "pf_sh_fan": {
+        "pf_roundup":10,
+        "pf_idx":0,
+        "pf_coefficients": [
+            {"a": 70, "b": 5, "c": 20},
+            {"a": 60, "b": 10, "c": 30},
+            {"a": 35, "b": 29.75, "c": 40}
+        ]
+    }
 }

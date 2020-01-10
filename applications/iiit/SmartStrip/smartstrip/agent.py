@@ -775,12 +775,10 @@ class SmartStrip(Agent):
     #calculate the total energy demand (TED)
     def _calculateTed(self):
         #_log.debug('_calculateTed()')
-
         ted = SMARTSTRIP_BASE_ENERGY
         for idx, plugState in enumerate(self._plugRelayState):
             if plugState == RELAY_ON and idx != self._sh_plug_id:
                 ted = ted + self._plugActivePwr[idx]
-
         return ted
 
     def publishTed(self):
