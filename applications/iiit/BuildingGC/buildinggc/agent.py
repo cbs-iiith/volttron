@@ -101,7 +101,7 @@ def buildinggc(config_path, **kwargs):
             _log.debug('_computeNewPrice()')
             #TODO: implement the algorithm to compute the new price
             #      based on predicted demand, etc.
-            return new_pp, new_pp_id, new_pp_isoptimal
+            return (new_pp, new_pp_id, new_pp_isoptimal)
 
 
     Agent.__name__ = 'BuildingGC_Agent'
