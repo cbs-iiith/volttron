@@ -18,5 +18,6 @@
     "energyDemand_topic": "zone/energydemand",
     "energyDemand_topic_ds": "ds/energydemand",
     "pricePoint_topic_us": "us/pricepoint",
-    "pricePoint_topic": "zone/pricepoint"
+    "pricePoint_topic": "zone/pricepoint",
+    "period_process_pp": 10
 }
