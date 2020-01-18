@@ -101,13 +101,12 @@ def volttronbridge(config_path, **kwargs):
             self._deviceId    = config.get('deviceId', 'Building-1')
             
             #we want to post ds only if there is change in price point
-            self._pp_current        = 0
-            self._pp_previous       = 0
-            self._pp_id             = randint(0, 99999999)
-            self._pp_isoptimal      = False
+            self._pp_current            = 0
+            self._pp_new                = 0
+            self._pp_id                 = randint(0, 99999999)
+            self._pp_isoptimal          = False
+            self._all_ds_posts_success  = True
             
-            self._us_last_pp_previous   = 0
-            self._us_last_pp_current    = 0
 
             #we want to post to us only if there is change in energy demand
             self._ed_current    = 0
@@ -372,46 +371,56 @@ def volttronbridge(config_path, **kwargs):
                             self._pp_isoptimal == new_pp_isoptimal :
                 _log.debug('no change, do nothing')
                 return
-            self._pp_previous = self._pp_current
-            self._pp_current = newPricePoint
+            self._pp_current = self._pp_new
+            self._pp_new = newPricePoint
             self._pp_id = new_pp_id
             self._pp_isoptimal = new_pp_isoptimal
+            self._reset_ds_retrycount(self)
             self._postDsNewPricePoint()
+            return
+            
+        def _reset_ds_retrycount(self):
+            for discovery_address in self._ds_voltBr:
+                index = self._ds_voltBr.index(discovery_address)
+                self._ds_retrycount[index] = 0
             return
             
         #perodically keeps trying to post pp to ds
         def _postDsNewPricePoint(self):
             #we want to post to ds only if there is change in price point
-            if isclose(self._pp_current, self._pp_previous, EPSILON):
+            if isclose(self._pp_current, self._pp_new, EPSILON) and \
+                    self._all_ds_posts_success :
                 _log.debug('No change in price point, do nothing')
                 return
                 
-            all_ds_posts_success = True
+            self._all_ds_posts_success  = True
             for discovery_address in self._ds_voltBr:
                 index = self._ds_voltBr.index(discovery_address)
-                if self._ds_retrycount[index] < MAX_RETRIES:
-                    url_root = 'http://' + discovery_address + '/VolttronBridge'
-                    result = self.do_rpc(url_root, 'rpc_postPricePoint', \
-                                            {'discovery_address': self._discovery_address, \
-                                            'deviceId': self._deviceId, \
-                                            'newPricePoint': self._pp_current, \
-                                            'new_pp_id': self._pp_id, \
-                                            'new_pp_isoptimal': self._pp_isoptimal \
-                                            })
-                    if result:
-                        #success, reset retry count
-                        self._ds_retrycount[index] = MAX_RETRIES + 1    #no need to retry on the next run
-                        _log.debug("post to:" + discovery_address + " sucess!!!")
-                    else:
-                        #failed to post, increment retry count
-                        self._ds_retrycount[index] = self._ds_retrycount[index]  + 1
-                        _log.debug("post to:" + discovery_address + \
-                                    " failed, count: {0:d} !!!".format(self._ds_retrycount[index]))
-                        flag_all_ds_success = False
-                        
-            if all_ds_posts_success:
-                self._price_point_previous = self._price_point_current
                 
+                if self._ds_retrycount[index] > MAX_RETRIES:
+                    #maybe already posted or failed more than max retries, do nothing
+                    continue
+                    
+                url_root = 'http://' + discovery_address + '/VolttronBridge'
+                result = self.do_rpc(url_root, 'rpc_postPricePoint', \
+                                        {'discovery_address': self._discovery_address, \
+                                        'deviceId': self._deviceId, \
+                                        'newPricePoint': self._pp_current, \
+                                        'new_pp_id': self._pp_id, \
+                                        'new_pp_isoptimal': self._pp_isoptimal \
+                                        })
+                if result:
+                    #success, reset retry count
+                    self._ds_retrycount[index] = MAX_RETRIES + 1    #no need to retry on the next run
+                    _log.debug("post to:" + discovery_address + " sucess!!!")
+                    self._pp_current = self._pp_new                 #atleast one success, update pp
+                else:
+                    #failed to post, increment retry count
+                    self._ds_retrycount[index] = self._ds_retrycount[index]  + 1
+                    _log.debug("post to:" + discovery_address + \
+                                " failed, count: {0:d} !!!".format(self._ds_retrycount[index]))
+                    self._all_ds_posts_success  = False
+                        
             return
             
         def _postDsNewPricePoint(self, discovery_address, newPricePoint, new_pp_id, new_pp_isoptimal):
