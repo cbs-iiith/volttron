@@ -120,7 +120,7 @@ def volttronbridge(config_path, **kwargs):
             self._this_ip_addr    = config.get('ip_addr', "192.168.1.51")
             self._this_port       = int(config.get('port', 8082))
             
-            self._period_process_pp = self.config.get('period_process_pp', 10)
+            self._period_process_pp = int(config.get('period_process_pp', 10))
             
             if self._bridge_host != 'LEVEL_TAILEND':
                 _log.debug(self._bridge_host)
@@ -425,19 +425,6 @@ def volttronbridge(config_path, **kwargs):
                     self._all_ds_posts_success  = False
                         
             return
-            
-        def _postDsNewPricePoint(self, discovery_address, newPricePoint, new_pp_id, new_pp_isoptimal):
-            _log.debug('_postDsNewPricePoint() to : ' + discovery_address)
-            
-            url_root = 'http://' + discovery_address + '/VolttronBridge'
-            result = self.do_rpc(url_root, 'rpc_postPricePoint', \
-                                    {'discovery_address': self._discovery_address, \
-                                    'deviceId': self._deviceId, \
-                                    'newPricePoint': newPricePoint, \
-                                    'new_pp_id': new_pp_id, \
-                                    'new_pp_isoptimal': new_pp_isoptimal \
-                                    })
-            return result
             
         def _registerDsBridge(self, discovery_address, deviceId):
             _log.debug('_registerDsBridge(), discovery_address: ' + discovery_address + ' deviceId: ' + deviceId)
