@@ -42,7 +42,7 @@ def buildinggc(config_path, **kwargs):
         def __init__(self, **kwargs):
             _log.debug('__init__()')
             super(BuildingGC, self).__init__(**kwargs)
-            
+            return
 
         @Core.receiver('onsetup')
         def setup(self, sender, **kwargs):
@@ -85,7 +85,7 @@ def buildinggc(config_path, **kwargs):
                 return True
                 
             #TODO:
-            else if False:
+            elif False:
             #if self._current_gd_pp != gd_pp:
                 new_pp, new_pp_id, new_pp_isoptimal = self._computeNewPrice(new_pp, new_pp_id, new_pp_isoptimal)
                 pubTopic =  self.topic_price_point
@@ -96,17 +96,16 @@ def buildinggc(config_path, **kwargs):
             else :
                 _log.debug('No change in price')
                 return False
-
+                
         def _computeNewPrice(self, new_pp, new_pp_id, new_pp_isoptimal):
             _log.debug('_computeNewPrice()')
             #TODO: implement the algorithm to compute the new price
             #      based on predicted demand, etc.
-            return (new_pp, new_pp_id, new_pp_isoptimal)
-
-
+            return new_pp, new_pp_id, new_pp_isoptimal
+            
     Agent.__name__ = 'BuildingGC_Agent'
     return BuildingGC(**kwargs)
-
+    
 def main(argv=sys.argv):
     '''Main method called by the eggsecutable.'''
     try:
@@ -114,9 +113,10 @@ def main(argv=sys.argv):
     except Exception as e:
         print e
         _log.exception('unhandled exception')
-
+        
 if __name__ == '__main__':
     try:
         sys.exit(main(sys.argv))
     except KeyboardInterrupt:
         pass
+        
