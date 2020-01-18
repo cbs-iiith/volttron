@@ -54,6 +54,7 @@ def buildinggc(config_path, **kwargs):
             
             self.topic_price_point_us   = config.get('pricePoint_topic_us', 'us/pricepoint')
             self.topic_price_point      = config.get('pricePoint_topic', 'building/pricepoint')
+            self.agent_disabled         = False
             return
 
         @Core.receiver('onstart')            
@@ -65,14 +66,30 @@ def buildinggc(config_path, **kwargs):
 
         def onNewPrice(self, peer, sender, bus,  topic, headers, message):
             #new zone price point
-            gd_pp = message[0]
-            _log.debug ( "*** New Price Point: {0:.2f} ***".format(gd_pp))
+            new_pp              = message[0]
+            new_pp_id           = message[2] if message[2] is not None else randint(0, 99999999)
+            new_pp_isoptimal    = message[3] if message[3] is not None else False
+            _log.info ("*** New Price Point: {0:.2f} ***".format(new_pp))
+            _log.debug("*** new_pp_id: " + str(new_pp_id))
+            _log.debug("*** new_pp_isoptimal: " + str(new_pp_isoptimal))
             
-            if True:
-            #if self._current_gd_pp != gd_pp:
-                bd_pp = self._computeNewPrice(gd_pp)
+            if self.agent_disabled:
+                _log.info("self.agent_disabled: " + str(self.agent_disabled) + ", do nothing!!!")
+                return True
+                
+            if new_pp_isoptimal:
                 pubTopic =  self.topic_price_point
-                pubMsg = [bd_pp, {'units': 'cents', 'tz': 'UTC', 'type': 'float'}]
+                pubMsg = [new_pp, {'units': 'cents', 'tz': 'UTC', 'type': 'float'}, new_pp_id, new_pp_isoptimal]
+                _log.debug('publishing to local bus topic: ' + pubTopic)
+                publish_to_bus(self, pubTopic, pubMsg)
+                return True
+                
+            #TODO:
+            else if False:
+            #if self._current_gd_pp != gd_pp:
+                new_pp, pp_id, pp_isoptimal = self._computeNewPrice(new_pp, new_pp_id, new_pp_isoptimal)
+                pubTopic =  self.topic_price_point
+                pubMsg = [new_pp, {'units': 'cents', 'tz': 'UTC', 'type': 'float'}, new_pp_id, new_pp_isoptimal]
                 _log.debug('publishing to local bus topic: ' + pubTopic)
                 publish_to_bus(self, pubTopic, pubMsg)
                 return True
@@ -80,11 +97,11 @@ def buildinggc(config_path, **kwargs):
                 _log.debug('No change in price')
                 return False
 
-        def _computeNewPrice(self, new_price):
+        def _computeNewPrice(self, new_price, pp_id, pp_isoptimal):
             _log.debug('_computeNewPrice()')
             #TODO: implement the algorithm to compute the new price
             #      based on predicted demand, etc.
-            return new_price
+            return new_price, pp_id, pp_isoptimal
 
 
     Agent.__name__ = 'BuildingGC_Agent'

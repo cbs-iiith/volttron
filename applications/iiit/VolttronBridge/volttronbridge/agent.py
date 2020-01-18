@@ -255,12 +255,12 @@ def volttronbridge(config_path, **kwargs):
                     #post the new energy demand from ds to the local bus
                     result = self._postEnergyDemand(**args)    
                 elif rpcdata.method == "rpc_postPricePoint":
-                    args = {'discovery_address': rpcdata.params['discovery_address'],
-                            'deviceId':rpcdata.params['deviceId'],
-                            'newPricePoint': rpcdata.params['newPricePoint'],
+                    args = {'discovery_address': rpcdata.params['discovery_address'], \
+                            'deviceId':rpcdata.params['deviceId'], \
+                            'newPricePoint': rpcdata.params['newPricePoint'], \
                             'new_pp_id': rpcdata.params['new_pp_id'] \
                                         if rpcdata.params['new_pp_id'] is not None \
-                                            else randint(0, 99999999), 
+                                            else randint(0, 99999999), \
                             'new_pp_isoptimal': rpcdata.params['new_pp_isoptimal'] \
                                         if rpcdata.params['new_pp_isoptimal'] is not None \
                                             else False

@@ -171,7 +171,7 @@ class BuildingController(Agent):
         if sender == 'pubsub.compat':
             message = compat.unpack_legacy_message(headers, message)
             
-        new_price_point = message[0]
+        new_price_point     = message[0]
         new_pp_id           = message[2] if message[2] is not None else randint(0, 99999999)
         new_pp_isoptimal    = message[3] if message[3] is not None else False
         _log.info ( "*** New Price Point: {0:.2f} ***".format(new_price_point))
@@ -260,7 +260,7 @@ class BuildingController(Agent):
     def publishBuildingPP(self):
         #_log.debug('publishBuildingPP()')
         pubTopic = self.root_topic+"/Building_PricePoint"
-        pubMsg = [self._price_point_new, {'units': 'cents', 'tz': 'UTC', 'type': 'float'}, self._pp_id_new]
+        pubMsg = [self._price_point_new, {'units': 'cents', 'tz': 'UTC', 'type': 'float'}, self._pp_id_new, True]
         publish_to_bus(self, pubTopic, pubMsg)
         return
 
