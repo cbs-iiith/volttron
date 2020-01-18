@@ -309,7 +309,7 @@ class BuildingController(Agent):
                     ' & ed: {0:.4f}'.format(message[0]))
                     
         ed_pp_id = message[2]
-        if self._pp_id != ed_pp_id
+        if self._pp_id != ed_pp_id:
             _log.debug("self._pp_id: " + str(self._pp_id) + " ed_pp_id: " + str(ed_pp_id) + " - Not same!!!, do nothing")
             return
             
