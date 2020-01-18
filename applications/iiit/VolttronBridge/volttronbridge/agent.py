@@ -48,7 +48,9 @@ EPSILON = 1e-03
 
 #if the rpc connection fails to post for more than MAX_RETRIES, 
 #then it is assumed that the dest is down
-#in case of ds posts, the retry count is reset when the ds registers again
+#in case of ds posts, the retry count is reset when the ds registers again or on a new price point
+#in case of us posts, the retry count is reset when change in ed.
+#   also if failed too many times to post ed, retry count is reset and the process yeilds for a movement(10sec)
 MAX_RETRIES = 5
 
 def volttronbridge(config_path, **kwargs):
@@ -309,6 +311,7 @@ def volttronbridge(config_path, **kwargs):
             self._ed_previous = self._ed_current
             self._ed_current = newEnergyDemand
             self._ed_pp_id = ed_pp_id
+            self._us_retrycount = 0
             self._postUsEnergyDemand()
             return
             
