@@ -533,9 +533,10 @@ def main(argv=sys.argv):
     except Exception as e:
         print e
         _log.exception('unhandled exception')
-
+        
 if __name__ == '__main__':
     try:
         sys.exit(main(sys.argv))
     except KeyboardInterrupt:
         pass
+        

@@ -58,9 +58,9 @@ class BuildingController(Agent):
     '''
     _pp_failed = False
     
-    _price_point_previous = 0.4 
     _price_point_current = 0.4 
     _price_point_new = 0.45
+    _pp_id = randint(0, 99999999)
 
     _rmTsp = 25
     
@@ -135,8 +135,8 @@ class BuildingController(Agent):
     def _configGetInitValues(self):
         self._period_read_data = self.config('period_read_data', 30)
         self._period_process_pp = self.config.get('period_process_pp', 10)
-        self._price_point_previous = self.config.get('default_base_price', 0.2)
-        self._price_point_current = self.config.get('price_point_latest', 0.2)
+        self._price_point_current = self.config.get('default_base_price', 0.2)
+        self._price_point_new = self.config.get('price_point_latest', 0.3)
         return
         
     def _configGetPoints(self):
@@ -172,38 +172,48 @@ class BuildingController(Agent):
             message = compat.unpack_legacy_message(headers, message)
             
         new_price_point = message[0]
+        new_pp_id           = message[2] if message[2] is not None else randint(0, 99999999)
+        new_pp_isoptimal    = message[3] if message[3] is not None else False
         _log.info ( "*** New Price Point: {0:.2f} ***".format(new_price_point))
+        _log.debug("*** new_pp_id: " + str(new_pp_id))
+        _log.debug("*** new_pp_isoptimal: " + str(new_pp_isoptimal))
         
-        if isclose(self._price_point_current, new_price_point, EPSILON):
+        if not new_pp_isoptimal:
+            _log.debug('not optimal pp!!!, do nothing')
+            return
+            
+        if isclose(self._price_point_current, new_price_point, EPSILON) and self._pp_id == new_pp_id:
             _log.debug('no change in price, do nothing')
             return
             
         self._price_point_new = new_price_point
+        self._pp_id_new = new_pp_id
         self.processNewPricePoint()
         return
         
     #this is a perodic function that keeps trying to apply the new pp till success
     def processNewPricePoint(self):
-        if isclose(self._price_point_current, self._price_point_new, EPSILON):
+        if isclose(self._price_point_current, self._price_point_new, EPSILON) and self._pp_id == self._pp_id_new:
             return
             
         self._pp_failed = False     #any process that failed to apply pp sets this flag True
-        self._price_point_previous = self._price_point_current
-        self.publishPriceToBMS(self._price_point_current)
+        self.publishPriceToBMS(self._price_point_new)
         if not self._pp_failed:
             self.applyPricingPolicy()
         
         if self._pp_failed:
             _log.error("unable to processNewPricePoint(), will try again in " + self._period_process_pp)
             return
+            
         _log.info("*** New Price Point processed.")
         self._price_point_current = self._price_point_new
-        
+        self._pp_id = self._pp_id_new
         return
 
     def applyPricingPolicy(self):
         _log.debug("applyPricingPolicy()")
         #TODO: control the energy demand of devices at building level accordingly
+        #if applying self._price_point_new failed, set self._pp_failed = True
         return
         
     # change rc surface temperature set point
@@ -219,7 +229,7 @@ class BuildingController(Agent):
                     self._agent_id, 
                     'iiit/cbs/buildingcontroller/Building_PricePoint',
                     pp).get(timeout=10)
-                self.updateBuildingPP(pp)
+                self.updateBuildingPP()
             except gevent.Timeout:
                 _log.exception("Expection: gevent.Timeout in publishPriceToBMS()")
             except Exception as e:
@@ -232,25 +242,25 @@ class BuildingController(Agent):
             _log.debug('schedule NOT available')
         return
 
-    def updateBuildingPP(self, pp):
+    def updateBuildingPP(self):
         #_log.debug('updateRmTsp()')
-        _log.debug('building_pp {0:0.2f}'.format( pp))
+        _log.debug('building_pp {0:0.2f}'.format( self._price_point_new))
         
         building_pp = self.rpc_getBuildingPP()
         
         #check if the pp really updated at the bms, only then proceed with new pp
-        if isclose(pp, building_pp, EPSILON):
-            self.publishBuildingPP(pp)
+        if isclose(self._price_point_new, building_pp, EPSILON):
+            self.publishBuildingPP()
         else:
             self._pp_failed = True
             
         _log.debug('Current Building PP: ' + "{0:0.2f}".format( pp))
         return
 
-    def publishBuildingPP(self, pp):
+    def publishBuildingPP(self):
         #_log.debug('publishBuildingPP()')
         pubTopic = self.root_topic+"/Building_PricePoint"
-        pubMsg = [pp, {'units': 'cents', 'tz': 'UTC', 'type': 'float'}]
+        pubMsg = [self._price_point_new, {'units': 'cents', 'tz': 'UTC', 'type': 'float'}, self._pp_id_new]
         publish_to_bus(self, pubTopic, pubMsg)
         return
 
@@ -288,7 +298,7 @@ class BuildingController(Agent):
         _log.info( "*** New TED: {0:.2f}, publishing to bus ***".format(ted))
         pubTopic = self.energyDemand_topic
         _log.debug("TED pubTopic: " + pubTopic)
-        pubMsg = [ted, {'units': 'W', 'tz': 'UTC', 'type': 'float'}]
+        pubMsg = [ted, {'units': 'W', 'tz': 'UTC', 'type': 'float'}, self._pp_id]
         publish_to_bus(self, pubTopic, pubMsg)
         return
         
@@ -297,7 +307,12 @@ class BuildingController(Agent):
             message = compat.unpack_legacy_message(headers, message)
         _log.debug('*********** New ed from ds, topic: ' + topic + \
                     ' & ed: {0:.4f}'.format(message[0]))
-        
+                    
+        ed_pp_id = message[2]
+        if self._pp_id != ed_pp_id
+            _log.debug("self._pp_id: " + str(self._pp_id) + " ed_pp_id: " + str(ed_pp_id) + " - Not same!!!, do nothing")
+            return
+            
         deviceID = (topic.split('/', 3))[2]
         idx = self._get_ds_device_idx(deviceID)
         self._ds_ed[idx] = message[0]
@@ -309,10 +324,7 @@ class BuildingController(Agent):
             idx = self._ds_deviceId.index(deviceID)
             self._ds_ed.insert(idx, 0.0)
         return self._ds_deviceId.index(deviceID)
-
-
-
-
+        
 def main(argv=sys.argv):
     '''Main method called by the eggsecutable.'''
     try:
@@ -320,11 +332,11 @@ def main(argv=sys.argv):
     except Exception as e:
         print e
         _log.exception('unhandled exception')
-
-
+        
 if __name__ == '__main__':
     # Entry point for script
     try:
         sys.exit(main())
     except KeyboardInterrupt:
         pass
+        
