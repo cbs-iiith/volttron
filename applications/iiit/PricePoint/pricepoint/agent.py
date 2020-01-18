@@ -107,9 +107,17 @@ class PricePoint(Agent):
         try:
             rpcdata = jsonrpc.JsonRpcData.parse(message)
             _log.debug('rpc method: {}'.format(rpcdata.method))
+            _log.debug('rpc params: {}'.format(rpcdata.params))
             
             if rpcdata.method == "rpc_updatePricePoint":
-                args = {'newPricePoint': rpcdata.params['newPricePoint']}
+                args = {'newPricePoint': rpcdata.params['newPricePoint'], \
+                            'new_pp_id': rpcdata.params['new_pp_id'] \
+                                        if rpcdata.params['new_pp_id'] is not null \
+                                            else randint(0, 99999999), \
+                            'new_pp_isoptimal': rpcdata.params['new_pp_isoptimal'] \
+                                        if rpcdata.params['new_pp_isoptimal'] is not None \
+                                            else False \
+                        }
                 result = self.updatePricePoint(**args)
             elif rpcdata.method == "rpc_ping":
                 result = True
@@ -129,12 +137,15 @@ class PricePoint(Agent):
         return
 
     @RPC.export
-    def updatePricePoint(self, newPricePoint):
+    def updatePricePoint(self, newPricePoint, new_pp_id, new_pp_isoptimal):
         #if newPricePoint != self._price_point_previous :
         if True:
             _log.debug('New Price Point: {0:.2f} !!!'.format(newPricePoint))
+            _log.debug("*** new_pp_id: " + str(new_pp_id))
+            _log.debug("*** new_pp_isoptimal: " + str(new_pp_isoptimal))
+
             pubTopic = self.topic_price_point
-            pubMsg = [newPricePoint, {'units': 'cents', 'tz': 'UTC', 'type': 'float'}]
+            pubMsg = [newPricePoint,{'units': 'cents', 'tz': 'UTC', 'type': 'float'}, new_pp_id, new_pp_isoptimal]
             _log.debug('publishing to local bus topic: ' + pubTopic)
             publish_to_bus(self, pubTopic, pubMsg)
             self._price_point_previous = newPricePoint
