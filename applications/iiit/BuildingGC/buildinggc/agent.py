@@ -87,7 +87,7 @@ def buildinggc(config_path, **kwargs):
             #TODO:
             else if False:
             #if self._current_gd_pp != gd_pp:
-                new_pp, pp_id, pp_isoptimal = self._computeNewPrice(new_pp, new_pp_id, new_pp_isoptimal)
+                new_pp, new_pp_id, new_pp_isoptimal = self._computeNewPrice(new_pp, new_pp_id, new_pp_isoptimal)
                 pubTopic =  self.topic_price_point
                 pubMsg = [new_pp, {'units': 'cents', 'tz': 'UTC', 'type': 'float'}, new_pp_id, new_pp_isoptimal]
                 _log.debug('publishing to local bus topic: ' + pubTopic)
@@ -97,11 +97,11 @@ def buildinggc(config_path, **kwargs):
                 _log.debug('No change in price')
                 return False
 
-        def _computeNewPrice(self, new_price, pp_id, pp_isoptimal):
+        def _computeNewPrice(self, new_pp, new_pp_id, new_pp_isoptimal):
             _log.debug('_computeNewPrice()')
             #TODO: implement the algorithm to compute the new price
             #      based on predicted demand, etc.
-            return new_price, pp_id, pp_isoptimal
+            return new_pp, new_pp_id, new_pp_isoptimal
 
 
     Agent.__name__ = 'BuildingGC_Agent'
