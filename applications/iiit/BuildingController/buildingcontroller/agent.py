@@ -61,6 +61,7 @@ class BuildingController(Agent):
     _price_point_current = 0.4 
     _price_point_new = 0.45
     _pp_id = randint(0, 99999999)
+    _pp_id_new = randint(0, 99999999)
 
     _rmTsp = 25
     
@@ -133,7 +134,7 @@ class BuildingController(Agent):
         return
 
     def _configGetInitValues(self):
-        self._period_read_data = self.config('period_read_data', 30)
+        self._period_read_data = self.config.get('period_read_data', 30)
         self._period_process_pp = self.config.get('period_process_pp', 10)
         self._price_point_current = self.config.get('default_base_price', 0.2)
         self._price_point_new = self.config.get('price_point_latest', 0.3)
@@ -254,7 +255,7 @@ class BuildingController(Agent):
         else:
             self._pp_failed = True
             
-        _log.debug('Current Building PP: ' + "{0:0.2f}".format( pp))
+        _log.debug('Current Building PP: ' + "{0:0.2f}".format( self._price_point_new))
         return
 
     def publishBuildingPP(self):

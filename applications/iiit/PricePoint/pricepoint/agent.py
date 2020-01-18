@@ -112,7 +112,7 @@ class PricePoint(Agent):
             if rpcdata.method == "rpc_updatePricePoint":
                 args = {'newPricePoint': rpcdata.params['newPricePoint'], \
                             'new_pp_id': rpcdata.params['new_pp_id'] \
-                                        if rpcdata.params['new_pp_id'] is not null \
+                                        if rpcdata.params['new_pp_id'] is not None \
                                             else randint(0, 99999999), \
                             'new_pp_isoptimal': rpcdata.params['new_pp_isoptimal'] \
                                         if rpcdata.params['new_pp_isoptimal'] is not None \

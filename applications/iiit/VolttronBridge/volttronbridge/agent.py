@@ -375,10 +375,10 @@ def volttronbridge(config_path, **kwargs):
                 _log.debug('no change, do nothing')
                 return
             self._pp_current = self._pp_new
-            self._pp_new = newPricePoint
+            self._pp_new = new_price_point
             self._pp_id = new_pp_id
             self._pp_isoptimal = new_pp_isoptimal
-            self._reset_ds_retrycount(self)
+            self._reset_ds_retrycount()
             self._postDsNewPricePoint()
             return
             
