@@ -114,7 +114,7 @@ def pricecontroller(config_path, **kwargs):
                 return jsonrpc.json_error('NA', UNHANDLED_EXCEPTION, e)
                 
         def _disable_agent(self, disable_agent):
-            if disable_agent is True \ 
+            if disable_agent is True \
                 or disable_agent is False \
                 :
                 self.agent_disabled = disable_agent
@@ -124,7 +124,7 @@ def pricecontroller(config_path, **kwargs):
             return result
             
         def _set_pp_optimize_option(self, option):
-            if option == "PASS_ON_PP" \ 
+            if option == "PASS_ON_PP" \
                 or option == "DEFAULT_OPT" \
                 or option == "EXTERN_OPT" \
                 :
@@ -176,7 +176,7 @@ def pricecontroller(config_path, **kwargs):
                 _log.debug('publishing to local bus topic: ' + pubTopic)
                 publish_to_bus(self, pubTopic, pubMsg)
                 return True
-            else self.pp_optimize_option == "DEFAULT_OPT":
+            elif self.pp_optimize_option == "DEFAULT_OPT":
                 self.us_new_pp = new_pp
                 self.us_new_pp_id = new_pp_id
                 self.us_new_pp_isoptimal = new_pp_isoptimal
