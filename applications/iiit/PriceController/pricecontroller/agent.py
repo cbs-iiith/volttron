@@ -20,6 +20,8 @@ import random
 from volttron.platform.vip.agent import Agent, Core, PubSub, compat, RPC
 from volttron.platform.agent import utils
 from volttron.platform.messaging import topics, headers as headers_mod
+from volttron.platform.agent.known_identities import (
+    MASTER_WEB, VOLTTRON_CENTRAL, VOLTTRON_CENTRAL_PLATFORM)
 
 import time
 import gevent
