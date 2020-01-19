@@ -40,7 +40,7 @@ import struct
 import gevent
 import gevent.event
 
-from ispace_utils import mround, publish_to_bus, get_task_schdl, cancel_task_schdl, isclose
+from ispace_utils import mround, publish_to_bus, get_task_schdl, cancel_task_schdl, isclose, ParamPP, ParamED
 
 utils.setup_logging()
 _log = logging.getLogger(__name__)
@@ -647,14 +647,23 @@ class SmartHub(Agent):
         if sender == 'pubsub.compat':
             message = compat.unpack_legacy_message(headers, message)
             
-        new_price_point = message[0]
+        new_price_point     = message[ParamPP.idx_pp]
+        new_pp_id           = message[ParamPP.idx_pp_id] \
+                                if message[ParamPP.idx_pp_id] is not None \
+                                else randint(0, 99999999)
+        new_pp_isoptimal    = message[ParamPP.idx_pp_isoptimal] \
+                                if message[ParamPP.idx_pp_isoptimal] is not None \
+                                else False
         _log.info ( "*** New Price Point: {0:.2f} ***".format(new_price_point))
+        _log.debug("*** new_pp_id: " + str(new_pp_id))
+        _log.debug("*** new_pp_isoptimal: " + str(new_pp_isoptimal))
         
-        if isclose(self._price_point_current, new_price_point, EPSILON):
-            _log.debug('no change in price, do nothing')
+        if not new_pp_isoptimal:
+            _log.debug('not optimal pp!!!, do nothing')
             return
             
         self._price_point_new = new_price_point
+        self._pp_id_new = new_pp_id
         self.processNewPricePoint()
         return
         
@@ -1118,12 +1127,18 @@ class SmartHub(Agent):
         if sender == 'pubsub.compat':
             message = compat.unpack_legacy_message(headers, message)
         _log.debug('*********** New ed from ds, topic: ' + topic + \
-                    ' & ed: {0:.4f}'.format(message[0]))
-        
-        deviceID = (topic.split('/', 3))[2]
+                    ' & ed: {0:.4f}'.format(message[ParamED.idx_ed]))
+                    
+        ed_pp_id = message[ParamED.idx_ed_pp_id]
+        ed_isoptimal = message[ParamED.idx_ed_isoptimal]
+        if not ed_isoptimal:         #only accumulate the ed of an optimal pp
+            _log.debug(" - Not optimal ed!!!, do nothing")
+            return
+            
+        #deviceID = (topic.split('/', 3))[2]
+        deviceID = message[ParamED.idx_ed_device_id]
         idx = self._get_ds_device_idx(deviceID)
-        self._ds_ed[idx] = message[0]
-
+        self._ds_ed[idx] = message[ParamED.idx_ed]
         return
         
     def _get_ds_device_idx(self, deviceID):   
