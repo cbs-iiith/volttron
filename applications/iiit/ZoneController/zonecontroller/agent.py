@@ -527,7 +527,7 @@ def main(argv=sys.argv):
     try:
         utils.vip_main(ZoneController)
     except Exception as e:
-        print e
+        print (e)
         _log.exception('unhandled exception')
 
 
