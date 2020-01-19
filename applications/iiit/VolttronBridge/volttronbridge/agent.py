@@ -179,6 +179,11 @@ def volttronbridge(config_path, **kwargs):
                 _log.debug("registering with upstream VolttronBridge: " + url_root)
                 self._usConnected = self._registerToUsBridge(url_root, self._discovery_address, self._deviceId)
                 
+            #keep track of us opt_pp_id & bid_pp_id
+            if self._bridge_host != 'LEVEL_HEAD':
+                self.us_opt_pp_id = 0
+                self.us_bid_pp_id = 0
+                
             #perodically keeps trying to post ed to us
             if self._bridge_host != 'LEVEL_HEAD':
                 self.core.periodic(self._period_process_pp, self.post_us_new_ed, wait=None)
@@ -331,7 +336,15 @@ def volttronbridge(config_path, **kwargs):
                             + ' ed_pp_id:' + str(self._ed_pp_id) \
                             + ' ed_isoptimal' + str(self._ed_isoptimal) \
                         )
-            
+                        
+            #post ed to us only if pp_id corresponds to these ids (i.e., ed for either us opt_pp_id or bid_pp_id)
+            if self._ed_pp_id not in [self.us_opt_pp_id, self.us_bid_pp_id]:
+                _log.debug("*** self._ed_pp_id: " + str(self._ed_pp_id) \
+                            + " not in [self.us_opt_pp_id, self.us_bid_pp_id]: " \
+                            + str([self.us_opt_pp_id, self.us_bid_pp_id])\
+                            + ", do nothing"\
+                            )
+                return
             self._all_us_posts_success = False         #initiate us post
             self.post_us_new_ed()
             return
@@ -460,7 +473,13 @@ def volttronbridge(config_path, **kwargs):
             _log.debug ( "*** New Price Point(us): {0:.2f} ***".format(new_pp))
             _log.debug("*** new_pp_id: " + str(new_pp_id))
             _log.debug("*** new_pp_isoptimal: " + str(new_pp_isoptimal))
-
+            
+            #keep track of us opt_pp_id & bid_pp_id
+            if new_pp_isoptimal:
+                self.us_opt_pp_id = new_pp_id
+            else:
+                self.us_bid_pp_id = new_pp_id
+                
             #post to bus
             _log.debug('post the new price point from us to the local-us-bus')
             pubTopic =  pricePoint_topic_us
