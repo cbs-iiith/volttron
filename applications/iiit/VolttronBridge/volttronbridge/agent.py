@@ -339,7 +339,7 @@ def volttronbridge(config_path, **kwargs):
         #perodically keeps trying to post ed to us
         def post_us_new_ed(self):
             if self._all_us_posts_success:
-                 _log.debug('all us posts success, do nothing')
+                _log.debug('all us posts success, do nothing')
                 return
             
             url_root = 'http://' + self._us_ip_addr + ':' + str(self._us_port) + '/VolttronBridge'
@@ -542,7 +542,7 @@ def main(argv=sys.argv):
     try:
         utils.vip_main(volttronbridge)
     except Exception as e:
-        print e
+        print (e)
         _log.exception('unhandled exception')
         
 if __name__ == '__main__':

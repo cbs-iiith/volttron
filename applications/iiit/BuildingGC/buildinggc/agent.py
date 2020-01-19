@@ -123,7 +123,7 @@ def main(argv=sys.argv):
     try:
         utils.vip_main(buildinggc)
     except Exception as e:
-        print e
+        print (e)
         _log.exception('unhandled exception')
         
 if __name__ == '__main__':
