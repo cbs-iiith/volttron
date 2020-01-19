@@ -7,4 +7,7 @@
     "energyDemand_topic_ds": "ds/energydemand",
     "pricePoint_topic_us": "us/pricepoint",
     "pricePoint_topic": "building/pricepoint"
+    "_comment": "valid options - PASS_ON_PP, DEFAULT_OPT, EXTERN_OPT",
+    "pp_optimize_option": "PASS_ON_PP"
+    "extrn_optimize_pp_topic": "pca/pricepoint"
 }
