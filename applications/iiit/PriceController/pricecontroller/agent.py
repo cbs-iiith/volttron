@@ -60,10 +60,58 @@ def pricecontroller(config_path, **kwargs):
         @Core.receiver('onstart')            
         def startup(self, sender, **kwargs):
             _log.debug('startup()')
+            
+            _log.debug('registering rpc routes')
+            self.vip.rpc.call(MASTER_WEB, 'register_agent_route', \
+                    r'^/PriceController', \
+#                    self.core.identity, \
+                    "rpc_from_net").get(timeout=30)
+                    
             #subscribing to topic_price_point_us
             self.vip.pubsub.subscribe("pubsub", self.topic_price_point_us, self.on_new_pp)
             return
-
+            
+        @RPC.export
+        def rpc_from_net(self, header, message):
+            result = False
+            try:
+                rpcdata = jsonrpc.JsonRpcData.parse(message)
+                '''
+                _log.debug('rpc_from_net()...' + \
+                            ', rpc method: {}'.format(rpcdata.method) +\
+                            ', rpc params: {}'.format(rpcdata.params))
+                '''
+                if rpcdata.method == "rpc_disable_agent":
+                    args = {'disable_agent': rpcdata.params['disable_agent'],
+                            }
+                    result = self._disable_agent(**args)
+                    
+                elif rpcdata.method == "rpc_ping":
+                    result = True
+                else:
+                    return jsonrpc.json_error(rpcdata.id, METHOD_NOT_FOUND, \
+                                                'Invalid method {}'.format(rpcdata.method))
+                                                
+                return jsonrpc.json_result(rpcdata.id, result)
+                
+            except KeyError as ke:
+                print(ke)
+                return jsonrpc.json_error('NA', INVALID_PARAMS,
+                        'Invalid params {}'.format(rpcdata.params))
+            except Exception as e:
+                print(e)
+                return jsonrpc.json_error('NA', UNHANDLED_EXCEPTION, e)
+                
+        def _disable_agent(self, disable_agent):
+            result = True
+            if disable_agent is True:
+                self.agent_disabled = True
+            elif disable_agent is False:
+                self.agent_disabled = False
+            else:
+                result = False
+            return result
+            
         def on_new_pp(self, peer, sender, bus,  topic, headers, message):
             #new zone price point
             new_pp              = message[ParamPP.idx_pp]
