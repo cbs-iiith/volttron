@@ -55,6 +55,8 @@ def pricecontroller(config_path, **kwargs):
             self.topic_price_point_us   = config.get('pricePoint_topic_us', 'us/pricepoint')
             self.topic_price_point      = config.get('pricePoint_topic', 'building/pricepoint')
             self.agent_disabled         = False
+            self.pp_optimize_option     = config.get('pp_optimize_option', 'PASS_ON_PP')
+            self.topic_extrn_pp         = config.get('extrn_optimize_pp_topic', 'pca/pricepoint')
             return
 
         @Core.receiver('onstart')            
@@ -67,6 +69,10 @@ def pricecontroller(config_path, **kwargs):
 #                    self.core.identity, \
                     "rpc_from_net").get(timeout=30)
                     
+            self.us_new_pp = 0
+            self.us_new_pp_id = 0
+            self.us_new_pp_isoptimal = False
+            
             #subscribing to topic_price_point_us
             self.vip.pubsub.subscribe("pubsub", self.topic_price_point_us, self.on_new_pp)
             return
@@ -86,6 +92,11 @@ def pricecontroller(config_path, **kwargs):
                             }
                     result = self._disable_agent(**args)
                     
+                elif rpcdata.method == "rpc_set_pp_optimize_option":
+                    args = {'option': rpcdata.params['option'],
+                            }
+                    result = self._set_pp_optimize_option(**args)
+                    
                 elif rpcdata.method == "rpc_ping":
                     result = True
                 else:
@@ -103,14 +114,35 @@ def pricecontroller(config_path, **kwargs):
                 return jsonrpc.json_error('NA', UNHANDLED_EXCEPTION, e)
                 
         def _disable_agent(self, disable_agent):
-            result = True
-            if disable_agent is True:
-                self.agent_disabled = True
-            elif disable_agent is False:
-                self.agent_disabled = False
+            if disable_agent is True \ 
+                or disable_agent is False \
+                :
+                self.agent_disabled = disable_agent
+                result = True
             else:
                 result = False
             return result
+            
+        def _set_pp_optimize_option(self, option):
+            if option == "PASS_ON_PP" \ 
+                or option == "DEFAULT_OPT" \
+                or option == "EXTERN_OPT" \
+                :
+                self.pp_optimize_option = self.pp_optimize_option
+                result = True
+            else:
+                result = False
+            return result
+            
+        #
+        def on_new_ed(self, peer, sender, bus,  topic, headers, message):
+            #subscribe to ds/energydemand,
+            #accumulate ed from all ds, also get local ed
+            #publish ted to local(building/zone/smarthub/smartstrip)/enedgydemand
+            
+            #subscribe to local(building/zone/smarthub/smartstrip)/pricepoint
+            #keep a note of pp_id
+            return
             
         def on_new_pp(self, peer, sender, bus,  topic, headers, message):
             #new zone price point
@@ -129,8 +161,13 @@ def pricecontroller(config_path, **kwargs):
                 _log.info("self.agent_disabled: " + str(self.agent_disabled) + ", do nothing!!!")
                 return True
                 
-            if new_pp_isoptimal:
-                pubTopic =  self.topic_price_point
+            if new_pp_isoptimal \
+                    or self.pp_optimize_option == "PASS_ON_PP" \
+                    or self.pp_optimize_option == "EXTERN_OPT" \
+                    :
+                pubTopic =  self.topic_extrn_pp \
+                                if self.pp_optimize_option == "EXTERN_OPT" \
+                                else self.topic_price_point 
                 pubMsg = [new_pp, \
                             {'units': 'cents', 'tz': 'UTC', 'type': 'float'}, \
                             new_pp_id, \
@@ -139,29 +176,39 @@ def pricecontroller(config_path, **kwargs):
                 _log.debug('publishing to local bus topic: ' + pubTopic)
                 publish_to_bus(self, pubTopic, pubMsg)
                 return True
-                
-            #TODO:
-            elif False:
-            #if self._current_gd_pp != gd_pp:
-                new_pp, new_pp_id, new_pp_isoptimal = self._computeNewPrice(new_pp, new_pp_id, new_pp_isoptimal)
-                pubTopic =  self.topic_price_point
-                pubMsg = [new_pp, \
-                            {'units': 'cents', 'tz': 'UTC', 'type': 'float'}, \
-                            new_pp_id, \
-                            new_pp_isoptimal\
-                            ]
-                _log.debug('publishing to local bus topic: ' + pubTopic)
-                publish_to_bus(self, pubTopic, pubMsg)
+            else self.pp_optimize_option == "DEFAULT_OPT":
+                self.us_new_pp = new_pp
+                self.us_new_pp_id = new_pp_id
+                self.us_new_pp_isoptimal = new_pp_isoptimal
+                self._computeNewPrice()
                 return True
-            else :
-                _log.debug('No change in price')
-                return False
                 
-        def _computeNewPrice(self, new_pp, new_pp_id, new_pp_isoptimal):
+        def _computeNewPrice(self):
             _log.debug('_computeNewPrice()')
             #TODO: implement the algorithm to compute the new price
-            #      based on predicted demand, etc.
-            return new_pp, new_pp_id, new_pp_isoptimal
+            #      based on walras algorithm.
+            #       config.get (optimization function)
+            #       based on some initial condition like ed, etc, compute new_pp
+            #       publish to bus
+
+            new_pp = self.us_new_pp
+            new_pp_id = self.us_new_pp_id
+            new_pp_isoptimal = self.us_new_pp_isoptimal
+
+            pubTopic =  self.topic_price_point
+            pubMsg = [new_pp, \
+                        {'units': 'cents', 'tz': 'UTC', 'type': 'float'}, \
+                        new_pp_id, \
+                        new_pp_isoptimal\
+                        ]
+            _log.debug('publishing to local bus topic: ' + pubTopic)
+            publish_to_bus(self, pubTopic, pubMsg)
+            
+            #       iterate till optimization condition satistifed
+            #       when new pp is published, the new ed for all devices is accumulated by on_new_ed()
+            #       once all the eds are received call this function again
+            #       publish the new optimal pp
+            return
             
     Agent.__name__ = 'PriceController_Agent'
     return PriceController(**kwargs)
