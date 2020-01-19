@@ -111,10 +111,10 @@
                         &nbsp;
                     </div>
                     <div class="large-2 columns">
-                        <input id="slider" type="range" min="0.01" max="1.1" step="0.01" value="0.5" onchange="printValue('slider','newPricePoint')"/>
+                        <input id="slider" type="range" min="0.01" max="1.1" step="0.01" value="0.5" onchange="printValue('slider','new_pp')"/>
                     </div>
                     <div class="large-2 columns">
-                        <input id="newPricePoint" type="text" size="4"/>
+                        <input id="new_pp" type="text" size="4"/>
                     </div>
                     <div class="large-2 columns">
                         &nbsp;
@@ -125,7 +125,7 @@
                     <!-- Rounded switch -->
                     <div class="large-2 columns">
                         <label class="switch">
-                            <input id = "isOptimalPP" type="checkbox" value="True" checked>
+                            <input id = "new_pp_isoptimal" type="checkbox" value="True" checked>
                                 <div class="slider round">
                         </label>
                     </div>
@@ -141,16 +141,16 @@
     </div>
     <script>
         $('#publishPricePoint').click(function(){
-            var newPricePoint = parseFloat($('#newPricePoint').val());
-            var isOptimalPP = document.getElementById("isOptimalPP").checked;
+            var new_pp = parseFloat($('#new_pp').val());
+            var new_pp_isoptimal = document.getElementById("new_pp_isoptimal").checked;
             var new_pp_id = null;
             var pdata = {
                      jsonrpc: '2.0',
                      method:  "rpc_updatePricePoint",
                      params: {
-                        newPricePoint: newPricePoint,
+                        new_pp: new_pp,
                         new_pp_id: new_pp_id,
-                        new_pp_isoptimal: isOptimalPP,
+                        new_pp_isoptimal: new_pp_isoptimal,
                      },
                      id: '72581-4'
              };
@@ -174,7 +174,7 @@
             x.value = y.value;
         }
 
-        window.onload = function() { printValue('slider', 'newPricePoint'); }
+        window.onload = function() { printValue('slider', 'new_pp'); }
     </script>
 </body>
 </html>
