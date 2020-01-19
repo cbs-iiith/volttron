@@ -20,9 +20,25 @@ import gevent.event
 from volttron.platform.agent import utils
 from volttron.platform.messaging import headers as headers_mod
 
+from enum import IntEnum
+
 utils.setup_logging()
 _log = logging.getLogger(__name__)
 
+class ParamPP(IntEnum):
+    IDX_PP                  = 0
+    IDX_PP_ID               = 1
+    IDX_PP_ISOPTIMAL        = 2
+    
+class ParamED(IntEnum):
+    IDX_ED                  = 0
+    IDX_ED_DATATYPE         = 1
+    IDX_ED_PP_ID            = 2
+    IDX_ED_ISOPTIMAL        = 3
+    IDX_ED_DISCOVERY_ADDRS  = 4
+    IDX_ED_DEVICE_ID        = 5
+    IDX_ED_NO_OF_DEVICES    = 6
+    
 def publish_to_bus(self, topic, msg):
     #_log.debug('publish_to_bus()')
     now = datetime.datetime.utcnow().isoformat(' ') + 'Z'

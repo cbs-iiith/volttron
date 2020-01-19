@@ -61,10 +61,10 @@ def buildinggc(config_path, **kwargs):
         def startup(self, sender, **kwargs):
             _log.debug('startup()')
             #subscribing to topic_price_point_us
-            self.vip.pubsub.subscribe("pubsub", self.topic_price_point_us, self.onNewPrice)
+            self.vip.pubsub.subscribe("pubsub", self.topic_price_point_us, self.on_new_pp)
             return
 
-        def onNewPrice(self, peer, sender, bus,  topic, headers, message):
+        def on_new_pp(self, peer, sender, bus,  topic, headers, message):
             #new zone price point
             new_pp              = message[0]
             new_pp_id           = message[2] if message[2] is not None else randint(0, 99999999)

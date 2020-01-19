@@ -94,7 +94,7 @@ class PricePoint(Agent):
         #Make a random price point
         _log.debug('fake_price_points()')
         new_price_reading = random.uniform(self.min_price, self.max_price)
-        self.updatePricePoint(newPricePoint)
+        self.updatePricePoint(new_pp)
         return
 
     @RPC.export
@@ -110,7 +110,7 @@ class PricePoint(Agent):
             _log.debug('rpc params: {}'.format(rpcdata.params))
             
             if rpcdata.method == "rpc_updatePricePoint":
-                args = {'newPricePoint': rpcdata.params['newPricePoint'], \
+                args = {'new_pp': rpcdata.params['new_pp'], \
                             'new_pp_id': rpcdata.params['new_pp_id'] \
                                         if rpcdata.params['new_pp_id'] is not None \
                                             else randint(0, 99999999), \
@@ -137,18 +137,18 @@ class PricePoint(Agent):
         return
 
     @RPC.export
-    def updatePricePoint(self, newPricePoint, new_pp_id, new_pp_isoptimal):
-        #if newPricePoint != self._price_point_previous :
+    def updatePricePoint(self, new_pp, new_pp_id, new_pp_isoptimal):
+        #if new_pp != self._price_point_previous :
         if True:
-            _log.debug('New Price Point: {0:.2f} !!!'.format(newPricePoint))
+            _log.debug('New Price Point: {0:.2f} !!!'.format(new_pp))
             _log.debug("*** new_pp_id: " + str(new_pp_id))
             _log.debug("*** new_pp_isoptimal: " + str(new_pp_isoptimal))
 
             pubTopic = self.topic_price_point
-            pubMsg = [newPricePoint,{'units': 'cents', 'tz': 'UTC', 'type': 'float'}, new_pp_id, new_pp_isoptimal]
+            pubMsg = [new_pp,{'units': 'cents', 'tz': 'UTC', 'type': 'float'}, new_pp_id, new_pp_isoptimal]
             _log.debug('publishing to local bus topic: ' + pubTopic)
             publish_to_bus(self, pubTopic, pubMsg)
-            self._price_point_previous = newPricePoint
+            self._price_point_previous = new_pp
             return True
         else :
             _log.debug('No change in price')
