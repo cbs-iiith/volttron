@@ -102,18 +102,18 @@ def volttronbridge(config_path, **kwargs):
             self._bridge_host = config.get('bridge_host', 'LEVEL_HEAD')
             self._deviceId    = config.get('deviceId', 'Building-1')
             
-            #we want to post ds only if there is change in price point
+            #price point
             self._pp_current            = 0
-            self._pp_new                = 0
             self._pp_id                 = randint(0, 99999999)
             self._pp_isoptimal          = False
-            self._all_ds_posts_success  = True
+            self._all_ds_posts_success  = False
             
 
-            #we want to post to us only if there is change in energy demand
-            self._ed_current    = 0
-            self._ed_previous   = 0
-            self._ed_pp_id      = randint(0, 99999999)
+            #energy demand
+            self._ed_current            = 0
+            self._ed_pp_id              = randint(0, 99999999)
+            self._ed_isoptimal          = False
+            self._all_us_posts_success  = False
             
             self._us_retrycount = 0
             
@@ -159,7 +159,7 @@ def volttronbridge(config_path, **kwargs):
                 _log.debug("subscribing to pricePoint_topic: " + pricePoint_topic)
                 self.vip.pubsub.subscribe("pubsub", \
                                             pricePoint_topic, \
-                                            self.onNewPrice \
+                                            self.on_new_pp \
                                             )
                 self._ds_voltBr[:] = []
                 self._ds_deviceId[:] = []
@@ -170,7 +170,7 @@ def volttronbridge(config_path, **kwargs):
                 _log.debug("subscribing to energyDemand_topic: " + energyDemand_topic)
                 self.vip.pubsub.subscribe("pubsub", \
                                             energyDemand_topic, \
-                                            self.onNewEnergyDemand \
+                                            self.on_new_ed \
                                             )
                                             
             #register to upstream
@@ -181,17 +181,17 @@ def volttronbridge(config_path, **kwargs):
                 
             #perodically keeps trying to post ed to us
             if self._bridge_host != 'LEVEL_HEAD':
-                self.core.periodic(self._period_process_pp, self._postUsEnergyDemand, wait=None)
+                self.core.periodic(self._period_process_pp, self.post_us_new_ed, wait=None)
                 
             #perodically keeps trying to post pp to ds
             if self._bridge_host != 'LEVEL_TAILEND':
-                self.core.periodic(self._period_process_pp, self._postDsNewPricePoint, wait=None)
+                self.core.periodic(self._period_process_pp, self.post_ds_new_pp, wait=None)
                 
             return
             
         #register with upstream volttron bridge
         def _registerToUsBridge(self, url_root, discovery_address, deviceId):
-            return self.do_rpc(url_root, 'rpc_registerDsBridge', \
+            return self.do_rpc(url_root, 'rpc_register_ds_bridge', \
                                 {'discovery_address': discovery_address, \
                                     'deviceId': deviceId \
                                     })
@@ -211,7 +211,7 @@ def volttronbridge(config_path, **kwargs):
                 if self._usConnected:
                     _log.debug("unregistering with upstream VolttronBridge")
                     url_root = 'http://' + self._us_ip_addr + ':' + str(self._us_port) + '/VolttronBridge'
-                    result = self.do_rpc(url_root, 'rpc_unregisterDsBridge', \
+                    result = self.do_rpc(url_root, 'rpc_unregister_ds_bridge', \
                                         {'discovery_address': self._discovery_address, \
                                             'deviceId': self._deviceId \
                                         })
@@ -236,28 +236,33 @@ def volttronbridge(config_path, **kwargs):
                             ', rpc method: {}'.format(rpcdata.method) +\
                             ', rpc params: {}'.format(rpcdata.params))
                 '''
-                if rpcdata.method == "rpc_registerDsBridge":
+                if rpcdata.method == "rpc_register_ds_bridge":
                     args = {'discovery_address': rpcdata.params['discovery_address'],
                             'deviceId':rpcdata.params['deviceId']
                             }
-                    result = self._registerDsBridge(**args)
-                elif rpcdata.method == "rpc_unregisterDsBridge":
+                    result = self._register_ds_bridge(**args)
+                elif rpcdata.method == "rpc_unregister_ds_bridge":
                     args = {'discovery_address': rpcdata.params['discovery_address'],
                             'deviceId':rpcdata.params['deviceId']
                             }
-                    result = self._unregisterDsBridge(**args)
-                elif rpcdata.method == "rpc_postEnergyDemand":
-                    args = {'discovery_address': rpcdata.params['discovery_address'],
-                            'deviceId':rpcdata.params['deviceId'],
-                            'newEnergyDemand': rpcdata.params['newEnergyDemand'],
-                            'ed_pp_id': rpcdata.params['ed_pp_id']
-                            }
-                    #post the new energy demand from ds to the local bus
-                    result = self._postEnergyDemand(**args)    
-                elif rpcdata.method == "rpc_postPricePoint":
+                    result = self._unregister_ds_bridge(**args)
+                elif rpcdata.method == "rpc_post_ed":
                     args = {'discovery_address': rpcdata.params['discovery_address'], \
                             'deviceId':rpcdata.params['deviceId'], \
-                            'newPricePoint': rpcdata.params['newPricePoint'], \
+                            'new_ed': rpcdata.params['new_ed'], \
+                            'ed_pp_id': rpcdata.params['ed_pp_id'] \
+                                        if rpcdata.params['ed_pp_id'] is not None \
+                                            else randint(0, 99999999), \
+                            'ed_pp_isoptimal': rpcdata.params['ed_pp_isoptimal'] \
+                                        if rpcdata.params['ed_pp_isoptimal'] is not None \
+                                            else False
+                            }
+                    #post the new energy demand from ds to the local bus
+                    result = self._post_ed(**args)    
+                elif rpcdata.method == "rpc_post_pp":
+                    args = {'discovery_address': rpcdata.params['discovery_address'], \
+                            'deviceId':rpcdata.params['deviceId'], \
+                            'new_pp': rpcdata.params['new_pp'], \
                             'new_pp_id': rpcdata.params['new_pp_id'] \
                                         if rpcdata.params['new_pp_id'] is not None \
                                             else randint(0, 99999999), \
@@ -266,7 +271,7 @@ def volttronbridge(config_path, **kwargs):
                                             else False
                             }
                     #post the new new price point from us to the local-us-bus
-                    result = self._postPricePoint(**args)
+                    result = self._post_pp(**args)
                 elif rpcdata.method == "rpc_ping":
                     result = True
                 else:
@@ -284,40 +289,46 @@ def volttronbridge(config_path, **kwargs):
                 return jsonrpc.json_error('NA', UNHANDLED_EXCEPTION, e)
                 
         #price point on local bus published, post it to all downstream bridges
-        def onNewPrice(self, peer, sender, bus,  topic, headers, message):
+        def on_new_pp(self, peer, sender, bus,  topic, headers, message):
             if self._bridge_host == 'LEVEL_TAILEND':
                 return
                 
-            new_price_point     = message[0]
-            new_pp_id           = message[2] if message[2] is not None else randint(0, 99999999)
-            new_pp_isoptimal    = message[3] if message[3] is not None else False
-            _log.debug("*** New Price Point: {0:.2f} ***".format(new_price_point))
-            _log.debug("*** new_pp_id: " + str(new_pp_id))
-            _log.debug("*** new_pp_isoptimal: " + str(new_pp_isoptimal))
-            
-            self._processNewPricePoint(new_price_point, new_pp_id, new_pp_isoptimal)
+            self._pp_current    = message[0]
+            self._pp_id         = message[2] if message[2] is not None else randint(0, 99999999)
+            self._pp_isoptimal  = message[3] if message[3] is not None else False
+            _log.debug("*** New Price Point: {0:.2f} ***".format(self._pp_current) \
+                            + " new_pp_id: " + str(self._pp_id) \
+                            + " new_pp_isoptimal: " + str(self._pp_isoptimal) \
+                        )
+                        
+            self._reset_ds_retrycount()
+            self._all_ds_posts_success  = False         #initiate ds post
+            self.post_ds_new_pp()
             return
             
         #energy demand on local bus published, post it to upstream bridge
-        def onNewEnergyDemand(self, peer, sender, bus,  topic, headers, message):
+        def on_new_ed(self, peer, sender, bus,  topic, headers, message):
             if self._bridge_host == 'LEVEL_HEAD':
                 #do nothing
                 return
                 
-            newEnergyDemand = message[0]
-            ed_pp_id = message[2] if message[2] is not None else randint(0, 99999999)
-            _log.debug ( "*** New Energy Demand: {0:.4f} ***".format(newEnergyDemand)+' pp_id:' + str(ed_pp_id))
+            self._ed_current = message[0]
+            self._ed_pp_id = message[2] if message[2] is not None else randint(0, 99999999)
+            self._ed_isoptimal = message[3] if message[3] is not None else False
+            _log.debug("*** New Energy Demand: {0:.4f} ***".format(self._ed_current) \
+                            + ' ed_pp_id:' + str(self._ed_pp_id) \
+                            + ' ed_isoptimal' + str(self._ed_isoptimal) \
+                        )
             
-            self._ed_previous = self._ed_current
-            self._ed_current = newEnergyDemand
-            self._ed_pp_id = ed_pp_id
-            self._us_retrycount = 0
-            self._postUsEnergyDemand()
+            self._all_us_posts_success = False         #initiate us post
+            self.post_us_new_ed()
             return
             
         #perodically keeps trying to post ed to us
-        def _postUsEnergyDemand(self):
-            post_ed = False
+        def post_us_new_ed(self):
+            if self._all_us_posts_success:
+                 _log.debug('all us posts success, do nothing')
+                return
             
             url_root = 'http://' + self._us_ip_addr + ':' + str(self._us_port) + '/VolttronBridge'
             
@@ -332,28 +343,23 @@ def volttronbridge(config_path, **kwargs):
                     _log.debug('_usConnected: ' + str(self._usConnected))
                     _log.debug('Failed to register, May be upstream bridge is not running!!!')
                     return
-                else:
-                    post_ed = True
                     
             _log.debug('_usConnected: ' + str(self._usConnected))
             
-            #we want to post to us only if there is change in energy demand
-            if isclose(self._ed_current, self._ed_previous, EPSILON) and post_ed == False:
-                _log.debug('No change in energy demand, do nothing')
-                return
-                
             _log.debug("posting energy demand to upstream VolttronBridge")
-            success = self.do_rpc(url_root, 'rpc_postEnergyDemand', \
+            success = self.do_rpc(url_root, 'rpc_post_ed', \
                             {'discovery_address': self._discovery_address, \
                                 'deviceId': self._deviceId, \
-                                'newEnergyDemand': self._ed_current,
-                                'ed_pp_id': self._ed_pp_id
+                                'new_ed': self._ed_current, \
+                                'ed_pp_id': self._ed_pp_id, \
+                                'ed_isoptimal':  self._ed_isoptimal \
                             })
             #_log.debug('success: ' + str(success))
             if success:
                 _log.debug("Success!!!")
                 self._us_retrycount = 0
                 self._ed_previous = self._ed_current
+                self._all_us_posts_success  = True
             else :
                 _log.debug("Failed!!!")
                 self._us_retrycount = self._us_retrycount + 1
@@ -365,38 +371,13 @@ def volttronbridge(config_path, **kwargs):
                     
             return
             
-        #price point on local bus changed post it to ds
-        def _processNewPricePoint(self, new_price_point, new_pp_id, new_pp_isoptimal):
-            #_log.debug('_processNewPricePoint()')
-            #we want to post to ds only if there is change in price point
-            if isclose(self._pp_current, new_price_point, EPSILON) and \
-                            self._pp_id == new_pp_id and \
-                            self._pp_isoptimal == new_pp_isoptimal :
-                _log.debug('no change, do nothing')
-                return
-            self._pp_current = self._pp_new
-            self._pp_new = new_price_point
-            self._pp_id = new_pp_id
-            self._pp_isoptimal = new_pp_isoptimal
-            self._reset_ds_retrycount()
-            self._postDsNewPricePoint()
-            return
-            
-        def _reset_ds_retrycount(self):
-            for discovery_address in self._ds_voltBr:
-                index = self._ds_voltBr.index(discovery_address)
-                self._ds_retrycount[index] = 0
-            return
-            
         #perodically keeps trying to post pp to ds
-        def _postDsNewPricePoint(self):
-            #we want to post to ds only if there is change in price point
-            if isclose(self._pp_current, self._pp_new, EPSILON) and \
-                    self._all_ds_posts_success :
-                _log.debug('No change in price point, do nothing')
+        def post_ds_new_pp(self):
+            if self._all_ds_posts_success:
+                _log.debug('all ds posts success, do nothing')
                 return
                 
-            self._all_ds_posts_success  = True
+            self._all_ds_posts_success  = True          #assume all ds post success, if any failed set to False
             for discovery_address in self._ds_voltBr:
                 index = self._ds_voltBr.index(discovery_address)
                 
@@ -405,10 +386,10 @@ def volttronbridge(config_path, **kwargs):
                     continue
                     
                 url_root = 'http://' + discovery_address + '/VolttronBridge'
-                result = self.do_rpc(url_root, 'rpc_postPricePoint', \
+                result = self.do_rpc(url_root, 'rpc_post_pp', \
                                         {'discovery_address': self._discovery_address, \
                                         'deviceId': self._deviceId, \
-                                        'newPricePoint': self._pp_current, \
+                                        'new_pp': self._pp_current, \
                                         'new_pp_id': self._pp_id, \
                                         'new_pp_isoptimal': self._pp_isoptimal \
                                         })
@@ -416,7 +397,6 @@ def volttronbridge(config_path, **kwargs):
                     #success, reset retry count
                     self._ds_retrycount[index] = MAX_RETRIES + 1    #no need to retry on the next run
                     _log.debug("post to:" + discovery_address + " sucess!!!")
-                    self._pp_current = self._pp_new                 #atleast one success, update pp
                 else:
                     #failed to post, increment retry count
                     self._ds_retrycount[index] = self._ds_retrycount[index]  + 1
@@ -426,8 +406,8 @@ def volttronbridge(config_path, **kwargs):
                         
             return
             
-        def _registerDsBridge(self, discovery_address, deviceId):
-            _log.debug('_registerDsBridge(), discovery_address: ' + discovery_address + ' deviceId: ' + deviceId)
+        def _register_ds_bridge(self, discovery_address, deviceId):
+            _log.debug('_register_ds_bridge(), discovery_address: ' + discovery_address + ' deviceId: ' + deviceId)
             if discovery_address in self._ds_voltBr:
                 _log.debug('already registered!!!')
                 index = self._ds_voltBr.index(discovery_address)
@@ -443,8 +423,8 @@ def volttronbridge(config_path, **kwargs):
             _log.debug('registered!!!')
             return True
             
-        def _unregisterDsBridge(self, discovery_address, deviceId):
-            _log.debug('_unregisterDsBridge(), discovery_address: ' + discovery_address + ' deviceId: ' + deviceId)
+        def _unregister_ds_bridge(self, discovery_address, deviceId):
+            _log.debug('_unregister_ds_bridge(), discovery_address: ' + discovery_address + ' deviceId: ' + deviceId)
             if discovery_address not in self._ds_voltBr:
                 _log.debug('already unregistered')
                 return True
@@ -457,28 +437,48 @@ def volttronbridge(config_path, **kwargs):
             _log.debug('unregistered!!!')
             return True
             
+        def _reset_ds_retrycount(self):
+            for discovery_address in self._ds_voltBr:
+                index = self._ds_voltBr.index(discovery_address)
+                self._ds_retrycount[index] = 0
+            return
+            
         #post the new price point from us to the local-us-bus
-        def _postPricePoint(self, discovery_address, deviceId, newPricePoint, new_pp_id, new_pp_isoptimal):
-            _log.debug ( "*** New Price Point(us): {0:.2f} ***".format(newPricePoint))
+        def _post_pp(self, discovery_address, deviceId, new_pp, new_pp_id, new_pp_isoptimal):
+            _log.debug ( "*** New Price Point(us): {0:.2f} ***".format(new_pp))
             _log.debug("*** new_pp_id: " + str(new_pp_id))
             _log.debug("*** new_pp_isoptimal: " + str(new_pp_isoptimal))
 
             #post to bus
             _log.debug('post the new price point from us to the local-us-bus')
             pubTopic =  pricePoint_topic_us
-            pubMsg = [newPricePoint,{'units': 'cents', 'tz': 'UTC', 'type': 'float'}, new_pp_id, new_pp_isoptimal]
+            pubMsg = [new_pp, \
+                        {'units': 'cents', 'tz': 'UTC', 'type': 'float'}, \
+                        new_pp_id, \
+                        new_pp_isoptimal \
+                        ]
             publish_to_bus(self, pubTopic, pubMsg)
             return True
             
         #post the new energy demand from ds to the local bus
-        def _postEnergyDemand(self, discovery_address, deviceId, newEnergyDemand, ed_pp_id):
-            _log.debug ( "*** New Energy Demand: {0:.4f} ***".format(newEnergyDemand) + ' ed_pp_id'+ str(ed_pp_id)+' from: ' + deviceId)
+        def _post_ed(self, discovery_address, deviceId, new_ed, ed_pp_id, ed_isoptimal, no_of_device=None):
+            _log.debug ( "*** New Energy Demand: {0:.4f} ***".format(new_ed) + ' ed_pp_id'+ str(ed_pp_id)+' from: ' + deviceId)
+            
+            no_of_device = no_of_device if not None else len(self._ds_deviceId) 
+            
             if discovery_address in self._ds_voltBr:
                 index = self._ds_voltBr.index(discovery_address)
                 if self._ds_deviceId[index] == deviceId:
                     #post to bus
                     pubTopic = energyDemand_topic_ds + "/" + deviceId
-                    pubMsg = [newEnergyDemand,{'units': 'W', 'tz': 'UTC', 'type': 'float'}, ed_pp_id, deviceId, len(self._ds_deviceId)]
+                    pubMsg = [new_ed, \
+                                {'units': 'W', 'tz': 'UTC', 'type': 'float'}, \
+                                ed_pp_id, \
+                                ed_isoptimal, \
+                                discovery_address, \
+                                deviceId, \
+                                no_of_device \
+                                ]
                     publish_to_bus(self, pubTopic, pubMsg)
                     self._ds_retrycount[index] = 0
                     _log.debug("...Done!!!")
