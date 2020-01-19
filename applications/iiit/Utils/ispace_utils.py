@@ -26,18 +26,21 @@ utils.setup_logging()
 _log = logging.getLogger(__name__)
 
 class ParamPP(IntEnum):
-    IDX_PP                  = 0
-    IDX_PP_ID               = 1
-    IDX_PP_ISOPTIMAL        = 2
+    idx_pp                  = 0
+    idx_pp_datatype         = 1
+    idx_pp_id               = 2
+    idx_pp_isoptimal        = 3
+    idx_pp_discovery_addrs  = 4
+    idx_pp_device_id        = 5
     
 class ParamED(IntEnum):
-    IDX_ED                  = 0
-    IDX_ED_DATATYPE         = 1
-    IDX_ED_PP_ID            = 2
-    IDX_ED_ISOPTIMAL        = 3
-    IDX_ED_DISCOVERY_ADDRS  = 4
-    IDX_ED_DEVICE_ID        = 5
-    IDX_ED_NO_OF_DEVICES    = 6
+    idx_ed                  = 0
+    idx_ed_datatype         = 1
+    idx_ed_pp_id            = 2
+    idx_ed_isoptimal        = 3
+    idx_ed_discovery_addrs  = 4
+    idx_ed_device_id        = 5
+    idx_ed_no_of_devices    = 6
     
 def publish_to_bus(self, topic, msg):
     #_log.debug('publish_to_bus()')

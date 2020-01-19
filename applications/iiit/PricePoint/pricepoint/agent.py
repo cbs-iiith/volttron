@@ -145,7 +145,11 @@ class PricePoint(Agent):
             _log.debug("*** new_pp_isoptimal: " + str(new_pp_isoptimal))
 
             pubTopic = self.topic_price_point
-            pubMsg = [new_pp,{'units': 'cents', 'tz': 'UTC', 'type': 'float'}, new_pp_id, new_pp_isoptimal]
+            pubMsg = [new_pp,\
+                        {'units': 'cents', 'tz': 'UTC', 'type': 'float'}, \
+                        new_pp_id, \
+                        new_pp_isoptimal\
+                        ]
             _log.debug('publishing to local bus topic: ' + pubTopic)
             publish_to_bus(self, pubTopic, pubMsg)
             self._price_point_previous = new_pp

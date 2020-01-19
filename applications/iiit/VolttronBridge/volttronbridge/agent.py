@@ -241,37 +241,41 @@ def volttronbridge(config_path, **kwargs):
                             'deviceId':rpcdata.params['deviceId']
                             }
                     result = self._register_ds_bridge(**args)
+                    
                 elif rpcdata.method == "rpc_unregister_ds_bridge":
                     args = {'discovery_address': rpcdata.params['discovery_address'],
                             'deviceId':rpcdata.params['deviceId']
                             }
                     result = self._unregister_ds_bridge(**args)
+                    
                 elif rpcdata.method == "rpc_post_ed":
                     args = {'discovery_address': rpcdata.params['discovery_address'], \
                             'deviceId':rpcdata.params['deviceId'], \
                             'new_ed': rpcdata.params['new_ed'], \
                             'ed_pp_id': rpcdata.params['ed_pp_id'] \
-                                        if rpcdata.params['ed_pp_id'] is not None \
+                                            if rpcdata.params['ed_pp_id'] is not None \
                                             else randint(0, 99999999), \
                             'ed_pp_isoptimal': rpcdata.params['ed_pp_isoptimal'] \
-                                        if rpcdata.params['ed_pp_isoptimal'] is not None \
+                                            if rpcdata.params['ed_pp_isoptimal'] is not None \
                                             else False
                             }
                     #post the new energy demand from ds to the local bus
-                    result = self._post_ed(**args)    
+                    result = self._post_ed(**args)
+                    
                 elif rpcdata.method == "rpc_post_pp":
                     args = {'discovery_address': rpcdata.params['discovery_address'], \
                             'deviceId':rpcdata.params['deviceId'], \
                             'new_pp': rpcdata.params['new_pp'], \
                             'new_pp_id': rpcdata.params['new_pp_id'] \
-                                        if rpcdata.params['new_pp_id'] is not None \
+                                            if rpcdata.params['new_pp_id'] is not None \
                                             else randint(0, 99999999), \
                             'new_pp_isoptimal': rpcdata.params['new_pp_isoptimal'] \
-                                        if rpcdata.params['new_pp_isoptimal'] is not None \
+                                            if rpcdata.params['new_pp_isoptimal'] is not None \
                                             else False
                             }
                     #post the new new price point from us to the local-us-bus
                     result = self._post_pp(**args)
+                    
                 elif rpcdata.method == "rpc_ping":
                     result = True
                 else:
@@ -293,9 +297,13 @@ def volttronbridge(config_path, **kwargs):
             if self._bridge_host == 'LEVEL_TAILEND':
                 return
                 
-            self._pp_current    = message[0]
-            self._pp_id         = message[2] if message[2] is not None else randint(0, 99999999)
-            self._pp_isoptimal  = message[3] if message[3] is not None else False
+            self._pp_current    = message[ParamPP.idx_pp]
+            self._pp_id         = message[ParamPP.idx_pp_id] \
+                                    if message[ParamPP.idx_pp_id] is not None \
+                                    else randint(0, 99999999)
+            self._pp_isoptimal  = message[ParamPP.idx_pp_isoptimal] \
+                                    if message[ParamPP.idx_pp_isoptimal] is not None \
+                                    else False
             _log.debug("*** New Price Point: {0:.2f} ***".format(self._pp_current) \
                             + " new_pp_id: " + str(self._pp_id) \
                             + " new_pp_isoptimal: " + str(self._pp_isoptimal) \
@@ -312,9 +320,13 @@ def volttronbridge(config_path, **kwargs):
                 #do nothing
                 return
                 
-            self._ed_current = message[0]
-            self._ed_pp_id = message[2] if message[2] is not None else randint(0, 99999999)
-            self._ed_isoptimal = message[3] if message[3] is not None else False
+            self._ed_current    = message[ParamED.idx_ed]
+            self._ed_pp_id      = message[ParamED.idx_ed_pp_id] \
+                                    if message[ParamED.idx_ed_pp_id] is not None \
+                                    else randint(0, 99999999)
+            self._ed_isoptimal  = message[ParamED.idx_ed_isoptimal] \
+                                    if message[ParamED.idx_ed_isoptimal] is not None \
+                                    else False
             _log.debug("*** New Energy Demand: {0:.4f} ***".format(self._ed_current) \
                             + ' ed_pp_id:' + str(self._ed_pp_id) \
                             + ' ed_isoptimal' + str(self._ed_isoptimal) \

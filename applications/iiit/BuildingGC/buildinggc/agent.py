@@ -25,7 +25,7 @@ import time
 import gevent
 import gevent.event
 
-from ispace_utils import publish_to_bus
+from ispace_utils import publish_to_bus, ParamPP, ParamED
 
 utils.setup_logging()
 _log = logging.getLogger(__name__)
@@ -66,9 +66,13 @@ def buildinggc(config_path, **kwargs):
 
         def on_new_pp(self, peer, sender, bus,  topic, headers, message):
             #new zone price point
-            new_pp              = message[0]
-            new_pp_id           = message[2] if message[2] is not None else randint(0, 99999999)
-            new_pp_isoptimal    = message[3] if message[3] is not None else False
+            new_pp              = message[ParamPP.idx_pp]
+            new_pp_id           = message[ParamPP.idx_pp_id] \
+                                    if message[ParamPP.idx_pp_id] is not None \
+                                    else randint(0, 99999999)
+            new_pp_isoptimal    = message[ParamPP.idx_pp_isoptimal] \
+                                    if message[ParamPP.idx_pp_isoptimal] is not None \
+                                    else False
             _log.info ("*** New Price Point: {0:.2f} ***".format(new_pp))
             _log.debug("*** new_pp_id: " + str(new_pp_id))
             _log.debug("*** new_pp_isoptimal: " + str(new_pp_isoptimal))
@@ -79,7 +83,11 @@ def buildinggc(config_path, **kwargs):
                 
             if new_pp_isoptimal:
                 pubTopic =  self.topic_price_point
-                pubMsg = [new_pp, {'units': 'cents', 'tz': 'UTC', 'type': 'float'}, new_pp_id, new_pp_isoptimal]
+                pubMsg = [new_pp, \
+                            {'units': 'cents', 'tz': 'UTC', 'type': 'float'}, \
+                            new_pp_id, \
+                            new_pp_isoptimal\
+                            ]
                 _log.debug('publishing to local bus topic: ' + pubTopic)
                 publish_to_bus(self, pubTopic, pubMsg)
                 return True
@@ -89,7 +97,11 @@ def buildinggc(config_path, **kwargs):
             #if self._current_gd_pp != gd_pp:
                 new_pp, new_pp_id, new_pp_isoptimal = self._computeNewPrice(new_pp, new_pp_id, new_pp_isoptimal)
                 pubTopic =  self.topic_price_point
-                pubMsg = [new_pp, {'units': 'cents', 'tz': 'UTC', 'type': 'float'}, new_pp_id, new_pp_isoptimal]
+                pubMsg = [new_pp, \
+                            {'units': 'cents', 'tz': 'UTC', 'type': 'float'}, \
+                            new_pp_id, \
+                            new_pp_isoptimal\
+                            ]
                 _log.debug('publishing to local bus topic: ' + pubTopic)
                 publish_to_bus(self, pubTopic, pubMsg)
                 return True
