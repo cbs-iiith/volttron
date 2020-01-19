@@ -31,17 +31,17 @@ utils.setup_logging()
 _log = logging.getLogger(__name__)
 __version__ = '0.3'
 
-def buildinggc(config_path, **kwargs):
+def pricecontroller(config_path, **kwargs):
 
     config = utils.load_config(config_path)
     agentid = config['agentid']
     message = config['message']
 
-    class BuildingGC(Agent):
+    class PriceController(Agent):
 
         def __init__(self, **kwargs):
             _log.debug('__init__()')
-            super(BuildingGC, self).__init__(**kwargs)
+            super(PriceController, self).__init__(**kwargs)
             return
 
         @Core.receiver('onsetup')
@@ -115,13 +115,13 @@ def buildinggc(config_path, **kwargs):
             #      based on predicted demand, etc.
             return new_pp, new_pp_id, new_pp_isoptimal
             
-    Agent.__name__ = 'BuildingGC_Agent'
-    return BuildingGC(**kwargs)
+    Agent.__name__ = 'PriceController_Agent'
+    return PriceController(**kwargs)
     
 def main(argv=sys.argv):
     '''Main method called by the eggsecutable.'''
     try:
-        utils.vip_main(buildinggc)
+        utils.vip_main(pricecontroller)
     except Exception as e:
         print (e)
         _log.exception('unhandled exception')
