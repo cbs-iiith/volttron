@@ -139,6 +139,7 @@ def ss_sh_device(config_path, **kwargs):
                     sh_on_btry_start_time = datetime.datetime.utcnow()
                 else:
                     #dont know what to do
+                    pass
                     
             if sh_on_btry and new_price_point <= self.sh_th_pp:
                 #change th_pp to min for the plug to which hub is connected (ss will switch-on the plug)
@@ -147,13 +148,14 @@ def ss_sh_device(config_path, **kwargs):
                                             self.sh_plug_id, \
                                             MIN_THPP \
                                             ).get(timeout=10)
-                
+                                            
                 if plugOn:
                     sh_on_btry = False
                     sh_on_grid_start_time = datetime.datetime.utcnow()
                 else:
                     #dont know what to do
-            
+                    pass
+                    
             self._price_point = new_price_point
             return
             
