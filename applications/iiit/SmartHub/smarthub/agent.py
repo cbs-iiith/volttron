@@ -687,7 +687,7 @@ class SmartHub(Agent):
             self._pp_failed = True
         
         if self._pp_failed:
-            _log.error("unable to processNewPricePoint(), will try again in " + str(self._period_process_pp))
+            _log.debug("unable to processNewPricePoint(), will try again in " + str(self._period_process_pp))
             return
             
         self.applyPricingPolicy(SH_DEVICE_LED, SCHEDULE_AVLB)
@@ -696,7 +696,7 @@ class SmartHub(Agent):
         cancel_task_schdl(self, task_id)
         
         if self._pp_failed:
-            _log.error("unable to processNewPricePoint(), will try again in " + str(self._period_process_pp))
+            _log.debug("unable to processNewPricePoint(), will try again in " + str(self._period_process_pp))
             return
             
         _log.info("*** New Price Point processed.")

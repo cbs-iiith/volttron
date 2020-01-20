@@ -508,7 +508,7 @@ class SmartStrip(Agent):
             self._pp_failed = True
             
         if self._pp_failed:
-            _log.error("unable to processNewPricePoint(), will try again in " + str(self._period_process_pp))
+            _log.debug("unable to processNewPricePoint(), will try again in " + str(self._period_process_pp))
             return
         self.applyPricingPolicy(PLUG_ID_1, SCHEDULE_AVLB)
         self.applyPricingPolicy(PLUG_ID_2, SCHEDULE_AVLB)
@@ -518,7 +518,7 @@ class SmartStrip(Agent):
         cancel_task_schdl(self, task_id)
         
         if self._pp_failed:
-            _log.error("unable to processNewPricePoint(), will try again in " + str(self._period_process_pp))
+            _log.debug("unable to processNewPricePoint(), will try again in " + str(self._period_process_pp))
             return
             
         _log.info("*** New Price Point processed.")
