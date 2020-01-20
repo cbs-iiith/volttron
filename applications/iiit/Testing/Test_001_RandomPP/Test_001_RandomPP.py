@@ -68,6 +68,7 @@ def post_random_price():
     try:
         response = do_rpc("rpc_updatePricePoint", \
                             {'new_pp': pp \
+                            , 'new_pp_datatype': {'units': 'cents', 'tz': 'UTC', 'type': 'float'} \
                             , 'new_pp_id': randint(0, 99999999) \
                             , 'new_pp_isoptimal': True \
                             , 'new_pp_ttl': WAIT_TIME_SECONDS \

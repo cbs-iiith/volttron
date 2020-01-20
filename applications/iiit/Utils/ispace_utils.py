@@ -56,7 +56,7 @@ def print_pp(self, new_pp \
                     , pp_timestamp
                     ):
     _log.debug("*** Price Point: {0:.2f} ***".format(new_pp) \
-                    + ", pp_datatype: " + str(pp_datatype) \
+                    #+ ", pp_datatype: " + str(pp_datatype) \
                     + ", pp_isoptimal: " + str(pp_isoptimal) \
                     + ", discovery_address: " + str(discovery_address) \
                     + ", deviceId: " + str(deviceId) \
@@ -76,7 +76,7 @@ def print_ed(self, new_ed \
                     , ed_timestamp \
                     ):
     _log.debug("*** Energy Demand: {0:.2f} ***".format(new_ed) \
-                    + ", ed_datatype: " +str(ed_datatype) \
+                    #+ ", ed_datatype: " +str(ed_datatype) \
                     + ", ed_pp_id: " +str(ed_pp_id) \
                     + ", ed_isoptimal: " +str(ed_isoptimal) \
                     + ", ed_discovery_addrs: " +str(ed_discovery_addrs) \
