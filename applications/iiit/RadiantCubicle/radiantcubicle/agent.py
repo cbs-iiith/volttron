@@ -421,12 +421,20 @@ class RadiantCubicle(Agent):
         return
 
     def publishTed(self):
-        #_log.debug('publishTed()')
         self._ted = self.rpc_getRcCalcCoolingEnergy()
         _log.info( "*** New TED: {0:.2f}, publishing to bus ***".format(self._ted))
         pubTopic = self.energyDemand_topic + "/" + self._deviceId
         #_log.debug("TED pubTopic: " + pubTopic)
-        pubMsg = [self._ted, {'units': 'W', 'tz': 'UTC', 'type': 'float'}]
+        pubMsg = [self._ted \
+                    , {'units': 'W', 'tz': 'UTC', 'type': 'float'}, \
+                    , self._pp_id \
+                    , True \
+                    , None \
+                    , self._deviceId \
+                    , None \
+                    , self._period_read_data \
+                    , datetime.datetime.utcnow().isoformat(' ') + 'Z'
+                    ]
         publish_to_bus(self, pubTopic, pubMsg)
         return
         

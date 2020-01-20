@@ -47,27 +47,43 @@ class ParamED(IntEnum):
     idx_ed_timestamp        = 8
     
 def print_pp(self, new_pp \
-                        , new_pp_datatype \
-                        , new_pp_id \
-                        , new_pp_isoptimal \
-                        , discovery_address \
-                        , deviceId \
-                        , new_pp_ttl \
-                        , new_pp_timestamp
-                        ):
+                    , pp_datatype \
+                    , pp_id \
+                    , pp_isoptimal \
+                    , discovery_address \
+                    , deviceId \
+                    , pp_ttl \
+                    , pp_timestamp
+                    ):
     _log.debug("*** Price Point: {0:.2f} ***".format(new_pp) \
-                    + ", new_pp_datatype: " + str(new_pp_datatype) \
-                    + ", new_pp_isoptimal: " + str(new_pp_isoptimal) \
+                    + ", pp_datatype: " + str(pp_datatype) \
+                    + ", pp_isoptimal: " + str(pp_isoptimal) \
                     + ", discovery_address: " + str(discovery_address) \
                     + ", deviceId: " + str(deviceId) \
-                    + ", new_pp_ttl: " + str(new_pp_ttl) \
-                    + ", new_pp_timestamp: " + str(new_pp_timestamp) \
+                    + ", pp_ttl: " + str(pp_ttl) \
+                    + ", pp_timestamp: " + str(pp_timestamp) \
                 )
     return
     
 def print_ed(self, new_ed \
-                        ):
+                    , ed_datatype \
+                    , ed_pp_id \
+                    , ed_isoptimal \
+                    , ed_discovery_addrs \
+                    , ed_device_id \
+                    , ed_no_of_devices \
+                    , ed_ttl \
+                    , ed_timestamp \
+                    ):
     _log.debug("*** Energy Demand: {0:.2f} ***".format(new_ed) \
+                    + ", ed_datatype: " +str(ed_datatype) \
+                    + ", ed_pp_id: " +str(ed_pp_id) \
+                    + ", ed_isoptimal: " +str(ed_isoptimal) \
+                    + ", ed_discovery_addrs: " +str(ed_discovery_addrs) \
+                    + ", ed_device_id: " +str(ed_device_id) \
+                    + ", ed_no_of_devices: " +str(ed_no_of_devices) \
+                    + ", ed_ttl: " +str(ed_ttl) \
+                    + ", ed_timestamp: " +str(ed_timestamp) \
                 )
     return
     

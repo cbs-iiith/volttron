@@ -305,14 +305,19 @@ class BuildingController(Agent):
         return ted
 
     def publishTed(self):
-        ted = self._calculateTed()
-        self._ted = ted
+        self._ted = self._calculateTed()
         _log.info( "*** New TED: {0:.2f}, publishing to bus ***".format(ted))
         pubTopic = self.energyDemand_topic
-        _log.debug("TED pubTopic: " + pubTopic)
-        pubMsg = [ted, \
-                    {'units': 'W', 'tz': 'UTC', 'type': 'float'}, \
-                    self._pp_id \
+        #_log.debug("TED pubTopic: " + pubTopic)
+        pubMsg = [self._ted \
+                    , {'units': 'W', 'tz': 'UTC', 'type': 'float'}, \
+                    , self._pp_id \
+                    , True \
+                    , None \
+                    , None \
+                    , None \
+                    , self._period_read_data \
+                    , datetime.datetime.utcnow().isoformat(' ') + 'Z'
                     ]
         publish_to_bus(self, pubTopic, pubMsg)
         return

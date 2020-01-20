@@ -113,8 +113,14 @@ def volttronbridge(config_path, **kwargs):
             
             #energy demand
             self._ed_current            = 0
+            self._ed_datatype           = {'units': 'W', 'tz': 'UTC', 'type': 'float'}
             self._ed_pp_id              = randint(0, 99999999)
-            self._ed_isoptimal          = False
+            self._ed_isoptimal          = True
+            self._ed_discovery_addrs    = None
+            self._ed_device_id          = None
+            self._ed_no_of_devices      = 0
+            self._ed_ttl                = -1
+            self._ed_timestamp          = datetime.datetime.utcnow().isoformat(' ') + 'Z'
             self._all_us_posts_success  = False
             
             self._us_retrycount = 0
@@ -256,15 +262,24 @@ def volttronbridge(config_path, **kwargs):
                     result = self._unregister_ds_bridge(**args)
                     
                 elif rpcdata.method == "rpc_post_ed":
-                    args = {'discovery_address': rpcdata.params['discovery_address'], \
-                            'deviceId':rpcdata.params['deviceId'], \
-                            'new_ed': rpcdata.params['new_ed'], \
-                            'ed_pp_id': rpcdata.params['ed_pp_id'] \
-                                            if rpcdata.params['ed_pp_id'] is not None \
-                                            else randint(0, 99999999), \
-                            'ed_pp_isoptimal': rpcdata.params['ed_pp_isoptimal'] \
-                                            if rpcdata.params['ed_pp_isoptimal'] is not None \
-                                            else False
+                    args = {'discovery_address': rpcdata.params['discovery_address'] \
+                            , 'deviceId': rpcdata.params['deviceId'] \
+                            , 'new_ed': rpcdata.params['new_ed'] \
+                            , 'ed_datatype': rpcdata.params['ed_datatype'] \
+                                        if rpcdata.params['ed_datatype'] is not None \
+                                        else {'units': 'W', 'tz': 'UTC', 'type': 'float'} \
+                            , 'ed_pp_id': rpcdata.params['ed_pp_id'] \
+                                        if rpcdata.params['ed_pp_id'] is not None \
+                                        else randint(0, 99999999) \
+                            , 'ed_isoptimal': rpcdata.params['ed_isoptimal'] \
+                                        if rpcdata.params['ed_isoptimal'] is not None \
+                                        else False
+                            , 'ed_ttl': rpcdata.params['ed_ttl'] \
+                                        if rpcdata.params['ed_ttl'] is not None \
+                                        else -1 \
+                            , 'ed_timestamp': rpcdata.params['ed_timestamp'] \
+                                        if rpcdata.params['ed_timestamp'] is not None \
+                                        else datetime.datetime.utcnow().isoformat(' ') + 'Z' \
                             }
                     #post the new energy demand from ds to the local bus
                     result = self._post_ed(**args)
@@ -275,13 +290,13 @@ def volttronbridge(config_path, **kwargs):
                             , 'new_pp': rpcdata.params['new_pp'] \
                             , 'new_pp_id': rpcdata.params['new_pp_id'] \
                                         if rpcdata.params['new_pp_id'] is not None \
-                                            else randint(0, 99999999) \
+                                        else randint(0, 99999999) \
                             , 'new_pp_datatype': rpcdata.params['new_pp_datatype'] \
                                         if rpcdata.params['new_pp_datatype'] is not None \
-                                            else {'units': 'cents', 'tz': 'UTC', 'type': 'float'} \
+                                        else {'units': 'cents', 'tz': 'UTC', 'type': 'float'} \
                             , 'new_pp_isoptimal': rpcdata.params['new_pp_isoptimal'] \
                                         if rpcdata.params['new_pp_isoptimal'] is not None \
-                                            else False \
+                                        else False \
                             , 'new_pp_ttl': rpcdata.params['new_pp_ttl'] \
                                         if rpcdata.params['new_pp_ttl'] is not None \
                                         else -1 \
@@ -352,17 +367,33 @@ def volttronbridge(config_path, **kwargs):
                 return
                 
             self._ed_current    = message[ParamED.idx_ed]
+            self._ed_datatype   = message[ParamED.idx_ed_datatype] \
+                                    if message[ParamED.idx_ed_datatype] is not None \
+                                    else {'units': 'W', 'tz': 'UTC', 'type': 'float'}
             self._ed_pp_id      = message[ParamED.idx_ed_pp_id] \
                                     if message[ParamED.idx_ed_pp_id] is not None \
                                     else randint(0, 99999999)
             self._ed_isoptimal  = message[ParamED.idx_ed_isoptimal] \
                                     if message[ParamED.idx_ed_isoptimal] is not None \
                                     else False
-            _log.debug("*** New Energy Demand: {0:.4f} ***".format(self._ed_current) \
-                            + ' ed_pp_id:' + str(self._ed_pp_id) \
-                            + ' ed_isoptimal' + str(self._ed_isoptimal) \
-                        )
-                        
+            self._ed_ttl        = message[ParamED.idx_ed_ttl] \
+                                    if message[ParamED.idx_ed_ttl] is not None \
+                                    else -1
+            self._ed_timestamp  = message[ParamED.idx_ed_timestamp] \
+                                    if message[ParamED.idx_ed_timestamp] is not None \
+                                    else datetime.datetime.utcnow().isoformat(' ') + 'Z'
+                                    
+            print_ed(self, self._ed_current \
+                            , self._ed_datatype \
+                            , self._ed_pp_id \
+                            , self._ed_isoptimal \
+                            , None \
+                            , None \
+                            , None \
+                            , self._ed_ttl \
+                            , self._ed_timestamp \
+                            )
+                            
             #post ed to us only if pp_id corresponds to these ids (i.e., ed for either us opt_pp_id or bid_pp_id)
             if self._ed_pp_id not in [self.us_opt_pp_id, self.us_bid_pp_id]:
                 _log.debug("*** self._ed_pp_id: " + str(self._ed_pp_id) \
@@ -539,23 +570,43 @@ def volttronbridge(config_path, **kwargs):
             return True
             
         #post the new energy demand from ds to the local bus
-        def _post_ed(self, discovery_address, deviceId, new_ed, ed_pp_id, ed_isoptimal, no_of_device=None):
-            _log.debug ( "*** New Energy Demand: {0:.4f} ***".format(new_ed) + ' ed_pp_id'+ str(ed_pp_id)+' from: ' + deviceId)
+        def _post_ed(self, discovery_address \
+                            , deviceId, \
+                            , new_ed \
+                            , ed_datatype \
+                            , ed_pp_id \
+                            , ed_isoptimal \
+                            , ed_no_of_devices = None\
+                            , ed_ttl \
+                            , ed_timestamp \
+                            ):
+            no_of_device = ed_no_of_devices if not None else len(self._ds_deviceId) 
             
-            no_of_device = no_of_device if not None else len(self._ds_deviceId) 
-            
+            print_ed(self, new_ed \
+                , ed_datatype \
+                , ed_pp_id \
+                , ed_isoptimal \
+                , discovery_address \
+                , deviceId \
+                , no_of_device \
+                , ed_ttl \
+                , ed_timestamp \
+                )
+                
             if discovery_address in self._ds_voltBr:
                 index = self._ds_voltBr.index(discovery_address)
                 if self._ds_deviceId[index] == deviceId:
                     #post to bus
                     pubTopic = energyDemand_topic_ds + "/" + deviceId
-                    pubMsg = [new_ed, \
-                                {'units': 'W', 'tz': 'UTC', 'type': 'float'}, \
-                                ed_pp_id, \
-                                ed_isoptimal, \
-                                discovery_address, \
-                                deviceId, \
-                                no_of_device \
+                    pubMsg = [new_ed \
+                                , ed_datatype \
+                                , ed_pp_id \
+                                , ed_isoptimal \
+                                , discovery_address \
+                                , deviceId \
+                                , no_of_device \
+                                , ed_ttl \
+                                , ed_timestamp \
                                 ]
                     publish_to_bus(self, pubTopic, pubMsg)
                     self._ds_retrycount[index] = 0

@@ -113,10 +113,10 @@ class PricePoint(Agent):
                 args = {'new_pp': rpcdata.params['new_pp'] \
                             , 'new_pp_id': rpcdata.params['new_pp_id'] \
                                         if rpcdata.params['new_pp_id'] is not None \
-                                            else randint(0, 99999999) \
+                                        else randint(0, 99999999) \
                             , 'new_pp_datatype': rpcdata.params['new_pp_datatype'] \
                                         if rpcdata.params['new_pp_datatype'] is not None \
-                                            else {'units': 'cents', 'tz': 'UTC', 'type': 'float'} \
+                                        else {'units': 'cents', 'tz': 'UTC', 'type': 'float'} \
                             , 'new_pp_isoptimal': rpcdata.params['new_pp_isoptimal'] \
                                         if rpcdata.params['new_pp_isoptimal'] is not None \
                                             else False \
