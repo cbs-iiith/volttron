@@ -32,6 +32,7 @@ class ParamPP(IntEnum):
     idx_pp_isoptimal        = 3
     idx_pp_discovery_addrs  = 4
     idx_pp_device_id        = 5
+    idx_pp_ttl              = 6
     
 class ParamED(IntEnum):
     idx_ed                  = 0
@@ -41,6 +42,7 @@ class ParamED(IntEnum):
     idx_ed_discovery_addrs  = 4
     idx_ed_device_id        = 5
     idx_ed_no_of_devices    = 6
+    idx_ed_ttl              = 7
     
 def publish_to_bus(self, topic, msg):
     #_log.debug('publish_to_bus()')
