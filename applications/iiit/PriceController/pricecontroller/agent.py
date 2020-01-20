@@ -15,7 +15,7 @@ import datetime
 import logging
 import sys
 import uuid
-import random
+from random import random, randint
 
 from volttron.platform.vip.agent import Agent, Core, PubSub, compat, RPC
 from volttron.platform.agent import utils
