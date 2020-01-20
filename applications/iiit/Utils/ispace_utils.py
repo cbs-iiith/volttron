@@ -57,6 +57,7 @@ def print_pp(self, new_pp \
                     ):
     _log.debug("*** Price Point: {0:.2f} ***".format(new_pp) \
                     #+ ", pp_datatype: " + str(pp_datatype) \
+                    + ", pp_id: " + str(pp_id) \
                     + ", pp_isoptimal: " + str(pp_isoptimal) \
                     + ", discovery_address: " + str(discovery_address) \
                     + ", deviceId: " + str(deviceId) \
