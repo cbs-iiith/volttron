@@ -15,9 +15,10 @@ from os.path import basename
 import requests
 import sys
 import json
-import math, random
+import math
 import threading, time, signal
 from datetime import timedelta
+from random import random, randint
 
 from test_utils import get_timestamp
 
@@ -60,11 +61,15 @@ def do_rpc(method, params=None ):
 def post_random_price():
     #random price between 0-1
     no_digit = 2
-    pp = math.floor(random.random()*10**no_digit)/10**no_digit
+    pp = math.floor(random()*10**no_digit)/10**no_digit
     pp = .94 if pp>.94 else pp
     print get_timestamp() + ' PricePoint: ' + str(pp) + ',',
     try:
-        response = do_rpc("rpc_updatePricePoint", {'newPricePoint': pp})
+        response = do_rpc("rpc_updatePricePoint", \
+                            {'new_pp': pp \
+                            , 'new_pp_id': randint(0, 99999999) \
+                            , 'new_pp_isoptimal': True \
+                            })
         #print "response: " +str(response),
         if response.ok:
             success = response.json()['result']
