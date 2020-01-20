@@ -236,7 +236,7 @@ def pricecontroller(config_path, **kwargs):
             #    
             #   pp_opt = pp_new
             #
-            new_pp = self.us_pp - 1.25
+            new_pp = self.us_pp * 1.25
             new_pp_datatype = self.us_pp_datatype
             new_pp_id = randint(0, 99999999)
             new_pp_isoptimal = False
