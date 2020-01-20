@@ -208,7 +208,7 @@ class BuildingController(Agent):
         self.publishPriceToBMS(self._price_point_new)
         if not self._pp_failed:
             self.applyPricingPolicy()
-        
+            
         if self._pp_failed:
             _log.error("unable to processNewPricePoint(), will try again in " + str(self._period_process_pp))
             return

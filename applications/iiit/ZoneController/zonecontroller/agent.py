@@ -58,9 +58,10 @@ class ZoneController(Agent):
     '''
     _pp_failed = False
     
-    _price_point_previous = 0.4 
     _price_point_current = 0.4 
     _price_point_new = 0.45
+    _pp_id = randint(0, 99999999)
+    _pp_id_new = randint(0, 99999999)
 
     _rmTsp = 25
     _rmLsp = 100
@@ -95,6 +96,8 @@ class ZoneController(Agent):
         _log.info("Starting ZoneController...")
         
         self._runBMSTest()
+        
+        
         
         #TODO: get the latest values (states/levels) from h/w
         #self.getInitialHwState()
@@ -226,21 +229,21 @@ class ZoneController(Agent):
         
     #this is a perodic function that keeps trying to apply the new pp till success
     def processNewPricePoint(self):
-        if isclose(self._price_point_current, self._price_point_new, EPSILON):
+        if isclose(self._price_point_current, self._price_point_new, EPSILON) and self._pp_id == self._pp_id_new:
             return
             
         self._pp_failed = False     #any process that failed to apply pp sets this flag True
-        self._price_point_previous = self._price_point_current
         self.applyPricingPolicy()
         
         if self._pp_failed:
             _log.error("unable to processNewPricePoint(), will try again in " + str(self._period_process_pp))
             return
+            
         _log.info("*** New Price Point processed.")
         self._price_point_current = self._price_point_new
-        
+        self._pp_id = self._pp_id_new
         return
-
+        
     def applyPricingPolicy(self):
         _log.debug("applyPricingPolicy()")
         

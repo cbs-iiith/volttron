@@ -117,9 +117,11 @@ class SmartHub(Agent):
     _shDevicesState = [0, 0, 0, 0, 0, 0, 0, 0, 0]
     _shDevicesLevel = [0.3, 0.3, 0.3, 0.3, 0.3, 0.3, 0.3, 0.3, 0.3]
     _shDevicesPP_th = [ 0.95, 0.95, 0.95, 0.95, 0.95, 0.95, 0.95, 0.95, 0.95]
-    _price_point_previous = 0.4 
+    
     _price_point_current = 0.4
     _price_point_new = 0.45
+    _pp_id = randint(0, 99999999)
+    _pp_id_new = randint(0, 99999999)
     
     #downstream energy demand and deviceId
     _ds_ed = []
@@ -231,7 +233,6 @@ class SmartHub(Agent):
     def _configGetInitValues(self):
         self._period_read_data          = self.config.get('period_read_data', 30)
         self._period_process_pp         = self.config.get('period_process_pp', 10)
-        self._price_point_previous      = self.config.get('default_base_price', 0.2)
         self._price_point_current       = self.config.get('price_point_latest', 0.2)
         return
         
@@ -676,7 +677,7 @@ class SmartHub(Agent):
         
     #this is a perodic function that keeps trying to apply the new pp till success
     def processNewPricePoint(self):
-        if isclose(self._price_point_current, self._price_point_new, EPSILON):
+        if isclose(self._price_point_current, self._price_point_new, EPSILON) and self._pp_id == self._pp_id_new:
             return
             
         self._pp_failed = False     #any process that failed to apply pp sets this flag True
@@ -689,7 +690,6 @@ class SmartHub(Agent):
             _log.error("unable to processNewPricePoint(), will try again in " + str(self._period_process_pp))
             return
             
-        self._price_point_previous = self._price_point_current
         self.applyPricingPolicy(SH_DEVICE_LED, SCHEDULE_AVLB)
         self.applyPricingPolicy(SH_DEVICE_FAN, SCHEDULE_AVLB)
         #cancel the schedule
@@ -698,9 +698,10 @@ class SmartHub(Agent):
         if self._pp_failed:
             _log.error("unable to processNewPricePoint(), will try again in " + str(self._period_process_pp))
             return
+            
         _log.info("*** New Price Point processed.")
         self._price_point_current = self._price_point_new
-        
+        self._pp_id = self._pp_id_new
         return
         
     def applyPricingPolicy(self, deviceId, schdExist):
