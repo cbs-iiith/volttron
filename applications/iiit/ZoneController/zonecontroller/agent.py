@@ -258,7 +258,7 @@ class ZoneController(Agent):
         lsp = self.getNewLsp(self._price_point_new)
         _log.debug('New Ambient Lighting Setpoint: {0:0.1f}'.format( lsp))
         self.setRmLsp(lsp)
-        if not isclose(tsp, self._rmLsp, EPSILON):
+        if not isclose(lsp, self._rmLsp, EPSILON):
             self._pp_failed = True
         return
         
