@@ -205,9 +205,9 @@ def volttronbridge(config_path, **kwargs):
         #register with upstream volttron bridge
         def _registerToUsBridge(self, url_root, discovery_address, deviceId):
             return self.do_rpc(url_root, 'rpc_register_ds_bridge', \
-                                {'discovery_address': discovery_address, \
-                                    'deviceId': deviceId \
-                                    })
+                                {'discovery_address': discovery_address \
+                                , 'deviceId': deviceId \
+                                })
                                     
         @Core.receiver('onstop')
         def onstop(self, sender, **kwargs):
@@ -225,8 +225,8 @@ def volttronbridge(config_path, **kwargs):
                     _log.debug("unregistering with upstream VolttronBridge")
                     url_root = 'http://' + self._us_ip_addr + ':' + str(self._us_port) + '/VolttronBridge'
                     result = self.do_rpc(url_root, 'rpc_unregister_ds_bridge', \
-                                        {'discovery_address': self._discovery_address, \
-                                            'deviceId': self._deviceId \
+                                        {'discovery_address': self._discovery_address \
+                                        , 'deviceId': self._deviceId \
                                         })
                     self._usConnected = False
                 
@@ -430,11 +430,11 @@ def volttronbridge(config_path, **kwargs):
             
             _log.debug("posting energy demand to upstream VolttronBridge")
             success = self.do_rpc(url_root, 'rpc_post_ed', \
-                            {'discovery_address': self._discovery_address, \
-                                'deviceId': self._deviceId, \
-                                'new_ed': self._ed_current, \
-                                'ed_pp_id': self._ed_pp_id, \
-                                'ed_isoptimal':  self._ed_isoptimal \
+                            {'discovery_address': self._discovery_address \
+                            , 'deviceId': self._deviceId \
+                            , 'new_ed': self._ed_current \
+                            , 'ed_pp_id': self._ed_pp_id \
+                            , 'ed_isoptimal':  self._ed_isoptimal \
                             })
             #_log.debug('success: ' + str(success))
             if success:
@@ -469,14 +469,14 @@ def volttronbridge(config_path, **kwargs):
                     
                 url_root = 'http://' + discovery_address + '/VolttronBridge'
                 result = self.do_rpc(url_root, 'rpc_post_pp', \
-                                        {'discovery_address': self._discovery_address, \
-                                        'deviceId': self._deviceId, \
-                                        'new_pp': self._pp_current, \
-                                        'new_pp_id': self._pp_id, \
-                                        'new_pp_isoptimal': self._pp_isoptimal \
-                                        'new_pp_datatype': self._pp_datatype \
-                                        'new_pp_ttl': self._pp_ttl \
-                                        'new_pp_timestamp': self._pp_timestamp \
+                                        {'discovery_address': self._discovery_address \
+                                        , 'deviceId': self._deviceId \
+                                        , 'new_pp': self._pp_current \
+                                        , 'new_pp_id': self._pp_id \
+                                        , 'new_pp_isoptimal': self._pp_isoptimal \
+                                        , 'new_pp_datatype': self._pp_datatype \
+                                        , 'new_pp_ttl': self._pp_ttl \
+                                        , 'new_pp_timestamp': self._pp_timestamp \
                                         })
                 if result:
                     #success, reset retry count
@@ -530,7 +530,7 @@ def volttronbridge(config_path, **kwargs):
             
         #post the new price point from us to the local-us-bus
         def _post_pp(self, discovery_address \
-                            , deviceId, \
+                            , deviceId \
                             , new_pp \
                             , new_pp_datatype \
                             , new_pp_id \
@@ -538,14 +538,14 @@ def volttronbridge(config_path, **kwargs):
                             , new_pp_ttl \
                             , new_pp_timestamp \
                             ):
-            print_pp(self, new_pp\
-                            , new_pp_datatype\
-                            , new_pp_id\
-                            , new_pp_isoptimal\
-                            , discovery_address\
-                            , deviceId\
-                            , new_pp_ttl\
-                            , new_pp_timestamp\
+            print_pp(self, new_pp \
+                            , new_pp_datatype \
+                            , new_pp_id \
+                            , new_pp_isoptimal \
+                            , discovery_address \
+                            , deviceId \
+                            , new_pp_ttl \
+                            , new_pp_timestamp \
                             )
                             
             #keep track of us opt_pp_id & bid_pp_id
@@ -571,14 +571,14 @@ def volttronbridge(config_path, **kwargs):
             
         #post the new energy demand from ds to the local bus
         def _post_ed(self, discovery_address \
-                            , deviceId, \
+                            , deviceId \
                             , new_ed \
                             , ed_datatype \
                             , ed_pp_id \
                             , ed_isoptimal \
-                            , ed_no_of_devices = None\
                             , ed_ttl \
                             , ed_timestamp \
+                            , ed_no_of_devices = None\
                             ):
             no_of_device = ed_no_of_devices if not None else len(self._ds_deviceId) 
             

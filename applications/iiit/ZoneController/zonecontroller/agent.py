@@ -491,7 +491,7 @@ class ZoneController(Agent):
         pubTopic = self.energyDemand_topic
         #_log.debug("TED pubTopic: " + pubTopic)
         pubMsg = [self._ted \
-                    , {'units': 'W', 'tz': 'UTC', 'type': 'float'}, \
+                    , {'units': 'W', 'tz': 'UTC', 'type': 'float'} \
                     , self._pp_id \
                     , True \
                     , None \
