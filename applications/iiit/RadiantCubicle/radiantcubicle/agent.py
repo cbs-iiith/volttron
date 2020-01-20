@@ -134,24 +134,24 @@ class RadiantCubicle(Agent):
         return
 
     def _configGetInitValues(self):
-        self._period_read_data = self.config('period_read_data', 30)
-        self._period_process_pp = self.config.get('period_process_pp', 10)
-        self._price_point_previous = self.config.get('default_base_price', 0.2)
-        self._price_point_current = self.config.get('price_point_latest', 0.2)
-        self._deviceId = self.config.get('deviceId', 'RadiantCubicle-61')
+        self._period_read_data          = self.config.get('period_read_data', 30)
+        self._period_process_pp         = self.config.get('period_process_pp', 10)
+        self._price_point_previous      = self.config.get('default_base_price', 0.2)
+        self._price_point_current       = self.config.get('price_point_latest', 0.2)
+        self._deviceId                  = self.config.get('deviceId', 'RadiantCubicle-61')
         return
         
     def _configGetPoints(self):
-        self.root_topic              = self.config.get('topic_root', 'radiantcubicle')
-        self.energyDemand_topic     = self.config.get('topic_energy_demand', \
+        self.root_topic                 = self.config.get('topic_root', 'radiantcubicle')
+        self.energyDemand_topic         = self.config.get('topic_energy_demand', \
                                             'radiantcubicle/energydemand')
-        self.topic_price_point      = self.config.get('topic_price_point', \
+        self.topic_price_point          = self.config.get('topic_price_point', \
                                             'topic_price_point')
         return
 
     def _configGetPriceFucntions(self):
         _log.debug("_configGetPriceFucntions()")
-        self.pf_rc  = self.config.get('pf_rc')
+        self.pf_rc                      = self.config.get('pf_rc')
         return
         
 

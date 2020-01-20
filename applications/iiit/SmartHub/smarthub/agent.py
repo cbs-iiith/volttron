@@ -229,25 +229,25 @@ class SmartHub(Agent):
         return
 
     def _configGetInitValues(self):
-        self._period_read_data = self.config('period_read_data', 30)
-        self._period_process_pp = self.config.get('period_process_pp', 10)
-        self._price_point_previous = self.config.get('default_base_price', 0.2)
-        self._price_point_current = self.config.get('price_point_latest', 0.2)
+        self._period_read_data          = self.config.get('period_read_data', 30)
+        self._period_process_pp         = self.config.get('period_process_pp', 10)
+        self._price_point_previous      = self.config.get('default_base_price', 0.2)
+        self._price_point_current       = self.config.get('price_point_latest', 0.2)
         return
         
     def _configGetPoints(self):
-        self.topic_root = self.config.get('topic_root', 'smarthub')
-        self.topic_price_point = self.config.get('topic_price_point', \
+        self.topic_root                 = self.config.get('topic_root', 'smarthub')
+        self.topic_price_point          = self.config.get('topic_price_point', \
                                         'smarthub/pricepoint')
-        self.energyDemand_topic     = self.config.get('topic_energy_demand', \
+        self.energyDemand_topic         = self.config.get('topic_energy_demand', \
                                             'smarthub/energydemand')
-        self.energyDemand_topic_ds  = self.config.get('topic_energy_demand_ds', \
+        self.energyDemand_topic_ds      = self.config.get('topic_energy_demand_ds', \
                                             'smartstrip/energydemand')
         return
         
     def _configGetPriceFucntions(self):
         _log.debug("_configGetPriceFucntions()")
-        self.pf_sh_fan  = self.config.get('pf_sh_fan')
+        self.pf_sh_fan                  = self.config.get('pf_sh_fan')
         return
         
     def runSmartHubTest(self):

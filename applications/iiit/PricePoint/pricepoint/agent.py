@@ -80,14 +80,14 @@ class PricePoint(Agent):
         return
 
     def _configGetInitValues(self):
-        self.default_base_price     = self.config.get('default_base_price', 0.4)
-        self.min_price              = self.config.get('min_price', 0.0)
-        self.max_price              = self.config.get('max_price', 1.0)
-        self.period_read_price_point = self.config.get('period_read_price_point', 5)
+        self.default_base_price         = self.config.get('default_base_price', 0.4)
+        self.min_price                  = self.config.get('min_price', 0.0)
+        self.max_price                  = self.config.get('max_price', 1.0)
+        self.period_read_price_point    = self.config.get('period_read_price_point', 5)
         return
 
     def _configGetPoints(self):
-        self.topic_price_point      = self.config.get('topic_price_point', 'zone/pricepoint')
+        self.topic_price_point          = self.config.get('topic_price_point', 'zone/pricepoint')
         return
 
     def fake_price_points(self):

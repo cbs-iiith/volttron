@@ -134,19 +134,19 @@ class BuildingController(Agent):
         return
 
     def _configGetInitValues(self):
-        self._period_read_data = self.config.get('period_read_data', 30)
-        self._period_process_pp = self.config.get('period_process_pp', 10)
-        self._price_point_current = self.config.get('default_base_price', 0.2)
-        self._price_point_new = self.config.get('price_point_latest', 0.3)
+        self._period_read_data          = self.config.get('period_read_data', 30)
+        self._period_process_pp         = self.config.get('period_process_pp', 10)
+        self._price_point_current       = self.config.get('default_base_price', 0.2)
+        self._price_point_new           = self.config.get('price_point_latest', 0.3)
         return
         
     def _configGetPoints(self):
-        self.root_topic              = self.config.get('topic_root', 'building')
-        self.energyDemand_topic     = self.config.get('topic_energy_demand', \
+        self.root_topic                 = self.config.get('topic_root', 'building')
+        self.energyDemand_topic         = self.config.get('topic_energy_demand', \
                                             'building/energydemand')
-        self.topic_price_point      = self.config.get('topic_price_point', \
+        self.topic_price_point          = self.config.get('topic_price_point', \
                                             'building/pricepoint')
-        self.energyDemand_topic_ds  = self.config.get('topic_energy_demand_ds', \
+        self.energyDemand_topic_ds      = self.config.get('topic_energy_demand_ds', \
                                             'ds/energydemand')
         return
 

@@ -433,8 +433,11 @@ def volttronbridge(config_path, **kwargs):
                             {'discovery_address': self._discovery_address \
                             , 'deviceId': self._deviceId \
                             , 'new_ed': self._ed_current \
+                            , 'ed_datatype': self._ed_datatype \
                             , 'ed_pp_id': self._ed_pp_id \
                             , 'ed_isoptimal':  self._ed_isoptimal \
+                            , 'ed_ttl': self._ed_ttl \
+                            , 'ed_timestamp': self._ed_timestamp \
                             })
             #_log.debug('success: ' + str(success))
             if success:
