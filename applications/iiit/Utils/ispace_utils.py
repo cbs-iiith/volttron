@@ -55,7 +55,7 @@ def print_pp(self, new_pp \
                     , pp_ttl \
                     , pp_timestamp
                     ):
-    _log.debug("New PP: {0:.2f}".format(new_pp) \
+    _log.info("New PP: {0:.2f}".format(new_pp) \
                     #+ ", pp_datatype: " + str(pp_datatype) \
                     + ", pp_id: " + str(pp_id) \
                     + ", pp_isoptimal: " + str(pp_isoptimal) \
@@ -76,7 +76,7 @@ def print_ed(self, new_ed \
                     , ed_ttl \
                     , ed_timestamp \
                     ):
-    _log.debug("New ED: {0:.2f}".format(new_ed) \
+    _log.info("New ED: {0:.2f}".format(new_ed) \
                     #+ ", ed_datatype: " +str(ed_datatype) \
                     + ", ed_pp_id: " +str(ed_pp_id) \
                     + ", ed_isoptimal: " +str(ed_isoptimal) \
