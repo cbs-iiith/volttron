@@ -409,7 +409,7 @@ def volttronbridge(config_path, **kwargs):
         #perodically keeps trying to post ed to us
         def post_us_new_ed(self):
             if self._all_us_posts_success:
-                _log.debug('all us posts success, do nothing')
+                #_log.debug('all us posts success, do nothing')
                 return
             
             url_root = 'http://' + self._us_ip_addr + ':' + str(self._us_port) + '/VolttronBridge'
@@ -459,7 +459,7 @@ def volttronbridge(config_path, **kwargs):
         #perodically keeps trying to post pp to ds
         def post_ds_new_pp(self):
             if self._all_ds_posts_success:
-                _log.debug('all ds posts success, do nothing')
+                #_log.debug('all ds posts success, do nothing')
                 return
                 
             self._all_ds_posts_success  = True          #assume all ds post success, if any failed set to False
