@@ -94,6 +94,7 @@
         </header>
         
         <div class="pages" >
+
             <div class="panel" data-title="Publish New PricePoint" id="setPricePoint" >
                 
                 <p>New Price Point</p>
@@ -151,17 +152,21 @@
     <script>
         $('#publishPricePoint').click(function(){
             var new_pp = parseFloat($('#new_pp').val());
+            var new_pp_id = getRndInteger(0,99999999);
+            var new_pp_datatype = null;
             var new_pp_isoptimal = document.getElementById("new_pp_isoptimal").checked;
-            var new_pp_id = null;
             var new_pp_ttl = parseFloat($('#new_pp_ttl').val());
+            var new_pp_timestamp = null;
             var pdata = {
                      jsonrpc: '2.0',
                      method:  "rpc_updatePricePoint",
                      params: {
                         new_pp: new_pp,
+                        new_pp_datatype: new_pp_datatype,
                         new_pp_id: new_pp_id,
                         new_pp_isoptimal: new_pp_isoptimal,
                         new_pp_ttl: new_pp_ttl,
+                        new_pp_timestamp: new_pp_timestamp,
                      },
                      id: '72581-4'
              };
@@ -174,7 +179,7 @@
                      console.log('Result: '+data.result.toString());},
                  failure: function(data){
                      console.log('Result: '+data.result.toString());}
-                     
+
              });
         });
     </script>
@@ -185,6 +190,9 @@
             x.value = y.value;
         }
         
+        function getRndInteger(min, max) {
+            return Math.floor(Math.random() * (max - min) ) + min;
+        }
         window.onload = function() { printValue('slider_pp', 'new_pp'); printValue('slider_pp_ttl', 'new_pp_ttl'); }
     </script>
 </body>
