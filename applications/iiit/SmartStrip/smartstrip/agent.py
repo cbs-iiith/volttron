@@ -814,7 +814,7 @@ class SmartStrip(Agent):
         
     def publishTed(self):
         self._ted = self._calculateTed()
-        _log.info( "*** New TED: {0:.2f}, publishing to bus ***".format(ted))
+        _log.info( "*** New TED: {0:.2f}, publishing to bus ***".format(self._ted))
         pubTopic = self.energyDemand_topic
         #_log.debug("TED pubTopic: " + pubTopic)
         pubMsg = [self._ted \
