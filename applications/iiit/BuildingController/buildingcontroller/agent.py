@@ -210,7 +210,7 @@ class BuildingController(Agent):
             self.applyPricingPolicy()
         
         if self._pp_failed:
-            _log.error("unable to processNewPricePoint(), will try again in " + self._period_process_pp)
+            _log.error("unable to processNewPricePoint(), will try again in " + str(self._period_process_pp))
             return
             
         _log.info("*** New Price Point processed.")
