@@ -37,7 +37,7 @@ import gevent.event
 import requests
 import json
 
-from ispace_utils import publish_to_bus, isclose, ParamPP, ParamED
+from ispace_utils import publish_to_bus, isclose, ParamPP, ParamED, print_pp, print_ed
 
 utils.setup_logging()
 _log = logging.getLogger(__name__)
@@ -105,10 +105,12 @@ def volttronbridge(config_path, **kwargs):
             #price point
             self._pp_current            = 0
             self._pp_id                 = randint(0, 99999999)
+            self._pp_datatype           = {'units': 'cents', 'tz': 'UTC', 'type': 'float'}
             self._pp_isoptimal          = False
+            self._pp_ttl                = -1
+            self._pp_timestamp          = datetime.datetime.utcnow().isoformat(' ') + 'Z'
             self._all_ds_posts_success  = False
             
-
             #energy demand
             self._ed_current            = 0
             self._ed_pp_id              = randint(0, 99999999)
@@ -268,16 +270,25 @@ def volttronbridge(config_path, **kwargs):
                     result = self._post_ed(**args)
                     
                 elif rpcdata.method == "rpc_post_pp":
-                    args = {'discovery_address': rpcdata.params['discovery_address'], \
-                            'deviceId':rpcdata.params['deviceId'], \
-                            'new_pp': rpcdata.params['new_pp'], \
-                            'new_pp_id': rpcdata.params['new_pp_id'] \
-                                            if rpcdata.params['new_pp_id'] is not None \
-                                            else randint(0, 99999999), \
-                            'new_pp_isoptimal': rpcdata.params['new_pp_isoptimal'] \
-                                            if rpcdata.params['new_pp_isoptimal'] is not None \
-                                            else False
-                            }
+                    args = {'discovery_address': rpcdata.params['discovery_address'] \
+                            , 'deviceId':rpcdata.params['deviceId'] \
+                            , 'new_pp': rpcdata.params['new_pp'] \
+                            , 'new_pp_id': rpcdata.params['new_pp_id'] \
+                                        if rpcdata.params['new_pp_id'] is not None \
+                                            else randint(0, 99999999) \
+                            , 'new_pp_datatype': rpcdata.params['new_pp_datatype'] \
+                                        if rpcdata.params['new_pp_datatype'] is not None \
+                                            else {'units': 'cents', 'tz': 'UTC', 'type': 'float'} \
+                            , 'new_pp_isoptimal': rpcdata.params['new_pp_isoptimal'] \
+                                        if rpcdata.params['new_pp_isoptimal'] is not None \
+                                            else False \
+                            , 'new_pp_ttl': rpcdata.params['new_pp_ttl'] \
+                                        if rpcdata.params['new_pp_ttl'] is not None \
+                                        else -1 \
+                            , 'new_pp_timestamp': rpcdata.params['new_pp_timestamp'] \
+                                        if rpcdata.params['new_pp_timestamp'] is not None \
+                                        else datetime.datetime.utcnow().isoformat(' ') + 'Z' \
+                        }
                     #post the new new price point from us to the local-us-bus
                     result = self._post_pp(**args)
                     
@@ -303,17 +314,32 @@ def volttronbridge(config_path, **kwargs):
                 return
                 
             self._pp_current    = message[ParamPP.idx_pp]
+            self._pp_datatype   = message[ParamPP.idx_pp_datatype] \
+                                    if message[ParamPP.idx_pp_datatype] is not None \
+                                    else {'units': 'cents', 'tz': 'UTC', 'type': 'float'}
             self._pp_id         = message[ParamPP.idx_pp_id] \
                                     if message[ParamPP.idx_pp_id] is not None \
                                     else randint(0, 99999999)
             self._pp_isoptimal  = message[ParamPP.idx_pp_isoptimal] \
                                     if message[ParamPP.idx_pp_isoptimal] is not None \
                                     else False
-            _log.debug("*** New Price Point: {0:.2f} ***".format(self._pp_current) \
-                            + " new_pp_id: " + str(self._pp_id) \
-                            + " new_pp_isoptimal: " + str(self._pp_isoptimal) \
-                        )
-                        
+            self._pp_ttl        = message[ParamPP.idx_pp_ttl] \
+                                    if message[ParamPP.idx_pp_ttl] is not None \
+                                    else -1
+            self._pp_timestamp  = message[ParamPP.idx_pp_timestamp] \
+                                    if message[ParamPP.idx_pp_timestamp] is not None \
+                                    else datetime.datetime.utcnow().isoformat(' ') + 'Z'
+                                    
+            print_pp(self, self._pp_current \
+                , self._pp_datatype \
+                , self._pp_id \
+                , self._pp_isoptimal \
+                , None \
+                , None \
+                , self._pp_ttl \
+                , self._pp_timestamp \
+                )
+                
             self._reset_ds_retrycount()
             self._all_ds_posts_success  = False         #initiate ds post
             self.post_ds_new_pp()
@@ -417,6 +443,9 @@ def volttronbridge(config_path, **kwargs):
                                         'new_pp': self._pp_current, \
                                         'new_pp_id': self._pp_id, \
                                         'new_pp_isoptimal': self._pp_isoptimal \
+                                        'new_pp_datatype': self._pp_datatype \
+                                        'new_pp_ttl': self._pp_ttl \
+                                        'new_pp_timestamp': self._pp_timestamp \
                                         })
                 if result:
                     #success, reset retry count
@@ -469,11 +498,25 @@ def volttronbridge(config_path, **kwargs):
             return
             
         #post the new price point from us to the local-us-bus
-        def _post_pp(self, discovery_address, deviceId, new_pp, new_pp_id, new_pp_isoptimal):
-            _log.debug ( "*** New Price Point(us): {0:.2f} ***".format(new_pp))
-            _log.debug("*** new_pp_id: " + str(new_pp_id))
-            _log.debug("*** new_pp_isoptimal: " + str(new_pp_isoptimal))
-            
+        def _post_pp(self, discovery_address \
+                            , deviceId, \
+                            , new_pp \
+                            , new_pp_datatype \
+                            , new_pp_id \
+                            , new_pp_isoptimal \
+                            , new_pp_ttl \
+                            , new_pp_timestamp \
+                            ):
+            print_pp(self, new_pp\
+                            , new_pp_datatype\
+                            , new_pp_id\
+                            , new_pp_isoptimal\
+                            , discovery_address\
+                            , deviceId\
+                            , new_pp_ttl\
+                            , new_pp_timestamp\
+                            )
+                            
             #keep track of us opt_pp_id & bid_pp_id
             if new_pp_isoptimal:
                 self.us_opt_pp_id = new_pp_id
@@ -483,10 +526,14 @@ def volttronbridge(config_path, **kwargs):
             #post to bus
             _log.debug('post the new price point from us to the local-us-bus')
             pubTopic =  pricePoint_topic_us
-            pubMsg = [new_pp, \
-                        {'units': 'cents', 'tz': 'UTC', 'type': 'float'}, \
-                        new_pp_id, \
-                        new_pp_isoptimal \
+            pubMsg = [new_pp \
+                        , new_pp_datatype \
+                        , new_pp_id \
+                        , new_pp_isoptimal \
+                        , discovery_address \
+                        , deviceId \
+                        , new_pp_ttl \
+                        , new_pp_timestamp \
                         ]
             publish_to_bus(self, pubTopic, pubMsg)
             return True

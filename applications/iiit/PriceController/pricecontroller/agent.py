@@ -27,7 +27,7 @@ import time
 import gevent
 import gevent.event
 
-from ispace_utils import publish_to_bus, ParamPP, ParamED
+from ispace_utils import publish_to_bus, ParamPP, ParamED, print_pp, print_ed
 
 utils.setup_logging()
 _log = logging.getLogger(__name__)
@@ -71,9 +71,13 @@ def pricecontroller(config_path, **kwargs):
 #                    self.core.identity, \
                     "rpc_from_net").get(timeout=30)
                     
-            self.us_new_pp = 0
-            self.us_new_pp_id = 0
-            self.us_new_pp_isoptimal = False
+            self.us_pp              = 0
+            self.us_pp_id           = randint(0, 99999999)
+            self.us_pp_datatype     = {'units': 'cents', 'tz': 'UTC', 'type': 'float'}
+            self.us_pp_isoptimal    = False
+            self.us_pp_ttl          = -1
+            self.us_pp_timestamp    = datetime.datetime.utcnow().isoformat(' ') + 'Z'
+            self.us_pp_isoptimal    = False
             
             #subscribing to topic_price_point_us
             self.vip.pubsub.subscribe("pubsub", self.topic_price_point_us, self.on_new_pp)
@@ -149,16 +153,31 @@ def pricecontroller(config_path, **kwargs):
         def on_new_pp(self, peer, sender, bus,  topic, headers, message):
             #new zone price point
             new_pp              = message[ParamPP.idx_pp]
+            new_pp_datatype     = message[ParamPP.idx_pp_datatype] \
+                                    if message[ParamPP.idx_pp_datatype] is not None \
+                                    else {'units': 'cents', 'tz': 'UTC', 'type': 'float'}
             new_pp_id           = message[ParamPP.idx_pp_id] \
                                     if message[ParamPP.idx_pp_id] is not None \
                                     else randint(0, 99999999)
             new_pp_isoptimal    = message[ParamPP.idx_pp_isoptimal] \
                                     if message[ParamPP.idx_pp_isoptimal] is not None \
                                     else False
-            _log.info ("*** New Price Point: {0:.2f} ***".format(new_pp))
-            _log.debug("*** new_pp_id: " + str(new_pp_id))
-            _log.debug("*** new_pp_isoptimal: " + str(new_pp_isoptimal))
-            
+            new_pp_ttl          = message[ParamPP.idx_pp_ttl] \
+                                    if message[ParamPP.idx_pp_ttl] is not None \
+                                    else -1
+            new_pp_timestamp    = message[ParamPP.idx_pp_timestamp] \
+                                    if message[ParamPP.idx_pp_timestamp] is not None \
+                                    else datetime.datetime.utcnow().isoformat(' ') + 'Z'
+            print_pp(self, new_pp \
+                            , new_pp_datatype \
+                            , new_pp_id \
+                            , new_pp_isoptimal \
+                            , None \
+                            , None \
+                            , new_pp_ttl \
+                            , new_pp_timestamp \
+                            )
+                            
             if self.agent_disabled:
                 _log.info("self.agent_disabled: " + str(self.agent_disabled) + ", do nothing!!!")
                 return True
@@ -170,18 +189,26 @@ def pricecontroller(config_path, **kwargs):
                 pubTopic =  self.topic_extrn_pp \
                                 if self.pp_optimize_option == "EXTERN_OPT" \
                                 else self.topic_price_point 
-                pubMsg = [new_pp, \
-                            {'units': 'cents', 'tz': 'UTC', 'type': 'float'}, \
-                            new_pp_id, \
-                            new_pp_isoptimal\
+                pubMsg = [new_pp \
+                            , new_pp_datatype \
+                            , new_pp_id \
+                            , new_pp_isoptimal \
+                            , None \
+                            , None \
+                            , new_pp_ttl \
+                            , new_pp_timestamp \
                             ]
                 _log.debug('publishing to local bus topic: ' + pubTopic)
                 publish_to_bus(self, pubTopic, pubMsg)
                 return True
             elif self.pp_optimize_option == "DEFAULT_OPT":
-                self.us_new_pp = new_pp
-                self.us_new_pp_id = new_pp_id
-                self.us_new_pp_isoptimal = new_pp_isoptimal
+                self.us_pp = new_pp
+                self.us_pp_datatype = new_pp_datatype
+                self.us_pp_id = new_pp_id
+                self.us_pp_isoptimal = new_pp_isoptimal
+                self.us_pp_ttl = new_pp_ttl
+                self.us_pp_timestamp = new_pp_timestamp
+                
                 self._computeNewPrice()
                 return True
                 
@@ -189,19 +216,52 @@ def pricecontroller(config_path, **kwargs):
             _log.debug('_computeNewPrice()')
             #TODO: implement the algorithm to compute the new price
             #      based on walras algorithm.
-            #       config.get (optimization function)
-            #       based on some initial condition like ed, etc, compute new_pp
+            #       config.get (optimization cost function)
+            #       based on some initial condition like ed, us_new_pp, etc, compute new_pp
             #       publish to bus
-
-            new_pp = self.us_new_pp
-            new_pp_id = self.us_new_pp_id
-            new_pp_isoptimal = self.us_new_pp_isoptimal
-
+            
+            #optimization algo
+            #   ed_target   = r% x ed_optimal
+            #   EPSILON     = 10       #deadband
+            #   gamma       = stepsize
+            #   max_iter    = 20        (assuming each iter is 30sec and max time spent is 10 min)
+            #   
+            #   count_iter = 0
+            #   pp_old = pp_opt
+            #   pp_new = pp_old
+            #   do while (ed_target - ed_current > EPSILON)
+            #       if (count_iter < max_iter)
+            #            pp_new = pp_old + gamma(ed_current - ed_previous)
+            #            pp_old = pp_new
+            #    
+            #   pp_opt = pp_new
+            #
+            new_pp = self.us_pp - 1.25
+            new_pp_datatype = self.us_pp_datatype
+            new_pp_id = randint(0, 99999999)
+            new_pp_isoptimal = False
+            new_pp_ttl = 5  #5 sec
+            new_pp_timestamp = datetime.datetime.utcnow().isoformat(' ') + 'Z'
+            
+            print_pp(self, new_pp \
+                            , new_pp_datatype \
+                            , new_pp_id \
+                            , new_pp_isoptimal \
+                            , None \
+                            , None \
+                            , new_pp_ttl \
+                            , new_pp_timestamp \
+                            )
+                            
             pubTopic =  self.topic_price_point
-            pubMsg = [new_pp, \
-                        {'units': 'cents', 'tz': 'UTC', 'type': 'float'}, \
-                        new_pp_id, \
-                        new_pp_isoptimal\
+            pubMsg = [new_pp \
+                        , new_pp_datatype \
+                        , new_pp_id \
+                        , new_pp_isoptimal \
+                        , None \
+                        , None \
+                        , new_pp_ttl \
+                        , new_pp_timestamp \
                         ]
             _log.debug('publishing to local bus topic: ' + pubTopic)
             publish_to_bus(self, pubTopic, pubMsg)

@@ -33,6 +33,7 @@ class ParamPP(IntEnum):
     idx_pp_discovery_addrs  = 4
     idx_pp_device_id        = 5
     idx_pp_ttl              = 6
+    idx_pp_timestamp        = 7
     
 class ParamED(IntEnum):
     idx_ed                  = 0
@@ -43,6 +44,32 @@ class ParamED(IntEnum):
     idx_ed_device_id        = 5
     idx_ed_no_of_devices    = 6
     idx_ed_ttl              = 7
+    idx_ed_timestamp        = 8
+    
+def print_pp(self, new_pp \
+                        , new_pp_datatype \
+                        , new_pp_id \
+                        , new_pp_isoptimal \
+                        , discovery_address \
+                        , deviceId \
+                        , new_pp_ttl \
+                        , new_pp_timestamp
+                        ):
+    _log.debug("*** Price Point: {0:.2f} ***".format(new_pp) \
+                    + ", new_pp_datatype: " + str(new_pp_datatype) \
+                    + ", new_pp_isoptimal: " + str(new_pp_isoptimal) \
+                    + ", discovery_address: " + str(discovery_address) \
+                    + ", deviceId: " + str(deviceId) \
+                    + ", new_pp_ttl: " + str(new_pp_ttl) \
+                    + ", new_pp_timestamp: " + str(new_pp_timestamp) \
+                )
+    return
+    
+def print_ed(self, new_ed \
+                        ):
+    _log.debug("*** Energy Demand: {0:.2f} ***".format(new_ed) \
+                )
+    return
     
 def publish_to_bus(self, topic, msg):
     #_log.debug('publish_to_bus()')

@@ -40,7 +40,7 @@ import struct
 import gevent
 import gevent.event
 
-from ispace_utils import mround, publish_to_bus, get_task_schdl, cancel_task_schdl, isclose, ParamPP, ParamED
+from ispace_utils import mround, publish_to_bus, get_task_schdl, cancel_task_schdl, isclose, ParamPP, ParamED, print_pp, print_ed
 
 utils.setup_logging()
 _log = logging.getLogger(__name__)
@@ -189,22 +189,29 @@ class RadiantCubicle(Agent):
         if sender == 'pubsub.compat':
             message = compat.unpack_legacy_message(headers, message)
             
-        new_price_point     = message[ParamPP.idx_pp]
-        new_pp_id           = message[ParamPP.idx_pp_id] \
-                                if message[ParamPP.idx_pp_id] is not None \
-                                else randint(0, 99999999)
-        new_pp_isoptimal    = message[ParamPP.idx_pp_isoptimal] \
-                                if message[ParamPP.idx_pp_isoptimal] is not None \
-                                else False
-        _log.info ( "*** New Price Point: {0:.2f} ***".format(new_price_point))
-        _log.debug("*** new_pp_id: " + str(new_pp_id))
-        _log.debug("*** new_pp_isoptimal: " + str(new_pp_isoptimal))
-        
+        new_pp              = message[ParamPP.idx_pp]
+        new_pp_datatype     = message[ParamPP.idx_pp_datatype]
+        new_pp_id           = message[ParamPP.idx_pp_id]
+        new_pp_isoptimal    = message[ParamPP.idx_pp_isoptimal]
+        discovery_address   = message[ParamPP.idx_pp_discovery_addrs]
+        deviceId            = message[ParamPP.idx_pp_device_id]
+        new_pp_ttl          = message[ParamPP.idx_pp_ttl]
+        new_pp_timestamp    = message[ParamPP.idx_pp_timestamp]
+        print_pp(self, new_pp\
+                , new_pp_datatype\
+                , new_pp_id\
+                , new_pp_isoptimal\
+                , discovery_address\
+                , deviceId\
+                , new_pp_ttl\
+                , new_pp_timestamp\
+                )
+                
         if not new_pp_isoptimal:
             _log.debug('not optimal pp!!!, do nothing')
             return
             
-        self._price_point_new = new_price_point
+        self._price_point_new = new_pp
         self._pp_id_new = new_pp_id
         self.processNewPricePoint()
         return

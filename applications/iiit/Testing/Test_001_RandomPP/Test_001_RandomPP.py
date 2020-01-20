@@ -17,7 +17,7 @@ import sys
 import json
 import math
 import threading, time, signal
-from datetime import timedelta
+import datetime
 from random import random, randint
 
 from test_utils import get_timestamp
@@ -64,13 +64,14 @@ def post_random_price():
     pp = math.floor(random()*10**no_digit)/10**no_digit
     pp = .94 if pp>.94 else pp
     print get_timestamp() + ' PricePoint: ' + str(pp) + ',',
+    now = datetime.datetime.utcnow().isoformat(' ') + 'Z'
     try:
         response = do_rpc("rpc_updatePricePoint", \
                             {'new_pp': pp \
                             , 'new_pp_id': randint(0, 99999999) \
                             , 'new_pp_isoptimal': True \
-                            , 'new_pp_ttl': = WAIT_TIME_SECONDS
-
+                            , 'new_pp_ttl': = WAIT_TIME_SECONDS \
+                            , 'new_pp_timestamp': = now \
                             })
         #print "response: " +str(response),
         if response.ok:
@@ -112,7 +113,7 @@ if __name__ == '__main__':
     print get_timestamp() + ' Initialising test - ' + basename(__file__) + ' ...'
     signal.signal(signal.SIGTERM, signal_handler)
     signal.signal(signal.SIGINT, signal_handler)
-    job = Job(interval=timedelta(seconds=WAIT_TIME_SECONDS), execute=post_random_price)
+    job = Job(interval = datetime.timedelta(seconds=WAIT_TIME_SECONDS), execute=post_random_price)
     print get_timestamp() + ' ROOT_URL: ' + str(ROOT_URL) + ', WAIT_TIME_SECONDS: ' + str(WAIT_TIME_SECONDS)
     print get_timestamp() + ' Starting a repetitive job...'
     sys.stdout.flush()
