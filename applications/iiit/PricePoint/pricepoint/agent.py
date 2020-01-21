@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*- {{{
 # vim: set fenc=utf-8 ft=python sw=4 ts=4 sts=4 et:
 #
-# Copyright (c) 2019, Sam Babu, Godithi.
+# Copyright (c) 2020, Sam Babu, Godithi.
 # All rights reserved.
 #
 #
@@ -33,28 +33,13 @@ from volttron.platform.jsonrpc import (
         UNAVAILABLE_AGENT)
 
 from random import randint
-
 import settings
-
 import time
-
-from ispace_utils import publish_to_bus
+from ispace_utils import publish_to_bus, print_pp, print_ed
 
 utils.setup_logging()
 _log = logging.getLogger(__name__)
-__version__ = '0.2'
-
-def DatetimeFromValue(ts):
-    ''' Utility for dealing with time
-    '''
-    if isinstance(ts, (int, long)):
-        return datetime.utcfromtimestamp(ts)
-    elif isinstance(ts, float):
-        return datetime.utcfromtimestamp(ts)
-    elif not isinstance(ts, datetime):
-        raise ValueError('Unknown timestamp value')
-    return ts
-
+__version__ = '0.3'
 
 class PricePoint(Agent):
 
@@ -95,21 +80,21 @@ class PricePoint(Agent):
         return
 
     def _configGetInitValues(self):
-        self.default_base_price     = self.config.get('default_base_price', 0.4)
-        self.min_price              = self.config.get('min_price', 0.0)
-        self.max_price              = self.config.get('max_price', 1.0)
-        self.period_read_price_point = self.config.get('period_read_price_point', 5)
+        self.default_base_price         = self.config.get('default_base_price', 0.4)
+        self.min_price                  = self.config.get('min_price', 0.0)
+        self.max_price                  = self.config.get('max_price', 1.0)
+        self.period_read_price_point    = self.config.get('period_read_price_point', 5)
         return
 
     def _configGetPoints(self):
-        self.topic_price_point      = self.config.get('topic_price_point', 'zone/pricepoint')
+        self.topic_price_point          = self.config.get('topic_price_point', 'zone/pricepoint')
         return
 
     def fake_price_points(self):
         #Make a random price point
         _log.debug('fake_price_points()')
         new_price_reading = random.uniform(self.min_price, self.max_price)
-        self.updatePricePoint(newPricePoint)
+        self.updatePricePoint(new_pp)
         return
 
     @RPC.export
@@ -122,9 +107,26 @@ class PricePoint(Agent):
         try:
             rpcdata = jsonrpc.JsonRpcData.parse(message)
             _log.debug('rpc method: {}'.format(rpcdata.method))
+            _log.debug('rpc params: {}'.format(rpcdata.params))
             
             if rpcdata.method == "rpc_updatePricePoint":
-                args = {'newPricePoint': rpcdata.params['newPricePoint']}
+                args = {'new_pp': rpcdata.params['new_pp'] \
+                            , 'new_pp_id': rpcdata.params['new_pp_id'] \
+                                        if rpcdata.params['new_pp_id'] is not None \
+                                        else randint(0, 99999999) \
+                            , 'new_pp_datatype': rpcdata.params['new_pp_datatype'] \
+                                        if rpcdata.params['new_pp_datatype'] is not None \
+                                        else {'units': 'cents', 'tz': 'UTC', 'type': 'float'} \
+                            , 'new_pp_isoptimal': rpcdata.params['new_pp_isoptimal'] \
+                                        if rpcdata.params['new_pp_isoptimal'] is not None \
+                                            else False \
+                            , 'new_pp_ttl': rpcdata.params['new_pp_ttl'] \
+                                        if rpcdata.params['new_pp_ttl'] is not None \
+                                        else -1 \
+                            , 'new_pp_ts': rpcdata.params['new_pp_ts'] \
+                                        if rpcdata.params['new_pp_ts'] is not None \
+                                        else datetime.datetime.utcnow().isoformat(' ') + 'Z' \
+                        }
                 result = self.updatePricePoint(**args)
             elif rpcdata.method == "rpc_ping":
                 result = True
@@ -144,19 +146,31 @@ class PricePoint(Agent):
         return
 
     @RPC.export
-    def updatePricePoint(self, newPricePoint):
-        #if newPricePoint != self._price_point_previous :
-        if True:
-            _log.debug('New Price Point: {0:.2f} !!!'.format(newPricePoint))
-            pubTopic = self.topic_price_point
-            pubMsg = [newPricePoint, {'units': 'cents', 'tz': 'UTC', 'type': 'float'}]
-            _log.debug('publishing to local bus topic: ' + pubTopic)
-            publish_to_bus(self, pubTopic, pubMsg)
-            self._price_point_previous = newPricePoint
-            return True
-        else :
-            _log.debug('No change in price')
-            return False
+    def updatePricePoint(self, new_pp, new_pp_datatype, new_pp_id, new_pp_isoptimal, new_pp_ttl, new_pp_ts):
+        print_pp(self, new_pp \
+                        , new_pp_datatype \
+                        , new_pp_id \
+                        , new_pp_isoptimal \
+                        , None \
+                        , None \
+                        , new_pp_ttl \
+                        , new_pp_ts \
+                        )
+                        
+        pubTopic = self.topic_price_point
+        pubMsg = [new_pp \
+                    , new_pp_datatype \
+                    , new_pp_id \
+                    , new_pp_isoptimal \
+                    , None \
+                    , None \
+                    , new_pp_ttl \
+                    , new_pp_ts \
+                    ]
+        _log.debug('publishing to local bus topic: ' + pubTopic)
+        publish_to_bus(self, pubTopic, pubMsg)
+        self._price_point_previous = new_pp
+        return True
 
 
 def main(argv=sys.argv):
@@ -164,7 +178,7 @@ def main(argv=sys.argv):
     try:
         utils.vip_main(PricePoint)
     except Exception as e:
-        print e
+        print (e)
         _log.exception('unhandled exception')
 
 if __name__ == '__main__':

@@ -1,0 +1,13 @@
+{
+    "exec":"pricecontroller-0.2-py2.7.egg --config \"%c\"--sub\"%s\"--pub \"%p\"",  
+    "agentid": "PriceController",
+    "message": "I am Price Controller Agent",
+    "period_read_price_point": 5,
+    "energyDemand_topic": "smartstrip/energydemand",
+    "energyDemand_topic_ds": "ds/energydemand",
+    "pricePoint_topic_us": "us/pricepoint",
+    "pricePoint_topic": "smartstrip/pricepoint",
+    "_comment": "valid options - PASS_ON_PP, DEFAULT_OPT, EXTERN_OPT",
+    "pp_optimize_option": "PASS_ON_PP",
+    "extrn_optimize_pp_topic": "pca/pricepoint"
+}

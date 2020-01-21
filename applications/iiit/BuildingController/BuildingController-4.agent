@@ -1,0 +1,14 @@
+{
+    "exec":"buildingcontroller-0.2-py2.7.egg --config \"%c\"--sub\"%s\"--pub \"%p\"",  
+    "agentid": "BuildingController",
+    "message": "iSPACE - BuildingController Agent",
+    "deviceId": "BuildingController-04",
+    "period_read_data": 30,
+    "period_process_pp": 10,
+    "topic_root": "building",
+    "topic_price_point": "building/pricepoint",
+    "topic_energy_demand": "building/energydemand",
+    "topic_energy_demand_ds": "ds/energydemand",
+    "default_base_price": 0.2,
+    "price_point_latest": 0.3
+}

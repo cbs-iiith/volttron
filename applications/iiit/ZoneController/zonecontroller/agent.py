@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*- {{{
 # vim: set fenc=utf-8 ft=python sw=4 ts=4 sts=4 et:
 #
-# Copyright (c) 2019, Sam Babu, Godithi.
+# Copyright (c) 2020, Sam Babu, Godithi.
 # All rights reserved.
 #
 #
@@ -18,8 +18,6 @@ import uuid
 
 from volttron.platform.vip.agent import Agent, Core, PubSub, compat, RPC
 from volttron.platform.agent import utils
-from volttron.platform.messaging import headers as headers_mod
-
 from volttron.platform.messaging import topics, headers as headers_mod
 from volttron.platform.agent.known_identities import (
     MASTER_WEB, VOLTTRON_CENTRAL, VOLTTRON_CENTRAL_PLATFORM)
@@ -32,22 +30,20 @@ from volttron.platform.jsonrpc import (
         UNAVAILABLE_AGENT)
 
 from random import randint
-
 import settings
-
 import time
 import struct
 import gevent
 import gevent.event
 
-from ispace_utils import mround, publish_to_bus, get_task_schdl, cancel_task_schdl, isclose
-
-#checking if a floating point value is “numerically zero” by checking if it is lower than epsilon
-EPSILON = 1e-03
+from ispace_utils import mround, publish_to_bus, get_task_schdl, cancel_task_schdl, isclose, ParamPP, ParamED, print_pp, print_ed
 
 utils.setup_logging()
 _log = logging.getLogger(__name__)
-__version__ = '0.2'
+__version__ = '0.3'
+
+#checking if a floating point value is “numerically zero” by checking if it is lower than epsilon
+EPSILON = 1e-03
 
 SCHEDULE_AVLB = 1
 SCHEDULE_NOT_AVLB = 0
@@ -57,23 +53,15 @@ E_UNKNOWN_TSP = -5
 E_UNKNOWN_LSP = -6
 E_UNKNOWN_CLE = -9
 
-def DatetimeFromValue(ts):
-    ''' Utility for dealing with time
-    '''
-    if isinstance(ts, (int, long)):
-        return datetime.utcfromtimestamp(ts)
-    elif isinstance(ts, float):
-        return datetime.utcfromtimestamp(ts)
-    elif not isinstance(ts, datetime):
-        raise ValueError('Unknown timestamp value')
-    return ts
-
 class ZoneController(Agent):
     '''Zone Controller
     '''
-    _price_point_previous = 0.4 
+    _pp_failed = False
+    
     _price_point_current = 0.4 
     _price_point_new = 0.45
+    _pp_id = randint(0, 99999999)
+    _pp_id_new = randint(0, 99999999)
 
     _rmTsp = 25
     _rmLsp = 100
@@ -106,14 +94,24 @@ class ZoneController(Agent):
         _log.info("yeild 30s for volttron platform to initiate properly...")
         time.sleep(30) #yeild for a movement
         _log.info("Starting ZoneController...")
-
+        
         self._runBMSTest()
+        
+        
+        
+        #TODO: get the latest values (states/levels) from h/w
+        #self.getInitialHwState()
+        #time.sleep(1) #yeild for a movement
+        
+        #TODO: apply pricing policy for default values
+        
+        #TODO: publish initial data to volttron bus
         
         #perodically publish total energy demand to volttron bus
         self.core.periodic(self._period_read_data, self.publishTed, wait=None)
         
-        #perodically process new pricing point
-        self.core.periodic(10, self.processNewPricePoint, wait=None)
+        #perodically process new pricing point that keeps trying to apply the new pp till success
+        self.core.periodic(self._period_process_pp, self.processNewPricePoint, wait=None)
         
         #subscribing to topic_price_point
         self.vip.pubsub.subscribe("pubsub", self.topic_price_point, self.onNewPrice)
@@ -140,26 +138,27 @@ class ZoneController(Agent):
         return
 
     def _configGetInitValues(self):
-        self._period_read_data = self.config['period_read_data']
-        self._price_point_previous = self.config['default_base_price']
-        self._price_point_current = self.config['default_base_price']
+        self._period_read_data          = self.config.get('period_read_data', 30)
+        self._period_process_pp         = self.config.get('period_process_pp', 10)
+        self._price_point_previous      = self.config.get('default_base_price', 0.2)
+        self._price_point_current       = self.config.get('price_point_latest', 0.2)
         return
         
     def _configGetPoints(self):
-        self.root_topic              = self.config.get('topic_root', 'zone')
-        self.energyDemand_topic     = self.config.get('topic_energy_demand', \
+        self.root_topic                 = self.config.get('topic_root', 'zone')
+        self.energyDemand_topic         = self.config.get('topic_energy_demand', \
                                             'zone/energydemand')
-        self.topic_price_point      = self.config.get('topic_price_point', \
+        self.topic_price_point          = self.config.get('topic_price_point', \
                                             'zone/pricepoint')
-        self.energyDemand_topic_ds  = self.config.get('topic_energy_demand_ds', \
+        self.energyDemand_topic_ds      = self.config.get('topic_energy_demand_ds', \
                                             'ds/energydemand')
         return
         
     def _configGetPriceFucntions(self):
         _log.debug("_configGetPriceFucntions()")
         
-        self.pf_zn_ac  = self.config.get('pf_zn_ac')
-        self.pf_zn_light  = self.config.get('pf_zn_light')
+        self.pf_zn_ac                   = self.config.get('pf_zn_ac')
+        self.pf_zn_light                = self.config.get('pf_zn_light')
         
         return
         
@@ -200,28 +199,51 @@ class ZoneController(Agent):
     def onNewPrice(self, peer, sender, bus,  topic, headers, message):
         if sender == 'pubsub.compat':
             message = compat.unpack_legacy_message(headers, message)
-
-        new_price_point = message[0]
-        _log.info ( "*** New Price Point: {0:.2f} ***".format(new_price_point))
-        
-        if isclose(self._price_point_current, new_price_point, EPSILON):
-            _log.debug('no change in price, do nothing')
+            
+        new_pp              = message[ParamPP.idx_pp]
+        new_pp_datatype     = message[ParamPP.idx_pp_datatype]
+        new_pp_id           = message[ParamPP.idx_pp_id]
+        new_pp_isoptimal    = message[ParamPP.idx_pp_isoptimal]
+        discovery_address   = message[ParamPP.idx_pp_discovery_addrs]
+        deviceId            = message[ParamPP.idx_pp_device_id]
+        new_pp_ttl          = message[ParamPP.idx_pp_ttl]
+        new_pp_ts           = message[ParamPP.idx_pp_ts]
+        print_pp(self, new_pp\
+                , new_pp_datatype\
+                , new_pp_id\
+                , new_pp_isoptimal\
+                , discovery_address\
+                , deviceId\
+                , new_pp_ttl\
+                , new_pp_ts\
+                )
+                
+        if not new_pp_isoptimal:
+            _log.debug('not optimal pp!!!, do nothing')
             return
-        
-        self._price_point_new = new_price_point
+            
+        self._price_point_new = new_pp
+        self._pp_id_new = new_pp_id
         self.processNewPricePoint()
         return
         
+    #this is a perodic function that keeps trying to apply the new pp till success
     def processNewPricePoint(self):
-        if isclose(self._price_point_current, self._price_point_new, EPSILON):
+        if isclose(self._price_point_current, self._price_point_new, EPSILON) and self._pp_id == self._pp_id_new:
             return
             
-        #_log.info ( "*** New Price Point: {0:.2f} ***".format(self._price_point_new))
-        self._price_point_previous = self._price_point_current
+        self._pp_failed = False     #any process that failed to apply pp sets this flag True
         self.applyPricingPolicy()
+        
+        if self._pp_failed:
+            _log.debug("unable to processNewPricePoint(), will try again in " + str(self._period_process_pp))
+            return
+            
+        _log.info("*** New Price Point processed.")
         self._price_point_current = self._price_point_new
+        self._pp_id = self._pp_id_new
         return
-
+        
     def applyPricingPolicy(self):
         _log.debug("applyPricingPolicy()")
         
@@ -229,12 +251,15 @@ class ZoneController(Agent):
         tsp = self.getNewTsp(self._price_point_new)
         _log.debug('New Ambient AC Setpoint: {0:0.1f}'.format( tsp))
         self.setRmTsp(tsp)
-        
+        if not isclose(tsp, self._rmTsp, EPSILON):
+            self._pp_failed = True
+            
         #apply for ambient lightinh
         lsp = self.getNewLsp(self._price_point_new)
         _log.debug('New Ambient Lighting Setpoint: {0:0.1f}'.format( lsp))
         self.setRmLsp(lsp)
-        
+        if not isclose(lsp, self._rmLsp, EPSILON):
+            self._pp_failed = True
         return
         
     #compute new zone temperature setpoint from price functions
@@ -464,12 +489,20 @@ class ZoneController(Agent):
         return ted
 
     def publishTed(self):
-        #_log.debug('publishTed()')
         self._ted = self._calculateTed()
         _log.info( "*** New TED: {0:.2f}, publishing to bus ***".format(self._ted))
         pubTopic = self.energyDemand_topic
         #_log.debug("TED pubTopic: " + pubTopic)
-        pubMsg = [self._ted, {'units': 'W', 'tz': 'UTC', 'type': 'float'}]
+        pubMsg = [self._ted \
+                    , {'units': 'W', 'tz': 'UTC', 'type': 'float'} \
+                    , self._pp_id \
+                    , True \
+                    , None \
+                    , None \
+                    , None \
+                    , self._period_read_data \
+                    , datetime.datetime.utcnow().isoformat(' ') + 'Z'
+                    ]
         publish_to_bus(self, pubTopic, pubMsg)
         return
         
@@ -502,11 +535,18 @@ class ZoneController(Agent):
         if sender == 'pubsub.compat':
             message = compat.unpack_legacy_message(headers, message)
         _log.debug('*********** New ed from ds, topic: ' + topic + \
-                    ' & ed: {0:.4f}'.format(message[0]))
-        
-        deviceID = (topic.split('/', 3))[2]
+                    ' & ed: {0:.4f}'.format(message[ParamED.idx_ed]))
+                    
+        ed_pp_id = message[ParamED.idx_ed_pp_id]
+        ed_isoptimal = message[ParamED.idx_ed_isoptimal]
+        if not ed_isoptimal:         #only accumulate the ed of an optimal pp
+            _log.debug(" - Not optimal ed!!!, do nothing")
+            return
+            
+        #deviceID = (topic.split('/', 3))[2]
+        deviceID = message[ParamED.idx_ed_device_id]
         idx = self._get_ds_device_idx(deviceID)
-        self._ds_ed[idx] = message[0]
+        self._ds_ed[idx] = message[ParamED.idx_ed]
         return
         
     def _get_ds_device_idx(self, deviceID):   
@@ -521,7 +561,7 @@ def main(argv=sys.argv):
     try:
         utils.vip_main(ZoneController)
     except Exception as e:
-        print e
+        print (e)
         _log.exception('unhandled exception')
 
 

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*- {{{
 # vim: set fenc=utf-8 ft=python sw=4 ts=4 sts=4 et:
 #
-# Copyright (c) 2019, Sam Babu, Godithi.
+# Copyright (c) 2020, Sam Babu, Godithi.
 # All rights reserved.
 #
 #
@@ -40,7 +40,11 @@ import struct
 import gevent
 import gevent.event
 
-from ispace_utils import mround, publish_to_bus, get_task_schdl, cancel_task_schdl, isclose
+from ispace_utils import mround, publish_to_bus, get_task_schdl, cancel_task_schdl, isclose, ParamPP, ParamED, print_pp, print_ed
+
+utils.setup_logging()
+_log = logging.getLogger(__name__)
+__version__ = '0.3'
 
 #checking if a floating point value is “numerically zero” by checking if it is lower than epsilon
 EPSILON = 1e-03
@@ -80,22 +84,6 @@ SMARTHUB_BASE_ENERGY    = 8.0
 SMARTHUB_FAN_ENERGY     = 7.0
 SMARTHUB_LED_ENERGY     = 10.0
 
-
-utils.setup_logging()
-_log = logging.getLogger(__name__)
-__version__ = '0.2'
-
-def DatetimeFromValue(ts):
-    ''' Utility for dealing with time
-    '''
-    if isinstance(ts, (int, long)):
-        return datetime.utcfromtimestamp(ts)
-    elif isinstance(ts, float):
-        return datetime.utcfromtimestamp(ts)
-    elif not isinstance(ts, datetime):
-        raise ValueError('Unknown timestamp value')
-    return ts
-
 def smarthub(config_path, **kwargs):
     config = utils.load_config(config_path)
     vip_identity = config.get('vip_identity', 'iiit.smarthub')
@@ -108,6 +96,8 @@ def smarthub(config_path, **kwargs):
 class SmartHub(Agent):
     '''Smart Hub
     '''
+    _pp_failed = False
+    
     _taskID_LedDebug = 1
     _ledDebugState = 0
     
@@ -127,9 +117,11 @@ class SmartHub(Agent):
     _shDevicesState = [0, 0, 0, 0, 0, 0, 0, 0, 0]
     _shDevicesLevel = [0.3, 0.3, 0.3, 0.3, 0.3, 0.3, 0.3, 0.3, 0.3]
     _shDevicesPP_th = [ 0.95, 0.95, 0.95, 0.95, 0.95, 0.95, 0.95, 0.95, 0.95]
-    _price_point_previous = 0.4 
+    
     _price_point_current = 0.4
     _price_point_new = 0.45
+    _pp_id = randint(0, 99999999)
+    _pp_id_new = randint(0, 99999999)
     
     #downstream energy demand and deviceId
     _ds_ed = []
@@ -160,18 +152,12 @@ class SmartHub(Agent):
         _log.info("yeild 30s for volttron platform to initiate properly...")
         time.sleep(30) #yeild for a movement
         _log.info("Starting SmartHub...")
+        
         self.runSmartHubTest()
         
-        #time.sleep(10) #yeild for a movement
-        
-        _log.debug('switch on debug led')
-        self.setShDeviceState(SH_DEVICE_LED_DEBUG, SH_DEVICE_STATE_ON, SCHEDULE_NOT_AVLB)
-        #time.sleep(1) #yeild for a movement
-
         #get the latest values (states/levels) from h/w
         self.getInitialHwState()
-        #time.sleep(1) #yeild for a movement
-
+        
         #apply pricing policy for default values
         self.applyPricingPolicy(SH_DEVICE_LED, SCHEDULE_NOT_AVLB)
         self.applyPricingPolicy(SH_DEVICE_FAN, SCHEDULE_NOT_AVLB)
@@ -183,12 +169,12 @@ class SmartHub(Agent):
         self.publishSensorData();
         self.publishCurrentPP();
         
-        #perodically process new pricing point
-        self.core.periodic(10, self.processNewPricePoint, wait=None)
+        #perodically process new pricing point that keeps trying to apply the new pp till success
+        self.core.periodic(self._period_process_pp, self.processNewPricePoint, wait=None)
         
         #perodically publish device state to volttron bus
         self.core.periodic(self._period_read_data, self.publishDeviceState, wait=None)
-
+        
         #perodically publish device level to volttron bus
         self.core.periodic(self._period_read_data, self.publishDeviceLevel, wait=None)
         
@@ -206,14 +192,17 @@ class SmartHub(Agent):
         
         #subscribing to ds energy demand, vb publishes ed from registered ds to this topic
         self.vip.pubsub.subscribe("pubsub", self.energyDemand_topic_ds, self.onDsEd)
-
+        
         self.vip.rpc.call(MASTER_WEB, 'register_agent_route', \
                             r'^/SmartHub', \
 #                            self.core.identity, \
                             "rpc_from_net").get(timeout=30)
         self._voltState = 1
         
-        return  
+        _log.debug('switch on debug led')
+        self.setShDeviceState(SH_DEVICE_LED_DEBUG, SH_DEVICE_STATE_ON, SCHEDULE_NOT_AVLB)
+        return
+        
     @Core.receiver('onstop')
     def onstop(self, sender, **kwargs):
         _log.debug('onstop()')
@@ -242,22 +231,24 @@ class SmartHub(Agent):
         return
 
     def _configGetInitValues(self):
-        self._period_read_data = self.config['period_read_data']
+        self._period_read_data          = self.config.get('period_read_data', 30)
+        self._period_process_pp         = self.config.get('period_process_pp', 10)
+        self._price_point_current       = self.config.get('price_point_latest', 0.2)
         return
         
     def _configGetPoints(self):
-        self.topic_root = self.config.get('topic_root', 'smarthub')
-        self.topic_price_point = self.config.get('topic_price_point', \
+        self.topic_root                 = self.config.get('topic_root', 'smarthub')
+        self.topic_price_point          = self.config.get('topic_price_point', \
                                         'smarthub/pricepoint')
-        self.energyDemand_topic     = self.config.get('topic_energy_demand', \
+        self.energyDemand_topic         = self.config.get('topic_energy_demand', \
                                             'smarthub/energydemand')
-        self.energyDemand_topic_ds  = self.config.get('topic_energy_demand_ds', \
+        self.energyDemand_topic_ds      = self.config.get('topic_energy_demand_ds', \
                                             'smartstrip/energydemand')
         return
         
     def _configGetPriceFucntions(self):
         _log.debug("_configGetPriceFucntions()")
-        self.pf_sh_fan  = self.config.get('pf_sh_fan')
+        self.pf_sh_fan                  = self.config.get('pf_sh_fan')
         return
         
     def runSmartHubTest(self):
@@ -651,41 +642,66 @@ class SmartHub(Agent):
                     
         pubMsg = [self._price_point_current, {'units': 'cent', 'tz': 'UTC', 'type': 'float'}]
         publish_to_bus(self, self.topic_price_point, pubMsg)
-        
+        return
         
     def onNewPrice(self, peer, sender, bus,  topic, headers, message):
         if sender == 'pubsub.compat':
             message = compat.unpack_legacy_message(headers, message)
             
-        new_price_point = message[0]
-        _log.debug ( "*** New Price Point: {0:.2f} ***".format(new_price_point))
-
-        self._price_point_new = new_price_point
-        
-        if self._price_point_current != new_price_point:
-            self.processNewPricePoint()
+        new_pp              = message[ParamPP.idx_pp]
+        new_pp_datatype     = message[ParamPP.idx_pp_datatype]
+        new_pp_id           = message[ParamPP.idx_pp_id]
+        new_pp_isoptimal    = message[ParamPP.idx_pp_isoptimal]
+        discovery_address   = message[ParamPP.idx_pp_discovery_addrs]
+        deviceId            = message[ParamPP.idx_pp_device_id]
+        new_pp_ttl          = message[ParamPP.idx_pp_ttl]
+        new_pp_ts           = message[ParamPP.idx_pp_ts]
+        print_pp(self, new_pp\
+                , new_pp_datatype\
+                , new_pp_id\
+                , new_pp_isoptimal\
+                , discovery_address\
+                , deviceId\
+                , new_pp_ttl\
+                , new_pp_ts\
+                )
+                
+        if not new_pp_isoptimal:
+            _log.debug('not optimal pp!!!, do nothing')
+            return
+            
+        self._price_point_new = new_pp
+        self._pp_id_new = new_pp_id
+        self.processNewPricePoint()
         return
         
+    #this is a perodic function that keeps trying to apply the new pp till success
     def processNewPricePoint(self):
-        if self._price_point_current != self._price_point_new:
-            _log.info ( "*** New Price Point: {0:.2f} ***".format(self._price_point_new))
-            #result = {}
-            #get schedule for testing relays
-            task_id = str(randint(0, 99999999))
-            #_log.debug("task_id: " + task_id)
-            result = get_task_schdl(self, task_id, 'iiit/cbs/smarthub')
+        if isclose(self._price_point_current, self._price_point_new, EPSILON) and self._pp_id == self._pp_id_new:
+            return
             
-            if result['result'] == 'SUCCESS':
-                self._price_point_previous = self._price_point_current
-                self._price_point_current = self._price_point_new
-
-                self.applyPricingPolicy(SH_DEVICE_LED, SCHEDULE_AVLB)
-                self.applyPricingPolicy(SH_DEVICE_FAN, SCHEDULE_AVLB)
-            else :
-                _log.error("unable to processNewPricePoint()")
-                
-            #cancel the schedule
-            cancel_task_schdl(self, task_id)
+        self._pp_failed = False     #any process that failed to apply pp sets this flag True
+        task_id = str(randint(0, 99999999))
+        result = get_task_schdl(self, task_id, 'iiit/cbs/smarthub')
+        if result['result'] != 'SUCCESS':
+            self._pp_failed = True
+        
+        if self._pp_failed:
+            _log.debug("unable to processNewPricePoint(), will try again in " + str(self._period_process_pp))
+            return
+            
+        self.applyPricingPolicy(SH_DEVICE_LED, SCHEDULE_AVLB)
+        self.applyPricingPolicy(SH_DEVICE_FAN, SCHEDULE_AVLB)
+        #cancel the schedule
+        cancel_task_schdl(self, task_id)
+        
+        if self._pp_failed:
+            _log.debug("unable to processNewPricePoint(), will try again in " + str(self._period_process_pp))
+            return
+            
+        _log.info("*** New Price Point processed.")
+        self._price_point_current = self._price_point_new
+        self._pp_id = self._pp_id_new
         return
         
     def applyPricingPolicy(self, deviceId, schdExist):
@@ -699,6 +715,8 @@ class SmartHub(Agent):
                             + 'Switching-Off Power' \
                             )
                 self.setShDeviceState(deviceId, SH_DEVICE_STATE_OFF, schdExist)
+                if not self._shDevicesState[deviceId] == SH_DEVICE_STATE_OFF:
+                    self._pp_failed = True
             #else:
                 #do nothing
         else:
@@ -708,10 +726,16 @@ class SmartHub(Agent):
                         + 'Switching-On Power' \
                         )
             self.setShDeviceState(deviceId, SH_DEVICE_STATE_ON, schdExist)
+            if not self._shDevicesState[deviceId] == SH_DEVICE_STATE_ON:
+                self._pp_failed = True
+                
             if deviceId == SH_DEVICE_FAN:
                 fan_speed = self.getNewFanSpeed(self._price_point_current)/100
                 _log.info ( "*** New Fan Speed: {0:.4f} ***".format(fan_speed))
                 self.setShDeviceLevel(SH_DEVICE_FAN, fan_speed, schdExist)
+                if not isclose(fan_speed, self._shDevicesLevel[deviceId], EPSILON):
+                    self._pp_failed = True
+
         return
         
     #compute new Fan Speed from price functions
@@ -1098,12 +1122,20 @@ class SmartHub(Agent):
         return ted
         
     def publishTed(self):
-        #_log.debug('publishTed()')
         self._ted = self._calculateTed()
         _log.info( "*** New TED: {0:.2f}, publishing to bus ***".format(self._ted))
         pubTopic = self.energyDemand_topic
         #_log.debug("TED pubTopic: " + pubTopic)
-        pubMsg = [self._ted, {'units': 'W', 'tz': 'UTC', 'type': 'float'}]
+        pubMsg = [self._ted \
+                    , {'units': 'W', 'tz': 'UTC', 'type': 'float'} \
+                    , self._pp_id \
+                    , True \
+                    , None \
+                    , None \
+                    , None \
+                    , self._period_read_data \
+                    , datetime.datetime.utcnow().isoformat(' ') + 'Z'
+                    ]
         publish_to_bus(self, pubTopic, pubMsg)
         return  
         
@@ -1111,12 +1143,18 @@ class SmartHub(Agent):
         if sender == 'pubsub.compat':
             message = compat.unpack_legacy_message(headers, message)
         _log.debug('*********** New ed from ds, topic: ' + topic + \
-                    ' & ed: {0:.4f}'.format(message[0]))
-        
-        deviceID = (topic.split('/', 3))[2]
+                    ' & ed: {0:.4f}'.format(message[ParamED.idx_ed]))
+                    
+        ed_pp_id = message[ParamED.idx_ed_pp_id]
+        ed_isoptimal = message[ParamED.idx_ed_isoptimal]
+        if not ed_isoptimal:         #only accumulate the ed of an optimal pp
+            _log.debug(" - Not optimal ed!!!, do nothing")
+            return
+            
+        #deviceID = (topic.split('/', 3))[2]
+        deviceID = message[ParamED.idx_ed_device_id]
         idx = self._get_ds_device_idx(deviceID)
-        self._ds_ed[idx] = message[0]
-
+        self._ds_ed[idx] = message[ParamED.idx_ed]
         return
         
     def _get_ds_device_idx(self, deviceID):   
@@ -1131,7 +1169,7 @@ def main(argv=sys.argv):
     try:
         utils.vip_main(smarthub)
     except Exception as e:
-        print e
+        print (e)
         _log.exception('unhandled exception')
         
         

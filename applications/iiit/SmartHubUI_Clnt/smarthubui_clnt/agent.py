@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*- {{{
 # vim: set fenc=utf-8 ft=python sw=4 ts=4 sts=4 et:
 #
-# Copyright (c) 2019, Sam Babu, Godithi.
+# Copyright (c) 2020, Sam Babu, Godithi.
 # All rights reserved.
 #
 #
@@ -18,14 +18,15 @@ import uuid
 
 from volttron.platform.vip.agent import Agent, Core, PubSub, compat, RPC
 from volttron.platform.agent import utils
-from volttron.platform.messaging import headers as headers_mod
-
 from volttron.platform.messaging import topics, headers as headers_mod
 
 import time
-
 import requests
 import json
+
+utils.setup_logging()
+_log = logging.getLogger(__name__)
+__version__ = '0.3'
 
 SH_DEVICE_LED_DEBUG = 0
 SH_DEVICE_LED = 1
@@ -36,22 +37,6 @@ SH_DEVICE_S_RH = 5
 SH_DEVICE_S_TEMP = 6
 SH_DEVICE_S_CO2 = 7
 SH_DEVICE_S_PIR = 8
-
-utils.setup_logging()
-_log = logging.getLogger(__name__)
-__version__ = '0.2'
-
-def DatetimeFromValue(ts):
-    ''' Utility for dealing with time
-    '''
-    if isinstance(ts, (int, long)):
-        return datetime.utcfromtimestamp(ts)
-    elif isinstance(ts, float):
-        return datetime.utcfromtimestamp(ts)
-    elif not isinstance(ts, datetime):
-        raise ValueError('Unknown timestamp value')
-    return ts
-
 
 def smarthubui_clnt(config_path, **kwargs):
 
@@ -262,7 +247,7 @@ def main(argv=sys.argv):
     try:
         utils.vip_main(smarthubui_clnt)
     except Exception as e:
-        print e
+        print (e)
         _log.exception('unhandled exception')
 
 if __name__ == '__main__':
