@@ -674,7 +674,7 @@ class SmartHub(Agent):
         self._bid_ed = 0        #reset bid_ed to zero on new bid_pp
         self._ds_bid_ed[:] = []
         self.process_bid_pp()   #initiate the periodic process
-    return
+        return
     
     #this is a periodic function, runs till all the ds bid_ed are received and bid_ted is published
     def process_bid_pp(self):
@@ -695,7 +695,7 @@ class SmartHub(Agent):
             #reset counters
             self._bid_ed = 0 
             self._bid_ed_published = True
-        else
+        else:
             #do nothing, wait for all ds ed or ttl timeout
             pass
         return
