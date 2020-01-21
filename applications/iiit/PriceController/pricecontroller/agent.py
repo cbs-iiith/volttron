@@ -76,7 +76,7 @@ def pricecontroller(config_path, **kwargs):
             self.us_pp_datatype     = {'units': 'cents', 'tz': 'UTC', 'type': 'float'}
             self.us_pp_isoptimal    = False
             self.us_pp_ttl          = -1
-            self.us_pp_timestamp    = datetime.datetime.utcnow().isoformat(' ') + 'Z'
+            self.us_pp_ts           = datetime.datetime.utcnow().isoformat(' ') + 'Z'
             self.us_pp_isoptimal    = False
             
             #subscribing to topic_price_point_us
@@ -130,10 +130,10 @@ def pricecontroller(config_path, **kwargs):
             return result
             
         def _set_pp_optimize_option(self, option):
-            if option == "PASS_ON_PP" \
-                or option == "DEFAULT_OPT" \
-                or option == "EXTERN_OPT" \
-                :
+            if option in ["PASS_ON_PP" \
+                            , "DEFAULT_OPT" \
+                            , "EXTERN_OPT" \
+                            ]:
                 self.pp_optimize_option = self.pp_optimize_option
                 result = True
             else:
@@ -165,8 +165,8 @@ def pricecontroller(config_path, **kwargs):
             new_pp_ttl          = message[ParamPP.idx_pp_ttl] \
                                     if message[ParamPP.idx_pp_ttl] is not None \
                                     else -1
-            new_pp_timestamp    = message[ParamPP.idx_pp_timestamp] \
-                                    if message[ParamPP.idx_pp_timestamp] is not None \
+            new_pp_ts           = message[ParamPP.idx_pp_ts] \
+                                    if message[ParamPP.idx_pp_ts] is not None \
                                     else datetime.datetime.utcnow().isoformat(' ') + 'Z'
             print_pp(self, new_pp \
                             , new_pp_datatype \
@@ -175,7 +175,7 @@ def pricecontroller(config_path, **kwargs):
                             , None \
                             , None \
                             , new_pp_ttl \
-                            , new_pp_timestamp \
+                            , new_pp_ts \
                             )
                             
             if self.agent_disabled:
@@ -196,7 +196,7 @@ def pricecontroller(config_path, **kwargs):
                             , None \
                             , None \
                             , new_pp_ttl \
-                            , new_pp_timestamp \
+                            , new_pp_ts \
                             ]
                 _log.debug('publishing to local bus topic: ' + pubTopic)
                 publish_to_bus(self, pubTopic, pubMsg)
@@ -207,7 +207,7 @@ def pricecontroller(config_path, **kwargs):
                 self.us_pp_id = new_pp_id
                 self.us_pp_isoptimal = new_pp_isoptimal
                 self.us_pp_ttl = new_pp_ttl
-                self.us_pp_timestamp = new_pp_timestamp
+                self.us_pp_ts = new_pp_ts
                 
                 self._computeNewPrice()
                 return True
@@ -236,12 +236,12 @@ def pricecontroller(config_path, **kwargs):
             #    
             #   pp_opt = pp_new
             #
-            new_pp = self.us_pp * 1.25
-            new_pp_datatype = self.us_pp_datatype
-            new_pp_id = randint(0, 99999999)
-            new_pp_isoptimal = False
-            new_pp_ttl = 5  #5 sec
-            new_pp_timestamp = datetime.datetime.utcnow().isoformat(' ') + 'Z'
+            new_pp              = self.us_pp * 1.25
+            new_pp_datatype     = self.us_pp_datatype
+            new_pp_id           = randint(0, 99999999)
+            new_pp_isoptimal    = False
+            new_pp_ttl          = 5  #5 sec
+            new_pp_ts           = datetime.datetime.utcnow().isoformat(' ') + 'Z'
             
             print_pp(self, new_pp \
                             , new_pp_datatype \
@@ -250,7 +250,7 @@ def pricecontroller(config_path, **kwargs):
                             , None \
                             , None \
                             , new_pp_ttl \
-                            , new_pp_timestamp \
+                            , new_pp_ts \
                             )
                             
             pubTopic =  self.topic_price_point
@@ -261,7 +261,7 @@ def pricecontroller(config_path, **kwargs):
                         , None \
                         , None \
                         , new_pp_ttl \
-                        , new_pp_timestamp \
+                        , new_pp_ts \
                         ]
             _log.debug('publishing to local bus topic: ' + pubTopic)
             publish_to_bus(self, pubTopic, pubMsg)

@@ -72,7 +72,7 @@ def post_random_price():
                             , 'new_pp_id': randint(0, 99999999) \
                             , 'new_pp_isoptimal': True \
                             , 'new_pp_ttl': WAIT_TIME_SECONDS \
-                            , 'new_pp_timestamp': now \
+                            , 'new_pp_ts': now \
                             })
         #print "response: " +str(response),
         if response.ok:

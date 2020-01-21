@@ -156,7 +156,7 @@
             var new_pp_datatype = null;
             var new_pp_isoptimal = document.getElementById("new_pp_isoptimal").checked;
             var new_pp_ttl = parseFloat($('#new_pp_ttl').val());
-            var new_pp_timestamp = null;
+            var new_pp_ts = null;
             var pdata = {
                      jsonrpc: '2.0',
                      method:  "rpc_updatePricePoint",
@@ -166,7 +166,7 @@
                         new_pp_id: new_pp_id,
                         new_pp_isoptimal: new_pp_isoptimal,
                         new_pp_ttl: new_pp_ttl,
-                        new_pp_timestamp: new_pp_timestamp,
+                        new_pp_ts: new_pp_ts,
                      },
                      id: '72581-4'
              };

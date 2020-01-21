@@ -33,7 +33,7 @@ class ParamPP(IntEnum):
     idx_pp_discovery_addrs  = 4
     idx_pp_device_id        = 5
     idx_pp_ttl              = 6
-    idx_pp_timestamp        = 7
+    idx_pp_ts               = 7
     
 class ParamED(IntEnum):
     idx_ed                  = 0
@@ -44,7 +44,7 @@ class ParamED(IntEnum):
     idx_ed_device_id        = 5
     idx_ed_no_of_devices    = 6
     idx_ed_ttl              = 7
-    idx_ed_timestamp        = 8
+    idx_ed_ts               = 8
     
 def print_pp(self, new_pp \
                     , pp_datatype \
@@ -53,7 +53,7 @@ def print_pp(self, new_pp \
                     , discovery_address \
                     , deviceId \
                     , pp_ttl \
-                    , pp_timestamp
+                    , pp_ts
                     ):
     _log.info("New PP: {0:.2f}".format(new_pp) \
                     #+ ", pp_datatype: " + str(pp_datatype) \
@@ -62,7 +62,7 @@ def print_pp(self, new_pp \
                     + ", discovery_address: " + str(discovery_address) \
                     + ", deviceId: " + str(deviceId) \
                     + ", pp_ttl: " + str(pp_ttl) \
-                    + ", pp_timestamp: " + str(pp_timestamp) \
+                    + ", pp_ts: " + str(pp_ts) \
                 )
     return
     
@@ -74,7 +74,7 @@ def print_ed(self, new_ed \
                     , ed_device_id \
                     , ed_no_of_devices \
                     , ed_ttl \
-                    , ed_timestamp \
+                    , ed_ts \
                     ):
     _log.info("New ED: {0:.2f}".format(new_ed) \
                     #+ ", ed_datatype: " +str(ed_datatype) \
@@ -84,7 +84,7 @@ def print_ed(self, new_ed \
                     + ", ed_device_id: " +str(ed_device_id) \
                     + ", ed_no_of_devices: " +str(ed_no_of_devices) \
                     + ", ed_ttl: " +str(ed_ttl) \
-                    + ", ed_timestamp: " +str(ed_timestamp) \
+                    + ", ed_ts: " +str(ed_ts) \
                 )
     return
     

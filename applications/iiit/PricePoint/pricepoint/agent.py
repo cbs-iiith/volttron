@@ -123,8 +123,8 @@ class PricePoint(Agent):
                             , 'new_pp_ttl': rpcdata.params['new_pp_ttl'] \
                                         if rpcdata.params['new_pp_ttl'] is not None \
                                         else -1 \
-                            , 'new_pp_timestamp': rpcdata.params['new_pp_timestamp'] \
-                                        if rpcdata.params['new_pp_timestamp'] is not None \
+                            , 'new_pp_ts': rpcdata.params['new_pp_ts'] \
+                                        if rpcdata.params['new_pp_ts'] is not None \
                                         else datetime.datetime.utcnow().isoformat(' ') + 'Z' \
                         }
                 result = self.updatePricePoint(**args)
@@ -146,7 +146,7 @@ class PricePoint(Agent):
         return
 
     @RPC.export
-    def updatePricePoint(self, new_pp, new_pp_datatype, new_pp_id, new_pp_isoptimal, new_pp_ttl, new_pp_timestamp):
+    def updatePricePoint(self, new_pp, new_pp_datatype, new_pp_id, new_pp_isoptimal, new_pp_ttl, new_pp_ts):
         print_pp(self, new_pp \
                         , new_pp_datatype \
                         , new_pp_id \
@@ -154,7 +154,7 @@ class PricePoint(Agent):
                         , None \
                         , None \
                         , new_pp_ttl \
-                        , new_pp_timestamp \
+                        , new_pp_ts \
                         )
                         
         pubTopic = self.topic_price_point
@@ -165,7 +165,7 @@ class PricePoint(Agent):
                     , None \
                     , None \
                     , new_pp_ttl \
-                    , new_pp_timestamp \
+                    , new_pp_ts \
                     ]
         _log.debug('publishing to local bus topic: ' + pubTopic)
         publish_to_bus(self, pubTopic, pubMsg)

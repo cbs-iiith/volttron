@@ -108,7 +108,7 @@ def volttronbridge(config_path, **kwargs):
             self._pp_datatype           = {'units': 'cents', 'tz': 'UTC', 'type': 'float'}
             self._pp_isoptimal          = False
             self._pp_ttl                = -1
-            self._pp_timestamp          = datetime.datetime.utcnow().isoformat(' ') + 'Z'
+            self._pp_ts                 = datetime.datetime.utcnow().isoformat(' ') + 'Z'
             self._all_ds_posts_success  = False
             
             #energy demand
@@ -120,7 +120,7 @@ def volttronbridge(config_path, **kwargs):
             self._ed_device_id          = None
             self._ed_no_of_devices      = 0
             self._ed_ttl                = -1
-            self._ed_timestamp          = datetime.datetime.utcnow().isoformat(' ') + 'Z'
+            self._ed_ts                 = datetime.datetime.utcnow().isoformat(' ') + 'Z'
             self._all_us_posts_success  = False
             
             self._us_retrycount = 0
@@ -277,8 +277,8 @@ def volttronbridge(config_path, **kwargs):
                             , 'ed_ttl': rpcdata.params['ed_ttl'] \
                                         if rpcdata.params['ed_ttl'] is not None \
                                         else -1 \
-                            , 'ed_timestamp': rpcdata.params['ed_timestamp'] \
-                                        if rpcdata.params['ed_timestamp'] is not None \
+                            , 'ed_ts': rpcdata.params['ed_ts'] \
+                                        if rpcdata.params['ed_ts'] is not None \
                                         else datetime.datetime.utcnow().isoformat(' ') + 'Z' \
                             }
                     #post the new energy demand from ds to the local bus
@@ -300,8 +300,8 @@ def volttronbridge(config_path, **kwargs):
                             , 'new_pp_ttl': rpcdata.params['new_pp_ttl'] \
                                         if rpcdata.params['new_pp_ttl'] is not None \
                                         else -1 \
-                            , 'new_pp_timestamp': rpcdata.params['new_pp_timestamp'] \
-                                        if rpcdata.params['new_pp_timestamp'] is not None \
+                            , 'new_pp_ts': rpcdata.params['new_pp_ts'] \
+                                        if rpcdata.params['new_pp_ts'] is not None \
                                         else datetime.datetime.utcnow().isoformat(' ') + 'Z' \
                         }
                     #post the new new price point from us to the local-us-bus
@@ -341,8 +341,8 @@ def volttronbridge(config_path, **kwargs):
             self._pp_ttl        = message[ParamPP.idx_pp_ttl] \
                                     if message[ParamPP.idx_pp_ttl] is not None \
                                     else -1
-            self._pp_timestamp  = message[ParamPP.idx_pp_timestamp] \
-                                    if message[ParamPP.idx_pp_timestamp] is not None \
+            self._pp_ts  = message[ParamPP.idx_pp_ts] \
+                                    if message[ParamPP.idx_pp_ts] is not None \
                                     else datetime.datetime.utcnow().isoformat(' ') + 'Z'
                                     
             print_pp(self, self._pp_current \
@@ -352,7 +352,7 @@ def volttronbridge(config_path, **kwargs):
                 , None \
                 , None \
                 , self._pp_ttl \
-                , self._pp_timestamp \
+                , self._pp_ts \
                 )
                 
             self._reset_ds_retrycount()
@@ -379,8 +379,8 @@ def volttronbridge(config_path, **kwargs):
             self._ed_ttl        = message[ParamED.idx_ed_ttl] \
                                     if message[ParamED.idx_ed_ttl] is not None \
                                     else -1
-            self._ed_timestamp  = message[ParamED.idx_ed_timestamp] \
-                                    if message[ParamED.idx_ed_timestamp] is not None \
+            self._ed_ts  = message[ParamED.idx_ed_ts] \
+                                    if message[ParamED.idx_ed_ts] is not None \
                                     else datetime.datetime.utcnow().isoformat(' ') + 'Z'
                                     
             print_ed(self, self._ed_current \
@@ -391,7 +391,7 @@ def volttronbridge(config_path, **kwargs):
                             , None \
                             , None \
                             , self._ed_ttl \
-                            , self._ed_timestamp \
+                            , self._ed_ts \
                             )
                             
             #post ed to us only if pp_id corresponds to these ids (i.e., ed for either us opt_pp_id or bid_pp_id)
@@ -437,7 +437,7 @@ def volttronbridge(config_path, **kwargs):
                             , 'ed_pp_id': self._ed_pp_id \
                             , 'ed_isoptimal':  self._ed_isoptimal \
                             , 'ed_ttl': self._ed_ttl \
-                            , 'ed_timestamp': self._ed_timestamp \
+                            , 'ed_ts': self._ed_ts \
                             })
             #_log.debug('success: ' + str(success))
             if success:
@@ -479,7 +479,7 @@ def volttronbridge(config_path, **kwargs):
                                         , 'new_pp_isoptimal': self._pp_isoptimal \
                                         , 'new_pp_datatype': self._pp_datatype \
                                         , 'new_pp_ttl': self._pp_ttl \
-                                        , 'new_pp_timestamp': self._pp_timestamp \
+                                        , 'new_pp_ts': self._pp_ts \
                                         })
                 if result:
                     #success, reset retry count
@@ -539,7 +539,7 @@ def volttronbridge(config_path, **kwargs):
                             , new_pp_id \
                             , new_pp_isoptimal \
                             , new_pp_ttl \
-                            , new_pp_timestamp \
+                            , new_pp_ts \
                             ):
             print_pp(self, new_pp \
                             , new_pp_datatype \
@@ -548,7 +548,7 @@ def volttronbridge(config_path, **kwargs):
                             , discovery_address \
                             , deviceId \
                             , new_pp_ttl \
-                            , new_pp_timestamp \
+                            , new_pp_ts \
                             )
                             
             #keep track of us opt_pp_id & bid_pp_id
@@ -567,7 +567,7 @@ def volttronbridge(config_path, **kwargs):
                         , discovery_address \
                         , deviceId \
                         , new_pp_ttl \
-                        , new_pp_timestamp \
+                        , new_pp_ts \
                         ]
             publish_to_bus(self, pubTopic, pubMsg)
             return True
@@ -580,10 +580,10 @@ def volttronbridge(config_path, **kwargs):
                             , ed_pp_id \
                             , ed_isoptimal \
                             , ed_ttl \
-                            , ed_timestamp \
+                            , ed_ts \
                             , ed_no_of_devices = None\
                             ):
-            no_of_device = ed_no_of_devices if not None else len(self._ds_deviceId) 
+            no_of_device = ed_no_of_devices if not None else len(self._ds_deviceId)
             
             print_ed(self, new_ed \
                 , ed_datatype \
@@ -593,7 +593,7 @@ def volttronbridge(config_path, **kwargs):
                 , deviceId \
                 , no_of_device \
                 , ed_ttl \
-                , ed_timestamp \
+                , ed_ts \
                 )
                 
             if discovery_address in self._ds_voltBr:
@@ -609,7 +609,7 @@ def volttronbridge(config_path, **kwargs):
                                 , deviceId \
                                 , no_of_device \
                                 , ed_ttl \
-                                , ed_timestamp \
+                                , ed_ts \
                                 ]
                     publish_to_bus(self, pubTopic, pubMsg)
                     self._ds_retrycount[index] = 0
