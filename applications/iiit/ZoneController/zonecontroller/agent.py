@@ -224,7 +224,7 @@ class ZoneController(Agent):
             
         self._price_point_new = new_pp
         self._pp_id_new = new_pp_id
-        self.processNewPricePoint()
+        self.processNewPricePoint()         #convert this to underscore !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
         return
         
     #this is a perodic function that keeps trying to apply the new pp till success

@@ -1,5 +1,5 @@
 {
-    "exec":"buildingcontroller-0.2-py2.7.egg --config \"%c\"--sub\"%s\"--pub \"%p\"",  
+    "exec":"buildingcontroller-0.3-py2.7.egg --config \"%c\"--sub\"%s\"--pub \"%p\"",  
     "agentid": "BuildingController",
     "message": "iSPACE - BuildingController Agent",
     "deviceId": "BuildingController-11",
@@ -9,6 +9,7 @@
     "topic_price_point": "building/pricepoint",
     "topic_energy_demand": "building/energydemand",
     "topic_energy_demand_ds": "ds/energydemand",
+    "local_vb_vip_identity": "volttronbridgeagent-0.3_1",
     "default_base_price": 0.2,
     "price_point_latest": 0.3
 }

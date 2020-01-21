@@ -1,5 +1,5 @@
 {
-    "exec":"volttronbridge-0.2-py2.7.egg --config \"%c\"--sub\"%s\"--pub \"%p\"",  
+    "exec":"volttronbridge-0.3-py2.7.egg --config \"%c\"--sub\"%s\"--pub \"%p\"",  
     "agentid": "VolttronBridge",
     "message": "I am Volttron Bridge Agent",
     "bridge_host": "LEVEL_ZONE",
