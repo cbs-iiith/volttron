@@ -323,6 +323,10 @@ def volttronbridge(config_path, **kwargs):
                 print(e)
                 return jsonrpc.json_error('NA', UNHANDLED_EXCEPTION, e)
                 
+        @RPC.export
+        def count_ds_devices(self):
+            return len(self._ds_voltBr)
+            
         #price point on local bus published, post it to all downstream bridges
         def on_new_pp(self, peer, sender, bus,  topic, headers, message):
             if self._bridge_host == 'LEVEL_TAILEND':

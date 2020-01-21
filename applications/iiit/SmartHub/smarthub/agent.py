@@ -237,13 +237,15 @@ class SmartHub(Agent):
         return
         
     def _configGetPoints(self):
-        self.topic_root                 = self.config.get('topic_root', 'smarthub')
-        self.topic_price_point          = self.config.get('topic_price_point', \
-                                        'smarthub/pricepoint')
-        self.energyDemand_topic         = self.config.get('topic_energy_demand', \
-                                            'smarthub/energydemand')
-        self.energyDemand_topic_ds      = self.config.get('topic_energy_demand_ds', \
-                                            'smartstrip/energydemand')
+        self.vb_vip_identity = self.config.get('vb_vip_identity',
+                                                'volttronbridgeagent-0.3_1')
+        self.topic_root = self.config.get('topic_root', 'smarthub')
+        self.topic_price_point = self.config.get('topic_price_point',
+                                                    'smarthub/pricepoint')
+        self.energyDemand_topic = self.config.get('topic_energy_demand',
+                                                    'smarthub/energydemand')
+        self.energyDemand_topic_ds = self.config.get('topic_energy_demand_ds',
+                                                        'smartstrip/energydemand')
         return
         
     def _configGetPriceFucntions(self):
@@ -648,31 +650,71 @@ class SmartHub(Agent):
         if sender == 'pubsub.compat':
             message = compat.unpack_legacy_message(headers, message)
             
-        new_pp              = message[ParamPP.idx_pp]
-        new_pp_datatype     = message[ParamPP.idx_pp_datatype]
-        new_pp_id           = message[ParamPP.idx_pp_id]
-        new_pp_isoptimal    = message[ParamPP.idx_pp_isoptimal]
-        discovery_address   = message[ParamPP.idx_pp_discovery_addrs]
-        deviceId            = message[ParamPP.idx_pp_device_id]
-        new_pp_ttl          = message[ParamPP.idx_pp_ttl]
-        new_pp_ts           = message[ParamPP.idx_pp_ts]
-        print_pp(self, new_pp\
-                , new_pp_datatype\
-                , new_pp_id\
-                , new_pp_isoptimal\
-                , discovery_address\
-                , deviceId\
-                , new_pp_ttl\
-                , new_pp_ts\
-                )
-                
-        if not new_pp_isoptimal:
-            _log.debug('not optimal pp!!!, do nothing')
+        print_pp_msg(self, message)
+        if message[ParamPP.idx_pp_isoptimal]:
+            _log.debug('optimal pp!!!')
+            self._process_opt_pp(message)
+        else:
+            _log.debug('not optimal pp!!!')
+            self._process_bid_pp(message)
+        return
+        
+    def _process_opt_pp(self, message):
+        self._price_point_new = message[ParamPP.idx_pp]
+        self._pp_id_new = message[ParamPP.idx_pp_id]
+        self.processNewPricePoint()     #initiate the periodic process
+        return
+        
+    def _process_bid_pp(self, message):
+        self._bid_pp = message[ParamPP.idx_pp]
+        self._bid_pp_datatype = message[ParamPP.idx_pp_datatype]
+        self._bid_pp_id = message[ParamPP.idx_pp_id]
+        self._bid_pp_ttl = message[ParamPP.idx_pp_ttl]
+        self._bid_pp_ts = message[ParamPP.idx_pp_ts]
+        self._bid_ed = 0        #reset bid_ed to zero on new bid_pp
+        self._ds_bid_ed[:] = []
+        self.process_bid_pp()   #initiate the periodic process
+    return
+    
+    #this is a periodic function, runs till all the ds bid_ed are received and bid_ted is published
+    def process_bid_pp(self):
+        if self._bid_ed_published:
             return
-            
-        self._price_point_new = new_pp
-        self._pp_id_new = new_pp_id
-        self.processNewPricePoint()
+        if self._bid_ed == 0 :
+            self._bid_ed = self.local_bid_ed(self._bid_pp)
+        
+        ds_devices = self.vip.rpc.call(self.vb_vip_identity, 'count_ds_devices').get(timeout=10)
+        rcvd_all_ds_bid_ed = True if ds_devices == len(self._ds_bid_ed) else False
+        
+        if rcvd_all_ds_bid_ed or ttl_timeout(self._bid_pp_ts, self._bid_pp_ttl):
+            #Calc total ed
+            for ed in self._ds_bid_ed:
+                self._bid_ed = self._bid_ed + ed
+            #publish ted
+            self.publish_bid_ted()
+            #reset counters
+            self._bid_ed = 0 
+            self._bid_ed_published = True
+        else
+            #do nothing, wait for all ds ed or ttl timeout
+            pass
+        return
+        
+    def publish_bid_ted(self):
+        _log.info( "*** New Bid TED: {0:.2f}, publishing to bus ***".format(self._bid_ted))
+        pubTopic = self.energyDemand_topic
+        #_log.debug("Bid TED pubTopic: " + pubTopic)
+        pubMsg = [self._bid_ted \
+                    , {'units': 'W', 'tz': 'UTC', 'type': 'float'} \
+                    , self._bid_pp_id \
+                    , False \
+                    , None \
+                    , None \
+                    , None \
+                    , self._bid_pp_ttl \
+                    , self._bid_pp_ts \
+                    ]
+        publish_to_bus(self, pubTopic, pubMsg)
         return
         
     #this is a perodic function that keeps trying to apply the new pp till success
@@ -1142,19 +1184,18 @@ class SmartHub(Agent):
     def onDsEd(self, peer, sender, bus,  topic, headers, message):
         if sender == 'pubsub.compat':
             message = compat.unpack_legacy_message(headers, message)
+            
         _log.debug('*********** New ed from ds, topic: ' + topic + \
                     ' & ed: {0:.4f}'.format(message[ParamED.idx_ed]))
-                    
-        ed_pp_id = message[ParamED.idx_ed_pp_id]
-        ed_isoptimal = message[ParamED.idx_ed_isoptimal]
-        if not ed_isoptimal:         #only accumulate the ed of an optimal pp
-            _log.debug(" - Not optimal ed!!!, do nothing")
-            return
-            
-        #deviceID = (topic.split('/', 3))[2]
-        deviceID = message[ParamED.idx_ed_device_id]
-        idx = self._get_ds_device_idx(deviceID)
-        self._ds_ed[idx] = message[ParamED.idx_ed]
+        print_ed_msg(message)
+        
+        idx = self._get_ds_device_idx(message[ParamED.idx_ed_device_id])
+        if message[ParamED.idx_ed_isoptimal]:
+            _log.debug(" - opt_pp - ed!!!")
+            self._ds_ed[idx] = message[ParamED.idx_ed]
+        else:
+            _log.debug(" - bid_pp - ed!!!")
+            self._ds_bid_ed[idx] = message[ParamED.idx_ed]
         return
         
     def _get_ds_device_idx(self, deviceID):   
@@ -1162,6 +1203,7 @@ class SmartHub(Agent):
             self._ds_deviceId.append(deviceID)
             idx = self._ds_deviceId.index(deviceID)
             self._ds_ed.insert(idx, 0.0)
+            self._ds_bid_ed.insert(idx, 0.0)
         return self._ds_deviceId.index(deviceID)
         
 def main(argv=sys.argv):

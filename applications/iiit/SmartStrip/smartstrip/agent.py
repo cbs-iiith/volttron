@@ -168,20 +168,20 @@ class SmartStrip(Agent):
         return
         
     def _configGetInitValues(self):
-        self._period_read_data          = self.config.get('period_read_data', 30)
-        self._period_process_pp         = self.config.get('period_process_pp', 10)
-        self._price_point_current       = self.config.get('price_point_latest', 0.2)
-        self._tag_ids                   = self.config['tag_ids']
-        self._plug_pricepoint_th        = self.config['plug_pricepoint_th']
-        self._sh_plug_id                = self.config.get('smarthub_plug', 4) - 1
+        self._period_read_data = self.config.get('period_read_data', 30)
+        self._period_process_pp = self.config.get('period_process_pp', 10)
+        self._price_point_current = self.config.get('price_point_latest', 0.2)
+        self._tag_ids = self.config['tag_ids']
+        self._plug_pricepoint_th = self.config['plug_pricepoint_th']
+        self._sh_plug_id = self.config.get('smarthub_plug', 4) - 1
         return
         
     def _configGetPoints(self):
-        self.root_topic                 = self.config.get('topic_root', 'smartstrip')
-        self.energyDemand_topic         = self.config.get('topic_energy_demand', \
-                                            'smartstrip/energydemand')
-        self.topic_price_point          = self.config.get('topic_price_point', \
-                                            'topic_price_point')
+        self.root_topic = self.config.get('topic_root', 'smartstrip')
+        self.energyDemand_topic = self.config.get('topic_energy_demand',
+                                                    'smartstrip/energydemand')
+        self.topic_price_point = self.config.get('topic_price_point',
+                                                    'topic_price_point')
         return
         
     def runSmartStripTest(self):
@@ -486,12 +486,26 @@ class SmartStrip(Agent):
                 )
                 
         if not new_pp_isoptimal:
-            _log.debug('not optimal pp!!!, do nothing')
+            _log.debug('not optimal pp!!!')
+            self._bid_pp            = new_pp
+            self._bid_pp_datatype   = new_pp_datatype
+            self._bid_pp_id         = new_pp_id
+            self._bid_pp_ttl        = new_pp_ttl
+            self._bid_pp_ts         = new_pp_ts
+            #process bid_pp
+            self.process_bid_pp()
             return
             
         self._price_point_new = new_pp
         self._pp_id_new = new_pp_id
         self.processNewPricePoint()
+        return
+        
+    #this is a periodic function that
+    def process_bid_pp(self):
+        bid_ed = self.compute_bid_ed(self._bid_pp)
+        #publish bid_ed
+        
         return
         
     #this is a perodic function that keeps trying to apply the new pp till success
@@ -803,6 +817,33 @@ class SmartStrip(Agent):
             print(e)
             return jsonrpc.json_error('NA', UNHANDLED_EXCEPTION, e)
             
+    #calculate the bid total energy demand (TED)
+    def _bid_ted(self):
+        #_log.debug('_calculateTed()')
+        bid_ted = SMARTSTRIP_BASE_ENERGY
+        for idx in enumerate(self._plugRelayState):
+            if idx != self._sh_plug_id:
+                bid_ted = bid_ted + self._plugActivePwr[idx]
+        return bid_ted
+        
+    def publishTed(self):
+        self._bid_ted = self._bid_ted()
+        _log.info( "*** New Bid TED: {0:.2f}, publishing to bus ***".format(self._bid_ted))
+        pubTopic = self.energyDemand_topic
+        #_log.debug("Bid TED pubTopic: " + pubTopic)
+        pubMsg = [self._bid_ted \
+                    , {'units': 'W', 'tz': 'UTC', 'type': 'float'} \
+                    , self._bid_pp_id \
+                    , False \
+                    , None \
+                    , None \
+                    , None \
+                    , self._bid_pp_ttl \
+                    , self._bid_pp_ts \
+                    ]
+        publish_to_bus(self, pubTopic, pubMsg)
+        return
+        
     #calculate the total energy demand (TED)
     def _calculateTed(self):
         #_log.debug('_calculateTed()')

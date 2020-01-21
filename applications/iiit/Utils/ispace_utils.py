@@ -46,6 +46,12 @@ class ParamED(IntEnum):
     idx_ed_ttl              = 7
     idx_ed_ts               = 8
     
+def ttl_timeout(self, str_ts, ttl):
+        _ts  = dateutil.parser.parse(str_ts)
+        _now = dateutil.parser.parse(datetime.datetime.utcnow().isoformat(' ') + 'Z')
+        ttl_timeout = True if (_now - _ts) > ttl else False
+        return ttl_timeout
+        
 def print_pp(self, new_pp \
                     , pp_datatype \
                     , pp_id \
@@ -64,6 +70,18 @@ def print_pp(self, new_pp \
                     + ", pp_ttl: " + str(pp_ttl) \
                     + ", pp_ts: " + str(pp_ts) \
                 )
+    return
+    
+def print_pp_msg(self, message):
+    print_pp(message[ParamPP.idx_pp]
+            , message[ParamPP.idx_pp_datatype]
+            , message[ParamPP.idx_pp_id]
+            , message[ParamPP.idx_pp_isoptimal]
+            , message[ParamPP.idx_pp_discovery_addrs]
+            , message[ParamPP.idx_pp_device_id]
+            , message[ParamPP.idx_pp_ttl]
+            , message[ParamPP.idx_pp_ts]
+            )
     return
     
 def print_ed(self, new_ed \
@@ -86,6 +104,19 @@ def print_ed(self, new_ed \
                     + ", ed_ttl: " +str(ed_ttl) \
                     + ", ed_ts: " +str(ed_ts) \
                 )
+    return
+    
+def print_ed_msg(self, message):
+    print_ed(message[ParamED.idx_ed]
+            , message[ParamED.idx_ed_datatype]
+            , message[ParamED.idx_ed_pp_id]
+            , message[ParamED.idx_ed_isoptimal]
+            , message[ParamED.idx_ed_discovery_addrs]
+            , message[ParamED.idx_ed_device_id]
+            , message[ParamED.idx_ed_no_of_devices]
+            , message[ParamED.idx_ed_ttl]
+            , message[ParamED.idx_ed_ts]
+            )
     return
     
 def publish_to_bus(self, topic, msg):

@@ -9,7 +9,7 @@
     "topic_price_point": "zone/pricepoint",
     "topic_energy_demand": "zone/energydemand",
     "topic_energy_demand_ds": "ds/energydemand",
-    "local_vb_vip_identity": "volttronbridgeagent-0.3_1",
+    "vb_vip_identity": "volttronbridgeagent-0.3_1",
     "default_base_price": 0.2,
     "price_point_latest": 0.2,
     
