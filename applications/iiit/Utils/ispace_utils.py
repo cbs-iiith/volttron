@@ -20,9 +20,74 @@ import gevent.event
 from volttron.platform.agent import utils
 from volttron.platform.messaging import headers as headers_mod
 
+from enum import IntEnum
+
 utils.setup_logging()
 _log = logging.getLogger(__name__)
 
+class ParamPP(IntEnum):
+    idx_pp                  = 0
+    idx_pp_datatype         = 1
+    idx_pp_id               = 2
+    idx_pp_isoptimal        = 3
+    idx_pp_discovery_addrs  = 4
+    idx_pp_device_id        = 5
+    idx_pp_ttl              = 6
+    idx_pp_ts               = 7
+    
+class ParamED(IntEnum):
+    idx_ed                  = 0
+    idx_ed_datatype         = 1
+    idx_ed_pp_id            = 2
+    idx_ed_isoptimal        = 3
+    idx_ed_discovery_addrs  = 4
+    idx_ed_device_id        = 5
+    idx_ed_no_of_devices    = 6
+    idx_ed_ttl              = 7
+    idx_ed_ts               = 8
+    
+def print_pp(self, new_pp \
+                    , pp_datatype \
+                    , pp_id \
+                    , pp_isoptimal \
+                    , discovery_address \
+                    , deviceId \
+                    , pp_ttl \
+                    , pp_ts
+                    ):
+    _log.info("New PP: {0:.2f}".format(new_pp) \
+                    #+ ", pp_datatype: " + str(pp_datatype) \
+                    + ", pp_id: " + str(pp_id) \
+                    + ", pp_isoptimal: " + str(pp_isoptimal) \
+                    + ", discovery_address: " + str(discovery_address) \
+                    + ", deviceId: " + str(deviceId) \
+                    + ", pp_ttl: " + str(pp_ttl) \
+                    + ", pp_ts: " + str(pp_ts) \
+                )
+    return
+    
+def print_ed(self, new_ed \
+                    , ed_datatype \
+                    , ed_pp_id \
+                    , ed_isoptimal \
+                    , ed_discovery_addrs \
+                    , ed_device_id \
+                    , ed_no_of_devices \
+                    , ed_ttl \
+                    , ed_ts \
+                    ):
+    _log.info("New ED: {0:.2f}".format(new_ed) \
+                    #+ ", ed_datatype: " +str(ed_datatype) \
+                    + ", ed_pp_id: " +str(ed_pp_id) \
+                    + ", ed_isoptimal: " +str(ed_isoptimal) \
+                    + ", ed_discovery_addrs: " +str(ed_discovery_addrs) \
+                    + ", ed_device_id: " +str(ed_device_id) \
+                    + ", ed_no_of_devices: " +str(ed_no_of_devices) \
+                    + ", ed_ttl: " +str(ed_ttl) \
+                    + ", ed_ts: " +str(ed_ts) \
+                )
+    return
+    
 def publish_to_bus(self, topic, msg):
     #_log.debug('publish_to_bus()')
     now = datetime.datetime.utcnow().isoformat(' ') + 'Z'

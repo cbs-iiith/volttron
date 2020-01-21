@@ -3,6 +3,7 @@
     "agentid": "SmartHub",
     "message": "iSPACE - SmartHub Agent",
     "period_read_data": 30,
+    "period_process_pp": 10,
     "topic_root": 'smarthub',
     "topic_price_point": "smarthub/pricepoint",
     "topic_energy_demand": "smarthub/energydemand",

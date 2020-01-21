@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*- {{{
 # vim: set fenc=utf-8 ft=python sw=4 ts=4 sts=4 et:
 #
-# Copyright (c) 2019, Sam Babu, Godithi.
+# Copyright (c) 2020, Sam Babu, Godithi.
 # All rights reserved.
 #
 #
@@ -19,8 +19,6 @@ import random
 
 from volttron.platform.vip.agent import Agent, Core, PubSub, compat, RPC
 from volttron.platform.agent import utils
-from volttron.platform.messaging import headers as headers_mod
-
 from volttron.platform.messaging import topics, headers as headers_mod
 
 import time
@@ -29,7 +27,7 @@ import gevent.event
 
 utils.setup_logging()
 _log = logging.getLogger(__name__)
-__version__ = '0.2'
+__version__ = '0.3'
 
 MAX_RETRIES = 5
 MAX_THPP = 1
@@ -141,6 +139,7 @@ def ss_sh_device(config_path, **kwargs):
                     sh_on_btry_start_time = datetime.datetime.utcnow()
                 else:
                     #dont know what to do
+                    pass
                     
             if sh_on_btry and new_price_point <= self.sh_th_pp:
                 #change th_pp to min for the plug to which hub is connected (ss will switch-on the plug)
@@ -149,13 +148,14 @@ def ss_sh_device(config_path, **kwargs):
                                             self.sh_plug_id, \
                                             MIN_THPP \
                                             ).get(timeout=10)
-                
+                                            
                 if plugOn:
                     sh_on_btry = False
                     sh_on_grid_start_time = datetime.datetime.utcnow()
                 else:
                     #dont know what to do
-            
+                    pass
+                    
             self._price_point = new_price_point
             return
             
@@ -234,7 +234,7 @@ def main(argv=sys.argv):
     try:
         utils.vip_main(ss_sh_device)
     except Exception as e:
-        print e
+        print (e)
         _log.exception('unhandled exception')
 
 if __name__ == '__main__':

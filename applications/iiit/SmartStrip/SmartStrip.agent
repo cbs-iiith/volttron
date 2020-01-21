@@ -57,6 +57,7 @@
     ],
 
     "period_read_data": 30,
+    "period_process_pp": 10,
     "topic_root": "smartstrip",
     "topic_price_point": "smartstrip/pricepoint",
     "topic_energy_demand": "smartstrip/energydemand",

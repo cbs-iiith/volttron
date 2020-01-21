@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*- {{{
 # vim: set fenc=utf-8 ft=python sw=4 ts=4 sts=4 et:
 #
-# Copyright (c) 2019, Sam Babu, Godithi.
+# Copyright (c) 2020, Sam Babu, Godithi.
 # All rights reserved.
 #
 #
@@ -40,7 +40,11 @@ import struct
 import gevent
 import gevent.event
 
-from ispace_utils import mround, publish_to_bus, get_task_schdl, cancel_task_schdl, isclose
+from ispace_utils import mround, publish_to_bus, get_task_schdl, cancel_task_schdl, isclose, ParamPP, ParamED, print_pp, print_ed
+
+utils.setup_logging()
+_log = logging.getLogger(__name__)
+__version__ = '0.3'
 
 #checking if a floating point value is “numerically zero” by checking if it is lower than epsilon
 EPSILON = 1e-03
@@ -55,41 +59,29 @@ E_UNKNOWN_CCE   = -4
 RC_AUTO_CNTRL_ON = 1
 RC_AUTO_CNTRL_OFF = 0
 
-utils.setup_logging()
-_log = logging.getLogger(__name__)
-__version__ = '0.2'
-
-def DatetimeFromValue(ts):
-    ''' Utility for dealing with time
-    '''
-    if isinstance(ts, (int, long)):
-        return datetime.utcfromtimestamp(ts)
-    elif isinstance(ts, float):
-        return datetime.utcfromtimestamp(ts)
-    elif not isinstance(ts, datetime):
-        raise ValueError('Unknown timestamp value')
-    return ts
-
 class RadiantCubicle(Agent):
     '''Radiant Cubicle
     '''
-    _price_point_previous = 0.4 
+    _pp_failed = False
+    
     _price_point_current = 0.4 
     _price_point_new = 0.45
-
+    _pp_id = randint(0, 99999999)
+    _pp_id_new = randint(0, 99999999)
+    
     _rcAutoCntrlState = RC_AUTO_CNTRL_OFF
     _rcTspLevel = 25
-
+    
     def __init__(self, config_path, **kwargs):
         super(RadiantCubicle, self).__init__(**kwargs)
         _log.debug("vip_identity: " + self.core.identity)
-
+        
         self.config = utils.load_config(config_path)
         self._configGetPoints()
         self._configGetInitValues()
         self._configGetPriceFucntions()
         return
-
+        
     @Core.receiver('onsetup')
     def setup(self, sender, **kwargs):
         _log.info(self.config['message'])
@@ -101,27 +93,34 @@ class RadiantCubicle(Agent):
         _log.info("yeild 30s for volttron platform to initiate properly...")
         time.sleep(30) #yeild for a movement
         _log.info("Starting RadiantCubicle...")
-
+        
         self._runRadiantCubicleTest()
         
-        _log.debug('switch ON RC_AUTO_CNTRL')
-        self.setRcAutoCntrl(RC_AUTO_CNTRL_ON)
+        #TODO: get the latest values (states/levels) from h/w
+        #self.getInitialHwState()
+        #time.sleep(1) #yeild for a movement
         
-        self.vip.rpc.call(MASTER_WEB, 'register_agent_route',
-                      r'^/RadiantCubicle',
-                      "rpc_from_net").get(timeout=10)
+        #TODO: apply pricing policy for default values
+        
+        #TODO: publish initial data to volttron bus
         
         #perodically publish total energy demand to volttron bus
         self.core.periodic(self._period_read_data, self.publishTed, wait=None)
         
-        #perodically process new pricing point
-        self.core.periodic(10, self.processNewPricePoint, wait=None)
+        #perodically process new pricing point that keeps trying to apply the new pp till success
+        self.core.periodic(self._period_process_pp, self.processNewPricePoint, wait=None)
         
         #subscribing to topic_price_point
         self.vip.pubsub.subscribe("pubsub", self.topic_price_point, self.onNewPrice)
         
+        self.vip.rpc.call(MASTER_WEB, 'register_agent_route',
+                      r'^/RadiantCubicle',
+                      "rpc_from_net").get(timeout=10)
+                      
+        _log.debug('switch ON RC_AUTO_CNTRL')
+        self.setRcAutoCntrl(RC_AUTO_CNTRL_ON)
         return
-
+        
     @Core.receiver('onstop')
     def onstop(self, sender, **kwargs):
         _log.debug('onstop()')
@@ -129,33 +128,32 @@ class RadiantCubicle(Agent):
         _log.debug('un registering rpc routes')
         self.vip.rpc.call(MASTER_WEB, 'unregister_all_agent_routes').get(timeout=10)
         return
-
+        
     @Core.receiver('onfinish')
     def onfinish(self, sender, **kwargs):
         _log.debug('onfinish()')
         return
-
+        
     def _configGetInitValues(self):
-        self._period_read_data = self.config['period_read_data']
-        self._price_point_previous = self.config['default_base_price']
-        self._price_point_current = self.config['default_base_price']
-        self._deviceId = self.config.get('deviceId', 'RadiantCubicle-61')
+        self._period_read_data          = self.config.get('period_read_data', 30)
+        self._period_process_pp         = self.config.get('period_process_pp', 10)
+        self._price_point_current       = self.config.get('price_point_latest', 0.2)
+        self._deviceId                  = self.config.get('deviceId', 'RadiantCubicle-61')
         return
         
     def _configGetPoints(self):
-        self.root_topic              = self.config.get('topic_root', 'radiantcubicle')
-        self.energyDemand_topic     = self.config.get('topic_energy_demand', \
+        self.root_topic                 = self.config.get('topic_root', 'radiantcubicle')
+        self.energyDemand_topic         = self.config.get('topic_energy_demand', \
                                             'radiantcubicle/energydemand')
-        self.topic_price_point      = self.config.get('topic_price_point', \
+        self.topic_price_point          = self.config.get('topic_price_point', \
                                             'topic_price_point')
         return
-
+        
     def _configGetPriceFucntions(self):
         _log.debug("_configGetPriceFucntions()")
-        self.pf_rc  = self.config.get('pf_rc')
+        self.pf_rc                      = self.config.get('pf_rc')
         return
         
-
     def _runRadiantCubicleTest(self):
         _log.debug("Running : _runRadiantCubicleTest()...")
         
@@ -189,32 +187,60 @@ class RadiantCubicle(Agent):
     def onNewPrice(self, peer, sender, bus,  topic, headers, message):
         if sender == 'pubsub.compat':
             message = compat.unpack_legacy_message(headers, message)
-
-        new_price_point = message[0]
-        #_log.info ( "*** New Price Point: {0:.2f} ***".format(new_price_point))
-
-        self._price_point_new = new_price_point
-        
-        if self._price_point_current != new_price_point:
-        #if True:
-            self.processNewPricePoint()
+            
+        new_pp              = message[ParamPP.idx_pp]
+        new_pp_datatype     = message[ParamPP.idx_pp_datatype]
+        new_pp_id           = message[ParamPP.idx_pp_id]
+        new_pp_isoptimal    = message[ParamPP.idx_pp_isoptimal]
+        discovery_address   = message[ParamPP.idx_pp_discovery_addrs]
+        deviceId            = message[ParamPP.idx_pp_device_id]
+        new_pp_ttl          = message[ParamPP.idx_pp_ttl]
+        new_pp_ts           = message[ParamPP.idx_pp_ts]
+        print_pp(self, new_pp\
+                , new_pp_datatype\
+                , new_pp_id\
+                , new_pp_isoptimal\
+                , discovery_address\
+                , deviceId\
+                , new_pp_ttl\
+                , new_pp_ts\
+                )
+                
+        if not new_pp_isoptimal:
+            _log.debug('not optimal pp!!!, do nothing')
+            return
+            
+        self._price_point_new = new_pp
+        self._pp_id_new = new_pp_id
+        self.processNewPricePoint()
         return
         
+    #this is a perodic function that keeps trying to apply the new pp till success
     def processNewPricePoint(self):
-        if self._price_point_current != self._price_point_new:
-            _log.info ( "*** New Price Point: {0:.2f} ***".format(self._price_point_new))
-            self._price_point_previous = self._price_point_current
-            self._price_point_current = self._price_point_new
-            self.applyPricingPolicy()
+        if isclose(self._price_point_current, self._price_point_new, EPSILON) and self._pp_id == self._pp_id_new:
+            return
+            
+        self._pp_failed = False     #any process that failed to apply pp sets this flag True
+        self.applyPricingPolicy()
+        
+        if self._pp_failed:
+            _log.debug("unable to processNewPricePoint(), will try again in " + str(self._period_process_pp))
+            return
+            
+        _log.info("*** New Price Point processed.")
+        self._price_point_current = self._price_point_new
+        self._pp_id = self._pp_id_new
         return
-
+        
     def applyPricingPolicy(self):
         _log.debug("applyPricingPolicy()")
         tsp = self.getNewTsp(self._price_point_current)
         _log.debug('New Setpoint: {0:0.1f}'.format( tsp))
         self.setRcTspLevel(tsp)
+        if not isclose(tsp, self._rcTspLevel, EPSILON):
+            self._pp_failed = True
         return
-    
+        
     #compute new TSP
     def getNewTsp(self, pp):
         pp = 0 if pp < 0 else 1 if pp > 1 else pp
@@ -260,19 +286,19 @@ class RadiantCubicle(Agent):
         else:
             _log.debug('schedule NOT available')
         return
-    
+        
     def setRcAutoCntrl(self, state):
         _log.debug('setRcAutoCntrl()')
-
+        
         if self._rcAutoCntrlState == state:
             _log.info('same state, do nothing')
             return
-
+            
         #get schedule to setRcAutoCntrl
         task_id = str(randint(0, 99999999))
         #_log.debug("task_id: " + task_id)
         result = get_task_schdl(self, task_id,'iiit/cbs/radiantcubicle')
-
+        
         if result['result'] == 'SUCCESS':
             result = {}
             try:
@@ -283,7 +309,7 @@ class RadiantCubicle(Agent):
                         self._agent_id, 
                         'iiit/cbs/radiantcubicle/RC_AUTO_CNTRL',
                         state).get(timeout=10)
-
+                        
                 self.updateRcAutoCntrl(state)
             except gevent.Timeout:
                 _log.exception("Expection: gevent.Timeout in setRcAutoCntrl()")
@@ -310,7 +336,7 @@ class RadiantCubicle(Agent):
             
         _log.debug('Current level: ' + "{0:0.1f}".format( device_level))
         return
-    
+        
     def updateRcAutoCntrl(self, state):
         _log.debug('updateRcAutoCntrl()')
         
@@ -319,7 +345,7 @@ class RadiantCubicle(Agent):
         if state == int(rcAutoCntrlState):
             self._rcAutoCntrlState = state
             self.publishRcAutoCntrlState(state)
-
+            
         if self._rcAutoCntrlState == RC_AUTO_CNTRL_ON:
             _log.info('Current State: RC Auto Cntrl is ON!!!')
         else:
@@ -392,14 +418,22 @@ class RadiantCubicle(Agent):
         pubMsg = [state, {'units': 'On/Off', 'tz': 'UTC', 'type': 'int'}]
         publish_to_bus(self, pubTopic, pubMsg)
         return
-
+        
     def publishTed(self):
-        #_log.debug('publishTed()')
         self._ted = self.rpc_getRcCalcCoolingEnergy()
         _log.info( "*** New TED: {0:.2f}, publishing to bus ***".format(self._ted))
         pubTopic = self.energyDemand_topic + "/" + self._deviceId
         #_log.debug("TED pubTopic: " + pubTopic)
-        pubMsg = [self._ted, {'units': 'W', 'tz': 'UTC', 'type': 'float'}]
+        pubMsg = [self._ted \
+                    , {'units': 'W', 'tz': 'UTC', 'type': 'float'} \
+                    , self._pp_id \
+                    , True \
+                    , None \
+                    , self._deviceId \
+                    , None \
+                    , self._period_read_data \
+                    , datetime.datetime.utcnow().isoformat(' ') + 'Z'
+                    ]
         publish_to_bus(self, pubTopic, pubMsg)
         return
         
@@ -428,16 +462,13 @@ class RadiantCubicle(Agent):
             ted = 100
         return ted
         
-
-
 def main(argv=sys.argv):
     '''Main method called by the eggsecutable.'''
     try:
         utils.vip_main(RadiantCubicle)
     except Exception as e:
-        print e
+        print (e)
         _log.exception('unhandled exception')
-
 
 if __name__ == '__main__':
     # Entry point for script
@@ -445,3 +476,4 @@ if __name__ == '__main__':
         sys.exit(main())
     except KeyboardInterrupt:
         pass
+        
