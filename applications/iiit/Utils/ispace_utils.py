@@ -158,6 +158,33 @@ def valid_ed_msg(self, message):
             print(e)
     return valid_msg
     
+def sanity_check_pp(self, ):
+    return
+    
+def sanity_check_ed(self, message, valid_pp_ids = []):
+    if not valid_ed_msg(message):
+        _log.warning('rcvd a invalid ed msg, message: {}'.format(message)
+                        + ', do nothing!!!'
+                        )
+        return False
+    print_ed_msg(message)
+    
+    #process ed only if pp_id corresponds to these ids (i.e., ed for either opt_pp_id or bid_pp_id)
+    if message[ParamPP.idx_ed_pp_id] not in valid_pp_ids
+        _log.debug("ed_pp_id: " + str(message[ParamPP.idx_ed_pp_id])
+                    + " not in [self._pp_id, self._bid_pp_id]: "
+                    + str([self._pp_id, self._bid_pp_id])
+                    + ", do nothing"
+                    )
+        return False
+        
+    #process ed only if msg is alive (didnot timeout)
+    if ispace_utils.ttl_timeout(message[ParamPP.idx_ed_pp_ts], message[ParamPP.idx_ed_pp_ttl]):
+        _log.warning("msg timed out, do nothing")
+        return False
+        
+    return True
+    
 def publish_to_bus(self, topic, msg):
     #_log.debug('publish_to_bus()')
     now = datetime.datetime.utcnow().isoformat(' ') + 'Z'
