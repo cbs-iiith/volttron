@@ -65,7 +65,7 @@ class RadiantCubicle(Agent):
     _pp_failed = False
     
     _price_point_current = 0.4 
-    _price_point_new = 0.45
+    _price_point_latest = 0.45
     _pp_id = randint(0, 99999999)
     _pp_id_new = randint(0, 99999999)
     
@@ -211,14 +211,14 @@ class RadiantCubicle(Agent):
             _log.debug('not optimal pp!!!, do nothing')
             return
             
-        self._price_point_new = new_pp
+        self._price_point_latest = new_pp
         self._pp_id_new = new_pp_id
         self.processNewPricePoint()
         return
         
     #this is a perodic function that keeps trying to apply the new pp till success
     def processNewPricePoint(self):
-        if ispace_utils.isclose(self._price_point_old, self._price_point_new, EPSILON) and self._pp_id == self._pp_id_new:
+        if ispace_utils.isclose(self._price_point_old, self._price_point_latest, EPSILON) and self._pp_id == self._pp_id_new:
             return
             
         self._pp_failed = False     #any process that failed to apply pp sets this flag True
@@ -229,13 +229,13 @@ class RadiantCubicle(Agent):
             return
             
         _log.info("New Price Point processed.")
-        self._price_point_old = self._price_point_new
+        self._price_point_old = self._price_point_latest
         self._pp_id = self._pp_id_new
         return
         
     def applyPricingPolicy(self):
         _log.debug("applyPricingPolicy()")
-        tsp = self.getNewTsp(self._price_point_new)
+        tsp = self.getNewTsp(self._price_point_latest)
         _log.debug('New Setpoint: {0:0.1f}'.format( tsp))
         self.setRcTspLevel(tsp)
         if not ispace_utils.isclose(tsp, self._rcTspLevel, EPSILON):

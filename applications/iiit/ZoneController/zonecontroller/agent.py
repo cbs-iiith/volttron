@@ -59,7 +59,7 @@ class ZoneController(Agent):
     _pp_failed = False
     
     _price_point_current = 0.4 
-    _price_point_new = 0.45
+    _price_point_latest = 0.45
     _pp_id = randint(0, 99999999)
     _pp_id_new = randint(0, 99999999)
 
@@ -142,7 +142,7 @@ class ZoneController(Agent):
         self._period_read_data = self.config.get('period_read_data', 30)
         self._period_process_pp = self.config.get('period_process_pp', 10)
         self._price_point_old = self.config.get('default_base_price', 0.1)
-        self._price_point_new = self.config.get('price_point_latest', 0.2)
+        self._price_point_latest = self.config.get('price_point_latest', 0.2)
         return
         
     def _configGetPoints(self):
@@ -225,14 +225,14 @@ class ZoneController(Agent):
             _log.debug('not optimal pp!!!, do nothing')
             return
             
-        self._price_point_new = new_pp
+        self._price_point_latest = new_pp
         self._pp_id_new = new_pp_id
         self.processNewPricePoint()         #convert this to underscore !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
         return
         
     #this is a perodic function that keeps trying to apply the new pp till success
     def processNewPricePoint(self):
-        if ispace_utils.isclose(self._price_point_old, self._price_point_new, EPSILON) and self._pp_id == self._pp_id_new:
+        if ispace_utils.isclose(self._price_point_old, self._price_point_latest, EPSILON) and self._pp_id == self._pp_id_new:
             return
             
         self._pp_failed = False     #any process that failed to apply pp sets this flag True
@@ -243,7 +243,7 @@ class ZoneController(Agent):
             return
             
         _log.info("New Price Point processed.")
-        self._price_point_old = self._price_point_new
+        self._price_point_old = self._price_point_latest
         self._pp_id = self._pp_id_new
         return
         
@@ -251,14 +251,14 @@ class ZoneController(Agent):
         _log.debug("applyPricingPolicy()")
         
         #apply for ambient ac
-        tsp = self.getNewTsp(self._price_point_new)
+        tsp = self.getNewTsp(self._price_point_latest)
         _log.debug('New Ambient AC Setpoint: {0:0.1f}'.format( tsp))
         self.setRmTsp(tsp)
         if not ispace_utils.isclose(tsp, self._rmTsp, EPSILON):
             self._pp_failed = True
             
         #apply for ambient lightinh
-        lsp = self.getNewLsp(self._price_point_new)
+        lsp = self.getNewLsp(self._price_point_latest)
         _log.debug('New Ambient Lighting Setpoint: {0:0.1f}'.format( lsp))
         self.setRmLsp(lsp)
         if not ispace_utils.isclose(lsp, self._rmLsp, EPSILON):

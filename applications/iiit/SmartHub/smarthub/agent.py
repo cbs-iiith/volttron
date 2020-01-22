@@ -119,7 +119,7 @@ class SmartHub(Agent):
     _shDevicesPP_th = [ 0.95, 0.95, 0.95, 0.95, 0.95, 0.95, 0.95, 0.95, 0.95]
     
     _price_point_current = 0.4
-    _price_point_new = 0.45
+    _price_point_latest = 0.45
     _pp_id = randint(0, 99999999)
     _pp_id_new = randint(0, 99999999)
     
@@ -232,7 +232,7 @@ class SmartHub(Agent):
         self._period_read_data = self.config.get('period_read_data', 30)
         self._period_process_pp = self.config.get('period_process_pp', 10)
         self._price_point_old = self.config.get('default_base_price', 0.1)
-        self._price_point_new = self.config.get('price_point_latest', 0.2)
+        self._price_point_latest = self.config.get('price_point_latest', 0.2)
         return
         
     def _configGetPoints(self):
@@ -640,8 +640,8 @@ class SmartHub(Agent):
     #this function is called only once on smarthub startup
     def publishCurrentPP(self):
         #_log.debug('publishCurrentPP()')
-        _log.debug("current price point: " + "{0:0.4f}".format(float(self._price_point_new)))
-        pubMsg = [self._price_point_new
+        _log.debug("current price point: " + "{0:0.4f}".format(float(self._price_point_latest)))
+        pubMsg = [self._price_point_latest
                     , {'units': 'cent', 'tz': 'UTC', 'type': 'float'}
                     , randint(0, 99999999)
                     , True
@@ -668,8 +668,12 @@ class SmartHub(Agent):
         return
         
     def _process_opt_pp(self, message):
-        self._price_point_new = message[ParamPP.idx_pp]
+        self._price_point_latest = message[ParamPP.idx_pp]
+        self._pp_datatype_new = message[ParamPP.idx_pp_datatype]
         self._pp_id_new = message[ParamPP.idx_pp_id]
+        self._pp_duration_new = message[ParamPP.idx_pp_duration]
+        self._pp_ttl_new = message[ParamPP.idx_pp_ttl]
+        self._pp_ts_new = message[ParamPP.idx_pp_ts]
         self.processNewPricePoint()     #initiate the periodic process
         return
         
@@ -728,7 +732,7 @@ class SmartHub(Agent):
         
     #this is a perodic function that keeps trying to apply the new pp till success
     def processNewPricePoint(self):
-        if ispace_utils.isclose(self._price_point_old, self._price_point_new, EPSILON) and self._pp_id == self._pp_id_new:
+        if ispace_utils.isclose(self._price_point_old, self._price_point_latest, EPSILON) and self._pp_id == self._pp_id_new:
             return
             
         self._pp_failed = False     #any process that failed to apply pp sets this flag True
@@ -750,15 +754,19 @@ class SmartHub(Agent):
             _log.debug("unable to processNewPricePoint(), will try again in " + str(self._period_process_pp))
             return
             
-        _log.info("New Price Point processed.")
-        self._price_point_old = self._price_point_new
+        self._price_point_old = self._price_point_latest
+        self._pp_datatype = self._pp_datatype_new
         self._pp_id = self._pp_id_new
+        self._pp_duration = self._pp_duration_new
+        self._pp_ttl = self._pp_ttl_new
+        self._pp_ts = self._pp_ts_new
+        _log.info("New Price Point processed.")
         return
         
     def applyPricingPolicy(self, deviceId, schdExist):
         _log.debug("applyPricingPolicy()")
         shDevicesPP_th = self._shDevicesPP_th[deviceId]
-        if self._price_point_new > shDevicesPP_th: 
+        if self._price_point_latest > shDevicesPP_th: 
             if self._shDevicesState[deviceId] == SH_DEVICE_STATE_ON:
                 _log.info(self._getEndPoint(deviceId, AT_GET_STATE)
                             + 'Current price point > threshold'
@@ -781,7 +789,7 @@ class SmartHub(Agent):
                 self._pp_failed = True
                 
             if deviceId == SH_DEVICE_FAN:
-                fan_speed = self.getNewFanSpeed(self._price_point_new)/100
+                fan_speed = self.getNewFanSpeed(self._price_point_latest)/100
                 _log.info ( "New Fan Speed: {0:.4f}".format(fan_speed))
                 self.setShDeviceLevel(SH_DEVICE_FAN, fan_speed, schdExist)
                 if not ispace_utils.isclose(fan_speed, self._shDevicesLevel[deviceId], EPSILON):
@@ -1195,7 +1203,7 @@ class SmartHub(Agent):
                     , True
                     , None
                     , None
-                    , None
+                    , self._pp_duration
                     , self._period_read_data
                     , datetime.datetime.utcnow().isoformat(' ') + 'Z'
                     ]

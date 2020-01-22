@@ -59,7 +59,7 @@ class BuildingController(Agent):
     _pp_failed = False
     
     _price_point_current = 0.4 
-    _price_point_new = 0.45
+    _price_point_latest = 0.45
     _pp_id = randint(0, 99999999)
     _pp_id_new = randint(0, 99999999)
 
@@ -138,7 +138,7 @@ class BuildingController(Agent):
         self._period_read_data = self.config.get('period_read_data', 30)
         self._period_process_pp = self.config.get('period_process_pp', 10)
         self._price_point_old = self.config.get('default_base_price', 0.1)
-        self._price_point_new = self.config.get('price_point_latest', 0.2)
+        self._price_point_latest = self.config.get('price_point_latest', 0.2)
         return
         
     def _configGetPoints(self):
@@ -196,18 +196,18 @@ class BuildingController(Agent):
             _log.debug('not optimal pp!!!, do nothing')
             return
             
-        self._price_point_new = new_pp
+        self._price_point_latest = new_pp
         self._pp_id_new = new_pp_id
         self.processNewPricePoint()         #convert this to underscore !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
         return
         
     #this is a perodic function that keeps trying to apply the new pp till success
     def processNewPricePoint(self):
-        if ispace_utils.isclose(self._price_point_old, self._price_point_new, EPSILON) and self._pp_id == self._pp_id_new:
+        if ispace_utils.isclose(self._price_point_old, self._price_point_latest, EPSILON) and self._pp_id == self._pp_id_new:
             return
             
         self._pp_failed = False     #any process that failed to apply pp sets this flag True
-        self.publishPriceToBMS(self._price_point_new)
+        self.publishPriceToBMS(self._price_point_latest)
         if not self._pp_failed:
             self.applyPricingPolicy()
             
@@ -216,14 +216,14 @@ class BuildingController(Agent):
             return
             
         _log.info(New Price Point processed.")
-        self._price_point_old = self._price_point_new
+        self._price_point_old = self._price_point_latest
         self._pp_id = self._pp_id_new
         return
 
     def applyPricingPolicy(self):
         _log.debug("applyPricingPolicy()")
         #TODO: control the energy demand of devices at building level accordingly
-        #if applying self._price_point_new failed, set self._pp_failed = True
+        #if applying self._price_point_latest failed, set self._pp_failed = True
         return
         
     # change rc surface temperature set point
@@ -254,23 +254,23 @@ class BuildingController(Agent):
 
     def updateBuildingPP(self):
         #_log.debug('updateRmTsp()')
-        _log.debug('building_pp {0:0.2f}'.format( self._price_point_new))
+        _log.debug('building_pp {0:0.2f}'.format( self._price_point_latest))
         
         building_pp = self.rpc_getBuildingPP()
         
         #check if the pp really updated at the bms, only then proceed with new pp
-        if ispace_utils.isclose(self._price_point_new, building_pp, EPSILON):
+        if ispace_utils.isclose(self._price_point_latest, building_pp, EPSILON):
             self.publishBuildingPP()
         else:
             self._pp_failed = True
             
-        _log.debug('Current Building PP: ' + "{0:0.2f}".format( self._price_point_new))
+        _log.debug('Current Building PP: ' + "{0:0.2f}".format( self._price_point_latest))
         return
 
     def publishBuildingPP(self):
         #_log.debug('publishBuildingPP()')
         pubTopic = self.root_topic+"/Building_PricePoint"
-        pubMsg = [self._price_point_new,
+        pubMsg = [self._price_point_latest,
                     {'units': 'cents', 'tz': 'UTC', 'type': 'float'},
                     self._pp_id_new,
                     True

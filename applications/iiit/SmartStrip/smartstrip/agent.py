@@ -79,7 +79,7 @@ class SmartStrip(Agent):
     _plug_pricepoint_th = [0.35, 0.5, 0.75, 0.95]
     
     _price_point_current = 0.4 
-    _price_point_new = 0.45
+    _price_point_latest = 0.45
     _pp_id = randint(0, 99999999)
     _pp_id_new = randint(0, 99999999)
     
@@ -172,7 +172,7 @@ class SmartStrip(Agent):
         self._period_read_data = self.config.get('period_read_data', 30)
         self._period_process_pp = self.config.get('period_process_pp', 10)
         self._price_point_old = self.config.get('default_base_price', 0.1)
-        self._price_point_new = self.config.get('price_point_latest', 0.2)
+        self._price_point_latest = self.config.get('price_point_latest', 0.2)
         self._tag_ids = self.config['tag_ids']
         self._plug_pricepoint_th = self.config['plug_pricepoint_th']
         self._sh_plug_id = self.config.get('smarthub_plug', 4) - 1
@@ -440,7 +440,7 @@ class SmartStrip(Agent):
                 self._plugConnected[plugID] = 1
                 if self.tagAuthorised(newTagId):
                     plug_pp_th = self._plug_pricepoint_th[plugID]
-                    if self._price_point_new < plug_pp_th:
+                    if self._price_point_latest < plug_pp_th:
                         _log.info(('Plug {0:d}: '.format(plugID + 1),
                                 'Current price point < '
                                 'threshold {0:.2f}, '.format(plug_pp_th),
@@ -506,7 +506,7 @@ class SmartStrip(Agent):
             self.process_bid_pp()
             return
             
-        self._price_point_new = new_pp
+        self._price_point_latest = new_pp
         self._pp_id_new = new_pp_id
         self.processNewPricePoint()
         return
@@ -520,7 +520,7 @@ class SmartStrip(Agent):
         
     #this is a perodic function that keeps trying to apply the new pp till success
     def processNewPricePoint(self):
-        if ispace_utils.isclose(self._price_point_old, self._price_point_new, EPSILON) and self._pp_id == self._pp_id_new:
+        if ispace_utils.isclose(self._price_point_old, self._price_point_latest, EPSILON) and self._pp_id == self._pp_id_new:
             return
             
         self._pp_failed = False     #any process that failed to apply pp, sets this flag True
@@ -545,13 +545,13 @@ class SmartStrip(Agent):
             return
             
         _log.info("New Price Point processed.")
-        self._price_point_old = self._price_point_new
+        self._price_point_old = self._price_point_latest
         self._pp_id = self._pp_id_new
         return
         
     def applyPricingPolicy(self, plugID, schdExist):
         plug_pp_th = self._plug_pricepoint_th[plugID]
-        if self._price_point_new > plug_pp_th:
+        if self._price_point_latest > plug_pp_th:
             if self._plugRelayState[plugID] == RELAY_ON:
                 _log.info(('Plug {0:d}: '.format(plugID + 1)
                             , 'Current price point > threshold'
