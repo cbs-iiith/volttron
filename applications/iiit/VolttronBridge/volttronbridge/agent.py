@@ -107,6 +107,8 @@ def volttronbridge(config_path, **kwargs):
             self._pp_id = randint(0, 99999999)
             self._pp_datatype = {'units': 'cents', 'tz': 'UTC', 'type': 'float'}
             self._pp_isoptimal = False
+            #self._pp_discovery_addrs = None    #using self._discovery_address, values from config
+            #self._pp_device_id = None          #using self._deviceId, values from config
             self._pp_duration = 3600
             self._pp_ttl = -1
             self._pp_ts = datetime.datetime.utcnow().isoformat(' ') + 'Z'
@@ -137,7 +139,7 @@ def volttronbridge(config_path, **kwargs):
                 #downstream volttron instances
                 #post price point to these instances
                 self._ds_register = []
-                self._ds_deviceId = []
+                self._ds_device_ids = []
                 self._ds_retrycount = []
                 
             if self._bridge_host != 'LEVEL_HEAD':
@@ -171,7 +173,7 @@ def volttronbridge(config_path, **kwargs):
                                             self.on_new_pp
                                             )
                 self._ds_register[:] = []
-                self._ds_deviceId[:] = []
+                self._ds_device_ids[:] = []
                 self._ds_retrycount[:] = []
                 
             #subscribe to energy demand so that it can be posted to upstream
@@ -217,7 +219,7 @@ def volttronbridge(config_path, **kwargs):
             
             if self._bridge_host != 'LEVEL_TAILEND':
                 del self._ds_register[:]
-                del self._ds_deviceId[:]
+                del self._ds_device_ids[:]
                 del self._ds_retrycount[:]
                 
             if self._bridge_host != 'LEVEL_HEAD':
@@ -504,7 +506,7 @@ def volttronbridge(config_path, **kwargs):
             #TODO: potential bug in this method, not atomic
             self._ds_register.append(discovery_address)
             index = self._ds_register.index(discovery_address)
-            self._ds_deviceId.insert(index, deviceId)
+            self._ds_device_ids.insert(index, deviceId)
             self._ds_retrycount.insert(index, 0)
             
             _log.debug('registered!!!')
@@ -521,7 +523,7 @@ def volttronbridge(config_path, **kwargs):
             #TODO: potential bug in this method, not atomic
             index = self._ds_register.index(discovery_address)
             self._ds_register.remove(discovery_address)
-            del self._ds_deviceId[index]
+            del self._ds_device_ids[index]
             del self._ds_retrycount[index]
             _log.debug('unregistered!!!')
             return True
@@ -625,7 +627,7 @@ def volttronbridge(config_path, **kwargs):
             
         def msg_from_registered_ds(self, discovery_address, device_id):
             return (True if discovery_address in self._ds_register
-                         and device_id == self._ds_deviceId[self._ds_register.index(discovery_address)]
+                         and device_id == self._ds_device_ids[self._ds_register.index(discovery_address)]
                          else False)
                          
         def do_rpc(self, url_root, method, params=None ):
