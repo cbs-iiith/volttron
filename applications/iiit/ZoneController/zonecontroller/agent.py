@@ -166,7 +166,7 @@ class ZoneController(Agent):
         return
         
     def _runBMSTest(self):
-        _log.debug("Running : _runBMS Commu Test()...")
+        _log.debug("Running: _runBMS Commu Test()...")
         
         _log.debug('change tsp 26')
         self.setRmTsp(26.0)

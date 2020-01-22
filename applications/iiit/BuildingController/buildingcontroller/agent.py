@@ -152,10 +152,9 @@ class BuildingController(Agent):
         self.energyDemand_topic_ds = self.config.get('topic_energy_demand_ds',
                                                         'ds/energydemand')
         return
-
-
+        
     def _runBMSTest(self):
-        _log.debug("Running : _runBMS Commu Test()...")
+        _log.debug("Running: _runBMS Commu Test()...")
         _log.debug('change pp .10')
         self.publishPriceToBMS(0.10)
         time.sleep(10)

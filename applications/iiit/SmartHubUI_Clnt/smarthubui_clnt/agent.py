@@ -158,7 +158,7 @@ def smarthubui_clnt(config_path, **kwargs):
             pricePoint = message[0]
             self.do_rpc('currentPricePoint', {'pricePoint': pricePoint})
 
-        def uiPostSensorData(self, headers, message) :
+        def uiPostSensorData(self, headers, message):
             _log.debug('uiPostSensorData()')
             luxLevel = message[0]['luxlevel']
             rhLevel = message[0]['rhlevel']

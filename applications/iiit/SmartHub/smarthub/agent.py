@@ -253,7 +253,7 @@ class SmartHub(Agent):
         return
         
     def runSmartHubTest(self):
-        _log.debug("Running : runSmartHubTest()...")
+        _log.debug("Running: runSmartHubTest()...")
         
         self.testLedDebug()
         self.testLed()
@@ -425,7 +425,7 @@ class SmartHub(Agent):
         
     def getShDeviceState(self, deviceId, schdExist):
         state = E_UNKNOWN_STATE
-        if not self._validDeviceAction(deviceId, AT_GET_STATE) :
+        if not self._validDeviceAction(deviceId, AT_GET_STATE):
             _log.exception ("Expection: not a valid device to get state, deviceId: " + str(deviceId))
             return state
             
@@ -454,7 +454,7 @@ class SmartHub(Agent):
     def getShDeviceLevel(self, deviceId, schdExist):
         #_log.debug('getShDeviceLevel()')
         level = E_UNKNOWN_LEVEL
-        if not self._validDeviceAction( deviceId, AT_GET_LEVEL) :
+        if not self._validDeviceAction( deviceId, AT_GET_LEVEL):
             _log.exception ("not a valid device to get level, deviceId: " + str(deviceId))
             return level
             
@@ -482,7 +482,7 @@ class SmartHub(Agent):
                 
     def setShDeviceState(self, deviceId, state, schdExist):
         #_log.debug('setShDeviceState()')
-        if not self._validDeviceAction(deviceId, AT_SET_STATE) :
+        if not self._validDeviceAction(deviceId, AT_SET_STATE):
             _log.exception ("Expection: not a valid device to change state, deviceId: " + str(deviceId))
             return
 
@@ -558,7 +558,7 @@ class SmartHub(Agent):
         
         return
         
-    def publishSensorData(self) :
+    def publishSensorData(self):
         #_log.debug('publishSensorData()')
         task_id = str(randint(0, 99999999))
         result = ispace_utils.get_task_schdl(self, task_id, 'iiit/cbs/smarthub', 300)
@@ -607,7 +607,7 @@ class SmartHub(Agent):
                 ispace_utils.cancel_task_schdl(self, task_id)
         return
         
-    def publishDeviceState(self) :
+    def publishDeviceState(self):
         #_log.debug('publishDeviceState()')
         state_led = self._shDevicesState[SH_DEVICE_LED]
         state_fan = self._shDevicesState[SH_DEVICE_FAN]
@@ -617,7 +617,7 @@ class SmartHub(Agent):
                     + ", fan state: " + "{0:0.4f}".format(float(state_fan)))
         return
         
-    def publishDeviceLevel(self) :
+    def publishDeviceLevel(self):
         #_log.debug('publishDeviceLevel()')
         level_led = self._shDevicesLevel[SH_DEVICE_LED]
         level_fan = self._shDevicesLevel[SH_DEVICE_FAN]
@@ -627,7 +627,7 @@ class SmartHub(Agent):
                     + ", fan level: " + "{0:0.4f}".format(float(level_fan)))
         return
         
-    def publishDeviceThPP(self) :
+    def publishDeviceThPP(self):
         #_log.debug('publishDeviceThPP()')
         thpp_led = self._shDevicesPP_th[SH_DEVICE_LED]
         thpp_fan = self._shDevicesPP_th[SH_DEVICE_FAN]
@@ -637,7 +637,7 @@ class SmartHub(Agent):
                     + ", fan th pp: " + "{0:0.4f}".format(float(thpp_fan)))
         return
         
-    def publishCurrentPP(self) :
+    def publishCurrentPP(self):
         #_log.debug('publishCurrentPP()')
         _log.debug("current price point: " + "{0:0.4f}".format(float(self._price_point_new)))
                     
@@ -952,7 +952,7 @@ class SmartHub(Agent):
                 return self.topic_root + '/ledstate'
             elif deviceId ==SH_DEVICE_FAN:
                 return self.topic_root + '/fanstate'
-        elif actionType == AT_PUB_LEVEL :    
+        elif actionType == AT_PUB_LEVEL :
             if deviceId == SH_DEVICE_LED:
                 return self.topic_root + '/ledlevel'
             elif deviceId == SH_DEVICE_FAN:
@@ -980,7 +980,7 @@ class SmartHub(Agent):
         if  actionType == AT_SET_LEVEL :
             if deviceId == SH_DEVICE_LED :
                 return "LEDPwmDuty"
-            elif deviceId == SH_DEVICE_FAN : 
+            elif deviceId == SH_DEVICE_FAN :
                 return "FanPwmDuty"
         elif actionType == AT_GET_LEVEL :
             if deviceId == SH_DEVICE_LED :

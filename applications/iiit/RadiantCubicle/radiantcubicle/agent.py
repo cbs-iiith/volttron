@@ -156,7 +156,7 @@ class RadiantCubicle(Agent):
         return
         
     def _runRadiantCubicleTest(self):
-        _log.debug("Running : _runRadiantCubicleTest()...")
+        _log.debug("Running: _runRadiantCubicleTest()...")
         
         _log.debug('change level 26')
         self.setRcTspLevel(26.0)

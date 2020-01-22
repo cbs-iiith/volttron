@@ -187,7 +187,7 @@ class SmartStrip(Agent):
         return
         
     def runSmartStripTest(self):
-        _log.debug("Running : runSmartStripTest()...")
+        _log.debug("Running: runSmartStripTest()...")
         _log.debug('switch on debug led')
         self.switchLedDebug(LED_ON)
         time.sleep(1)
@@ -606,7 +606,7 @@ class SmartStrip(Agent):
         _log.debug('setThresholdPP()')
         if self._plug_pricepoint_th[plugID] != newThreshold:
             _log.info(('Changing Threshold: Plug ',
-                        str(plugID+1), ' : ', newThreshold))
+                        str(plugID+1), ': ', newThreshold))
             self._plug_pricepoint_th[plugID] = newThreshold
             self.publishThresholdPP(plugID, newThreshold)
         return 'success'
