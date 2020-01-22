@@ -27,7 +27,7 @@ import time
 import gevent
 import gevent.event
 
-from ispace_utils import publish_to_bus, ParamPP, ParamED, print_pp, print_ed
+import ispace_utils
 
 utils.setup_logging()
 _log = logging.getLogger(__name__)
@@ -168,7 +168,7 @@ def pricecontroller(config_path, **kwargs):
             new_pp_ts           = message[ParamPP.idx_pp_ts] \
                                     if message[ParamPP.idx_pp_ts] is not None \
                                     else datetime.datetime.utcnow().isoformat(' ') + 'Z'
-            print_pp(self, new_pp \
+            ispace_utils.print_pp(self, new_pp \
                             , new_pp_datatype \
                             , new_pp_id \
                             , new_pp_isoptimal \
@@ -199,7 +199,7 @@ def pricecontroller(config_path, **kwargs):
                             , new_pp_ts \
                             ]
                 _log.debug('publishing to local bus topic: ' + pubTopic)
-                publish_to_bus(self, pubTopic, pubMsg)
+                ispace_utils.publish_to_bus(self, pubTopic, pubMsg)
                 return True
             elif self.pp_optimize_option == "DEFAULT_OPT":
                 self.us_pp = new_pp
@@ -243,7 +243,7 @@ def pricecontroller(config_path, **kwargs):
             new_pp_ttl          = 5  #5 sec
             new_pp_ts           = datetime.datetime.utcnow().isoformat(' ') + 'Z'
             
-            print_pp(self, new_pp \
+            ispace_utils.print_pp(self, new_pp \
                             , new_pp_datatype \
                             , new_pp_id \
                             , new_pp_isoptimal \
@@ -264,7 +264,7 @@ def pricecontroller(config_path, **kwargs):
                         , new_pp_ts \
                         ]
             _log.debug('publishing to local bus topic: ' + pubTopic)
-            publish_to_bus(self, pubTopic, pubMsg)
+            ispace_utils.publish_to_bus(self, pubTopic, pubMsg)
             
             #       iterate till optimization condition satistifed
             #       when new pp is published, the new ed for all devices is accumulated by on_new_ed()

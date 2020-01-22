@@ -40,7 +40,7 @@ import struct
 import gevent
 import gevent.event
 
-from ispace_utils import mround, publish_to_bus, get_task_schdl, cancel_task_schdl, isclose, ParamPP, ParamED, print_pp, print_ed
+import ispace_utils
 
 utils.setup_logging()
 _log = logging.getLogger(__name__)
@@ -196,7 +196,7 @@ class RadiantCubicle(Agent):
         deviceId            = message[ParamPP.idx_pp_device_id]
         new_pp_ttl          = message[ParamPP.idx_pp_ttl]
         new_pp_ts           = message[ParamPP.idx_pp_ts]
-        print_pp(self, new_pp\
+        ispace_utils.print_pp(self, new_pp\
                 , new_pp_datatype\
                 , new_pp_id\
                 , new_pp_isoptimal\
@@ -217,7 +217,7 @@ class RadiantCubicle(Agent):
         
     #this is a perodic function that keeps trying to apply the new pp till success
     def processNewPricePoint(self):
-        if isclose(self._price_point_current, self._price_point_new, EPSILON) and self._pp_id == self._pp_id_new:
+        if ispace_utils.isclose(self._price_point_current, self._price_point_new, EPSILON) and self._pp_id == self._pp_id_new:
             return
             
         self._pp_failed = False     #any process that failed to apply pp sets this flag True
@@ -237,7 +237,7 @@ class RadiantCubicle(Agent):
         tsp = self.getNewTsp(self._price_point_current)
         _log.debug('New Setpoint: {0:0.1f}'.format( tsp))
         self.setRcTspLevel(tsp)
-        if not isclose(tsp, self._rcTspLevel, EPSILON):
+        if not ispace_utils.isclose(tsp, self._rcTspLevel, EPSILON):
             self._pp_failed = True
         return
         
@@ -254,18 +254,18 @@ class RadiantCubicle(Agent):
         c = pf_coefficients[pf_idx]['c']
         
         tsp = a*pp**2 + b*pp + c
-        return mround(tsp, pf_roundup)
+        return ispace_utils.mround(tsp, pf_roundup)
         
     # change rc surface temperature set point
     def setRcTspLevel(self, level):
         #_log.debug('setRcTspLevel()')
         
-        if isclose(level, self._rcTspLevel, EPSILON):
+        if ispace_utils.isclose(level, self._rcTspLevel, EPSILON):
             _log.debug('same level, do nothing')
             return
             
         task_id = str(randint(0, 99999999))
-        result = get_task_schdl(self, task_id,'iiit/cbs/radiantcubicle')
+        result = ispace_utils.get_task_schdl(self, task_id,'iiit/cbs/radiantcubicle')
         if result['result'] == 'SUCCESS':
             try:
                 result = self.vip.rpc.call(
@@ -282,7 +282,7 @@ class RadiantCubicle(Agent):
                 print(e)
             finally:
                 #cancel the schedule
-                cancel_task_schdl(self, task_id)
+                ispace_utils.cancel_task_schdl(self, task_id)
         else:
             _log.debug('schedule NOT available')
         return
@@ -297,7 +297,7 @@ class RadiantCubicle(Agent):
         #get schedule to setRcAutoCntrl
         task_id = str(randint(0, 99999999))
         #_log.debug("task_id: " + task_id)
-        result = get_task_schdl(self, task_id,'iiit/cbs/radiantcubicle')
+        result = ispace_utils.get_task_schdl(self, task_id,'iiit/cbs/radiantcubicle')
         
         if result['result'] == 'SUCCESS':
             result = {}
@@ -318,7 +318,7 @@ class RadiantCubicle(Agent):
                 print(e)
             finally:
                 #cancel the schedule
-                cancel_task_schdl(self, task_id)
+                ispace_utils.cancel_task_schdl(self, task_id)
         else:
             _log.debug('schedule NOT available')
         return
@@ -330,7 +330,7 @@ class RadiantCubicle(Agent):
         device_level = self.rpc_getRcTspLevel()
         
         #check if the level really updated at the h/w, only then proceed with new level
-        if isclose(level, device_level, EPSILON):
+        if ispace_utils.isclose(level, device_level, EPSILON):
             self._rcTspLevel = level
             self.publishRcTspLevel(level)
             
@@ -355,7 +355,7 @@ class RadiantCubicle(Agent):
         
     def rpc_getRcCalcCoolingEnergy(self):
         task_id = str(randint(0, 99999999))
-        result = get_task_schdl(self, task_id,'iiit/cbs/radiantcubicle')
+        result = ispace_utils.get_task_schdl(self, task_id,'iiit/cbs/radiantcubicle')
         if result['result'] == 'SUCCESS':
             try:
                 coolingEnergy = self.vip.rpc.call(
@@ -371,7 +371,7 @@ class RadiantCubicle(Agent):
                 return E_UNKNOWN_CCE
             finally:
                 #cancel the schedule
-                cancel_task_schdl(self, task_id)
+                ispace_utils.cancel_task_schdl(self, task_id)
         else:
             _log.debug('schedule NOT available')
         return E_UNKNOWN_CCE
@@ -410,13 +410,13 @@ class RadiantCubicle(Agent):
         #_log.debug('publishRcTspLevel()')
         pubTopic = self.root_topic+"/rc_tsp_level"
         pubMsg = [level, {'units': 'celcius', 'tz': 'UTC', 'type': 'float'}]
-        publish_to_bus(self, pubTopic, pubMsg)
+        ispace_utils.publish_to_bus(self, pubTopic, pubMsg)
         return
         
     def publishRcAutoCntrlState(self, state):
         pubTopic = self.root_topic+"/rc_auto_cntrl_state"
         pubMsg = [state, {'units': 'On/Off', 'tz': 'UTC', 'type': 'int'}]
-        publish_to_bus(self, pubTopic, pubMsg)
+        ispace_utils.publish_to_bus(self, pubTopic, pubMsg)
         return
         
     def publishTed(self):
@@ -434,7 +434,7 @@ class RadiantCubicle(Agent):
                     , self._period_read_data \
                     , datetime.datetime.utcnow().isoformat(' ') + 'Z'
                     ]
-        publish_to_bus(self, pubTopic, pubMsg)
+        ispace_utils.publish_to_bus(self, pubTopic, pubMsg)
         return
         
     def _calculatePredictedTed(self):

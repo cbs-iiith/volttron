@@ -36,7 +36,7 @@ import struct
 import gevent
 import gevent.event
 
-from ispace_utils import mround, publish_to_bus, get_task_schdl, cancel_task_schdl, isclose, ParamPP, ParamED, print_pp, print_ed
+import ispace_utils
 
 utils.setup_logging()
 _log = logging.getLogger(__name__)
@@ -210,7 +210,7 @@ class ZoneController(Agent):
         deviceId            = message[ParamPP.idx_pp_device_id]
         new_pp_ttl          = message[ParamPP.idx_pp_ttl]
         new_pp_ts           = message[ParamPP.idx_pp_ts]
-        print_pp(self, new_pp\
+        ispace_utils.print_pp(self, new_pp\
                 , new_pp_datatype\
                 , new_pp_id\
                 , new_pp_isoptimal\
@@ -231,7 +231,7 @@ class ZoneController(Agent):
         
     #this is a perodic function that keeps trying to apply the new pp till success
     def processNewPricePoint(self):
-        if isclose(self._price_point_current, self._price_point_new, EPSILON) and self._pp_id == self._pp_id_new:
+        if ispace_utils.isclose(self._price_point_current, self._price_point_new, EPSILON) and self._pp_id == self._pp_id_new:
             return
             
         self._pp_failed = False     #any process that failed to apply pp sets this flag True
@@ -253,14 +253,14 @@ class ZoneController(Agent):
         tsp = self.getNewTsp(self._price_point_new)
         _log.debug('New Ambient AC Setpoint: {0:0.1f}'.format( tsp))
         self.setRmTsp(tsp)
-        if not isclose(tsp, self._rmTsp, EPSILON):
+        if not ispace_utils.isclose(tsp, self._rmTsp, EPSILON):
             self._pp_failed = True
             
         #apply for ambient lightinh
         lsp = self.getNewLsp(self._price_point_new)
         _log.debug('New Ambient Lighting Setpoint: {0:0.1f}'.format( lsp))
         self.setRmLsp(lsp)
-        if not isclose(lsp, self._rmLsp, EPSILON):
+        if not ispace_utils.isclose(lsp, self._rmLsp, EPSILON):
             self._pp_failed = True
         return
         
@@ -277,7 +277,7 @@ class ZoneController(Agent):
         c = pf_coefficients[pf_idx]['c']
         
         tsp = a*pp**2 + b*pp + c
-        return mround(tsp, pf_roundup)
+        return ispace_utils.mround(tsp, pf_roundup)
         
     #compute new zone lighting setpoint from price functions
     def getNewLsp(self, pp):
@@ -292,18 +292,18 @@ class ZoneController(Agent):
         c = pf_coefficients[pf_idx]['c']
         
         lsp = a*pp**2 + b*pp + c
-        return mround(lsp, pf_roundup)
+        return ispace_utils.mround(lsp, pf_roundup)
         
     # change ambient temperature set point
     def setRmTsp(self, tsp):
         #_log.debug('setRmTsp()')
         
-        if isclose(tsp, self._rmTsp, EPSILON):
+        if ispace_utils.isclose(tsp, self._rmTsp, EPSILON):
             _log.debug('same tsp, do nothing')
             return
             
         task_id = str(randint(0, 99999999))
-        result = get_task_schdl(self, task_id,'iiit/cbs/zonecontroller')
+        result = ispace_utils.get_task_schdl(self, task_id,'iiit/cbs/zonecontroller')
         if result['result'] == 'SUCCESS':
             result = {}
             try:
@@ -321,7 +321,7 @@ class ZoneController(Agent):
                 print(e)
             finally:
                 #cancel the schedule
-                cancel_task_schdl(self, task_id)
+                ispace_utils.cancel_task_schdl(self, task_id)
         else:
             _log.debug('schedule NOT available')
         return
@@ -330,12 +330,12 @@ class ZoneController(Agent):
     def setRmLsp(self, lsp):
         #_log.debug('setRmLsp()')
         
-        if isclose(lsp, self._rmLsp, EPSILON):
+        if ispace_utils.isclose(lsp, self._rmLsp, EPSILON):
             _log.debug('same lsp, do nothing')
             return
             
         task_id = str(randint(0, 99999999))
-        result = get_task_schdl(self, task_id,'iiit/cbs/zonecontroller')
+        result = ispace_utils.get_task_schdl(self, task_id,'iiit/cbs/zonecontroller')
         if result['result'] == 'SUCCESS':
             result = {}
             try:
@@ -353,7 +353,7 @@ class ZoneController(Agent):
                 print(e)
             finally:
                 #cancel the schedule
-                cancel_task_schdl(self, task_id)
+                ispace_utils.cancel_task_schdl(self, task_id)
         else:
             _log.debug('schedule NOT available')
         return
@@ -365,7 +365,7 @@ class ZoneController(Agent):
         rm_tsp = self.rpc_getRmTsp()
         
         #check if the tsp really updated at the bms, only then proceed with new tsp
-        if isclose(tsp, rm_tsp, EPSILON):
+        if ispace_utils.isclose(tsp, rm_tsp, EPSILON):
             self._rmTsp = tsp
             self.publishRmTsp(tsp)
             
@@ -379,7 +379,7 @@ class ZoneController(Agent):
         rm_lsp = self.rpc_getRmLsp()
         
         #check if the lsp really updated at the bms, only then proceed with new lsp
-        if isclose(lsp, rm_lsp, EPSILON):
+        if ispace_utils.isclose(lsp, rm_lsp, EPSILON):
             self._rmLsp = lsp
             self.publishRmLsp(lsp)
             
@@ -388,7 +388,7 @@ class ZoneController(Agent):
         
     def rpc_getRmCalcLightEnergy(self):
         task_id = str(randint(0, 99999999))
-        result = get_task_schdl(self, task_id,'iiit/cbs/zonecontroller')
+        result = ispace_utils.get_task_schdl(self, task_id,'iiit/cbs/zonecontroller')
         if result['result'] == 'SUCCESS':
             try:
                 lightEnergy = self.vip.rpc.call(
@@ -404,14 +404,14 @@ class ZoneController(Agent):
                 return E_UNKNOWN_CLE
             finally:
                 #cancel the schedule
-                cancel_task_schdl(self, task_id)
+                ispace_utils.cancel_task_schdl(self, task_id)
         else:
             _log.debug('schedule NOT available')
         return E_UNKNOWN_CLE
         
     def rpc_getRmCalcCoolingEnergy(self):
         task_id = str(randint(0, 99999999))
-        result = get_task_schdl(self, task_id,'iiit/cbs/zonecontroller')
+        result = ispace_utils.get_task_schdl(self, task_id,'iiit/cbs/zonecontroller')
         if result['result'] == 'SUCCESS':
             try:
                 coolingEnergy = self.vip.rpc.call(
@@ -427,7 +427,7 @@ class ZoneController(Agent):
                 return E_UNKNOWN_CCE
             finally:
                 #cancel the schedule
-                cancel_task_schdl(self, task_id)
+                ispace_utils.cancel_task_schdl(self, task_id)
         else:
             _log.debug('schedule NOT available')
         return E_UNKNOWN_CCE
@@ -466,14 +466,14 @@ class ZoneController(Agent):
         #_log.debug('publishRmTsp()')
         pubTopic = self.root_topic+"/rm_tsp"
         pubMsg = [tsp, {'units': 'celcius', 'tz': 'UTC', 'type': 'float'}]
-        publish_to_bus(self, pubTopic, pubMsg)
+        ispace_utils.publish_to_bus(self, pubTopic, pubMsg)
         return
         
     def publishRmLsp(self, lsp):
         #_log.debug('publishRmLsp()')
         pubTopic = self.root_topic+"/rm_lsp"
         pubMsg = [lsp, {'units': '%', 'tz': 'UTC', 'type': 'float'}]
-        publish_to_bus(self, pubTopic, pubMsg)
+        ispace_utils.publish_to_bus(self, pubTopic, pubMsg)
         return
 
     def _calculateTed(self):
@@ -505,7 +505,7 @@ class ZoneController(Agent):
                     , self._period_read_data \
                     , datetime.datetime.utcnow().isoformat(' ') + 'Z'
                     ]
-        publish_to_bus(self, pubTopic, pubMsg)
+        ispace_utils.publish_to_bus(self, pubTopic, pubMsg)
         return
         
     def _calculatePredictedTed(self):
@@ -513,21 +513,21 @@ class ZoneController(Agent):
         #TODO: Sam
         #get actual tsp from device
         tsp = self._rmTsp
-        if isclose(tsp, 22.0, EPSILON):
+        if ispace_utils.isclose(tsp, 22.0, EPSILON):
             ted = 6500
-        elif isclose(tsp, 23.0, EPSILON):
+        elif ispace_utils.isclose(tsp, 23.0, EPSILON):
             ted = 6000
-        elif isclose(tsp, 24.0, EPSILON):
+        elif ispace_utils.isclose(tsp, 24.0, EPSILON):
             ted = 5500
-        elif isclose(tsp, 25.0, EPSILON):
+        elif ispace_utils.isclose(tsp, 25.0, EPSILON):
             ted = 5000
-        elif isclose(tsp, 26.0, EPSILON):
+        elif ispace_utils.isclose(tsp, 26.0, EPSILON):
             ted = 4500
-        elif isclose(tsp, 27.0, EPSILON):
+        elif ispace_utils.isclose(tsp, 27.0, EPSILON):
             ted = 4000
-        elif isclose(tsp, 28.0, EPSILON):
+        elif ispace_utils.isclose(tsp, 28.0, EPSILON):
             ted = 2000
-        elif isclose(tsp, 29.0, EPSILON):
+        elif ispace_utils.isclose(tsp, 29.0, EPSILON):
             ted = 1000
         else :
             ted = 500

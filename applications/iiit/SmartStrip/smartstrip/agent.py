@@ -36,7 +36,7 @@ import struct
 import gevent
 import gevent.event
 
-from ispace_utils import mround, publish_to_bus, get_task_schdl, cancel_task_schdl, isclose, ParamPP, ParamED, print_pp, print_ed
+import ispace_utils
 
 utils.setup_logging()
 _log = logging.getLogger(__name__)
@@ -210,7 +210,7 @@ class SmartStrip(Agent):
         #get schedule for testing relays
         task_id = str(randint(0, 99999999))
         #_log.debug("task_id: " + task_id)
-        result = get_task_schdl(self, task_id,'iiit/cbs/smartstrip')
+        result = ispace_utils.get_task_schdl(self, task_id,'iiit/cbs/smartstrip')
         
         #test all four relays
         if result['result'] == 'SUCCESS':
@@ -239,7 +239,7 @@ class SmartStrip(Agent):
             self.switchRelay(PLUG_ID_4, RELAY_OFF, SCHEDULE_AVLB)
             
             #cancel the schedule
-            cancel_task_schdl(self, task_id)
+            ispace_utils.cancel_task_schdl(self, task_id)
         return
         
     def publishPlugThPP(self):
@@ -260,7 +260,7 @@ class SmartStrip(Agent):
         #get schedule for to h/w latest data
         task_id = str(randint(0, 99999999))
         #_log.debug("task_id: " + task_id)
-        result = get_task_schdl(self, task_id,'iiit/cbs/smartstrip')
+        result = ispace_utils.get_task_schdl(self, task_id,'iiit/cbs/smartstrip')
         
         #run the task
         if result['result'] == 'SUCCESS':
@@ -289,7 +289,7 @@ class SmartStrip(Agent):
             #_log.debug('...done processNewTagId()')
             
             #cancel the schedule
-            cancel_task_schdl(self, task_id)
+            ispace_utils.cancel_task_schdl(self, task_id)
         return
         
     def readMeterData(self, plugID):
@@ -475,7 +475,7 @@ class SmartStrip(Agent):
         deviceId            = message[ParamPP.idx_pp_device_id]
         new_pp_ttl          = message[ParamPP.idx_pp_ttl]
         new_pp_ts           = message[ParamPP.idx_pp_ts]
-        print_pp(self, new_pp\
+        ispace_utils.print_pp(self, new_pp\
                 , new_pp_datatype\
                 , new_pp_id\
                 , new_pp_isoptimal\
@@ -510,14 +510,14 @@ class SmartStrip(Agent):
         
     #this is a perodic function that keeps trying to apply the new pp till success
     def processNewPricePoint(self):
-        if isclose(self._price_point_current, self._price_point_new, EPSILON) and self._pp_id == self._pp_id_new:
+        if ispace_utils.isclose(self._price_point_current, self._price_point_new, EPSILON) and self._pp_id == self._pp_id_new:
             return
             
         self._pp_failed = False     #any process that failed to apply pp, sets this flag True
         #get schedule for testing relays
         task_id = str(randint(0, 99999999))
         #_log.debug("task_id: " + task_id)
-        result = get_task_schdl(self, task_id,'iiit/cbs/smartstrip')
+        result = ispace_utils.get_task_schdl(self, task_id,'iiit/cbs/smartstrip')
         if result['result'] != 'SUCCESS':
             _log.debug("unable to processNewPricePoint(), will try again in " + str(self._period_process_pp))
             self._pp_failed = True
@@ -528,7 +528,7 @@ class SmartStrip(Agent):
         self.applyPricingPolicy(PLUG_ID_3, SCHEDULE_AVLB)
         self.applyPricingPolicy(PLUG_ID_4, SCHEDULE_AVLB)
         #cancel the schedule
-        cancel_task_schdl(self, task_id)
+        ispace_utils.cancel_task_schdl(self, task_id)
         
         if self._pp_failed:
             _log.debug("unable to processNewPricePoint(), will try again in " + str(self._period_process_pp))
@@ -610,7 +610,7 @@ class SmartStrip(Agent):
         #get schedule to switchLedDebug
         task_id = str(randint(0, 99999999))
         #_log.debug("task_id: " + task_id)
-        result = get_task_schdl(self, task_id,'iiit/cbs/smartstrip')
+        result = ispace_utils.get_task_schdl(self, task_id,'iiit/cbs/smartstrip')
         
         if result['result'] == 'SUCCESS':
             result = {}
@@ -631,7 +631,7 @@ class SmartStrip(Agent):
                 print(e)
             finally:
                 #cancel the schedule
-                cancel_task_schdl(self, task_id)
+                ispace_utils.cancel_task_schdl(self, task_id)
         return
         
     def switchRelay(self, plugID, state, schdExist):
@@ -647,7 +647,7 @@ class SmartStrip(Agent):
             #get schedule to switchRelay
             task_id = str(randint(0, 99999999))
             #_log.debug("task_id: " + task_id)
-            result = get_task_schdl(self, task_id,'iiit/cbs/smartstrip')
+            result = ispace_utils.get_task_schdl(self, task_id,'iiit/cbs/smartstrip')
             
             if result['result'] == 'SUCCESS':
                 try:
@@ -662,7 +662,7 @@ class SmartStrip(Agent):
                     return
                 finally:
                     #cancel the schedule
-                    cancel_task_schdl(self, task_id)
+                    ispace_utils.cancel_task_schdl(self, task_id)
                     return
         else:
             #do notthing
@@ -749,7 +749,7 @@ class SmartStrip(Agent):
                     'current':{'units': 'A', 'tz': 'UTC', 'type': 'float'},
                     'active_power':{'units': 'W', 'tz': 'UTC', 'type': 'float'}
                     }]
-        publish_to_bus(self, pubTopic, pubMsg)
+        ispace_utils.publish_to_bus(self, pubTopic, pubMsg)
         return
         
     def publishTagId(self, plugID, newTagId):
@@ -758,7 +758,7 @@ class SmartStrip(Agent):
             
         pubTopic = self.root_topic+"/plug"+str(plugID+1)+"/tagid"
         pubMsg = [newTagId,{'units': '', 'tz': 'UTC', 'type': 'string'}]
-        publish_to_bus(self, pubTopic, pubMsg)
+        ispace_utils.publish_to_bus(self, pubTopic, pubMsg)
         return
         
     def publishRelayState(self, plugID, state):
@@ -767,7 +767,7 @@ class SmartStrip(Agent):
             
         pubTopic = self.root_topic+"/plug" + str(plugID+1) + "/relaystate"
         pubMsg = [state,{'units': 'On/Off', 'tz': 'UTC', 'type': 'int'}]
-        publish_to_bus(self, pubTopic, pubMsg)
+        ispace_utils.publish_to_bus(self, pubTopic, pubMsg)
         return
         
     def publishThresholdPP(self, plugID, thresholdPP):
@@ -776,7 +776,7 @@ class SmartStrip(Agent):
             
         pubTopic = self.root_topic+"/plug" + str(plugID+1) + "/threshold"
         pubMsg = [thresholdPP,{'units': 'cents', 'tz': 'UTC', 'type': 'float'}]
-        publish_to_bus(self, pubTopic, pubMsg)
+        ispace_utils.publish_to_bus(self, pubTopic, pubMsg)
         return
         
     @RPC.export
@@ -840,7 +840,7 @@ class SmartStrip(Agent):
                     , self._bid_pp_ttl \
                     , self._bid_pp_ts \
                     ]
-        publish_to_bus(self, pubTopic, pubMsg)
+        ispace_utils.publish_to_bus(self, pubTopic, pubMsg)
         return
         
     #calculate the total energy demand (TED)
@@ -867,7 +867,7 @@ class SmartStrip(Agent):
                     , self._period_read_data \
                     , datetime.datetime.utcnow().isoformat(' ') + 'Z'
                     ]
-        publish_to_bus(self, pubTopic, pubMsg)
+        ispace_utils.publish_to_bus(self, pubTopic, pubMsg)
         return
         
     def _validPlugId(self, plugID):

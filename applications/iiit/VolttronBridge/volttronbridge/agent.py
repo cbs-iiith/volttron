@@ -37,7 +37,7 @@ import gevent.event
 import requests
 import json
 
-from ispace_utils import publish_to_bus, isclose, ParamPP, ParamED, print_pp, print_ed
+import ispace_utils
 
 utils.setup_logging()
 _log = logging.getLogger(__name__)
@@ -350,7 +350,7 @@ def volttronbridge(config_path, **kwargs):
                                     if message[ParamPP.idx_pp_ts] is not None \
                                     else datetime.datetime.utcnow().isoformat(' ') + 'Z'
                                     
-            print_pp(self, self._pp_current \
+            ispace_utils.print_pp(self, self._pp_current \
                 , self._pp_datatype \
                 , self._pp_id \
                 , self._pp_isoptimal \
@@ -388,7 +388,7 @@ def volttronbridge(config_path, **kwargs):
                                     if message[ParamED.idx_ed_ts] is not None \
                                     else datetime.datetime.utcnow().isoformat(' ') + 'Z'
                                     
-            print_ed(self, self._ed_current \
+            ispace_utils.print_ed(self, self._ed_current \
                             , self._ed_datatype \
                             , self._ed_pp_id \
                             , self._ed_isoptimal \
@@ -546,7 +546,7 @@ def volttronbridge(config_path, **kwargs):
                             , new_pp_ttl \
                             , new_pp_ts \
                             ):
-            print_pp(self, new_pp \
+            ispace_utils.print_pp(self, new_pp \
                             , new_pp_datatype \
                             , new_pp_id \
                             , new_pp_isoptimal \
@@ -574,7 +574,7 @@ def volttronbridge(config_path, **kwargs):
                         , new_pp_ttl \
                         , new_pp_ts \
                         ]
-            publish_to_bus(self, pubTopic, pubMsg)
+            ispace_utils.publish_to_bus(self, pubTopic, pubMsg)
             return True
             
         #post the new energy demand from ds to the local bus
@@ -589,7 +589,7 @@ def volttronbridge(config_path, **kwargs):
                             , ed_ts
                             ):
             
-            print_ed(self, new_ed \
+            ispace_utils.print_ed(self, new_ed \
                 , ed_datatype \
                 , ed_pp_id \
                 , ed_isoptimal \
@@ -615,7 +615,7 @@ def volttronbridge(config_path, **kwargs):
                                 , ed_ttl
                                 , ed_ts
                                 ]
-                    publish_to_bus(self, pubTopic, pubMsg)
+                    ispace_utils.publish_to_bus(self, pubTopic, pubMsg)
                     self._ds_retrycount[index] = 0
                     _log.debug("...Done!!!")
                     return True
