@@ -1019,7 +1019,7 @@ class SmartHub(Agent):
                 return self.topic_root + '/ledthpp'
             elif deviceId == SH_DEVICE_FAN:
                 return self.topic_root + '/fanthpp'
-        _log.exception ("Expection: not a vaild device-action type for pubTopic")
+        _log.exception ("Expection: not a valid device-action type for pubTopic")
         return ""
         
     def _getEndPoint(self, deviceId, actionType):
@@ -1052,7 +1052,7 @@ class SmartHub(Agent):
             elif deviceId == SH_DEVICE_FAN:
                 return "Fan"
         
-        _log.exception ("Expection: not a vaild device-action type for endpoint")
+        _log.exception ("Expection: not a valid device-action type for endpoint")
         return ""
         
     def _validDeviceAction(self, deviceId, actionType):
@@ -1120,7 +1120,7 @@ class SmartHub(Agent):
                             , SH_DEVICE_FAN
                             ]:
                 return True
-        log.exception ("Expection: not a vaild device-action")
+        log.exception ("Expection: not a valid device-action")
         return False
         
     @RPC.export
@@ -1223,34 +1223,14 @@ class SmartHub(Agent):
         return ed
         
     def on_ds_ed(self, peer, sender, bus, topic, headers, message):
-        if sender == 'pubsub.compat':
-            message = compat.unpack_legacy_message(headers, message)
-            
-        if not ispace_utils.valid_ed_msg(message):
-            _log.warning('rcvd a invalid ed msg, message: {}'.format(message)
-                            + ', do nothing!!!'
-                            )
+        #post ed to us only if pp_id corresponds to these ids (i.e., ed for either us opt_pp_id or bid_pp_id)
+        valid_pp_ids = [self.self._pp_id, self._bid_pp_id]
+
+        #check for msg validity, pp_id, timeout, etc., also _log.info(message) if a valid msg
+        valid_msg = ispace_utils.sanity_check_ed(message, valid_pp_ids)
+        if not valid_msg:
             return
-            
-        _log.debug('New ed from ds, topic: ' + topic 
-                    + ' & ed: {0:.4f}'.format(message[ParamED.idx_ed])
-                    )
-        ispace_utils.print_ed_msg(message)
         
-        #process ed only if pp_id corresponds to these ids (i.e., ed for either opt_pp_id or bid_pp_id)
-        if message[ParamPP.idx_ed_pp_id] not in [self.self._pp_id, self._bid_pp_id]:
-            _log.debug("ed_pp_id: " + str(message[ParamPP.idx_ed_pp_id])
-                        + " not in [self._pp_id, self._bid_pp_id]: "
-                        + str([self._pp_id, self._bid_pp_id])
-                        + ", do nothing"
-                        )
-            return
-            
-        #process ed only if msg is alive (didnot timeout)
-        if ispace_utils.ttl_timeout(message[ParamPP.idx_ed_pp_ts], message[ParamPP.idx_ed_pp_ttl]):
-            _log.warning("msg timed out, do nothing")
-            return
-            
         idx = self._get_ds_device_idx(message[ParamED.idx_ed_device_id])
         if message[ParamED.idx_ed_isoptimal]:
             _log.debug(" - opt_pp - ed!!!")

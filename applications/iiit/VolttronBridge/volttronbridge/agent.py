@@ -272,6 +272,9 @@ def volttronbridge(config_path, **kwargs):
                             , 'ed_isoptimal': rpcdata.params['ed_isoptimal']
                                         if rpcdata.params['ed_isoptimal'] is not None
                                         else False
+                            , 'ed_duration': rpcdata.params['ed_duration']
+                                        if rpcdata.params['ed_duration'] is not None
+                                        else 3600
                             , 'ed_ttl': rpcdata.params['ed_ttl']
                                         if rpcdata.params['ed_ttl'] is not None
                                         else -1
@@ -295,6 +298,9 @@ def volttronbridge(config_path, **kwargs):
                             , 'new_pp_isoptimal': rpcdata.params['new_pp_isoptimal']
                                         if rpcdata.params['new_pp_isoptimal'] is not None
                                         else False
+                            , 'new_pp_duration': rpcdata.params['new_pp_duration']
+                                        if rpcdata.params['new_pp_duration'] is not None
+                                        else 3600
                             , 'new_pp_ttl': rpcdata.params['new_pp_ttl']
                                         if rpcdata.params['new_pp_ttl'] is not None
                                         else -1
@@ -328,6 +334,20 @@ def volttronbridge(config_path, **kwargs):
         #price point on local bus published, post it to all downstream bridges
         def on_new_pp(self, peer, sender, bus,  topic, headers, message):
             if self._bridge_host == 'LEVEL_TAILEND':
+                return
+                
+            #post ed to us only if pp_id corresponds to these ids (i.e., ed for either us opt_pp_id or bid_pp_id)
+            valid_pp_ids = []
+            
+           
+            mandatory_fields = [ParamPP.idx_pp
+                                , ParamPP.idx_pp_datatype
+                                , 
+                                ]
+            
+            #check for msg validity, pp_id, timeout, etc., also _log.info(message) if a valid msg
+            valid_msg = ispace_utils.sanity_check_pp(message, mandatory_fields, valid_pp_ids)
+            if not valid_msg:
                 return
                 
             self._pp_current = message[ParamPP.idx_pp]
@@ -368,6 +388,24 @@ def volttronbridge(config_path, **kwargs):
                 #do nothing
                 return
                 
+            #post ed to us only if pp_id corresponds to these ids (i.e., ed for either us opt_pp_id or bid_pp_id)
+            valid_pp_ids = [self.us_opt_pp_id, self.us_bid_pp_id]
+            
+            mandatory_fields = [ParamPP.idx_ed
+                                , ParamPP.idx_ed_datatype
+                                , ParamPP.idx_ed_pp_id
+                                , ParamPP.idx_ed_isoptimal
+                                , ParamPP.idx_ed_device_id
+                                , ParamPP.idx_pp_duration
+                                , ParamPP.idx_pp_ttl
+                                ,ParamPP.idx_pp_ts
+                                ]
+                                
+            #check for msg validity, pp_id, timeout, etc., also _log.info(message) if a valid msg
+            valid_msg = ispace_utils.sanity_check_ed(message, mandatory_fields, valid_pp_ids)
+            if not valid_msg:
+                return
+                
             self._ed_current    = message[ParamED.idx_ed]
             self._ed_datatype   = message[ParamED.idx_ed_datatype]
                                     if message[ParamED.idx_ed_datatype] is not None
@@ -387,14 +425,6 @@ def volttronbridge(config_path, **kwargs):
                                     
             ispace_utils.print_ed_msg(message)
                             
-            #post ed to us only if pp_id corresponds to these ids (i.e., ed for either us opt_pp_id or bid_pp_id)
-            if self._ed_pp_id not in [self.us_opt_pp_id, self.us_bid_pp_id]:
-                _log.debug("self._ed_pp_id: " + str(self._ed_pp_id)
-                            + " not in [self.us_opt_pp_id, self.us_bid_pp_id]: "
-                            + str([self.us_opt_pp_id, self.us_bid_pp_id])
-                            + ", do nothing"
-                            )
-                return
             self._all_us_posts_success = False         #initiate us post
             self.post_us_new_ed()
             return
@@ -429,7 +459,8 @@ def volttronbridge(config_path, **kwargs):
                             , 'new_ed': self._ed_current
                             , 'ed_datatype': self._ed_datatype
                             , 'ed_pp_id': self._ed_pp_id
-                            , 'ed_isoptimal':  self._ed_isoptimal
+                            , 'ed_isoptimal': self._ed_isoptimal
+                            , 'ed_duration': self._ed_duration
                             , 'ed_ttl': self._ed_ttl
                             , 'ed_ts': self._ed_ts
                             })
@@ -472,6 +503,7 @@ def volttronbridge(config_path, **kwargs):
                                         , 'new_pp_id': self._pp_id
                                         , 'new_pp_isoptimal': self._pp_isoptimal
                                         , 'new_pp_datatype': self._pp_datatype
+                                        , 'new_pp_duration': self._pp_duration
                                         , 'new_pp_ttl': self._pp_ttl
                                         , 'new_pp_ts': self._pp_ts
                                         })

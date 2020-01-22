@@ -48,10 +48,11 @@ class ParamED(IntEnum):
     idx_ed_ts = 8
     
 def ttl_timeout(self, str_ts, ttl):
-        _ts  = dateutil.parser.parse(str_ts)
-        _now = dateutil.parser.parse(datetime.datetime.utcnow().isoformat(' ') + 'Z')
-        ttl_timeout = True if (_now - _ts) > ttl else False
-        return ttl_timeout
+        if ttl < 0:
+            return False
+        ts  = dateutil.parser.parse(str_ts)
+        now = dateutil.parser.parse(datetime.datetime.utcnow().isoformat(' ') + 'Z')
+        return True if (now - ts) > ttl else False
         
 def print_pp(self, new_pp
                     , pp_datatype
@@ -123,59 +124,50 @@ def print_ed_msg(self, message):
             )
     return
     
-    #check for minium required fields the message
-    def valid_pp_msg(message):
-        valid_msg = True
-        try:
-            if message[ParamPP.idx_pp] is None 
-                or message[ParamPP.idx_pp_datatype] is None 
-                or message[ParamPP.idx_pp_id] is None 
-                or message[ParamPP.idx_pp_isoptimal] is None 
-                or message[ParamPP.idx_pp_duration] is None 
-                or message[ParamPP.idx_pp_ttl] is None 
-                or message[ParamPP.idx_pp_ts] is None 
-                : valid_msg = False
-        except Exception as e:
-                valid_msg = False
-                print(e)
-        return valid_msg
-        
-#check for minium required fields the message
-def valid_ed_msg(self, message):
-    valid_msg = True
+#check for mandatory fields in the message
+def valid_msg(message, mandatory_fields = []):
     try:
-        if message[ParamPP.idx_ed] is None
-            or message[ParamPP.idx_ed_datatype] is None
-            or message[ParamPP.idx_ed_pp_id] is None
-            or message[ParamPP.idx_ed_isoptimal] is None
-            or message[ParamPP.idx_ed_device_id] is None
-            or message[ParamPP.idx_pp_duration] is None
-            or message[ParamPP.idx_pp_ttl] is None
-            or message[ParamPP.idx_pp_ts] is None
-            : valid_msg = False
+        for idx in mandatory_fields:
+            if message[idx] is None:
+                return False
     except Exception as e:
-            valid_msg = False
             print(e)
-    return valid_msg
+            return False
+    return True
     
-def sanity_check_pp(self, ):
-    return
-    
-def sanity_check_ed(self, message, valid_pp_ids = []):
-    if not valid_ed_msg(message):
-        _log.warning('rcvd a invalid ed msg, message: {}'.format(message)
-                        + ', do nothing!!!'
-                        )
+def sanity_check_pp(self, message, mandatory_fields = [], valid_pp_ids = []):
+    if not valid_msg(message, mandatory_fields):
+        _log.warning('rcvd a invalid pp msg, message: {}'.format(message) + ', do nothing!!!')
         return False
+        
+    #print only if a valid msg
+    print_pp_msg(message)
+    
+    #process pp only if pp_id corresponds to these ids (i.e., pp for either opt_pp_id or bid_pp_id)
+    if valid_pp_ids != [] and message[ParamPP.idx_pp_id] not in valid_pp_ids:
+        _log.debug('pp_id: {}'.format(message[ParamPP.idx_pp_id])
+                    + ' not in valid_pp_ids: {}'.format(valid_pp_ids) + ", do nothing!!!")
+        return False
+        
+    #process ed only if msg is alive (didnot timeout)
+    if ispace_utils.ttl_timeout(message[ParamPP.idx_pp_ts], message[ParamPP.idx_pp_ttl]):
+        _log.warning("msg timed out, do nothing!!!")
+        return False
+        
+    return True
+    
+def sanity_check_ed(self, message, mandatory_fields = [], valid_pp_ids = []):
+    if not valid_msg(message, mandatory_fields):
+        _log.warning('rcvd a invalid ed msg, message: {}'.format(message) + ', do nothing!!!')
+        return False
+        
+    #print only if a valid msg
     print_ed_msg(message)
     
     #process ed only if pp_id corresponds to these ids (i.e., ed for either opt_pp_id or bid_pp_id)
-    if message[ParamPP.idx_ed_pp_id] not in valid_pp_ids
-        _log.debug("ed_pp_id: " + str(message[ParamPP.idx_ed_pp_id])
-                    + " not in [self._pp_id, self._bid_pp_id]: "
-                    + str([self._pp_id, self._bid_pp_id])
-                    + ", do nothing"
-                    )
+    if valid_pp_ids != [] and message[ParamPP.idx_ed_pp_id] not in valid_pp_ids:
+        _log.debug('pp_id: {}'.format(message[ParamPP.idx_pp_id])
+                    + ' not in valid_pp_ids: {}'.format(valid_pp_ids) + ", do nothing!!!")
         return False
         
     #process ed only if msg is alive (didnot timeout)
