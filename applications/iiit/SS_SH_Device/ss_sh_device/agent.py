@@ -128,10 +128,10 @@ def ss_sh_device(config_path, **kwargs):
                 
             if not sh_on_btry and new_price_point > self.sh_th_pp and sh_btry_th == 1:
                 #change th_pp to max for the plug to which hub is connected (ss will switch-off the plug)
-                plugOff = self.vip.rpc.call('iiit.smartstrip',
-                                            'setThresholdPP',
-                                            self.sh_plug_id,
-                                            MAX_THPP
+                plugOff = self.vip.rpc.call('iiit.smartstrip'
+                                            , 'setThresholdPP'
+                                            , self.sh_plug_id
+                                            , MAX_THPP
                                             ).get(timeout=10)
                 
                 if plugOff:
@@ -143,10 +143,10 @@ def ss_sh_device(config_path, **kwargs):
                     
             if sh_on_btry and new_price_point <= self.sh_th_pp:
                 #change th_pp to min for the plug to which hub is connected (ss will switch-on the plug)
-                plugOn = self.vip.rpc.call('iiit.smartstrip',
-                                            'setThresholdPP',
-                                            self.sh_plug_id,
-                                            MIN_THPP
+                plugOn = self.vip.rpc.call('iiit.smartstrip'
+                                            , 'setThresholdPP'
+                                            , self.sh_plug_id
+                                            , MIN_THPP
                                             ).get(timeout=10)
                                             
                 if plugOn:
@@ -184,9 +184,9 @@ def ss_sh_device(config_path, **kwargs):
                 else:
                     _log.debug('failed to switch on power, will try in next iteration')
                     self.hub_ping_count = 0
-
+                    
             return
-                                                    
+            
         def _monitorShBattery(self):
             return
             
@@ -228,7 +228,7 @@ def ss_sh_device(config_path, **kwargs):
             
     Agent.__name__ = 'SS_SH_Device_Agent'
     return SS_SH_Device(**kwargs)
-
+    
 def main(argv=sys.argv):
     '''Main method called by the eggsecutable.'''
     try:
@@ -236,9 +236,10 @@ def main(argv=sys.argv):
     except Exception as e:
         print (e)
         _log.exception('unhandled exception')
-
+        
 if __name__ == '__main__':
     try:
         sys.exit(main(sys.argv))
     except KeyboardInterrupt:
         pass
+        

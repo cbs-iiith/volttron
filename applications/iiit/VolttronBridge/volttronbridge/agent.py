@@ -159,10 +159,10 @@ def volttronbridge(config_path, **kwargs):
             
             _log.debug('registering rpc routes')
             self.vip.rpc.call(MASTER_WEB, 'register_agent_route',
-                    r'^/VolttronBridge',
-#                    self.core.identity,
-                    "rpc_from_net").get(timeout=30)
-                    
+                                r'^/VolttronBridge'
+                                "rpc_from_net"
+                                ).get(timeout=30)
+                                
             #subscribe to price point so that it can be posted to downstream
             if self._bridge_host != 'LEVEL_TAILEND':
                 _log.debug("subscribing to pricePoint_topic: " + pricePoint_topic)
@@ -232,11 +232,8 @@ def volttronbridge(config_path, **kwargs):
                     self._usConnected = False
                 
             _log.debug('un registering rpc routes')
-            self.vip.rpc.call(MASTER_WEB
-                                , 'unregister_all_agent_routes'
-#                                , self.core.identity
-                                ).get(timeout=30)
-                                
+            self.vip.rpc.call(MASTER_WEB, 'unregister_all_agent_routes').get(timeout=30)
+            
             _log.debug('done!!!')
             return
             

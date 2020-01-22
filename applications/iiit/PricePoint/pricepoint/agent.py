@@ -60,11 +60,12 @@ class PricePoint(Agent):
         self._agent_id = self.config['agentid']
         return
 
-    @Core.receiver('onstart')            
+    @Core.receiver('onstart')
     def startup(self, sender, **kwargs):
-        self.vip.rpc.call(MASTER_WEB, 'register_agent_route',
-                      r'^/PricePoint',
-                      "rpc_from_net").get(timeout=10)    
+        self.vip.rpc.call(MASTER_WEB, 'register_agent_route'
+                            , r'^/PricePoint'
+                            , "rpc_from_net"
+                            ).get(timeout=10)
         return
 
     @Core.receiver('onstop')

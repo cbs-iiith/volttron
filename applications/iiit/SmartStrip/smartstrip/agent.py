@@ -137,9 +137,10 @@ class SmartStrip(Agent):
         #subscribing to topic_price_point
         self.vip.pubsub.subscribe("pubsub", self.topic_price_point, self.onNewPrice)
         
-        self.vip.rpc.call(MASTER_WEB, 'register_agent_route',
-                      r'^/SmartStrip',
-                      "rpc_from_net").get(timeout=10)
+        self.vip.rpc.call(MASTER_WEB, 'register_agent_route'
+                            , r'^/SmartStrip'
+                            , "rpc_from_net"
+                            ).get(timeout=10)
                       
         self.switchLedDebug(LED_ON)
         return
@@ -304,20 +305,20 @@ class SmartStrip(Agent):
         pubTopic = self.root_topic + '/plug' + str(plugID+1) + '/meterdata/all'
         
         try:
-            fVolatge = self.vip.rpc.call(
-                    'platform.actuator','get_point',
-                    'iiit/cbs/smartstrip/' +
-                    pointVolatge).get(timeout=10)
+            fVolatge = self.vip.rpc.call('platform.actuator'
+                                            ,'get_point',
+                                            'iiit/cbs/smartstrip/' + pointVolatge
+                                            ).get(timeout=10)
             #_log.debug('voltage: {0:.2f}'.format(fVolatge))
-            fCurrent = self.vip.rpc.call(
-                    'platform.actuator','get_point',
-                    ('iiit/cbs/smartstrip/' +
-                    pointCurrent)).get(timeout=10)
+            fCurrent = self.vip.rpc.call('platform.actuator'
+                                            ,'get_point',
+                                            , 'iiit/cbs/smartstrip/' + pointCurrent
+                                            ).get(timeout=10)
             #_log.debug('current: {0:.2f}'.format(fCurrent))
-            fActivePower = self.vip.rpc.call(
-                    'platform.actuator','get_point',
-                    'iiit/cbs/smartstrip/' +
-                    pointActivePower).get(timeout=10)
+            fActivePower = self.vip.rpc.call('platform.actuator'
+                                            ,'get_point',
+                                            'iiit/cbs/smartstrip/' + pointActivePower
+                                            ).get(timeout=10)
             #_log.debug('active: {0:.2f}'.format(fActivePower))
             
             #keep track of plug active power
@@ -359,46 +360,54 @@ class SmartStrip(Agent):
             newTagId3 = ''
             newTagId4 = ''
             
-            fTagID1_1 = self.vip.rpc.call(
-                    'platform.actuator','get_point',
-                    'iiit/cbs/smartstrip/TagID1_1').get(timeout=10)
-                    
-            fTagID1_2 = self.vip.rpc.call(
-                    'platform.actuator','get_point',
-                    'iiit/cbs/smartstrip/TagID1_2').get(timeout=10)
+            fTagID1_1 = self.vip.rpc.call('platform.actuator'
+                                            ,'get_point',
+                                            'iiit/cbs/smartstrip/TagID1_1'
+                                            ).get(timeout=10)
+                                            
+            fTagID1_2 = self.vip.rpc.call('platform.actuator'
+                                            ,'get_point',
+                                            , 'iiit/cbs/smartstrip/TagID1_2'
+                                            ).get(timeout=10)
             self._newTagId1 = self.recoveryTagID(fTagID1_1, fTagID1_2)
             #_log.debug('Tag 1: ' + newTagId1)
             
             #get second tag id
-            fTagID2_1 = self.vip.rpc.call(
-                    'platform.actuator','get_point',
-                    'iiit/cbs/smartstrip/TagID2_1').get(timeout=10)
+            fTagID2_1 = self.vip.rpc.call('platform.actuator'
+                                            ,'get_point'
+                                            , 'iiit/cbs/smartstrip/TagID2_1'
+                                            ).get(timeout=10)
                     
-            fTagID2_2 = self.vip.rpc.call(
-                    'platform.actuator','get_point',
-                    'iiit/cbs/smartstrip/TagID2_2').get(timeout=10)
+            fTagID2_2 = self.vip.rpc.call('platform.actuator'
+                                            ,'get_point'
+                                            , 'iiit/cbs/smartstrip/TagID2_2'
+                                            ).get(timeout=10)
             self._newTagId2 = self.recoveryTagID(fTagID2_1, fTagID2_2)
             #_log.debug('Tag 2: ' + newTagId2)
             
             #get third tag id
-            fTagID3_1 = self.vip.rpc.call(
-                    'platform.actuator','get_point',
-                    'iiit/cbs/smartstrip/TagID3_1').get(timeout=10)
+            fTagID3_1 = self.vip.rpc.call('platform.actuator'
+                                            , 'get_point'
+                                            , 'iiit/cbs/smartstrip/TagID3_1'
+                                            ).get(timeout=10)
                     
-            fTagID3_2 = self.vip.rpc.call(
-                    'platform.actuator','get_point',
-                    'iiit/cbs/smartstrip/TagID3_2').get(timeout=10)
+            fTagID3_2 = self.vip.rpc.call('platform.actuator'
+                                            , 'get_point'
+                                            , 'iiit/cbs/smartstrip/TagID3_2'
+                                            ).get(timeout=10)
             self._newTagId3 = self.recoveryTagID(fTagID3_1, fTagID3_2)
             #_log.debug('Tag 3: ' + newTagId3)
             
             #get fourth tag id
-            fTagID4_1 = self.vip.rpc.call(
-                    'platform.actuator','get_point',
-                    'iiit/cbs/smartstrip/TagID4_1').get(timeout=10)
+            fTagID4_1 = self.vip.rpc.call('platform.actuator'
+                                            , 'get_point'
+                                            , 'iiit/cbs/smartstrip/TagID4_1'
+                                            ).get(timeout=10)
                     
-            fTagID4_2 = self.vip.rpc.call(
-                    'platform.actuator','get_point',
-                    'iiit/cbs/smartstrip/TagID4_2').get(timeout=10)
+            fTagID4_2 = self.vip.rpc.call('platform.actuator'
+                                            ,'get_point'
+                                            , 'iiit/cbs/smartstrip/TagID4_2'
+                                            ).get(timeout=10)
             self._newTagId4 = self.recoveryTagID(fTagID4_1, fTagID4_2)
             #_log.debug('Tag 4: ' + newTagId4)
             

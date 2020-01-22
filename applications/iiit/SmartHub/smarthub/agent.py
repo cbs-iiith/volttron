@@ -193,10 +193,10 @@ class SmartHub(Agent):
         #subscribing to ds energy demand, vb publishes ed from registered ds to this topic
         self.vip.pubsub.subscribe("pubsub", self.energyDemand_topic_ds, self.onDsEd)
         
-        self.vip.rpc.call(MASTER_WEB, 'register_agent_route',
-                            r'^/SmartHub',
-#                            self.core.identity,
-                            "rpc_from_net").get(timeout=30)
+        self.vip.rpc.call(MASTER_WEB, 'register_agent_route'
+                            , r'^/SmartHub'
+                            , "rpc_from_net"
+                            ).get(timeout=30)
         self._voltState = 1
         
         _log.debug('switch on debug led')
@@ -210,16 +210,14 @@ class SmartHub(Agent):
             self._stopVolt()
         
         _log.debug('un registering rpc routes')
-        self.vip.rpc.call(MASTER_WEB,
-#                            self.core.identity,
-                            'unregister_all_agent_routes').get(timeout=30)
+        self.vip.rpc.call(MASTER_WEB, 'unregister_all_agent_routes').get(timeout=30)
         return
+        
     @Core.receiver('onfinish')
     def onfinish(self, sender, **kwargs):
         _log.debug('onfinish()')
         if self._voltState != 0:
             self._stopVolt()
-        
         return 
         
     def _stopVolt(self):

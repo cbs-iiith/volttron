@@ -66,11 +66,11 @@ def pricecontroller(config_path, **kwargs):
             _log.debug('startup()')
             
             _log.debug('registering rpc routes')
-            self.vip.rpc.call(MASTER_WEB, 'register_agent_route',
-                    r'^/PriceController',
-#                    self.core.identity,
-                    "rpc_from_net").get(timeout=30)
-                    
+            self.vip.rpc.call(MASTER_WEB, 'register_agent_route'
+                                ,r'^/PriceController'
+                                , "rpc_from_net"
+                                ).get(timeout=30)
+                                
             self.us_pp = 0
             self.us_pp_id = randint(0, 99999999)
             self.us_pp_datatype = {'units': 'cents', 'tz': 'UTC', 'type': 'float'}

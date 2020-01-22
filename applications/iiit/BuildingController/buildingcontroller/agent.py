@@ -115,9 +115,10 @@ class BuildingController(Agent):
         #subscribing to ds energy demand, vb publishes ed from registered ds to this topic
         self.vip.pubsub.subscribe("pubsub", self.energyDemand_topic_ds, self.onDsEd)
         
-        self.vip.rpc.call(MASTER_WEB, 'register_agent_route',
-                      r'^/BuildingController',
-                      "rpc_from_net").get(timeout=10)
+        self.vip.rpc.call(MASTER_WEB, 'register_agent_route'
+                            , r'^/BuildingController'
+                            , "rpc_from_net"
+                            ).get(timeout=10)
         return
 
     @Core.receiver('onstop')
@@ -233,12 +234,12 @@ class BuildingController(Agent):
         result = ispace_utils.get_task_schdl(self, task_id,'iiit/cbs/buildingcontroller')
         if result['result'] == 'SUCCESS':
             try:
-                result = self.vip.rpc.call(
-                    'platform.actuator', 
-                    'set_point',
-                    self._agent_id, 
-                    'iiit/cbs/buildingcontroller/Building_PricePoint',
-                    pp).get(timeout=10)
+                result = self.vip.rpc.call('platform.actuator'
+                                            , 'set_point'
+                                            , self._agent_id
+                                            , 'iiit/cbs/buildingcontroller/Building_PricePoint'
+                                            pp
+                                            ).get(timeout=10)
                 self.updateBuildingPP()
             except gevent.Timeout:
                 _log.exception("Expection: gevent.Timeout in publishPriceToBMS()")
@@ -280,9 +281,10 @@ class BuildingController(Agent):
 
     def rpc_getBuildingPP(self):
         try:
-            pp = self.vip.rpc.call(
-                    'platform.actuator','get_point',
-                    'iiit/cbs/buildingcontroller/Building_PricePoint').get(timeout=10)
+            pp = self.vip.rpc.call('platform.actuator'
+                                    ,'get_point'
+                                    , 'iiit/cbs/buildingcontroller/Building_PricePoint'
+                                    ).get(timeout=10)
             return pp
         except gevent.Timeout:
             _log.exception("Expection: gevent.Timeout in rpc_getBuildingPP()")

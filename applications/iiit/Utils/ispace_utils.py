@@ -152,7 +152,7 @@ def get_task_schdl(self, task_id, device, time_ms=None):
                 + datetime.timedelta(milliseconds=self.time_ms))
                 
         msg = [[device,start,end]]
-        result = self.vip.rpc.call('platform.actuator', 
+        result = self.vip.rpc.call('platform.actuator'
                                     , 'request_new_schedule'
                                     , self._agent_id
                                     , task_id

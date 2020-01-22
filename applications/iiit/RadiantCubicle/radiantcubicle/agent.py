@@ -113,10 +113,11 @@ class RadiantCubicle(Agent):
         #subscribing to topic_price_point
         self.vip.pubsub.subscribe("pubsub", self.topic_price_point, self.onNewPrice)
         
-        self.vip.rpc.call(MASTER_WEB, 'register_agent_route',
-                      r'^/RadiantCubicle',
-                      "rpc_from_net").get(timeout=10)
-                      
+        self.vip.rpc.call(MASTER_WEB, 'register_agent_route'
+                            , r'^/RadiantCubicle'
+                            , "rpc_from_net"
+                            ).get(timeout=10)
+                            
         _log.debug('switch ON RC_AUTO_CNTRL')
         self.setRcAutoCntrl(RC_AUTO_CNTRL_ON)
         return
@@ -268,12 +269,12 @@ class RadiantCubicle(Agent):
         result = ispace_utils.get_task_schdl(self, task_id,'iiit/cbs/radiantcubicle')
         if result['result'] == 'SUCCESS':
             try:
-                result = self.vip.rpc.call(
-                    'platform.actuator', 
-                    'set_point',
-                    self._agent_id, 
-                    'iiit/cbs/radiantcubicle/RC_TSP',
-                    level).get(timeout=10)
+                result = self.vip.rpc.call('platform.actuator'
+                                            , 'set_point'
+                                            , self._agent_id
+                                            , 'iiit/cbs/radiantcubicle/RC_TSP'
+                                            , level
+                                            ).get(timeout=10)
                 self.updateRcTspLevel(level)
             except gevent.Timeout:
                 _log.exception("Expection: gevent.Timeout in setRcTspLevel()")
@@ -303,12 +304,12 @@ class RadiantCubicle(Agent):
             result = {}
             try:
                 #_log.debug('schl avlb')
-                result = self.vip.rpc.call(
-                        'platform.actuator', 
-                        'set_point',
-                        self._agent_id, 
-                        'iiit/cbs/radiantcubicle/RC_AUTO_CNTRL',
-                        state).get(timeout=10)
+                result = self.vip.rpc.call('platform.actuator'
+                                            , 'set_point'
+                                            , self._agent_id,
+                                            , 'iiit/cbs/radiantcubicle/RC_AUTO_CNTRL'
+                                            , state
+                                            ).get(timeout=10)
                         
                 self.updateRcAutoCntrl(state)
             except gevent.Timeout:
@@ -358,9 +359,10 @@ class RadiantCubicle(Agent):
         result = ispace_utils.get_task_schdl(self, task_id,'iiit/cbs/radiantcubicle')
         if result['result'] == 'SUCCESS':
             try:
-                coolingEnergy = self.vip.rpc.call(
-                        'platform.actuator','get_point',
-                        'iiit/cbs/radiantcubicle/RC_CCE_ELEC').get(timeout=10)
+                coolingEnergy = self.vip.rpc.call('platform.actuator'
+                                                    ,'get_point'
+                                                    , 'iiit/cbs/radiantcubicle/RC_CCE_ELEC'
+                                                    ).get(timeout=10)
                 return coolingEnergy
             except gevent.Timeout:
                 _log.exception("Expection: gevent.Timeout in rpc_getRcCalcCoolingEnergy()")
@@ -393,9 +395,10 @@ class RadiantCubicle(Agent):
         
     def rpc_getRcAutoCntrlState(self):
         try:
-            state = self.vip.rpc.call(
-                    'platform.actuator','get_point',
-                    'iiit/cbs/radiantcubicle/RC_AUTO_CNTRL').get(timeout=10)
+            state = self.vip.rpc.call('platform.actuator'
+                                        ,'get_point'
+                                        , 'iiit/cbs/radiantcubicle/RC_AUTO_CNTRL'
+                                        ).get(timeout=10)
             return state
         except gevent.Timeout:
             _log.exception("Expection: gevent.Timeout in rpc_getShDeviceLevel()")

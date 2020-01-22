@@ -119,9 +119,10 @@ class ZoneController(Agent):
         #subscribing to ds energy demand, vb publishes ed from registered ds to this topic
         self.vip.pubsub.subscribe("pubsub", self.energyDemand_topic_ds, self.onDsEd)
         
-        self.vip.rpc.call(MASTER_WEB, 'register_agent_route',
-                      r'^/ZoneController',
-                      "rpc_from_net").get(timeout=10)
+        self.vip.rpc.call(MASTER_WEB, 'register_agent_route'
+                            , r'^/ZoneController'
+                            , "rpc_from_net"
+                            ).get(timeout=10)
         return
 
     @Core.receiver('onstop')
@@ -307,12 +308,12 @@ class ZoneController(Agent):
         if result['result'] == 'SUCCESS':
             result = {}
             try:
-                result = self.vip.rpc.call(
-                    'platform.actuator', 
-                    'set_point',
-                    self._agent_id, 
-                    'iiit/cbs/zonecontroller/RM_TSP',
-                    tsp).get(timeout=10)
+                result = self.vip.rpc.call('platform.actuator'
+                                            , 'set_point'
+                                            , self._agent_id
+                                            , 'iiit/cbs/zonecontroller/RM_TSP'
+                                            tsp
+                                            ).get(timeout=10)
                 self.updateRmTsp(tsp)
             except gevent.Timeout:
                 _log.exception("Expection: gevent.Timeout in setRmTsp()")
@@ -339,12 +340,12 @@ class ZoneController(Agent):
         if result['result'] == 'SUCCESS':
             result = {}
             try:
-                result = self.vip.rpc.call(
-                    'platform.actuator', 
-                    'set_point',
-                    self._agent_id, 
-                    'iiit/cbs/zonecontroller/RM_LSP',
-                    lsp).get(timeout=10)
+                result = self.vip.rpc.call('platform.actuator'
+                                            , 'set_point'
+                                            , self._agent_id,
+                                            , 'iiit/cbs/zonecontroller/RM_LSP'
+                                            , lsp
+                                            ).get(timeout=10)
                 self.updateRmLsp(lsp)
             except gevent.Timeout:
                 _log.exception("Expection: gevent.Timeout in setRmLsp()")
@@ -391,9 +392,10 @@ class ZoneController(Agent):
         result = ispace_utils.get_task_schdl(self, task_id,'iiit/cbs/zonecontroller')
         if result['result'] == 'SUCCESS':
             try:
-                lightEnergy = self.vip.rpc.call(
-                        'platform.actuator','get_point',
-                        'iiit/cbs/zonecontroller/RM_LIGHT_CALC_PWR').get(timeout=10)
+                lightEnergy = self.vip.rpc.call('platform.actuator'
+                                                , 'get_point'
+                                                , 'iiit/cbs/zonecontroller/RM_LIGHT_CALC_PWR'
+                                                ).get(timeout=10)
                 return lightEnergy
             except gevent.Timeout:
                 _log.exception("Expection: gevent.Timeout in rpc_getRmCalcLightEnergy()")
@@ -414,9 +416,10 @@ class ZoneController(Agent):
         result = ispace_utils.get_task_schdl(self, task_id,'iiit/cbs/zonecontroller')
         if result['result'] == 'SUCCESS':
             try:
-                coolingEnergy = self.vip.rpc.call(
-                        'platform.actuator','get_point',
-                        'iiit/cbs/zonecontroller/RM_CCE').get(timeout=10)
+                coolingEnergy = self.vip.rpc.call('platform.actuator'
+                                                    ,'get_point'
+                                                    , 'iiit/cbs/zonecontroller/RM_CCE'
+                                                    ).get(timeout=10)
                 return coolingEnergy
             except gevent.Timeout:
                 _log.exception("Expection: gevent.Timeout in rpc_getRmCalcCoolingEnergy()")
@@ -434,9 +437,10 @@ class ZoneController(Agent):
         
     def rpc_getRmTsp(self):
         try:
-            rm_tsp = self.vip.rpc.call(
-                    'platform.actuator','get_point',
-                    'iiit/cbs/zonecontroller/RM_TSP').get(timeout=10)
+            rm_tsp = self.vip.rpc.call('platform.actuator'
+                                        , 'get_point'
+                                        , 'iiit/cbs/zonecontroller/RM_TSP'
+                                        ).get(timeout=10)
             return rm_tsp
         except gevent.Timeout:
             _log.exception("Expection: gevent.Timeout in rpc_getRmTsp()")
@@ -449,9 +453,10 @@ class ZoneController(Agent):
         
     def rpc_getRmLsp(self):
         try:
-            rm_lsp = self.vip.rpc.call(
-                    'platform.actuator','get_point',
-                    'iiit/cbs/zonecontroller/RM_LSP').get(timeout=10)
+            rm_lsp = self.vip.rpc.call('platform.actuator'
+                                        , 'get_point'
+                                        , 'iiit/cbs/zonecontroller/RM_LSP'
+                                        ).get(timeout=10)
             return rm_lsp
         except gevent.Timeout:
             _log.exception("Expection: gevent.Timeout in rpc_getRmLsp()")
