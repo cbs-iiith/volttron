@@ -71,44 +71,44 @@ def smartstripui_clnt(config_path, **kwargs):
             return
         
         def _configGetPoints(self):
-            self.topic_price_point          = config.get('topic_price_point',\
+            self.topic_price_point          = config.get('topic_price_point',
                                                     'smartstrip/pricepoint')
-            self.plug1_meterData_all_point  = config.get('plug1_meterData_all_point',\
+            self.plug1_meterData_all_point  = config.get('plug1_meterData_all_point',
                                                     'smartstrip/plug1/meterdata/all')
-            self.plug2_meterData_all_point  = config.get('plug2_meterData_all_point',\
+            self.plug2_meterData_all_point  = config.get('plug2_meterData_all_point',
                                                     'smartstrip/plug2/meterdata/all')
-            self.plug1_relayState_point     = config.get('plug1_relayState_point',\
+            self.plug1_relayState_point     = config.get('plug1_relayState_point',
                                                     'smartstrip/plug1/relaystate')
-            self.plug2_relayState_point     = config.get('plug2_relayState_point',\
+            self.plug2_relayState_point     = config.get('plug2_relayState_point',
                                                     'smartstrip/plug2/relaystate')
-            self.plug1_thresholdPP_point    = config.get('plug1_thresholdPP_point',\
+            self.plug1_thresholdPP_point    = config.get('plug1_thresholdPP_point',
                                                     'smartstrip/plug1/threshold')
-            self.plug2_thresholdPP_point    = config.get('plug2_thresholdPP_point',\
+            self.plug2_thresholdPP_point    = config.get('plug2_thresholdPP_point',
                                                     'smartstrip/plug2/threshold')
-            self.plug1_tagId_point          = config.get('plug1_tagId_point',\
+            self.plug1_tagId_point          = config.get('plug1_tagId_point',
                                                     'smartstrip/plug1/tagid')
-            self.plug2_tagId_point          = config.get('plug2_thresholdPP_point',\
+            self.plug2_tagId_point          = config.get('plug2_thresholdPP_point',
                                                     'smartstrip/plug2/tagid')
             return
             
         def _subscribeTopics(self):
-            self.vip.pubsub.subscribe("pubsub", self.topic_price_point, \
+            self.vip.pubsub.subscribe("pubsub", self.topic_price_point,
                                                     self.on_match_currentPP)
-            self.vip.pubsub.subscribe("pubsub", self.plug1_meterData_all_point,\
+            self.vip.pubsub.subscribe("pubsub", self.plug1_meterData_all_point,
                                                     self.on_match_plug1MeterData)
-            self.vip.pubsub.subscribe("pubsub", self.plug2_meterData_all_point,\
+            self.vip.pubsub.subscribe("pubsub", self.plug2_meterData_all_point,
                                                     self.on_match_plug2MeterData)
-            self.vip.pubsub.subscribe("pubsub", self.plug1_relayState_point,\
+            self.vip.pubsub.subscribe("pubsub", self.plug1_relayState_point,
                                                     self.on_match_plug1RelayState)
-            self.vip.pubsub.subscribe("pubsub", self.plug2_relayState_point,\
+            self.vip.pubsub.subscribe("pubsub", self.plug2_relayState_point,
                                                     self.on_match_plug2RelayState)
-            self.vip.pubsub.subscribe("pubsub", self.plug1_thresholdPP_point,\
+            self.vip.pubsub.subscribe("pubsub", self.plug1_thresholdPP_point,
                                                     self.on_match_plug1Threshold)
-            self.vip.pubsub.subscribe("pubsub", self.plug2_thresholdPP_point,\
+            self.vip.pubsub.subscribe("pubsub", self.plug2_thresholdPP_point,
                                                     self.on_match_plug2Threshold)
-            self.vip.pubsub.subscribe("pubsub", self.plug1_tagId_point,\
+            self.vip.pubsub.subscribe("pubsub", self.plug1_tagId_point,
                                                     self.on_match_plug1TagID)
-            self.vip.pubsub.subscribe("pubsub", self.plug2_tagId_point,\
+            self.vip.pubsub.subscribe("pubsub", self.plug2_tagId_point,
                                                     self.on_match_plug2TagID)
             return
             

@@ -270,10 +270,10 @@ class BuildingController(Agent):
     def publishBuildingPP(self):
         #_log.debug('publishBuildingPP()')
         pubTopic = self.root_topic+"/Building_PricePoint"
-        pubMsg = [self._price_point_new, \
-                    {'units': 'cents', 'tz': 'UTC', 'type': 'float'}, \
-                    self._pp_id_new, \
-                    True \
+        pubMsg = [self._price_point_new,
+                    {'units': 'cents', 'tz': 'UTC', 'type': 'float'},
+                    self._pp_id_new,
+                    True
                     ]
         ispace_utils.publish_to_bus(self, pubTopic, pubMsg)
         return
@@ -311,14 +311,14 @@ class BuildingController(Agent):
         _log.info( "New TED: {0:.2f}, publishing to bus.".format(self._ted))
         pubTopic = self.energyDemand_topic
         #_log.debug("TED pubTopic: " + pubTopic)
-        pubMsg = [self._ted \
-                    , {'units': 'W', 'tz': 'UTC', 'type': 'float'} \
-                    , self._pp_id \
-                    , True \
-                    , None \
-                    , None \
-                    , None \
-                    , self._period_read_data \
+        pubMsg = [self._ted
+                    , {'units': 'W', 'tz': 'UTC', 'type': 'float'}
+                    , self._pp_id
+                    , True
+                    , None
+                    , None
+                    , None
+                    , self._period_read_data
                     , datetime.datetime.utcnow().isoformat(' ') + 'Z'
                     ]
         ispace_utils.publish_to_bus(self, pubTopic, pubMsg)
@@ -327,7 +327,7 @@ class BuildingController(Agent):
     def onDsEd(self, peer, sender, bus,  topic, headers, message):
         if sender == 'pubsub.compat':
             message = compat.unpack_legacy_message(headers, message)
-        _log.debug('New ed from ds, topic: ' + topic + \
+        _log.debug('New ed from ds, topic: ' + topic +
                     ' & ed: {0:.4f}'.format(message[ParamED.idx_ed]))
                     
         ed_pp_id = message[ParamED.idx_ed_pp_id]

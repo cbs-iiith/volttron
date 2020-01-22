@@ -66,9 +66,9 @@ def pricecontroller(config_path, **kwargs):
             _log.debug('startup()')
             
             _log.debug('registering rpc routes')
-            self.vip.rpc.call(MASTER_WEB, 'register_agent_route', \
-                    r'^/PriceController', \
-#                    self.core.identity, \
+            self.vip.rpc.call(MASTER_WEB, 'register_agent_route',
+                    r'^/PriceController',
+#                    self.core.identity,
                     "rpc_from_net").get(timeout=30)
                     
             self.us_pp              = 0
@@ -89,7 +89,7 @@ def pricecontroller(config_path, **kwargs):
             try:
                 rpcdata = jsonrpc.JsonRpcData.parse(message)
                 '''
-                _log.debug('rpc_from_net()...' + \
+                _log.debug('rpc_from_net()...' +
                             ', rpc method: {}'.format(rpcdata.method) +\
                             ', rpc params: {}'.format(rpcdata.params))
                 '''
@@ -106,7 +106,7 @@ def pricecontroller(config_path, **kwargs):
                 elif rpcdata.method == "rpc_ping":
                     result = True
                 else:
-                    return jsonrpc.json_error(rpcdata.id, METHOD_NOT_FOUND, \
+                    return jsonrpc.json_error(rpcdata.id, METHOD_NOT_FOUND,
                                                 'Invalid method {}'.format(rpcdata.method))
                                                 
                 return jsonrpc.json_result(rpcdata.id, result)
@@ -120,8 +120,8 @@ def pricecontroller(config_path, **kwargs):
                 return jsonrpc.json_error('NA', UNHANDLED_EXCEPTION, e)
                 
         def _disable_agent(self, disable_agent):
-            if disable_agent is True \
-                or disable_agent is False \
+            if disable_agent is True
+                or disable_agent is False
                 :
                 self.agent_disabled = disable_agent
                 result = True
@@ -130,9 +130,9 @@ def pricecontroller(config_path, **kwargs):
             return result
             
         def _set_pp_optimize_option(self, option):
-            if option in ["PASS_ON_PP" \
-                            , "DEFAULT_OPT" \
-                            , "EXTERN_OPT" \
+            if option in ["PASS_ON_PP"
+                            , "DEFAULT_OPT"
+                            , "EXTERN_OPT"
                             ]:
                 self.pp_optimize_option = self.pp_optimize_option
                 result = True
@@ -153,50 +153,50 @@ def pricecontroller(config_path, **kwargs):
         def on_new_pp(self, peer, sender, bus,  topic, headers, message):
             #new zone price point
             new_pp              = message[ParamPP.idx_pp]
-            new_pp_datatype     = message[ParamPP.idx_pp_datatype] \
-                                    if message[ParamPP.idx_pp_datatype] is not None \
+            new_pp_datatype     = message[ParamPP.idx_pp_datatype]
+                                    if message[ParamPP.idx_pp_datatype] is not None
                                     else {'units': 'cents', 'tz': 'UTC', 'type': 'float'}
-            new_pp_id           = message[ParamPP.idx_pp_id] \
-                                    if message[ParamPP.idx_pp_id] is not None \
+            new_pp_id           = message[ParamPP.idx_pp_id]
+                                    if message[ParamPP.idx_pp_id] is not None
                                     else randint(0, 99999999)
-            new_pp_isoptimal    = message[ParamPP.idx_pp_isoptimal] \
-                                    if message[ParamPP.idx_pp_isoptimal] is not None \
+            new_pp_isoptimal    = message[ParamPP.idx_pp_isoptimal]
+                                    if message[ParamPP.idx_pp_isoptimal] is not None
                                     else False
-            new_pp_ttl          = message[ParamPP.idx_pp_ttl] \
-                                    if message[ParamPP.idx_pp_ttl] is not None \
+            new_pp_ttl          = message[ParamPP.idx_pp_ttl]
+                                    if message[ParamPP.idx_pp_ttl] is not None
                                     else -1
-            new_pp_ts           = message[ParamPP.idx_pp_ts] \
-                                    if message[ParamPP.idx_pp_ts] is not None \
+            new_pp_ts           = message[ParamPP.idx_pp_ts]
+                                    if message[ParamPP.idx_pp_ts] is not None
                                     else datetime.datetime.utcnow().isoformat(' ') + 'Z'
-            ispace_utils.print_pp(self, new_pp \
-                            , new_pp_datatype \
-                            , new_pp_id \
-                            , new_pp_isoptimal \
-                            , None \
-                            , None \
-                            , new_pp_ttl \
-                            , new_pp_ts \
+            ispace_utils.print_pp(self, new_pp
+                            , new_pp_datatype
+                            , new_pp_id
+                            , new_pp_isoptimal
+                            , None
+                            , None
+                            , new_pp_ttl
+                            , new_pp_ts
                             )
                             
             if self.agent_disabled:
                 _log.info("self.agent_disabled: " + str(self.agent_disabled) + ", do nothing!!!")
                 return True
                 
-            if new_pp_isoptimal \
-                    or self.pp_optimize_option == "PASS_ON_PP" \
-                    or self.pp_optimize_option == "EXTERN_OPT" \
+            if new_pp_isoptimal
+                    or self.pp_optimize_option == "PASS_ON_PP"
+                    or self.pp_optimize_option == "EXTERN_OPT"
                     :
-                pubTopic =  self.topic_extrn_pp \
-                                if self.pp_optimize_option == "EXTERN_OPT" \
+                pubTopic =  self.topic_extrn_pp
+                                if self.pp_optimize_option == "EXTERN_OPT"
                                 else self.topic_price_point 
-                pubMsg = [new_pp \
-                            , new_pp_datatype \
-                            , new_pp_id \
-                            , new_pp_isoptimal \
-                            , None \
-                            , None \
-                            , new_pp_ttl \
-                            , new_pp_ts \
+                pubMsg = [new_pp
+                            , new_pp_datatype
+                            , new_pp_id
+                            , new_pp_isoptimal
+                            , None
+                            , None
+                            , new_pp_ttl
+                            , new_pp_ts
                             ]
                 _log.debug('publishing to local bus topic: ' + pubTopic)
                 ispace_utils.publish_to_bus(self, pubTopic, pubMsg)
@@ -243,25 +243,25 @@ def pricecontroller(config_path, **kwargs):
             new_pp_ttl          = 5  #5 sec
             new_pp_ts           = datetime.datetime.utcnow().isoformat(' ') + 'Z'
             
-            ispace_utils.print_pp(self, new_pp \
-                            , new_pp_datatype \
-                            , new_pp_id \
-                            , new_pp_isoptimal \
-                            , None \
-                            , None \
-                            , new_pp_ttl \
-                            , new_pp_ts \
+            ispace_utils.print_pp(self, new_pp
+                            , new_pp_datatype
+                            , new_pp_id
+                            , new_pp_isoptimal
+                            , None
+                            , None
+                            , new_pp_ttl
+                            , new_pp_ts
                             )
                             
             pubTopic =  self.topic_price_point
-            pubMsg = [new_pp \
-                        , new_pp_datatype \
-                        , new_pp_id \
-                        , new_pp_isoptimal \
-                        , None \
-                        , None \
-                        , new_pp_ttl \
-                        , new_pp_ts \
+            pubMsg = [new_pp
+                        , new_pp_datatype
+                        , new_pp_id
+                        , new_pp_isoptimal
+                        , None
+                        , None
+                        , new_pp_ttl
+                        , new_pp_ts
                         ]
             _log.debug('publishing to local bus topic: ' + pubTopic)
             ispace_utils.publish_to_bus(self, pubTopic, pubMsg)

@@ -167,7 +167,7 @@ def get_task_schdl(self, task_id, device, time_ms=None):
 
 def cancel_task_schdl(self, task_id):
     #_log.debug('cancel_task_schdl()')
-    result = self.vip.rpc.call('platform.actuator', 'request_cancel_schedule', \
+    result = self.vip.rpc.call('platform.actuator', 'request_cancel_schedule',
                                 self._agent_id, task_id).get(timeout=10)
     #_log.debug("task_id: " + task_id)
     #_log.debug(result)

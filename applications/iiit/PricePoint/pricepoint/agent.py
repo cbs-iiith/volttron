@@ -110,22 +110,22 @@ class PricePoint(Agent):
             _log.debug('rpc params: {}'.format(rpcdata.params))
             
             if rpcdata.method == "rpc_updatePricePoint":
-                args = {'new_pp': rpcdata.params['new_pp'] \
-                            , 'new_pp_id': rpcdata.params['new_pp_id'] \
-                                        if rpcdata.params['new_pp_id'] is not None \
-                                        else randint(0, 99999999) \
-                            , 'new_pp_datatype': rpcdata.params['new_pp_datatype'] \
-                                        if rpcdata.params['new_pp_datatype'] is not None \
-                                        else {'units': 'cents', 'tz': 'UTC', 'type': 'float'} \
-                            , 'new_pp_isoptimal': rpcdata.params['new_pp_isoptimal'] \
-                                        if rpcdata.params['new_pp_isoptimal'] is not None \
-                                            else False \
-                            , 'new_pp_ttl': rpcdata.params['new_pp_ttl'] \
-                                        if rpcdata.params['new_pp_ttl'] is not None \
-                                        else -1 \
-                            , 'new_pp_ts': rpcdata.params['new_pp_ts'] \
-                                        if rpcdata.params['new_pp_ts'] is not None \
-                                        else datetime.datetime.utcnow().isoformat(' ') + 'Z' \
+                args = {'new_pp': rpcdata.params['new_pp']
+                            , 'new_pp_id': rpcdata.params['new_pp_id']
+                                        if rpcdata.params['new_pp_id'] is not None
+                                        else randint(0, 99999999)
+                            , 'new_pp_datatype': rpcdata.params['new_pp_datatype']
+                                        if rpcdata.params['new_pp_datatype'] is not None
+                                        else {'units': 'cents', 'tz': 'UTC', 'type': 'float'}
+                            , 'new_pp_isoptimal': rpcdata.params['new_pp_isoptimal']
+                                        if rpcdata.params['new_pp_isoptimal'] is not None
+                                            else False
+                            , 'new_pp_ttl': rpcdata.params['new_pp_ttl']
+                                        if rpcdata.params['new_pp_ttl'] is not None
+                                        else -1
+                            , 'new_pp_ts': rpcdata.params['new_pp_ts']
+                                        if rpcdata.params['new_pp_ts'] is not None
+                                        else datetime.datetime.utcnow().isoformat(' ') + 'Z'
                         }
                 result = self.updatePricePoint(**args)
             elif rpcdata.method == "rpc_ping":
@@ -147,25 +147,25 @@ class PricePoint(Agent):
 
     @RPC.export
     def updatePricePoint(self, new_pp, new_pp_datatype, new_pp_id, new_pp_isoptimal, new_pp_ttl, new_pp_ts):
-        print_pp(self, new_pp \
-                        , new_pp_datatype \
-                        , new_pp_id \
-                        , new_pp_isoptimal \
-                        , None \
-                        , None \
-                        , new_pp_ttl \
-                        , new_pp_ts \
+        print_pp(self, new_pp
+                        , new_pp_datatype
+                        , new_pp_id
+                        , new_pp_isoptimal
+                        , None
+                        , None
+                        , new_pp_ttl
+                        , new_pp_ts
                         )
                         
         pubTopic = self.topic_price_point
-        pubMsg = [new_pp \
-                    , new_pp_datatype \
-                    , new_pp_id \
-                    , new_pp_isoptimal \
-                    , None \
-                    , None \
-                    , new_pp_ttl \
-                    , new_pp_ts \
+        pubMsg = [new_pp
+                    , new_pp_datatype
+                    , new_pp_id
+                    , new_pp_isoptimal
+                    , None
+                    , None
+                    , new_pp_ttl
+                    , new_pp_ts
                     ]
         _log.debug('publishing to local bus topic: ' + pubTopic)
         publish_to_bus(self, pubTopic, pubMsg)

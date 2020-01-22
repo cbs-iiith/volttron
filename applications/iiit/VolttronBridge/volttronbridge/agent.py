@@ -58,14 +58,14 @@ def volttronbridge(config_path, **kwargs):
     config = utils.load_config(config_path)
     agent_id = config['agentid']
     
-    energyDemand_topic      = config.get('energyDemand_topic', \
+    energyDemand_topic      = config.get('energyDemand_topic',
                                             'zone/energydemand')
-    energyDemand_topic_ds   = config.get('energyDemand_topic_ds', \
+    energyDemand_topic_ds   = config.get('energyDemand_topic_ds',
                                             'smarthub/energydemand')
                                             
-    pricePoint_topic_us     = config.get('pricePoint_topic_us', \
+    pricePoint_topic_us     = config.get('pricePoint_topic_us',
                                             'building/pricepoint')
-    pricePoint_topic        = config.get('pricePoint_topic', \
+    pricePoint_topic        = config.get('pricePoint_topic',
                                             'zone/pricepoint')
                                             
     '''
@@ -158,17 +158,17 @@ def volttronbridge(config_path, **kwargs):
             _log.debug(self._bridge_host)
             
             _log.debug('registering rpc routes')
-            self.vip.rpc.call(MASTER_WEB, 'register_agent_route', \
-                    r'^/VolttronBridge', \
-#                    self.core.identity, \
+            self.vip.rpc.call(MASTER_WEB, 'register_agent_route',
+                    r'^/VolttronBridge',
+#                    self.core.identity,
                     "rpc_from_net").get(timeout=30)
                     
             #subscribe to price point so that it can be posted to downstream
             if self._bridge_host != 'LEVEL_TAILEND':
                 _log.debug("subscribing to pricePoint_topic: " + pricePoint_topic)
-                self.vip.pubsub.subscribe("pubsub", \
-                                            pricePoint_topic, \
-                                            self.on_new_pp \
+                self.vip.pubsub.subscribe("pubsub",
+                                            pricePoint_topic,
+                                            self.on_new_pp
                                             )
                 self._ds_voltBr[:] = []
                 self._ds_deviceId[:] = []
@@ -177,9 +177,9 @@ def volttronbridge(config_path, **kwargs):
             #subscribe to energy demand so that it can be posted to upstream
             if self._bridge_host != 'LEVEL_HEAD':
                 _log.debug("subscribing to energyDemand_topic: " + energyDemand_topic)
-                self.vip.pubsub.subscribe("pubsub", \
-                                            energyDemand_topic, \
-                                            self.on_new_ed \
+                self.vip.pubsub.subscribe("pubsub",
+                                            energyDemand_topic,
+                                            self.on_new_ed
                                             )
                                             
             #register to upstream
@@ -205,9 +205,9 @@ def volttronbridge(config_path, **kwargs):
             
         #register with upstream volttron bridge
         def _registerToUsBridge(self, url_root, discovery_address, deviceId):
-            return self.do_rpc(url_root, 'rpc_register_ds_bridge', \
-                                {'discovery_address': discovery_address \
-                                , 'deviceId': deviceId \
+            return self.do_rpc(url_root, 'rpc_register_ds_bridge',
+                                {'discovery_address': discovery_address
+                                , 'deviceId': deviceId
                                 })
                                     
         @Core.receiver('onstop')
@@ -225,14 +225,14 @@ def volttronbridge(config_path, **kwargs):
                 if self._usConnected:
                     _log.debug("unregistering with upstream VolttronBridge")
                     url_root = 'http://' + self._us_ip_addr + ':' + str(self._us_port) + '/VolttronBridge'
-                    result = self.do_rpc(url_root, 'rpc_unregister_ds_bridge', \
-                                        {'discovery_address': self._discovery_address \
-                                        , 'deviceId': self._deviceId \
+                    result = self.do_rpc(url_root, 'rpc_unregister_ds_bridge',
+                                        {'discovery_address': self._discovery_address
+                                        , 'deviceId': self._deviceId
                                         })
                     self._usConnected = False
                 
             _log.debug('un registering rpc routes')
-            self.vip.rpc.call(MASTER_WEB, \
+            self.vip.rpc.call(MASTER_WEB,
                                 'unregister_all_agent_routes'\
 #                                , self.core.identity\
                                 ).get(timeout=30)
@@ -246,7 +246,7 @@ def volttronbridge(config_path, **kwargs):
             try:
                 rpcdata = jsonrpc.JsonRpcData.parse(message)
                 '''
-                _log.debug('rpc_from_net()...' + \
+                _log.debug('rpc_from_net()...' +
                             ', rpc method: {}'.format(rpcdata.method) +\
                             ', rpc params: {}'.format(rpcdata.params))
                 '''
@@ -263,47 +263,47 @@ def volttronbridge(config_path, **kwargs):
                     result = self._unregister_ds_bridge(**args)
                     
                 elif rpcdata.method == "rpc_post_ed":
-                    args = {'discovery_address': rpcdata.params['discovery_address'] \
-                            , 'deviceId': rpcdata.params['deviceId'] \
-                            , 'new_ed': rpcdata.params['new_ed'] \
-                            , 'ed_datatype': rpcdata.params['ed_datatype'] \
-                                        if rpcdata.params['ed_datatype'] is not None \
-                                        else {'units': 'W', 'tz': 'UTC', 'type': 'float'} \
-                            , 'ed_pp_id': rpcdata.params['ed_pp_id'] \
-                                        if rpcdata.params['ed_pp_id'] is not None \
-                                        else randint(0, 99999999) \
-                            , 'ed_isoptimal': rpcdata.params['ed_isoptimal'] \
-                                        if rpcdata.params['ed_isoptimal'] is not None \
+                    args = {'discovery_address': rpcdata.params['discovery_address']
+                            , 'deviceId': rpcdata.params['deviceId']
+                            , 'new_ed': rpcdata.params['new_ed']
+                            , 'ed_datatype': rpcdata.params['ed_datatype']
+                                        if rpcdata.params['ed_datatype'] is not None
+                                        else {'units': 'W', 'tz': 'UTC', 'type': 'float'}
+                            , 'ed_pp_id': rpcdata.params['ed_pp_id']
+                                        if rpcdata.params['ed_pp_id'] is not None
+                                        else randint(0, 99999999)
+                            , 'ed_isoptimal': rpcdata.params['ed_isoptimal']
+                                        if rpcdata.params['ed_isoptimal'] is not None
                                         else False
-                            , 'ed_ttl': rpcdata.params['ed_ttl'] \
-                                        if rpcdata.params['ed_ttl'] is not None \
-                                        else -1 \
-                            , 'ed_ts': rpcdata.params['ed_ts'] \
-                                        if rpcdata.params['ed_ts'] is not None \
-                                        else datetime.datetime.utcnow().isoformat(' ') + 'Z' \
+                            , 'ed_ttl': rpcdata.params['ed_ttl']
+                                        if rpcdata.params['ed_ttl'] is not None
+                                        else -1
+                            , 'ed_ts': rpcdata.params['ed_ts']
+                                        if rpcdata.params['ed_ts'] is not None
+                                        else datetime.datetime.utcnow().isoformat(' ') + 'Z'
                             }
                     #post the new energy demand from ds to the local bus
                     result = self._post_ed(**args)
                     
                 elif rpcdata.method == "rpc_post_pp":
-                    args = {'discovery_address': rpcdata.params['discovery_address'] \
-                            , 'deviceId':rpcdata.params['deviceId'] \
-                            , 'new_pp': rpcdata.params['new_pp'] \
-                            , 'new_pp_id': rpcdata.params['new_pp_id'] \
-                                        if rpcdata.params['new_pp_id'] is not None \
-                                        else randint(0, 99999999) \
-                            , 'new_pp_datatype': rpcdata.params['new_pp_datatype'] \
-                                        if rpcdata.params['new_pp_datatype'] is not None \
-                                        else {'units': 'cents', 'tz': 'UTC', 'type': 'float'} \
-                            , 'new_pp_isoptimal': rpcdata.params['new_pp_isoptimal'] \
-                                        if rpcdata.params['new_pp_isoptimal'] is not None \
-                                        else False \
-                            , 'new_pp_ttl': rpcdata.params['new_pp_ttl'] \
-                                        if rpcdata.params['new_pp_ttl'] is not None \
-                                        else -1 \
-                            , 'new_pp_ts': rpcdata.params['new_pp_ts'] \
-                                        if rpcdata.params['new_pp_ts'] is not None \
-                                        else datetime.datetime.utcnow().isoformat(' ') + 'Z' \
+                    args = {'discovery_address': rpcdata.params['discovery_address']
+                            , 'deviceId':rpcdata.params['deviceId']
+                            , 'new_pp': rpcdata.params['new_pp']
+                            , 'new_pp_id': rpcdata.params['new_pp_id']
+                                        if rpcdata.params['new_pp_id'] is not None
+                                        else randint(0, 99999999)
+                            , 'new_pp_datatype': rpcdata.params['new_pp_datatype']
+                                        if rpcdata.params['new_pp_datatype'] is not None
+                                        else {'units': 'cents', 'tz': 'UTC', 'type': 'float'}
+                            , 'new_pp_isoptimal': rpcdata.params['new_pp_isoptimal']
+                                        if rpcdata.params['new_pp_isoptimal'] is not None
+                                        else False
+                            , 'new_pp_ttl': rpcdata.params['new_pp_ttl']
+                                        if rpcdata.params['new_pp_ttl'] is not None
+                                        else -1
+                            , 'new_pp_ts': rpcdata.params['new_pp_ts']
+                                        if rpcdata.params['new_pp_ts'] is not None
+                                        else datetime.datetime.utcnow().isoformat(' ') + 'Z'
                         }
                     #post the new new price point from us to the local-us-bus
                     result = self._post_pp(**args)
@@ -311,7 +311,7 @@ def volttronbridge(config_path, **kwargs):
                 elif rpcdata.method == "rpc_ping":
                     result = True
                 else:
-                    return jsonrpc.json_error(rpcdata.id, METHOD_NOT_FOUND, \
+                    return jsonrpc.json_error(rpcdata.id, METHOD_NOT_FOUND,
                                                 'Invalid method {}'.format(rpcdata.method))
                                                 
                 return jsonrpc.json_result(rpcdata.id, result)
@@ -334,30 +334,30 @@ def volttronbridge(config_path, **kwargs):
                 return
                 
             self._pp_current    = message[ParamPP.idx_pp]
-            self._pp_datatype   = message[ParamPP.idx_pp_datatype] \
-                                    if message[ParamPP.idx_pp_datatype] is not None \
+            self._pp_datatype   = message[ParamPP.idx_pp_datatype]
+                                    if message[ParamPP.idx_pp_datatype] is not None
                                     else {'units': 'cents', 'tz': 'UTC', 'type': 'float'}
-            self._pp_id         = message[ParamPP.idx_pp_id] \
-                                    if message[ParamPP.idx_pp_id] is not None \
+            self._pp_id         = message[ParamPP.idx_pp_id]
+                                    if message[ParamPP.idx_pp_id] is not None
                                     else randint(0, 99999999)
-            self._pp_isoptimal  = message[ParamPP.idx_pp_isoptimal] \
-                                    if message[ParamPP.idx_pp_isoptimal] is not None \
+            self._pp_isoptimal  = message[ParamPP.idx_pp_isoptimal]
+                                    if message[ParamPP.idx_pp_isoptimal] is not None
                                     else False
-            self._pp_ttl        = message[ParamPP.idx_pp_ttl] \
-                                    if message[ParamPP.idx_pp_ttl] is not None \
+            self._pp_ttl        = message[ParamPP.idx_pp_ttl]
+                                    if message[ParamPP.idx_pp_ttl] is not None
                                     else -1
-            self._pp_ts  = message[ParamPP.idx_pp_ts] \
-                                    if message[ParamPP.idx_pp_ts] is not None \
+            self._pp_ts  = message[ParamPP.idx_pp_ts]
+                                    if message[ParamPP.idx_pp_ts] is not None
                                     else datetime.datetime.utcnow().isoformat(' ') + 'Z'
                                     
-            ispace_utils.print_pp(self, self._pp_current \
-                , self._pp_datatype \
-                , self._pp_id \
-                , self._pp_isoptimal \
-                , None \
-                , None \
-                , self._pp_ttl \
-                , self._pp_ts \
+            ispace_utils.print_pp(self, self._pp_current
+                , self._pp_datatype
+                , self._pp_id
+                , self._pp_isoptimal
+                , None
+                , None
+                , self._pp_ttl
+                , self._pp_ts
                 )
                 
             self._reset_ds_retrycount()
@@ -372,37 +372,37 @@ def volttronbridge(config_path, **kwargs):
                 return
                 
             self._ed_current    = message[ParamED.idx_ed]
-            self._ed_datatype   = message[ParamED.idx_ed_datatype] \
-                                    if message[ParamED.idx_ed_datatype] is not None \
+            self._ed_datatype   = message[ParamED.idx_ed_datatype]
+                                    if message[ParamED.idx_ed_datatype] is not None
                                     else {'units': 'W', 'tz': 'UTC', 'type': 'float'}
-            self._ed_pp_id      = message[ParamED.idx_ed_pp_id] \
-                                    if message[ParamED.idx_ed_pp_id] is not None \
+            self._ed_pp_id      = message[ParamED.idx_ed_pp_id]
+                                    if message[ParamED.idx_ed_pp_id] is not None
                                     else randint(0, 99999999)
-            self._ed_isoptimal  = message[ParamED.idx_ed_isoptimal] \
-                                    if message[ParamED.idx_ed_isoptimal] is not None \
+            self._ed_isoptimal  = message[ParamED.idx_ed_isoptimal]
+                                    if message[ParamED.idx_ed_isoptimal] is not None
                                     else False
-            self._ed_ttl        = message[ParamED.idx_ed_ttl] \
-                                    if message[ParamED.idx_ed_ttl] is not None \
+            self._ed_ttl        = message[ParamED.idx_ed_ttl]
+                                    if message[ParamED.idx_ed_ttl] is not None
                                     else -1
-            self._ed_ts  = message[ParamED.idx_ed_ts] \
-                                    if message[ParamED.idx_ed_ts] is not None \
+            self._ed_ts  = message[ParamED.idx_ed_ts]
+                                    if message[ParamED.idx_ed_ts] is not None
                                     else datetime.datetime.utcnow().isoformat(' ') + 'Z'
                                     
-            ispace_utils.print_ed(self, self._ed_current \
-                            , self._ed_datatype \
-                            , self._ed_pp_id \
-                            , self._ed_isoptimal \
-                            , None \
-                            , None \
-                            , None \
-                            , self._ed_ttl \
-                            , self._ed_ts \
+            ispace_utils.print_ed(self, self._ed_current
+                            , self._ed_datatype
+                            , self._ed_pp_id
+                            , self._ed_isoptimal
+                            , None
+                            , None
+                            , None
+                            , self._ed_ttl
+                            , self._ed_ts
                             )
                             
             #post ed to us only if pp_id corresponds to these ids (i.e., ed for either us opt_pp_id or bid_pp_id)
             if self._ed_pp_id not in [self.us_opt_pp_id, self.us_bid_pp_id]:
-                _log.debug("self._ed_pp_id: " + str(self._ed_pp_id) \
-                            + " not in [self.us_opt_pp_id, self.us_bid_pp_id]: " \
+                _log.debug("self._ed_pp_id: " + str(self._ed_pp_id)
+                            + " not in [self.us_opt_pp_id, self.us_bid_pp_id]: "
                             + str([self.us_opt_pp_id, self.us_bid_pp_id])\
                             + ", do nothing"\
                             )
@@ -434,15 +434,15 @@ def volttronbridge(config_path, **kwargs):
             _log.debug('_usConnected: ' + str(self._usConnected))
             
             _log.debug("posting energy demand to upstream VolttronBridge")
-            success = self.do_rpc(url_root, 'rpc_post_ed', \
-                            {'discovery_address': self._discovery_address \
-                            , 'deviceId': self._deviceId \
-                            , 'new_ed': self._ed_current \
-                            , 'ed_datatype': self._ed_datatype \
-                            , 'ed_pp_id': self._ed_pp_id \
-                            , 'ed_isoptimal':  self._ed_isoptimal \
-                            , 'ed_ttl': self._ed_ttl \
-                            , 'ed_ts': self._ed_ts \
+            success = self.do_rpc(url_root, 'rpc_post_ed',
+                            {'discovery_address': self._discovery_address
+                            , 'deviceId': self._deviceId
+                            , 'new_ed': self._ed_current
+                            , 'ed_datatype': self._ed_datatype
+                            , 'ed_pp_id': self._ed_pp_id
+                            , 'ed_isoptimal':  self._ed_isoptimal
+                            , 'ed_ttl': self._ed_ttl
+                            , 'ed_ts': self._ed_ts
                             })
             #_log.debug('success: ' + str(success))
             if success:
@@ -476,15 +476,15 @@ def volttronbridge(config_path, **kwargs):
                     continue
                     
                 url_root = 'http://' + discovery_address + '/VolttronBridge'
-                result = self.do_rpc(url_root, 'rpc_post_pp', \
-                                        {'discovery_address': self._discovery_address \
-                                        , 'deviceId': self._deviceId \
-                                        , 'new_pp': self._pp_current \
-                                        , 'new_pp_id': self._pp_id \
-                                        , 'new_pp_isoptimal': self._pp_isoptimal \
-                                        , 'new_pp_datatype': self._pp_datatype \
-                                        , 'new_pp_ttl': self._pp_ttl \
-                                        , 'new_pp_ts': self._pp_ts \
+                result = self.do_rpc(url_root, 'rpc_post_pp',
+                                        {'discovery_address': self._discovery_address
+                                        , 'deviceId': self._deviceId
+                                        , 'new_pp': self._pp_current
+                                        , 'new_pp_id': self._pp_id
+                                        , 'new_pp_isoptimal': self._pp_isoptimal
+                                        , 'new_pp_datatype': self._pp_datatype
+                                        , 'new_pp_ttl': self._pp_ttl
+                                        , 'new_pp_ts': self._pp_ts
                                         })
                 if result:
                     #success, reset retry count
@@ -493,7 +493,7 @@ def volttronbridge(config_path, **kwargs):
                 else:
                     #failed to post, increment retry count
                     self._ds_retrycount[index] = self._ds_retrycount[index]  + 1
-                    _log.debug("post to:" + discovery_address + \
+                    _log.debug("post to:" + discovery_address +
                                 " failed, count: {0:d} !!!".format(self._ds_retrycount[index]))
                     self._all_ds_posts_success  = False
                         
@@ -537,23 +537,23 @@ def volttronbridge(config_path, **kwargs):
             return
             
         #post the new price point from us to the local-us-bus
-        def _post_pp(self, discovery_address \
-                            , deviceId \
-                            , new_pp \
-                            , new_pp_datatype \
-                            , new_pp_id \
-                            , new_pp_isoptimal \
-                            , new_pp_ttl \
-                            , new_pp_ts \
+        def _post_pp(self, discovery_address
+                            , deviceId
+                            , new_pp
+                            , new_pp_datatype
+                            , new_pp_id
+                            , new_pp_isoptimal
+                            , new_pp_ttl
+                            , new_pp_ts
                             ):
-            ispace_utils.print_pp(self, new_pp \
-                            , new_pp_datatype \
-                            , new_pp_id \
-                            , new_pp_isoptimal \
-                            , discovery_address \
-                            , deviceId \
-                            , new_pp_ttl \
-                            , new_pp_ts \
+            ispace_utils.print_pp(self, new_pp
+                            , new_pp_datatype
+                            , new_pp_id
+                            , new_pp_isoptimal
+                            , discovery_address
+                            , deviceId
+                            , new_pp_ttl
+                            , new_pp_ts
                             )
                             
             #keep track of us opt_pp_id & bid_pp_id
@@ -565,14 +565,14 @@ def volttronbridge(config_path, **kwargs):
             #post to bus
             _log.debug('post the new price point from us to the local-us-bus')
             pubTopic =  pricePoint_topic_us
-            pubMsg = [new_pp \
-                        , new_pp_datatype \
-                        , new_pp_id \
-                        , new_pp_isoptimal \
-                        , discovery_address \
-                        , deviceId \
-                        , new_pp_ttl \
-                        , new_pp_ts \
+            pubMsg = [new_pp
+                        , new_pp_datatype
+                        , new_pp_id
+                        , new_pp_isoptimal
+                        , discovery_address
+                        , deviceId
+                        , new_pp_ttl
+                        , new_pp_ts
                         ]
             ispace_utils.publish_to_bus(self, pubTopic, pubMsg)
             return True
@@ -589,15 +589,15 @@ def volttronbridge(config_path, **kwargs):
                             , ed_ts
                             ):
             
-            ispace_utils.print_ed(self, new_ed \
-                , ed_datatype \
-                , ed_pp_id \
-                , ed_isoptimal \
-                , discovery_address \
-                , deviceId \
+            ispace_utils.print_ed(self, new_ed
+                , ed_datatype
+                , ed_pp_id
+                , ed_isoptimal
+                , discovery_address
+                , deviceId
                 , ed_duration
-                , ed_ttl \
-                , ed_ts \
+                , ed_ttl
+                , ed_ts
                 )
                 
             if discovery_address in self._ds_voltBr:

@@ -75,21 +75,21 @@ def smarthubui_clnt(config_path, **kwargs):
             return
         
         def _configGetPoints(self):
-            self.topic_price_point              = config.get('topic_price_point', \
+            self.topic_price_point              = config.get('topic_price_point',
                                                             'smarthub/pricepoint')
-            self.topic_sensorsLevelAll_point    = config.get('sensorsLevelAll_point', \
+            self.topic_sensorsLevelAll_point    = config.get('sensorsLevelAll_point',
                                                             'smarthub/sensors/all')
-            self.topic_ledState_point           = config.get('ledState_point', \
+            self.topic_ledState_point           = config.get('ledState_point',
                                                             'smarthub/ledstate')    
-            self.topic_fanState_point           = config.get('fanState_point', \
+            self.topic_fanState_point           = config.get('fanState_point',
                                                             'smarthub/fanstate')    
-            self.topic_ledLevel_point           = config.get('ledLevel_point', \
+            self.topic_ledLevel_point           = config.get('ledLevel_point',
                                                             'smarthub/ledlevel')    
-            self.topic_fanLevel_point           = config.get('fanLevel_point', \
+            self.topic_fanLevel_point           = config.get('fanLevel_point',
                                                             'smarthub/fanlevel')
-            self.topic_ledThPP_point            = config.get('ledThPP_point', \
+            self.topic_ledThPP_point            = config.get('ledThPP_point',
                                                             'smarthub/ledthpp')    
-            self.topic_fanThPP_point            = config.get('fanThPP_point', \
+            self.topic_fanThPP_point            = config.get('fanThPP_point',
                                                             'smarthub/fanthpp')
             return
             
@@ -166,11 +166,11 @@ def smarthubui_clnt(config_path, **kwargs):
             co2Level   = message[0]['co2level']
             pirLevel   = message[0]['pirlevel']
             self.do_rpc('shSensorsData', {\
-                                            'luxLevel': luxLevel, \
-                                            'rhLevel':  rhLevel, \
-                                            'tempLevel': tempLevel, \
-                                            'co2Level': co2Level, \
-                                            'pirLevel': pirLevel \
+                                            'luxLevel': luxLevel,
+                                            'rhLevel':  rhLevel,
+                                            'tempLevel': tempLevel,
+                                            'co2Level': co2Level,
+                                            'pirLevel': pirLevel
                                             })
             return
             

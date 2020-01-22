@@ -193,9 +193,9 @@ class SmartHub(Agent):
         #subscribing to ds energy demand, vb publishes ed from registered ds to this topic
         self.vip.pubsub.subscribe("pubsub", self.energyDemand_topic_ds, self.onDsEd)
         
-        self.vip.rpc.call(MASTER_WEB, 'register_agent_route', \
-                            r'^/SmartHub', \
-#                            self.core.identity, \
+        self.vip.rpc.call(MASTER_WEB, 'register_agent_route',
+                            r'^/SmartHub',
+#                            self.core.identity,
                             "rpc_from_net").get(timeout=30)
         self._voltState = 1
         
@@ -210,8 +210,8 @@ class SmartHub(Agent):
             self._stopVolt()
         
         _log.debug('un registering rpc routes')
-        self.vip.rpc.call(MASTER_WEB, \
-#                            self.core.identity, \
+        self.vip.rpc.call(MASTER_WEB,
+#                            self.core.identity,
                             'unregister_all_agent_routes').get(timeout=30)
         return
     @Core.receiver('onfinish')
@@ -577,25 +577,25 @@ class SmartHub(Agent):
                 #cancel the schedule
                 ispace_utils.cancel_task_schdl(self, task_id)
                 
-                _log.debug("lux Level: " + "{0:0.4f}".format(lux_level) \
-                            + ", rh Level: " + "{0:0.4f}".format(rh_level) \
-                            + ", temp Level: " + "{0:0.4f}".format(temp_level) \
-                            + ", co2 Level: " + "{0:0.4f}".format(co2_level) \
-                            + ", pir Level: " + "{0:d}".format(int(pir_level)) \
+                _log.debug("lux Level: " + "{0:0.4f}".format(lux_level)
+                            + ", rh Level: " + "{0:0.4f}".format(rh_level)
+                            + ", temp Level: " + "{0:0.4f}".format(temp_level)
+                            + ", co2 Level: " + "{0:0.4f}".format(co2_level)
+                            + ", pir Level: " + "{0:d}".format(int(pir_level))
                             )
                 
-                pubMsg = [{'luxlevel':lux_level, \
-                            'rhlevel':rh_level, \
-                            'templevel':temp_level, \
-                            'co2level': co2_level, \
-                            'pirlevel': pir_level \
-                            }, \
-                            {'luxlevel':{'units': 'lux', 'tz': 'UTC', 'type': 'float'}, \
+                pubMsg = [{'luxlevel':lux_level,
+                            'rhlevel':rh_level,
+                            'templevel':temp_level,
+                            'co2level': co2_level,
+                            'pirlevel': pir_level
+                            },
+                            {'luxlevel':{'units': 'lux', 'tz': 'UTC', 'type': 'float'},
                                 'rhlevel':{'units': 'cent', 'tz': 'UTC', 'type': 'float'},
-                                'templevel':{'units': 'degree', 'tz': 'UTC', 'type': 'float'}, \
-                                'co2level':{'units': 'ppm', 'tz': 'UTC', 'type': 'float'}, \
-                                'pirlevel':{'units': 'bool', 'tz': 'UTC', 'type': 'int'} \
-                            } \
+                                'templevel':{'units': 'degree', 'tz': 'UTC', 'type': 'float'},
+                                'co2level':{'units': 'ppm', 'tz': 'UTC', 'type': 'float'},
+                                'pirlevel':{'units': 'bool', 'tz': 'UTC', 'type': 'int'}
+                            }
                             ]
                 ispace_utils.publish_to_bus(self, pubTopic, pubMsg)
         
@@ -615,7 +615,7 @@ class SmartHub(Agent):
         state_fan = self._shDevicesState[SH_DEVICE_FAN]
         self._publishShDeviceState(SH_DEVICE_LED, state_led)
         self._publishShDeviceState(SH_DEVICE_FAN, state_fan)
-        _log.debug("led state: " + "{0:0.4f}".format(float(state_led)) \
+        _log.debug("led state: " + "{0:0.4f}".format(float(state_led))
                     + ", fan state: " + "{0:0.4f}".format(float(state_fan)))
         return
         
@@ -625,7 +625,7 @@ class SmartHub(Agent):
         level_fan = self._shDevicesLevel[SH_DEVICE_FAN]
         self._publishShDeviceLevel(SH_DEVICE_LED, level_led)
         self._publishShDeviceLevel(SH_DEVICE_FAN, level_fan)
-        _log.debug("led level: " + "{0:0.4f}".format(float(level_led)) \
+        _log.debug("led level: " + "{0:0.4f}".format(float(level_led))
                     + ", fan level: " + "{0:0.4f}".format(float(level_fan)))
         return
         
@@ -635,7 +635,7 @@ class SmartHub(Agent):
         thpp_fan = self._shDevicesPP_th[SH_DEVICE_FAN]
         self._publishShDeviceThPP(SH_DEVICE_LED, thpp_led)
         self._publishShDeviceThPP(SH_DEVICE_FAN, thpp_fan)
-        _log.debug("led th pp: " + "{0:0.4f}".format(float(thpp_led)) \
+        _log.debug("led th pp: " + "{0:0.4f}".format(float(thpp_led))
                     + ", fan th pp: " + "{0:0.4f}".format(float(thpp_fan)))
         return
         
@@ -705,15 +705,15 @@ class SmartHub(Agent):
         _log.info( "New Bid TED: {0:.2f}, publishing to bus.".format(self._bid_ted))
         pubTopic = self.energyDemand_topic
         #_log.debug("Bid TED pubTopic: " + pubTopic)
-        pubMsg = [self._bid_ted \
-                    , {'units': 'W', 'tz': 'UTC', 'type': 'float'} \
-                    , self._bid_pp_id \
-                    , False \
-                    , None \
-                    , None \
-                    , None \
-                    , self._bid_pp_ttl \
-                    , self._bid_pp_ts \
+        pubMsg = [self._bid_ted
+                    , {'units': 'W', 'tz': 'UTC', 'type': 'float'}
+                    , self._bid_pp_id
+                    , False
+                    , None
+                    , None
+                    , None
+                    , self._bid_pp_ttl
+                    , self._bid_pp_ts
                     ]
         ispace_utils.publish_to_bus(self, pubTopic, pubMsg)
         return
@@ -752,10 +752,10 @@ class SmartHub(Agent):
         shDevicesPP_th = self._shDevicesPP_th[deviceId]
         if self._price_point_new > shDevicesPP_th: 
             if self._shDevicesState[deviceId] == SH_DEVICE_STATE_ON:
-                _log.info(self._getEndPoint(deviceId, AT_GET_STATE) \
-                            + 'Current price point > threshold' \
-                            + '({0:.2f}), '.format(shDevicesPP_th) \
-                            + 'Switching-Off Power' \
+                _log.info(self._getEndPoint(deviceId, AT_GET_STATE)
+                            + 'Current price point > threshold'
+                            + '({0:.2f}), '.format(shDevicesPP_th)
+                            + 'Switching-Off Power'
                             )
                 self.setShDeviceState(deviceId, SH_DEVICE_STATE_OFF, schdExist)
                 if not self._shDevicesState[deviceId] == SH_DEVICE_STATE_OFF:
@@ -763,10 +763,10 @@ class SmartHub(Agent):
             #else:
                 #do nothing
         else:
-            _log.info(self._getEndPoint(deviceId, AT_GET_STATE) \
-                        + 'Current price point <= threshold' \
-                        + '({0:.2f}), '.format(shDevicesPP_th) \
-                        + 'Switching-On Power' \
+            _log.info(self._getEndPoint(deviceId, AT_GET_STATE)
+                        + 'Current price point <= threshold'
+                        + '({0:.2f}), '.format(shDevicesPP_th)
+                        + 'Switching-On Power'
                         )
             self.setShDeviceState(deviceId, SH_DEVICE_STATE_ON, schdExist)
             if not self._shDevicesState[deviceId] == SH_DEVICE_STATE_ON:
@@ -999,9 +999,9 @@ class SmartHub(Agent):
                 return "SensorCO2"
             elif deviceId == SH_DEVICE_S_PIR :
                 return "SensorOccupancy"
-        elif actionType in [ \
-                            AT_GET_STATE, \
-                            AT_SET_STATE \
+        elif actionType in [
+                            AT_GET_STATE,
+                            AT_SET_STATE
                             ]:
             if deviceId == SH_DEVICE_LED_DEBUG:
                 return "LEDDebug"
@@ -1015,76 +1015,76 @@ class SmartHub(Agent):
         
     def _validDeviceAction(self, deviceId, actionType):
         #_log.debug('_validDeviceAction()')
-        if actionType not in [ \
-                                AT_GET_STATE, \
-                                AT_GET_LEVEL, \
-                                AT_SET_STATE, \
-                                AT_SET_LEVEL, \
-                                AT_PUB_LEVEL, \
-                                AT_PUB_STATE, \
-                                AT_GET_THPP, \
-                                AT_SET_THPP, \
-                                AT_PUB_THPP \
+        if actionType not in [
+                                AT_GET_STATE,
+                                AT_GET_LEVEL,
+                                AT_SET_STATE,
+                                AT_SET_LEVEL,
+                                AT_PUB_LEVEL,
+                                AT_PUB_STATE,
+                                AT_GET_THPP,
+                                AT_SET_THPP,
+                                AT_PUB_THPP
                                 ]:
             return False
         
         if actionType == AT_GET_STATE :
-            if deviceId in [ \
-                            SH_DEVICE_LED_DEBUG, \
-                            SH_DEVICE_LED, \
-                            SH_DEVICE_FAN \
+            if deviceId in [
+                            SH_DEVICE_LED_DEBUG,
+                            SH_DEVICE_LED,
+                            SH_DEVICE_FAN
                             ]:
                 return True
         elif actionType ==  AT_GET_LEVEL :
-            if deviceId in [ \
-                            SH_DEVICE_LED, \
-                            SH_DEVICE_FAN, \
-                            SH_DEVICE_S_LUX, \
-                            SH_DEVICE_S_RH, \
-                            SH_DEVICE_S_TEMP, \
-                            SH_DEVICE_S_CO2, \
-                            SH_DEVICE_S_PIR \
+            if deviceId in [
+                            SH_DEVICE_LED,
+                            SH_DEVICE_FAN,
+                            SH_DEVICE_S_LUX,
+                            SH_DEVICE_S_RH,
+                            SH_DEVICE_S_TEMP,
+                            SH_DEVICE_S_CO2,
+                            SH_DEVICE_S_PIR
                             ]:
                 return True
         elif actionType == AT_SET_STATE :
-            if deviceId in [ \
-                            SH_DEVICE_LED_DEBUG, \
-                            SH_DEVICE_LED, \
-                            SH_DEVICE_FAN \
+            if deviceId in [
+                            SH_DEVICE_LED_DEBUG,
+                            SH_DEVICE_LED,
+                            SH_DEVICE_FAN
                             ]:
                 return True
         elif actionType == AT_SET_LEVEL :
-            if deviceId in [ \
-                            SH_DEVICE_LED, \
-                            SH_DEVICE_FAN \
+            if deviceId in [
+                            SH_DEVICE_LED,
+                            SH_DEVICE_FAN
                             ]:
                 return True
         elif actionType == AT_PUB_LEVEL :
-            if deviceId in [ \
-                            SH_DEVICE_LED, \
-                            SH_DEVICE_FAN, \
-                            SH_DEVICE_S_LUX, \
-                            SH_DEVICE_S_RH, \
-                            SH_DEVICE_S_TEMP, \
-                            SH_DEVICE_S_CO2, \
-                            SH_DEVICE_S_PIR \
+            if deviceId in [
+                            SH_DEVICE_LED,
+                            SH_DEVICE_FAN,
+                            SH_DEVICE_S_LUX,
+                            SH_DEVICE_S_RH,
+                            SH_DEVICE_S_TEMP,
+                            SH_DEVICE_S_CO2,
+                            SH_DEVICE_S_PIR
                             ]:
                 return True
         elif actionType == AT_PUB_STATE :
-            if deviceId in [ \
-                            SH_DEVICE_LED_DEBUG, \
-                            SH_DEVICE_LED, \
-                            SH_DEVICE_FAN \
+            if deviceId in [
+                            SH_DEVICE_LED_DEBUG,
+                            SH_DEVICE_LED,
+                            SH_DEVICE_FAN
                             ]:
                 return True
-        elif actionType in [ \
-                            AT_GET_THPP, \
-                            AT_SET_THPP, \
+        elif actionType in [
+                            AT_GET_THPP,
+                            AT_SET_THPP,
                             AT_PUB_THPP
                             ] :
-            if deviceId in [ \
-                            SH_DEVICE_LED, \
-                            SH_DEVICE_FAN \
+            if deviceId in [
+                            SH_DEVICE_LED,
+                            SH_DEVICE_FAN
                             ]:
                 return True
         log.exception ("Expection: not a vaild device-action")
@@ -1169,14 +1169,14 @@ class SmartHub(Agent):
         _log.info( "New TED: {0:.2f}, publishing to bus.".format(self._ted))
         pubTopic = self.energyDemand_topic
         #_log.debug("TED pubTopic: " + pubTopic)
-        pubMsg = [self._ted \
-                    , {'units': 'W', 'tz': 'UTC', 'type': 'float'} \
-                    , self._pp_id \
-                    , True \
-                    , None \
-                    , None \
-                    , None \
-                    , self._period_read_data \
+        pubMsg = [self._ted
+                    , {'units': 'W', 'tz': 'UTC', 'type': 'float'}
+                    , self._pp_id
+                    , True
+                    , None
+                    , None
+                    , None
+                    , self._period_read_data
                     , datetime.datetime.utcnow().isoformat(' ') + 'Z'
                     ]
         ispace_utils.publish_to_bus(self, pubTopic, pubMsg)
@@ -1187,7 +1187,7 @@ class SmartHub(Agent):
             message = compat.unpack_legacy_message(headers, message)
             message = compat.unpack_legacy_message(headers, message)
             
-        _log.debug('New ed from ds, topic: ' + topic + \
+        _log.debug('New ed from ds, topic: ' + topic +
                     ' & ed: {0:.4f}'.format(message[ParamED.idx_ed]))
         ispace_utils.print_ed_msg(message)
         

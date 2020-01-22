@@ -306,17 +306,17 @@ class SmartStrip(Agent):
         try:
             fVolatge = self.vip.rpc.call(
                     'platform.actuator','get_point',
-                    'iiit/cbs/smartstrip/' + \
+                    'iiit/cbs/smartstrip/' +
                     pointVolatge).get(timeout=10)
             #_log.debug('voltage: {0:.2f}'.format(fVolatge))
             fCurrent = self.vip.rpc.call(
                     'platform.actuator','get_point',
-                    ('iiit/cbs/smartstrip/' + \
+                    ('iiit/cbs/smartstrip/' +
                     pointCurrent)).get(timeout=10)
             #_log.debug('current: {0:.2f}'.format(fCurrent))
             fActivePower = self.vip.rpc.call(
                     'platform.actuator','get_point',
-                    'iiit/cbs/smartstrip/' + \
+                    'iiit/cbs/smartstrip/' +
                     pointActivePower).get(timeout=10)
             #_log.debug('active: {0:.2f}'.format(fActivePower))
             
@@ -454,8 +454,8 @@ class SmartStrip(Agent):
             #no device connected condition, new tag id is DEFAULT_TAG_ID
             if self._plugConnected[plugID] == 0:
                 return
-            elif self._plugConnected[plugID] == 1 or \
-                    newTagId != self._plug_tag_id[plugID] or \
+            elif self._plugConnected[plugID] == 1 or
+                    newTagId != self._plug_tag_id[plugID] or
                     self._plugRelayState[plugID] == RELAY_ON :
                 #update the tag id and change connected state
                 self._plug_tag_id[plugID] = newTagId
@@ -831,15 +831,15 @@ class SmartStrip(Agent):
         _log.info( "New Bid TED: {0:.2f}, publishing to bus.".format(self._bid_ted))
         pubTopic = self.energyDemand_topic
         #_log.debug("Bid TED pubTopic: " + pubTopic)
-        pubMsg = [self._bid_ted \
-                    , {'units': 'W', 'tz': 'UTC', 'type': 'float'} \
-                    , self._bid_pp_id \
-                    , False \
-                    , None \
-                    , None \
-                    , None \
-                    , self._bid_pp_ttl \
-                    , self._bid_pp_ts \
+        pubMsg = [self._bid_ted
+                    , {'units': 'W', 'tz': 'UTC', 'type': 'float'}
+                    , self._bid_pp_id
+                    , False
+                    , None
+                    , None
+                    , None
+                    , self._bid_pp_ttl
+                    , self._bid_pp_ts
                     ]
         ispace_utils.publish_to_bus(self, pubTopic, pubMsg)
         return
@@ -858,14 +858,14 @@ class SmartStrip(Agent):
         _log.info( "New TED: {0:.2f}, publishing to bus.".format(self._ted))
         pubTopic = self.energyDemand_topic
         #_log.debug("TED pubTopic: " + pubTopic)
-        pubMsg = [self._ted \
-                    , {'units': 'W', 'tz': 'UTC', 'type': 'float'} \
-                    , self._pp_id \
-                    , True \
-                    , None \
-                    , None \
-                    , None \
-                    , self._period_read_data \
+        pubMsg = [self._ted
+                    , {'units': 'W', 'tz': 'UTC', 'type': 'float'}
+                    , self._pp_id
+                    , True
+                    , None
+                    , None
+                    , None
+                    , self._period_read_data
                     , datetime.datetime.utcnow().isoformat(' ') + 'Z'
                     ]
         ispace_utils.publish_to_bus(self, pubTopic, pubMsg)

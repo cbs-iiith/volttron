@@ -424,14 +424,14 @@ class RadiantCubicle(Agent):
         _log.info( "New TED: {0:.2f}, publishing to bus.".format(self._ted))
         pubTopic = self.energyDemand_topic + "/" + self._deviceId
         #_log.debug("TED pubTopic: " + pubTopic)
-        pubMsg = [self._ted \
-                    , {'units': 'W', 'tz': 'UTC', 'type': 'float'} \
-                    , self._pp_id \
-                    , True \
-                    , None \
-                    , self._deviceId \
-                    , None \
-                    , self._period_read_data \
+        pubMsg = [self._ted
+                    , {'units': 'W', 'tz': 'UTC', 'type': 'float'}
+                    , self._pp_id
+                    , True
+                    , None
+                    , self._deviceId
+                    , None
+                    , self._period_read_data
                     , datetime.datetime.utcnow().isoformat(' ') + 'Z'
                     ]
         ispace_utils.publish_to_bus(self, pubTopic, pubMsg)
