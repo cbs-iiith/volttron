@@ -32,8 +32,9 @@ class ParamPP(IntEnum):
     idx_pp_isoptimal        = 3
     idx_pp_discovery_addrs  = 4
     idx_pp_device_id        = 5
-    idx_pp_ttl              = 6
-    idx_pp_ts               = 7
+    idx_pp_duration         = 6
+    idx_pp_ttl              = 7
+    idx_pp_ts               = 8
     
 class ParamED(IntEnum):
     idx_ed                  = 0
@@ -42,7 +43,7 @@ class ParamED(IntEnum):
     idx_ed_isoptimal        = 3
     idx_ed_discovery_addrs  = 4
     idx_ed_device_id        = 5
-    idx_ed_no_of_devices    = 6
+    idx_ed_duration         = 6
     idx_ed_ttl              = 7
     idx_ed_ts               = 8
     
@@ -52,23 +53,25 @@ def ttl_timeout(self, str_ts, ttl):
         ttl_timeout = True if (_now - _ts) > ttl else False
         return ttl_timeout
         
-def print_pp(self, new_pp \
-                    , pp_datatype \
-                    , pp_id \
-                    , pp_isoptimal \
-                    , discovery_address \
-                    , deviceId \
-                    , pp_ttl \
+def print_pp(self, new_pp
+                    , pp_datatype
+                    , pp_id
+                    , pp_isoptimal
+                    , discovery_address
+                    , deviceId
+                    , pp_duration
+                    , pp_ttl
                     , pp_ts
                     ):
-    _log.info("New PP: {0:.2f}".format(new_pp) \
-                    #+ ", pp_datatype: " + str(pp_datatype) \
-                    + ", pp_id: " + str(pp_id) \
-                    + ", pp_isoptimal: " + str(pp_isoptimal) \
-                    + ", discovery_address: " + str(discovery_address) \
-                    + ", deviceId: " + str(deviceId) \
-                    + ", pp_ttl: " + str(pp_ttl) \
-                    + ", pp_ts: " + str(pp_ts) \
+    _log.info("New PP: {0:.2f}".format(new_pp)
+                    #+ ", pp_datatype: " + str(pp_datatype)
+                    + ", pp_id: " + str(pp_id)
+                    + ", pp_isoptimal: " + str(pp_isoptimal)
+                    + ", discovery_address: " + str(discovery_address)
+                    + ", deviceId: " + str(deviceId)
+                    + ", pp_duration: " + str(pp_duration)
+                    + ", pp_ttl: " + str(pp_ttl)
+                    + ", pp_ts: " + str(pp_ts)
                 )
     return
     
@@ -84,25 +87,26 @@ def print_pp_msg(self, message):
             )
     return
     
-def print_ed(self, new_ed \
-                    , ed_datatype \
-                    , ed_pp_id \
-                    , ed_isoptimal \
-                    , ed_discovery_addrs \
-                    , ed_device_id \
-                    , ed_no_of_devices \
-                    , ed_ttl \
-                    , ed_ts \
+def print_ed(self, new_ed
+                    , ed_datatype
+                    , ed_pp_id
+                    , ed_isoptimal
+                    , ed_discovery_addrs
+                    , ed_device_id
+                    , ed_no_of_devices
+                    , ed_ttl
+                    , ed_ts
                     ):
-    _log.info("New ED: {0:.2f}".format(new_ed) \
-                    #+ ", ed_datatype: " +str(ed_datatype) \
-                    + ", ed_pp_id: " +str(ed_pp_id) \
-                    + ", ed_isoptimal: " +str(ed_isoptimal) \
-                    + ", ed_discovery_addrs: " +str(ed_discovery_addrs) \
-                    + ", ed_device_id: " +str(ed_device_id) \
-                    + ", ed_no_of_devices: " +str(ed_no_of_devices) \
-                    + ", ed_ttl: " +str(ed_ttl) \
-                    + ", ed_ts: " +str(ed_ts) \
+    _log.info("New ED: {0:.2f}".format(new_ed)
+                    #+ ", ed_datatype: " +str(ed_datatype)
+                    + ", ed_pp_id: " +str(ed_pp_id)
+                    + ", ed_isoptimal: " +str(ed_isoptimal)
+                    + ", ed_discovery_addrs: " +str(ed_discovery_addrs)
+                    + ", ed_device_id: " +str(ed_device_id)
+                    + ", ed_no_of_devices: " +str(ed_no_of_devices)
+                    + ", ed_duration: " + str(ed_duration)
+                    + ", ed_ttl: " +str(ed_ttl)
+                    + ", ed_ts: " +str(ed_ts)
                 )
     return
     

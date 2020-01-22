@@ -107,6 +107,7 @@ def volttronbridge(config_path, **kwargs):
             self._pp_id                 = randint(0, 99999999)
             self._pp_datatype           = {'units': 'cents', 'tz': 'UTC', 'type': 'float'}
             self._pp_isoptimal          = False
+            self._pp_duration           = 0
             self._pp_ttl                = -1
             self._pp_ts                 = datetime.datetime.utcnow().isoformat(' ') + 'Z'
             self._all_ds_posts_success  = False
@@ -118,7 +119,7 @@ def volttronbridge(config_path, **kwargs):
             self._ed_isoptimal          = True
             self._ed_discovery_addrs    = None
             self._ed_device_id          = None
-            self._ed_no_of_devices      = 0
+            self._ed_duration           = 0
             self._ed_ttl                = -1
             self._ed_ts                 = datetime.datetime.utcnow().isoformat(' ') + 'Z'
             self._all_us_posts_success  = False
@@ -577,17 +578,16 @@ def volttronbridge(config_path, **kwargs):
             return True
             
         #post the new energy demand from ds to the local bus
-        def _post_ed(self, discovery_address \
-                            , deviceId \
-                            , new_ed \
-                            , ed_datatype \
-                            , ed_pp_id \
-                            , ed_isoptimal \
-                            , ed_ttl \
-                            , ed_ts \
-                            , ed_no_of_devices = None\
+        def _post_ed(self, discovery_address
+                            , deviceId
+                            , new_ed
+                            , ed_datatype
+                            , ed_pp_id
+                            , ed_isoptimal
+                            , ed_duration
+                            , ed_ttl
+                            , ed_ts
                             ):
-            no_of_device = ed_no_of_devices if not None else len(self._ds_deviceId)
             
             print_ed(self, new_ed \
                 , ed_datatype \
@@ -595,7 +595,7 @@ def volttronbridge(config_path, **kwargs):
                 , ed_isoptimal \
                 , discovery_address \
                 , deviceId \
-                , no_of_device \
+                , ed_duration
                 , ed_ttl \
                 , ed_ts \
                 )
@@ -605,15 +605,15 @@ def volttronbridge(config_path, **kwargs):
                 if self._ds_deviceId[index] == deviceId:
                     #post to bus
                     pubTopic = energyDemand_topic_ds + "/" + deviceId
-                    pubMsg = [new_ed \
-                                , ed_datatype \
-                                , ed_pp_id \
-                                , ed_isoptimal \
-                                , discovery_address \
-                                , deviceId \
-                                , no_of_device \
-                                , ed_ttl \
-                                , ed_ts \
+                    pubMsg = [new_ed
+                                , ed_datatype
+                                , ed_pp_id
+                                , ed_isoptimal
+                                , discovery_address
+                                , deviceId
+                                , ed_duration
+                                , ed_ttl
+                                , ed_ts
                                 ]
                     publish_to_bus(self, pubTopic, pubMsg)
                     self._ds_retrycount[index] = 0
