@@ -80,9 +80,9 @@ AT_GET_THPP = 327
 AT_SET_THPP = 328
 AT_PUB_THPP = 329
 
-SMARTHUB_BASE_ENERGY = 10.0
-SMARTHUB_FAN_ENERGY = 8.0
-SMARTHUB_LED_ENERGY = 10.0
+SMARTHUB_BASE_ENERGY = 1.2      #kWh (10 watts @30sec interval observed during physical verification)
+SMARTHUB_FAN_ENERGY = 0.96      #kWh (08 watts @30sec interval observed during physical verification)
+SMARTHUB_LED_ENERGY = 1.2       #kWh (10 watts @30sec interval observed during physical verification)
 
 def smarthub(config_path, **kwargs):
     config = utils.load_config(config_path)
@@ -637,11 +637,20 @@ class SmartHub(Agent):
                     + ", fan th pp: " + "{0:0.4f}".format(float(thpp_fan)))
         return
         
+    #this function is called only once on smarthub startup
     def publishCurrentPP(self):
         #_log.debug('publishCurrentPP()')
         _log.debug("current price point: " + "{0:0.4f}".format(float(self._price_point_new)))
-                    
-        pubMsg = [self._price_point_new, {'units': 'cent', 'tz': 'UTC', 'type': 'float'}]
+        pubMsg = [self._price_point_new
+                    , {'units': 'cent', 'tz': 'UTC', 'type': 'float'}
+                    , randint(0, 99999999)
+                    , True
+                    , None
+                    , None
+                    , 3600
+                    , 120
+                    , datetime.datetime.utcnow().isoformat(' ') + 'Z'
+                    ]
         ispace_utils.publish_to_bus(self, self.topic_price_point, pubMsg)
         return
         
@@ -668,6 +677,7 @@ class SmartHub(Agent):
         self._bid_pp = message[ParamPP.idx_pp]
         self._bid_pp_datatype = message[ParamPP.idx_pp_datatype]
         self._bid_pp_id = message[ParamPP.idx_pp_id]
+        self._bid_pp_duration = message[ParamPP.idx_pp_duration]
         self._bid_pp_ttl = message[ParamPP.idx_pp_ttl]
         self._bid_pp_ts = message[ParamPP.idx_pp_ts]
         self._bid_ed = 0        #reset bid_ed to zero on new bid_pp
@@ -680,7 +690,7 @@ class SmartHub(Agent):
         if self._bid_ed_published:
             return
         if self._bid_ed == 0:
-            self._bid_ed = self.local_bid_ed(self._bid_pp)
+            self._bid_ed = self._local_bid_ed(self._bid_pp, self._bid_pp_duration)
         
         ds_devices = self.vip.rpc.call(self.vb_vip_identity, 'count_ds_devices').get(timeout=10)
         rcvd_all_ds_bid_ed = True if ds_devices == len(self._ds_bid_ed) else False
@@ -709,7 +719,7 @@ class SmartHub(Agent):
                     , False
                     , None
                     , None
-                    , None
+                    , self._bid_pp_duration
                     , self._bid_pp_ttl
                     , self._bid_pp_ts
                     ]
@@ -1128,26 +1138,50 @@ class SmartHub(Agent):
             print(e)
             return jsonrpc.json_error('NA', UNHANDLED_EXCEPTION, e)
             
-    #calculate the local energy demand
-    def _calculateLocalEd(self):
-        #_log.debug('_calculateLocalEd()')
-        
+    #calculate the local energy demand for opt_pp
+    def _local_opt_ed(self):
+        pp_duration = self._period_read_data
+        # TODO:
+        # ed should be measured in realtime from connected plug
+        # however, since we don't have model for the battery charge controller
+        # we are using below algo based on experimental data
         ed = SMARTHUB_BASE_ENERGY
         if self._shDevicesState[SH_DEVICE_LED] == SH_DEVICE_STATE_ON:
-            ed = ed + (SMARTHUB_LED_ENERGY * self._shDevicesLevel[SH_DEVICE_LED])
+            level_led = self._shDevicesLevel[SH_DEVICE_LED]
+            ed = ed + (SMARTHUB_LED_ENERGY * 0.30 * (3600 / pp_duration) ) 
+                        if level_led < 0.30
+                        else (SMARTHUB_LED_ENERGY * level_led * (3600 / pp_duration) )
+                        
         if self._shDevicesState[SH_DEVICE_FAN] == SH_DEVICE_STATE_ON:
-            ed = ed + (SMARTHUB_FAN_ENERGY * self._shDevicesLevel[SH_DEVICE_FAN])
-    
+            level_fan = self._shDevicesLevel[SH_DEVICE_FAN]
+            ed = ed + (SMARTHUB_FAN_ENERGY * 0.30 * (3600 / pp_duration) )
+                        if level_fan < 0.30
+                        else (SMARTHUB_FAN_ENERGY * level_fan * (3600 / pp_duration) )
+                        
         return ed
-    
+        
+    #calculate the local energy demand for bid_pp
+    def _local_bid_ed(self, bid_pp, pp_duration):
+        ed = SMARTHUB_BASE_ENERGY
+        if bid_pp <= self._shDevicesPP_th[SH_DEVICE_LED]:
+            level_led = get_led_level(bid_pp)
+            ed = ed + (SMARTHUB_LED_ENERGY * 0.30 * (3600 / pp_duration) ) 
+                        if level_led < 0.30
+                        else (SMARTHUB_LED_ENERGY * level_led * (3600 / pp_duration) )
+                        
+        if bid_pp <= self._shDevicesPP_th[SH_DEVICE_FAN]:
+            level_fan = get_fan_level(bid_pp)
+            ed = ed + (SMARTHUB_FAN_ENERGY * 0.30 * (3600 / pp_duration) )
+                        if level_fan < 0.30
+                        else (SMARTHUB_FAN_ENERGY * level_fan * (3600 / pp_duration) )
+                        
+        return ed
+        
     #calculate the total energy demand (TED)
     def _calculateTed(self):
-        #_log.debug('_calculateTed()')
-        
-        ted = self._calculateLocalEd()
+        ted = self._local_opt_ed()
         for ed in self._ds_ed:
             ted = ted + ed
-        
         return ted
         
     def publish_ted(self):

@@ -104,7 +104,7 @@ def ss_sh_device(config_path, **kwargs):
             self.hub_ping_count = 0
             self.core.periodic(self.period_read, self._pingSmartHub, wait=None)
             self.core.periodic(self.period_read, self._monitorShBattery, wait=None)
-            self.vip.pubsub.subscribe("pubsub", self.ss_pp_topic, self._onNewPrice)
+            self.vip.pubsub.subscribe("pubsub", self.ss_pp_topic, self.onNewPrice)
             return
             
         @Core.receiver('onstop')
@@ -121,7 +121,7 @@ def ss_sh_device(config_path, **kwargs):
             self.ss_pp_topic = config.get("ss_pp_topic", "smartstrip/pricepoint")
             return
             
-        def _onNewPrice(self, peer, sender, bus,  topic, headers, message):
+        def onNewPrice(self, peer, sender, bus,  topic, headers, message):
             new_price_point = message[0]
             if self._price_point == new_price_point:
                 return
