@@ -1164,13 +1164,13 @@ class SmartHub(Agent):
     def _local_bid_ed(self, bid_pp, pp_duration):
         ed = SMARTHUB_BASE_ENERGY
         if bid_pp <= self._shDevicesPP_th[SH_DEVICE_LED]:
-            level_led = get_led_level(bid_pp)
+            level_led = self._shDevicesLevel[SH_DEVICE_LED]
             ed = ed + (SMARTHUB_LED_ENERGY * 0.30 * (3600 / pp_duration) ) 
                         if level_led < 0.30
                         else (SMARTHUB_LED_ENERGY * level_led * (3600 / pp_duration) )
                         
         if bid_pp <= self._shDevicesPP_th[SH_DEVICE_FAN]:
-            level_fan = get_fan_level(bid_pp)
+            level_fan = self.getNewFanSpeed(bid_pp)/100
             ed = ed + (SMARTHUB_FAN_ENERGY * 0.30 * (3600 / pp_duration) )
                         if level_fan < 0.30
                         else (SMARTHUB_FAN_ENERGY * level_fan * (3600 / pp_duration) )
