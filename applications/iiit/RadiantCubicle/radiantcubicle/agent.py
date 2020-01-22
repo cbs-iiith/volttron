@@ -111,7 +111,7 @@ class RadiantCubicle(Agent):
         self.core.periodic(self._period_process_pp, self.processNewPricePoint, wait=None)
         
         #subscribing to topic_price_point
-        self.vip.pubsub.subscribe("pubsub", self.topic_price_point, self.onNewPrice)
+        self.vip.pubsub.subscribe("pubsub", self.topic_price_point, self.on_new_price)
         
         self.vip.rpc.call(MASTER_WEB, 'register_agent_route'
                             , r'^/RadiantCubicle'
@@ -185,7 +185,7 @@ class RadiantCubicle(Agent):
         _log.debug("EOF Testing")
         return
         
-    def onNewPrice(self, peer, sender, bus,  topic, headers, message):
+    def on_new_price(self, peer, sender, bus,  topic, headers, message):
         if sender == 'pubsub.compat':
             message = compat.unpack_legacy_message(headers, message)
             

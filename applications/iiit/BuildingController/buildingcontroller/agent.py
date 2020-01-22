@@ -110,7 +110,7 @@ class BuildingController(Agent):
         self.core.periodic(self._period_process_pp, self.processNewPricePoint, wait=None)
         
         #subscribing to topic_price_point
-        self.vip.pubsub.subscribe("pubsub", self.topic_price_point, self.onNewPrice)
+        self.vip.pubsub.subscribe("pubsub", self.topic_price_point, self.on_new_price)
         
         #subscribing to ds energy demand, vb publishes ed from registered ds to this topic
         self.vip.pubsub.subscribe("pubsub", self.energyDemand_topic_ds, self.on_ds_ed)
@@ -170,7 +170,7 @@ class BuildingController(Agent):
         _log.debug("EOF Testing")
         return
         
-    def onNewPrice(self, peer, sender, bus,  topic, headers, message):
+    def on_new_price(self, peer, sender, bus,  topic, headers, message):
         if sender == 'pubsub.compat':
             message = compat.unpack_legacy_message(headers, message)
             
