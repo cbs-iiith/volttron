@@ -231,9 +231,10 @@ class SmartHub(Agent):
         return
 
     def _configGetInitValues(self):
-        self._period_read_data          = self.config.get('period_read_data', 30)
-        self._period_process_pp         = self.config.get('period_process_pp', 10)
-        self._price_point_old       = self.config.get('price_point_latest', 0.2)
+        self._period_read_data = self.config.get('period_read_data', 30)
+        self._period_process_pp = self.config.get('period_process_pp', 10)
+        self._price_point_old = self.config.get('default_base_price', 0.1)
+        self._price_point_new = self.config.get('price_point_latest', 0.2)
         return
         
     def _configGetPoints(self):
