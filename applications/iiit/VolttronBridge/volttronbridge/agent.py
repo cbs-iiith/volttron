@@ -107,7 +107,7 @@ def volttronbridge(config_path, **kwargs):
             self._pp_id = randint(0, 99999999)
             self._pp_datatype = {'units': 'cents', 'tz': 'UTC', 'type': 'float'}
             self._pp_isoptimal = False
-            self._pp_duration = 0
+            self._pp_duration = 3600
             self._pp_ttl = -1
             self._pp_ts = datetime.datetime.utcnow().isoformat(' ') + 'Z'
             self._all_ds_posts_success = False
@@ -264,23 +264,11 @@ def volttronbridge(config_path, **kwargs):
                             , 'deviceId': rpcdata.params['deviceId']
                             , 'new_ed': rpcdata.params['new_ed']
                             , 'ed_datatype': rpcdata.params['ed_datatype']
-                                        if rpcdata.params['ed_datatype'] is not None
-                                        else {'units': 'W', 'tz': 'UTC', 'type': 'float'}
                             , 'ed_pp_id': rpcdata.params['ed_pp_id']
-                                        if rpcdata.params['ed_pp_id'] is not None
-                                        else randint(0, 99999999)
                             , 'ed_isoptimal': rpcdata.params['ed_isoptimal']
-                                        if rpcdata.params['ed_isoptimal'] is not None
-                                        else False
                             , 'ed_duration': rpcdata.params['ed_duration']
-                                        if rpcdata.params['ed_duration'] is not None
-                                        else 3600
                             , 'ed_ttl': rpcdata.params['ed_ttl']
-                                        if rpcdata.params['ed_ttl'] is not None
-                                        else -1
                             , 'ed_ts': rpcdata.params['ed_ts']
-                                        if rpcdata.params['ed_ts'] is not None
-                                        else datetime.datetime.utcnow().isoformat(' ') + 'Z'
                             }
                     #post the new energy demand from ds to the local bus
                     result = self._post_ed(**args)
@@ -336,49 +324,38 @@ def volttronbridge(config_path, **kwargs):
             if self._bridge_host == 'LEVEL_TAILEND':
                 return
                 
-            #post ed to us only if pp_id corresponds to these ids (i.e., ed for either us opt_pp_id or bid_pp_id)
+            #all pp ids are valid
             valid_pp_ids = []
             
-           
+            #mandatory fields in the message
             mandatory_fields = [ParamPP.idx_pp
                                 , ParamPP.idx_pp_datatype
-                                , 
+                                , ParamPP.idx_pp_id
+                                , ParamPP.idx_pp_isoptimal
+                                , ParamPP.idx_pp_duration
+                                , ParamPP.idx_pp_ttl
+                                , ParamPP.idx_pp_ts
                                 ]
-            
+                                
             #check for msg validity, pp_id, timeout, etc., also _log.info(message) if a valid msg
             valid_msg = ispace_utils.sanity_check_pp(message, mandatory_fields, valid_pp_ids)
             if not valid_msg:
                 return
                 
+            #store pp data to global to be retrived later
             self._pp_current = message[ParamPP.idx_pp]
             self._pp_datatype = message[ParamPP.idx_pp_datatype]
-                                    if message[ParamPP.idx_pp_datatype] is not None
-                                    else {'units': 'cents', 'tz': 'UTC', 'type': 'float'}
             self._pp_id = message[ParamPP.idx_pp_id]
-                                    if message[ParamPP.idx_pp_id] is not None
-                                    else randint(0, 99999999)
             self._pp_isoptimal = message[ParamPP.idx_pp_isoptimal]
-                                    if message[ParamPP.idx_pp_isoptimal] is not None
-                                    else False
+            self._pp_duration = message[ParamPP.idx_pp_duration]
             self._pp_ttl = message[ParamPP.idx_pp_ttl]
-                                    if message[ParamPP.idx_pp_ttl] is not None
-                                    else -1
             self._pp_ts = message[ParamPP.idx_pp_ts]
-                                    if message[ParamPP.idx_pp_ts] is not None
-                                    else datetime.datetime.utcnow().isoformat(' ') + 'Z'
-                                    
-            ispace_utils.print_pp(self, self._pp_current
-                , self._pp_datatype
-                , self._pp_id
-                , self._pp_isoptimal
-                , None
-                , None
-                , self._pp_ttl
-                , self._pp_ts
-                )
-                
+            
+            #reset counters & flags
             self._reset_ds_retrycount()
-            self._all_ds_posts_success  = False         #initiate ds post
+            self._all_ds_posts_success  = False
+            
+            #initiate ds post
             self.post_ds_new_pp()
             return
             
@@ -391,6 +368,7 @@ def volttronbridge(config_path, **kwargs):
             #post ed to us only if pp_id corresponds to these ids (i.e., ed for either us opt_pp_id or bid_pp_id)
             valid_pp_ids = [self.us_opt_pp_id, self.us_bid_pp_id]
             
+            #mandatory fields in the message
             mandatory_fields = [ParamPP.idx_ed
                                 , ParamPP.idx_ed_datatype
                                 , ParamPP.idx_ed_pp_id
@@ -406,26 +384,19 @@ def volttronbridge(config_path, **kwargs):
             if not valid_msg:
                 return
                 
-            self._ed_current    = message[ParamED.idx_ed]
-            self._ed_datatype   = message[ParamED.idx_ed_datatype]
-                                    if message[ParamED.idx_ed_datatype] is not None
-                                    else {'units': 'W', 'tz': 'UTC', 'type': 'float'}
-            self._ed_pp_id      = message[ParamED.idx_ed_pp_id]
-                                    if message[ParamED.idx_ed_pp_id] is not None
-                                    else randint(0, 99999999)
-            self._ed_isoptimal  = message[ParamED.idx_ed_isoptimal]
-                                    if message[ParamED.idx_ed_isoptimal] is not None
-                                    else False
-            self._ed_ttl        = message[ParamED.idx_ed_ttl]
-                                    if message[ParamED.idx_ed_ttl] is not None
-                                    else -1
-            self._ed_ts  = message[ParamED.idx_ed_ts]
-                                    if message[ParamED.idx_ed_ts] is not None
-                                    else datetime.datetime.utcnow().isoformat(' ') + 'Z'
-                                    
-            ispace_utils.print_ed_msg(message)
-                            
-            self._all_us_posts_success = False         #initiate us post
+            self._ed_current = message[ParamED.idx_ed]
+            self._ed_datatype = message[ParamED.idx_ed_datatype]
+            self._ed_pp_id = message[ParamED.idx_ed_pp_id]
+            self._ed_isoptimal = message[ParamED.idx_ed_isoptimal]
+            self._ed_duration = message[ParamED.idx_ed_duration]
+            self._ed_ttl = message[ParamED.idx_ed_ttl]
+            self._ed_ts = message[ParamED.idx_ed_ts]
+            
+            #reset counters & flags
+            self._us_retrycount = 0
+            self._all_us_posts_success = False
+            
+            #initiate us post
             self.post_us_new_ed()
             return
             

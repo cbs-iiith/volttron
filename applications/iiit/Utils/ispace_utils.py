@@ -54,7 +54,7 @@ def ttl_timeout(self, str_ts, ttl):
         now = dateutil.parser.parse(datetime.datetime.utcnow().isoformat(' ') + 'Z')
         return True if (now - ts) > ttl else False
         
-def print_pp(self, new_pp
+def print_pp(self, hint, new_pp
                     , pp_datatype
                     , pp_id
                     , pp_isoptimal
@@ -64,20 +64,20 @@ def print_pp(self, new_pp
                     , pp_ttl
                     , pp_ts
                     ):
-    _log.info("New PP: {0:.2f}".format(new_pp)
-                    #+ ", pp_datatype: " + str(pp_datatype)
-                    + ", pp_id: " + str(pp_id)
-                    + ", pp_isoptimal: " + str(pp_isoptimal)
-                    + ", discovery_address: " + str(discovery_address)
-                    + ", deviceId: " + str(deviceId)
-                    + ", pp_duration: " + str(pp_duration)
-                    + ", pp_ttl: " + str(pp_ttl)
-                    + ", pp_ts: " + str(pp_ts)
+    _log.info('New PP ({}): {0:.2f}'.format(hint, new_pp)
+                    #+ ', pp_datatype: ' + str(pp_datatype)
+                    + ', pp_id: ' + str(pp_id)
+                    + ', pp_isoptimal: ' + str(pp_isoptimal)
+                    + ', discovery_address: ' + str(discovery_address)
+                    + ', deviceId: ' + str(deviceId)
+                    + ', pp_duration: ' + str(pp_duration)
+                    + ', pp_ttl: ' + str(pp_ttl)
+                    + ', pp_ts: ' + str(pp_ts)
                     )
     return
     
-def print_pp_msg(self, message):
-    print_pp(message[ParamPP.idx_pp]
+def print_pp_msg(self, message, hint):
+    print_pp(hint, message[ParamPP.idx_pp]
             , message[ParamPP.idx_pp_datatype]
             , message[ParamPP.idx_pp_id]
             , message[ParamPP.idx_pp_isoptimal]
@@ -88,7 +88,7 @@ def print_pp_msg(self, message):
             )
     return
     
-def print_ed(self, new_ed
+def print_ed(self, hint, new_ed
                     , ed_datatype
                     , ed_pp_id
                     , ed_isoptimal
@@ -98,21 +98,21 @@ def print_ed(self, new_ed
                     , ed_ttl
                     , ed_ts
                     ):
-    _log.info("New ED: {0:.2f}".format(new_ed)
-                    #+ ", ed_datatype: " +str(ed_datatype)
-                    + ", ed_pp_id: " +str(ed_pp_id)
-                    + ", ed_isoptimal: " +str(ed_isoptimal)
-                    + ", ed_discovery_addrs: " +str(ed_discovery_addrs)
-                    + ", ed_device_id: " +str(ed_device_id)
-                    + ", ed_no_of_devices: " +str(ed_no_of_devices)
-                    + ", ed_duration: " + str(ed_duration)
-                    + ", ed_ttl: " +str(ed_ttl)
-                    + ", ed_ts: " +str(ed_ts)
+    _log.info('New ED ({}): {0:.2f}'.format(hint, new_ed)
+                    #+ ', ed_datatype: ' + str(ed_datatype)
+                    + ', ed_pp_id: ' + str(ed_pp_id)
+                    + ', ed_isoptimal: ' + str(ed_isoptimal)
+                    + ', ed_discovery_addrs: ' + str(ed_discovery_addrs)
+                    + ', ed_device_id: ' + str(ed_device_id)
+                    + ', ed_no_of_devices: ' + str(ed_no_of_devices)
+                    + ', ed_duration: ' + str(ed_duration)
+                    + ', ed_ttl: ' + str(ed_ttl)
+                    + ', ed_ts: ' + str(ed_ts)
                     )
     return
     
-def print_ed_msg(self, message):
-    print_ed(message[ParamED.idx_ed]
+def print_ed_msg(self, hint, message):
+    print_ed(hint, message[ParamED.idx_ed]
             , message[ParamED.idx_ed_datatype]
             , message[ParamED.idx_ed_pp_id]
             , message[ParamED.idx_ed_isoptimal]
@@ -137,7 +137,7 @@ def valid_msg(message, mandatory_fields = []):
     
 def sanity_check_pp(self, message, mandatory_fields = [], valid_pp_ids = []):
     if not valid_msg(message, mandatory_fields):
-        _log.warning('rcvd a invalid pp msg, message: {}'.format(message) + ', do nothing!!!')
+        _log.warning('rcvd a invalid pp msg, message: {}, do nothing!!!'.format(message))
         return False
         
     #print only if a valid msg
@@ -146,19 +146,19 @@ def sanity_check_pp(self, message, mandatory_fields = [], valid_pp_ids = []):
     #process pp only if pp_id corresponds to these ids (i.e., pp for either opt_pp_id or bid_pp_id)
     if valid_pp_ids != [] and message[ParamPP.idx_pp_id] not in valid_pp_ids:
         _log.debug('pp_id: {}'.format(message[ParamPP.idx_pp_id])
-                    + ' not in valid_pp_ids: {}'.format(valid_pp_ids) + ", do nothing!!!")
+                    + ' not in valid_pp_ids: {}, do nothing!!!'.format(valid_pp_ids))
         return False
         
     #process ed only if msg is alive (didnot timeout)
     if ispace_utils.ttl_timeout(message[ParamPP.idx_pp_ts], message[ParamPP.idx_pp_ttl]):
-        _log.warning("msg timed out, do nothing!!!")
+        _log.warning('msg timed out, do nothing!!!')
         return False
         
     return True
     
 def sanity_check_ed(self, message, mandatory_fields = [], valid_pp_ids = []):
     if not valid_msg(message, mandatory_fields):
-        _log.warning('rcvd a invalid ed msg, message: {}'.format(message) + ', do nothing!!!')
+        _log.warning('rcvd a invalid ed msg, message: {}, do nothing!!!'.format(message))
         return False
         
     #print only if a valid msg
@@ -167,12 +167,12 @@ def sanity_check_ed(self, message, mandatory_fields = [], valid_pp_ids = []):
     #process ed only if pp_id corresponds to these ids (i.e., ed for either opt_pp_id or bid_pp_id)
     if valid_pp_ids != [] and message[ParamPP.idx_ed_pp_id] not in valid_pp_ids:
         _log.debug('pp_id: {}'.format(message[ParamPP.idx_pp_id])
-                    + ' not in valid_pp_ids: {}'.format(valid_pp_ids) + ", do nothing!!!")
+                    + ' not in valid_pp_ids: {}, do nothing!!!'.format(valid_pp_ids))
         return False
         
     #process ed only if msg is alive (didnot timeout)
     if ispace_utils.ttl_timeout(message[ParamPP.idx_ed_pp_ts], message[ParamPP.idx_ed_pp_ttl]):
-        _log.warning("msg timed out, do nothing")
+        _log.warning('msg timed out, do nothing')
         return False
         
     return True
@@ -189,15 +189,15 @@ def publish_to_bus(self, topic, msg):
                                 , msg
                                 ).get(timeout=10)
     except gevent.Timeout:
-        _log.warning("Expection: gevent.Timeout in publish_to_bus()")
+        _log.warning('Expection: gevent.Timeout in publish_to_bus()')
         return
     except Exception as e:
-        _log.warning("Expection: publish_to_bus?")
+        _log.warning('Expection: publish_to_bus?')
         return
     return
 
 def get_task_schdl(self, task_id, device, time_ms=None):
-    #_log.debug("get_task_schdl()")
+    #_log.debug('get_task_schdl()')
     self.time_ms = 600 if time_ms is None else time_ms
     try:
         result = {}
@@ -214,9 +214,9 @@ def get_task_schdl(self, task_id, device, time_ms=None):
                                     , msg
                                     ).get(timeout=10)
     except gevent.Timeout:
-        _log.exception("Expection: gevent.Timeout in get_task_schdl()")
+        _log.exception('Expection: gevent.Timeout in get_task_schdl()')
     except Exception as e:
-        _log.exception ("Expection: Could not contact actuator. Is it running?")
+        _log.exception ('Expection: Could not contact actuator. Is it running?')
         print(e)
     finally:
         return result
@@ -227,7 +227,7 @@ def cancel_task_schdl(self, task_id):
                                 , 'request_cancel_schedule'
                                 , self._agent_id, task_id
                                 ).get(timeout=10)
-    #_log.debug("task_id: " + task_id)
+    #_log.debug('task_id: ' + task_id)
     #_log.debug(result)
     return
 
