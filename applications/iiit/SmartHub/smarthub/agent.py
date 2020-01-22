@@ -723,7 +723,7 @@ class SmartHub(Agent):
                         else (SMARTHUB_LED_ENERGY * level_led * (3600 / pp_duration) )
                         
         if bid_pp <= self._shDevicesPP_th[SH_DEVICE_FAN]:
-            level_fan = self.getNewFanSpeed(bid_pp)/100
+            level_fan = self._get_new_fan_speed(bid_pp)/100
             ed = ed + (SMARTHUB_FAN_ENERGY * 0.30 * (3600 / pp_duration) )
                         if level_fan < 0.30
                         else (SMARTHUB_FAN_ENERGY * level_fan * (3600 / pp_duration) )
@@ -806,7 +806,7 @@ class SmartHub(Agent):
                 self._pp_failed = True
                 
             if deviceId == SH_DEVICE_FAN:
-                fan_speed = self.getNewFanSpeed(self._price_point_latest)/100
+                fan_speed = self._get_new_fan_speed(self._price_point_latest)/100
                 _log.info ( "New Fan Speed: {0:.4f}".format(fan_speed))
                 self.setShDeviceLevel(SH_DEVICE_FAN, fan_speed, schdExist)
                 if not ispace_utils.isclose(fan_speed, self._shDevicesLevel[deviceId], EPSILON):
@@ -815,7 +815,7 @@ class SmartHub(Agent):
         return
         
     #compute new Fan Speed from price functions
-    def getNewFanSpeed(self, pp):
+    def _get_new_fan_speed(self, pp):
         pp = 0 if pp < 0 else 1 if pp > 1 else pp
         
         pf_idx = self.pf_sh_fan['pf_idx']
@@ -1125,24 +1125,24 @@ class SmartHub(Agent):
             _log.info('rpc params: {}'.format(rpcdata.params))
             
             if rpcdata.method == "rpc_setShDeviceState":
-                args = {'deviceId': rpcdata.params['deviceId'], 
-                        'state': rpcdata.params['newState'],
-                        'schdExist': SCHEDULE_NOT_AVLB
+                args = {'deviceId': rpcdata.params['deviceId']
+                        , 'state': rpcdata.params['newState']
+                        , 'schdExist': SCHEDULE_NOT_AVLB
                         }
                 result = self.setShDeviceState(**args)
                 
             elif rpcdata.method == "rpc_setShDeviceLevel":
-                args = {'deviceId': rpcdata.params['deviceId'], 
-                        'level': rpcdata.params['newLevel'],
-                        'schdExist': SCHEDULE_NOT_AVLB
+                args = {'deviceId': rpcdata.params['deviceId']
+                        , 'level': rpcdata.params['newLevel']
+                        , 'schdExist': SCHEDULE_NOT_AVLB
                         }
                 result = self.setShDeviceLevel(**args)
                 
             elif rpcdata.method == "rpc_setShDeviceThPP":
-                args = {'deviceId': rpcdata.params['deviceId'], 
-                        'thPP': rpcdata.params['newThPP']
+                args = {'deviceId': rpcdata.params['deviceId']
+                        , 'thPP': rpcdata.params['newThPP']
                         }
-                result = self.setShDeviceThPP(**args)                
+                result = self.setShDeviceThPP(**args)
             elif rpcdata.method == "rpc_ping":
                 result = True
             else:
@@ -1179,7 +1179,7 @@ class SmartHub(Agent):
                     , datetime.datetime.utcnow().isoformat(' ') + 'Z'
                     ]
         ispace_utils.publish_to_bus(self, pubTopic, pubMsg)
-        return  
+        return
         
     #calculate the total energy demand (TED)
     def _calculate_ted(self):
@@ -1210,13 +1210,14 @@ class SmartHub(Agent):
                         
         return ed
         
-    def on_ds_ed(self, peer, sender, bus,  topic, headers, message):
+    def on_ds_ed(self, peer, sender, bus, topic, headers, message):
         if sender == 'pubsub.compat':
             message = compat.unpack_legacy_message(headers, message)
             message = compat.unpack_legacy_message(headers, message)
             
-        _log.debug('New ed from ds, topic: ' + topic +
-                    ' & ed: {0:.4f}'.format(message[ParamED.idx_ed]))
+        _log.debug('New ed from ds, topic: ' + topic 
+                    + ' & ed: {0:.4f}'.format(message[ParamED.idx_ed])
+                    )
         ispace_utils.print_ed_msg(message)
         
         idx = self._get_ds_device_idx(message[ParamED.idx_ed_device_id])
@@ -1228,7 +1229,7 @@ class SmartHub(Agent):
             self._ds_bid_ed[idx] = message[ParamED.idx_ed]
         return
         
-    def _get_ds_device_idx(self, deviceID):   
+    def _get_ds_device_idx(self, deviceID):
         if deviceID not in self._ds_deviceId:
             self._ds_deviceId.append(deviceID)
             idx = self._ds_deviceId.index(deviceID)
@@ -1243,7 +1244,6 @@ def main(argv=sys.argv):
     except Exception as e:
         print (e)
         _log.exception('unhandled exception')
-        
         
 if __name__ == '__main__':
     # Entry point for script
