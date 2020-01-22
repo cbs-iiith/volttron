@@ -188,7 +188,7 @@ def volttronbridge(config_path, **kwargs):
             if self._bridge_host != 'LEVEL_HEAD':
                 url_root = 'http://' + self._us_ip_addr + ':' + str(self._us_port) + '/VolttronBridge'
                 _log.debug("registering with upstream VolttronBridge: " + url_root)
-                self._usConnected = self._registerToUsBridge(url_root, self._discovery_address, self._deviceId)
+                self._usConnected = self._register_to_us_bridge(url_root, self._discovery_address, self._deviceId)
                 
             #keep track of us opt_pp_id & bid_pp_id
             if self._bridge_host != 'LEVEL_HEAD':
@@ -206,7 +206,7 @@ def volttronbridge(config_path, **kwargs):
             return
             
         #register with upstream volttron bridge
-        def _registerToUsBridge(self, url_root, discovery_address, deviceId):
+        def _register_to_us_bridge(self, url_root, discovery_address, deviceId):
             return self.do_rpc(url_root, 'rpc_register_ds_bridge',
                                 {'discovery_address': discovery_address
                                 , 'deviceId': deviceId
@@ -414,7 +414,7 @@ def volttronbridge(config_path, **kwargs):
             _log.debug('check us connection...')
             if not self._usConnected:
                 _log.debug('not connected, Trying to register once...')
-                self._usConnected = self._registerToUsBridge(url_root,
+                self._usConnected = self._register_to_us_bridge(url_root,
                                                                 , self._discovery_address
                                                                 , self._deviceId
                                                                 )
