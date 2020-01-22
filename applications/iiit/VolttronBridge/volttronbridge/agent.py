@@ -560,7 +560,7 @@ def volttronbridge(config_path, **kwargs):
                 self.us_bid_pp_id = new_pp_id
                 
             #post to bus
-            _log.debug('post the new price point from us to the local-us-bus')
+            _log.debug('post to the local-us-bus')
             pubTopic =  pricePoint_topic_us
             pubMsg = [new_pp
                         , new_pp_datatype
@@ -572,6 +572,7 @@ def volttronbridge(config_path, **kwargs):
                         , new_pp_ts
                         ]
             ispace_utils.publish_to_bus(self, pubTopic, pubMsg)
+            _log.debug('...Done!!!')
             return True
             
         #post the new energy demand from ds to the local bus
@@ -598,29 +599,29 @@ def volttronbridge(config_path, **kwargs):
                                         )
                                         
             if not msg_from_registered_ds(discovery_address, deviceId):
-                _log.warning("msg not from registered ds, do nothing!!!")
-            
-            if discovery_address in self._ds_register:
-                index = self._ds_register.index(discovery_address)
-                if self._ds_deviceId[index] == deviceId:
-                    #post to bus
-                    pubTopic = energyDemand_topic_ds + "/" + deviceId
-                    pubMsg = [new_ed
-                                , ed_datatype
-                                , ed_pp_id
-                                , ed_isoptimal
-                                , discovery_address
-                                , deviceId
-                                , ed_duration
-                                , ed_ttl
-                                , ed_ts
-                                ]
-                    ispace_utils.publish_to_bus(self, pubTopic, pubMsg)
-                    self._ds_retrycount[index] = 0
-                    _log.debug("...Done!!!")
-                    return True
-            _log.debug("...Failed!!!")
-            return False
+                #either the post to ds failed in previous iteration and de-registered from the _ds_register
+                # or the msg is corrupted
+                _log.warning('msg not from registered ds, do nothing!!!')
+                return False
+                
+            #post to bus
+            _log.debug('post the local-ds-bus')
+            pubTopic = energyDemand_topic_ds + "/" + deviceId
+            pubMsg = [new_ed
+                        , ed_datatype
+                        , ed_pp_id
+                        , ed_isoptimal
+                        , discovery_address
+                        , deviceId
+                        , ed_duration
+                        , ed_ttl
+                        , ed_ts
+                        ]
+            ispace_utils.publish_to_bus(self, pubTopic, pubMsg)
+            #at this stage, ds is alive, reset the counter
+            self._ds_retrycount[self._ds_register.index(discovery_address)] = 0
+            _log.debug('...Done!!!')
+            return True
             
         def msg_from_registered_ds(self, discovery_address, device_id):
             return (True if discovery_address in self._ds_register
