@@ -830,7 +830,7 @@ class SmartStrip(Agent):
             
     #calculate the bid total energy demand (TED)
     def _bid_ted(self):
-        #_log.debug('_calculateTed()')
+        #_log.debug('_calculate_ted()')
         bid_ted = SMARTSTRIP_BASE_ENERGY
         for idx in enumerate(self._plugRelayState):
             if idx != self._sh_plug_id:
@@ -856,8 +856,8 @@ class SmartStrip(Agent):
         return
         
     #calculate the total energy demand (TED)
-    def _calculateTed(self):
-        #_log.debug('_calculateTed()')
+    def _calculate_ted(self):
+        #_log.debug('_calculate_ted()')
         ted = SMARTSTRIP_BASE_ENERGY
         for idx, plugState in enumerate(self._plugRelayState):
             if plugState == RELAY_ON and idx != self._sh_plug_id:
@@ -865,7 +865,7 @@ class SmartStrip(Agent):
         return ted
         
     def publish_ted(self):
-        self._ted = self._calculateTed()
+        self._ted = self._calculate_ted()
         _log.info( "New TED: {0:.2f}, publishing to bus.".format(self._ted))
         pubTopic = self.energyDemand_topic
         #_log.debug("TED pubTopic: " + pubTopic)

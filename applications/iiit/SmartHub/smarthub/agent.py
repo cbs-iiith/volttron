@@ -1178,14 +1178,14 @@ class SmartHub(Agent):
         return ed
         
     #calculate the total energy demand (TED)
-    def _calculateTed(self):
+    def _calculate_ted(self):
         ted = self._local_opt_ed()
         for ed in self._ds_ed:
             ted = ted + ed
         return ted
         
     def publish_ted(self):
-        self._ted = self._calculateTed()
+        self._ted = self._calculate_ted()
         _log.info( "New TED: {0:.2f}, publishing to bus.".format(self._ted))
         pubTopic = self.energyDemand_topic
         #_log.debug("TED pubTopic: " + pubTopic)

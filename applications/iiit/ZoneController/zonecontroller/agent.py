@@ -481,8 +481,8 @@ class ZoneController(Agent):
         ispace_utils.publish_to_bus(self, pubTopic, pubMsg)
         return
 
-    def _calculateTed(self):
-        #_log.debug('_calculateTed()')
+    def _calculate_ted(self):
+        #_log.debug('_calculate_ted()')
         
         #zone lighting + ac
         cce = self.rpc_getRmCalcCoolingEnergy()
@@ -496,7 +496,7 @@ class ZoneController(Agent):
         return ted
 
     def publish_ted(self):
-        self._ted = self._calculateTed()
+        self._ted = self._calculate_ted()
         _log.info( "New TED: {0:.2f}, publishing to bus.".format(self._ted))
         pubTopic = self.energyDemand_topic
         #_log.debug("TED pubTopic: " + pubTopic)
