@@ -132,7 +132,7 @@ class SmartStrip(Agent):
         self.core.periodic(self._period_read_data, self.publish_ted, wait=None)
         
         #perodically process new pricing point that keeps trying to apply the new pp till success
-        self.core.periodic(self._period_process_pp, self.processNewPricePoint, wait=None)
+        self.core.periodic(self._period_process_pp, self.process_opt_pp, wait=None)
         
         #subscribing to topic_price_point
         self.vip.pubsub.subscribe("pubsub", self.topic_price_point, self.on_new_price)
@@ -508,7 +508,7 @@ class SmartStrip(Agent):
             
         self._price_point_latest = new_pp
         self._pp_id_latest = new_pp_id
-        self.processNewPricePoint()
+        self.process_opt_pp()
         return
         
     #this is a periodic function that
@@ -519,7 +519,7 @@ class SmartStrip(Agent):
         return
         
     #this is a perodic function that keeps trying to apply the new pp till success
-    def processNewPricePoint(self):
+    def process_opt_pp(self):
         if ispace_utils.isclose(self._price_point_old, self._price_point_latest, EPSILON) and self._pp_id == self._pp_id_new:
             return
             
@@ -529,7 +529,7 @@ class SmartStrip(Agent):
         #_log.debug("task_id: " + task_id)
         result = ispace_utils.get_task_schdl(self, task_id,'iiit/cbs/smartstrip')
         if result['result'] != 'SUCCESS':
-            _log.debug("unable to processNewPricePoint(), will try again in " + str(self._period_process_pp))
+            _log.debug("unable to process_opt_pp(), will try again in " + str(self._period_process_pp))
             self._pp_failed = True
             return
             
@@ -541,7 +541,7 @@ class SmartStrip(Agent):
         ispace_utils.cancel_task_schdl(self, task_id)
         
         if self._pp_failed:
-            _log.debug("unable to processNewPricePoint(), will try again in " + str(self._period_process_pp))
+            _log.debug("unable to process_opt_pp(), will try again in " + str(self._period_process_pp))
             return
             
         _log.info("New Price Point processed.")

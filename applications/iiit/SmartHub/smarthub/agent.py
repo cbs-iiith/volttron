@@ -170,7 +170,7 @@ class SmartHub(Agent):
         self.publishCurrentPP();
         
         #perodically process new pricing point that keeps trying to apply the new pp till success
-        self.core.periodic(self._period_process_pp, self.processNewPricePoint, wait=None)
+        self.core.periodic(self._period_process_pp, self.process_opt_pp, wait=None)
         
         #perodically publish device state to volttron bus
         self.core.periodic(self._period_read_data, self.publishDeviceState, wait=None)
@@ -674,7 +674,7 @@ class SmartHub(Agent):
         self._pp_duration_latest = message[ParamPP.idx_pp_duration]
         self._pp_ttl_latest = message[ParamPP.idx_pp_ttl]
         self._pp_ts_latest = message[ParamPP.idx_pp_ts]
-        self.processNewPricePoint()     #initiate the periodic process
+        self.process_opt_pp()     #initiate the periodic process
         return
         
     def _process_bid_pp(self, message):
@@ -748,7 +748,7 @@ class SmartHub(Agent):
         return
         
     #this is a perodic function that keeps trying to apply the new pp till success
-    def processNewPricePoint(self):
+    def process_opt_pp(self):
         if ispace_utils.isclose(self._price_point_old, self._price_point_latest, EPSILON) and self._pp_id == self._pp_id_new:
             return
             
@@ -759,7 +759,7 @@ class SmartHub(Agent):
             self._pp_failed = True
         
         if self._pp_failed:
-            _log.debug("unable to processNewPricePoint(), will try again in " + str(self._period_process_pp))
+            _log.debug("unable to process_opt_pp(), will try again in " + str(self._period_process_pp))
             return
             
         self.applyPricingPolicy(SH_DEVICE_LED, SCHEDULE_AVLB)
@@ -768,7 +768,7 @@ class SmartHub(Agent):
         ispace_utils.cancel_task_schdl(self, task_id)
         
         if self._pp_failed:
-            _log.debug("unable to processNewPricePoint(), will try again in " + str(self._period_process_pp))
+            _log.debug("unable to process_opt_pp(), will try again in " + str(self._period_process_pp))
             return
             
         self._price_point_old = self._price_point_latest
