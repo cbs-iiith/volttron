@@ -115,7 +115,7 @@ class RadiantCubicle(Agent):
         
         self.vip.rpc.call(MASTER_WEB, 'register_agent_route'
                             , r'^/RadiantCubicle'
-                            , "rpc_from_net"
+                            , "rpc_from_net"            ############################################# add rpc_from_net
                             ).get(timeout=10)
                             
         _log.debug('switch ON RC_AUTO_CNTRL')

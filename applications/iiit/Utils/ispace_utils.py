@@ -123,6 +123,41 @@ def print_ed_msg(self, message):
             )
     return
     
+    #check for minium required fields the message
+    def valid_pp_msg(message):
+        valid_msg = True
+        try:
+            if message[ParamPP.idx_pp] is None 
+                or message[ParamPP.idx_pp_datatype] is None 
+                or message[ParamPP.idx_pp_id] is None 
+                or message[ParamPP.idx_pp_isoptimal] is None 
+                or message[ParamPP.idx_pp_duration] is None 
+                or message[ParamPP.idx_pp_ttl] is None 
+                or message[ParamPP.idx_pp_ts] is None 
+                : valid_msg = False
+        except Exception as e:
+                valid_msg = False
+                print(e)
+        return valid_msg
+        
+#check for minium required fields the message
+def valid_ed_msg(self, message):
+    valid_msg = True
+    try:
+        if message[ParamPP.idx_ed] is None
+            or message[ParamPP.idx_ed_datatype] is None
+            or message[ParamPP.idx_ed_pp_id] is None
+            or message[ParamPP.idx_ed_isoptimal] is None
+            or message[ParamPP.idx_ed_device_id] is None
+            or message[ParamPP.idx_pp_duration] is None
+            or message[ParamPP.idx_pp_ttl] is None
+            or message[ParamPP.idx_pp_ts] is None
+            : valid_msg = False
+    except Exception as e:
+            valid_msg = False
+            print(e)
+    return valid_msg
+    
 def publish_to_bus(self, topic, msg):
     #_log.debug('publish_to_bus()')
     now = datetime.datetime.utcnow().isoformat(' ') + 'Z'
