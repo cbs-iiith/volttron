@@ -230,7 +230,7 @@ def smarthubui_clnt(config_path, **kwargs):
                         _log.debug('response - ok, {} result:{}'.format(method, success))
                     else:
                         _log.debug('respone - not ok, {} result:{}'.format(method, success))
-                else :
+                else:
                     _log.debug('no respone, {} result: {}'.format(method, response))
             except Exception as e:
                 #print (e)

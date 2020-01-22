@@ -448,7 +448,7 @@ def volttronbridge(config_path, **kwargs):
                 self._us_retrycount = 0
                 self._ed_previous = self._ed_current
                 self._all_us_posts_success  = True
-            else :
+            else:
                 _log.debug("Failed!!!")
                 self._us_retrycount = self._us_retrycount + 1
                 if self._us_retrycount > MAX_RETRIES:
@@ -643,7 +643,7 @@ def volttronbridge(config_path, **kwargs):
                         result = True
                     else:
                         _log.debug('respone - not ok, {} result:{}'.format(method, success))
-                else :
+                else:
                     _log.debug('no respone, {} result: {}'.format(method, response))
             except KeyError:
                 error = response.json()['error']

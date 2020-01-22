@@ -162,7 +162,7 @@ def ss_sh_device(config_path, **kwargs):
         def _pingSmartHub(self):
             _log.debug('_pingSmartHub()')
             url_root = 'http://' + self.sh_ip_addr + ':' + str(self.sh_port) + '/SmartHub'
-            if not sh_on_btry or self.do_rpc(url_root, 'rpc_ping')  :
+            if not sh_on_btry or self.do_rpc(url_root, 'rpc_ping'):
                 #hub is not on btry or hub is alive, do nothing
                 self.hub_ping_count = 0
                 return
@@ -213,7 +213,7 @@ def ss_sh_device(config_path, **kwargs):
                         result = True
                     else:
                         _log.debug('respone - not ok, {} result:{}'.format(method, success))
-                else :
+                else:
                     _log.debug('no respone, {} result: {}'.format(method, response))
             except KeyError:
                 error = response.json()['error']

@@ -120,9 +120,7 @@ def pricecontroller(config_path, **kwargs):
                 return jsonrpc.json_error('NA', UNHANDLED_EXCEPTION, e)
                 
         def _disable_agent(self, disable_agent):
-            if disable_agent is True
-                or disable_agent is False
-                :
+            if disable_agent in [True, False]:
                 self.agent_disabled = disable_agent
                 result = True
             else:
@@ -182,10 +180,7 @@ def pricecontroller(config_path, **kwargs):
                 _log.info("self.agent_disabled: " + str(self.agent_disabled) + ", do nothing!!!")
                 return True
                 
-            if new_pp_isoptimal
-                    or self.pp_optimize_option == "PASS_ON_PP"
-                    or self.pp_optimize_option == "EXTERN_OPT"
-                    :
+            if new_pp_isoptimal or self.pp_optimize_option in ["PASS_ON_PP", "EXTERN_OPT"]:
                 pubTopic =  self.topic_extrn_pp
                                 if self.pp_optimize_option == "EXTERN_OPT"
                                 else self.topic_price_point 

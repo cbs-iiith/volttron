@@ -556,7 +556,7 @@ class ZoneController(Agent):
         self._ds_ed[idx] = message[ParamED.idx_ed]
         return
         
-    def _get_ds_device_idx(self, deviceID):   
+    def _get_ds_device_idx(self, deviceID):
         if deviceID not in self._ds_deviceId:
             self._ds_deviceId.append(deviceID)
             idx = self._ds_deviceId.index(deviceID)

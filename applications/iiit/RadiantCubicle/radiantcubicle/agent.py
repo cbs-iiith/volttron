@@ -440,31 +440,6 @@ class RadiantCubicle(Agent):
         ispace_utils.publish_to_bus(self, pubTopic, pubMsg)
         return
         
-    def _calculatePredictedTed(self):
-        #_log.debug('_calculatePredictedTed()')
-        
-        #get actual tsp from device
-        tsp = self._rcTspLevel
-        if tsp == 22.0 :
-            ted = 350
-        elif tsp == 23.0 :
-            ted = 325
-        elif tsp == 24.0 :
-            ted = 300
-        elif tsp == 25.0 :
-            ted = 275
-        elif tsp == 26.0 :
-            ted = 250
-        elif tsp == 27.0 :
-            ted = 225
-        elif tsp == 28.0 :
-            ted = 200
-        elif tsp == 29.0 :
-            ted = 150
-        else :
-            ted = 100
-        return ted
-        
 def main(argv=sys.argv):
     '''Main method called by the eggsecutable.'''
     try:

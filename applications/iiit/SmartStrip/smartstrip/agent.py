@@ -431,7 +431,7 @@ class SmartStrip(Agent):
         if newTagId != '7FC000007FC00000':
             #device is connected condition
             #check if current tag id is same as new, if so, do nothing
-            if newTagId == self._plug_tag_id[plugID] :
+            if newTagId == self._plug_tag_id[plugID]:
                 return
             else:
                 #update the tag id and change connected state
@@ -465,7 +465,7 @@ class SmartStrip(Agent):
                 return
             elif self._plugConnected[plugID] == 1 or
                     newTagId != self._plug_tag_id[plugID] or
-                    self._plugRelayState[plugID] == RELAY_ON :
+                    self._plugRelayState[plugID] == RELAY_ON:
                 #update the tag id and change connected state
                 self._plug_tag_id[plugID] = newTagId
                 self.publishTagId(plugID, newTagId)
@@ -551,7 +551,7 @@ class SmartStrip(Agent):
         
     def applyPricingPolicy(self, plugID, schdExist):
         plug_pp_th = self._plug_pricepoint_th[plugID]
-        if self._price_point_new > plug_pp_th: 
+        if self._price_point_new > plug_pp_th:
             if self._plugRelayState[plugID] == RELAY_ON:
                 _log.info(('Plug {0:d}: '.format(plugID + 1)
                             , 'Current price point > threshold'
@@ -596,7 +596,7 @@ class SmartStrip(Agent):
         
     def tagAuthorised(self, tagID):
         #return True
-        for authTagID in self._tag_ids :
+        for authTagID in self._tag_ids:
             if tagID == authTagID:
                 return True
         return False
@@ -750,7 +750,7 @@ class SmartStrip(Agent):
             _log.info('Current State: Plug ' + str(plugID+1) + ' Relay Switched ON!!!')
         elif state == RELAY_OFF:
             _log.info('Current State: Plug ' + str(plugID+1) + ' Relay Switched OFF!!!')
-        else :
+        else:
             _log.info('Current State: Plug ' + str(plugID+1) + ' Relay STATE UNKNOWN!!!')
         return
         

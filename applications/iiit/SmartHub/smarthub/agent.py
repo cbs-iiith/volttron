@@ -679,7 +679,7 @@ class SmartHub(Agent):
     def process_bid_pp(self):
         if self._bid_ed_published:
             return
-        if self._bid_ed == 0 :
+        if self._bid_ed == 0:
             self._bid_ed = self.local_bid_ed(self._bid_pp)
         
         ds_devices = self.vip.rpc.call(self.vb_vip_identity, 'count_ds_devices').get(timeout=10)
@@ -952,7 +952,7 @@ class SmartHub(Agent):
                 return self.topic_root + '/ledstate'
             elif deviceId ==SH_DEVICE_FAN:
                 return self.topic_root + '/fanstate'
-        elif actionType == AT_PUB_LEVEL :
+        elif actionType == AT_PUB_LEVEL:
             if deviceId == SH_DEVICE_LED:
                 return self.topic_root + '/ledlevel'
             elif deviceId == SH_DEVICE_FAN:
@@ -977,35 +977,32 @@ class SmartHub(Agent):
         
     def _getEndPoint(self, deviceId, actionType):
         #_log.debug('_getEndPoint()')
-        if  actionType == AT_SET_LEVEL :
-            if deviceId == SH_DEVICE_LED :
+        if  actionType == AT_SET_LEVEL:
+            if deviceId == SH_DEVICE_LED:
                 return "LEDPwmDuty"
-            elif deviceId == SH_DEVICE_FAN :
+            elif deviceId == SH_DEVICE_FAN:
                 return "FanPwmDuty"
-        elif actionType == AT_GET_LEVEL :
-            if deviceId == SH_DEVICE_LED :
+        elif actionType == AT_GET_LEVEL:
+            if deviceId == SH_DEVICE_LED:
                 return "LEDPwmDuty"
-            elif deviceId == SH_DEVICE_FAN :
+            elif deviceId == SH_DEVICE_FAN:
                 return "FanPwmDuty"
-            elif deviceId == SH_DEVICE_S_LUX :
+            elif deviceId == SH_DEVICE_S_LUX:
                 return "SensorLux"
-            elif deviceId == SH_DEVICE_S_RH :
+            elif deviceId == SH_DEVICE_S_RH:
                 return "SensorRh"
-            elif deviceId == SH_DEVICE_S_TEMP :
+            elif deviceId == SH_DEVICE_S_TEMP:
                 return "SensorTemp"
-            elif deviceId == SH_DEVICE_S_CO2 :
+            elif deviceId == SH_DEVICE_S_CO2:
                 return "SensorCO2"
-            elif deviceId == SH_DEVICE_S_PIR :
+            elif deviceId == SH_DEVICE_S_PIR:
                 return "SensorOccupancy"
-        elif actionType in [
-                            AT_GET_STATE,
-                            AT_SET_STATE
-                            ]:
+        elif actionType in [AT_GET_STATE, AT_SET_STATE]:
             if deviceId == SH_DEVICE_LED_DEBUG:
                 return "LEDDebug"
-            elif deviceId == SH_DEVICE_LED :
+            elif deviceId == SH_DEVICE_LED:
                 return "LED"
-            elif deviceId == SH_DEVICE_FAN :
+            elif deviceId == SH_DEVICE_FAN:
                 return "Fan"
         
         _log.exception ("Expection: not a vaild device-action type for endpoint")
@@ -1013,76 +1010,67 @@ class SmartHub(Agent):
         
     def _validDeviceAction(self, deviceId, actionType):
         #_log.debug('_validDeviceAction()')
-        if actionType not in [
-                                AT_GET_STATE,
-                                AT_GET_LEVEL,
-                                AT_SET_STATE,
-                                AT_SET_LEVEL,
-                                AT_PUB_LEVEL,
-                                AT_PUB_STATE,
-                                AT_GET_THPP,
-                                AT_SET_THPP,
-                                AT_PUB_THPP
+        if actionType not in [AT_GET_STATE
+                                , AT_GET_LEVEL
+                                , AT_SET_STATE
+                                , AT_SET_LEVEL
+                                , AT_PUB_LEVEL
+                                , AT_PUB_STATE
+                                , AT_GET_THPP
+                                , AT_SET_THPP
+                                , AT_PUB_THPP
                                 ]:
             return False
         
         if actionType == AT_GET_STATE :
-            if deviceId in [
-                            SH_DEVICE_LED_DEBUG,
-                            SH_DEVICE_LED,
-                            SH_DEVICE_FAN
+            if deviceId in [SH_DEVICE_LED_DEBUG
+                            , SH_DEVICE_LED
+                            , SH_DEVICE_FAN
                             ]:
                 return True
         elif actionType ==  AT_GET_LEVEL :
-            if deviceId in [
-                            SH_DEVICE_LED,
-                            SH_DEVICE_FAN,
-                            SH_DEVICE_S_LUX,
-                            SH_DEVICE_S_RH,
-                            SH_DEVICE_S_TEMP,
-                            SH_DEVICE_S_CO2,
-                            SH_DEVICE_S_PIR
+            if deviceId in [SH_DEVICE_LED
+                            , SH_DEVICE_FAN
+                            , SH_DEVICE_S_LUX
+                            , SH_DEVICE_S_RH
+                            , SH_DEVICE_S_TEMP
+                            , SH_DEVICE_S_CO2
+                            , SH_DEVICE_S_PIR
                             ]:
                 return True
         elif actionType == AT_SET_STATE :
-            if deviceId in [
-                            SH_DEVICE_LED_DEBUG,
-                            SH_DEVICE_LED,
-                            SH_DEVICE_FAN
+            if deviceId in [SH_DEVICE_LED_DEBUG
+                            , SH_DEVICE_LED
+                            , SH_DEVICE_FAN
                             ]:
                 return True
         elif actionType == AT_SET_LEVEL :
-            if deviceId in [
-                            SH_DEVICE_LED,
-                            SH_DEVICE_FAN
+            if deviceId in [SH_DEVICE_LED
+                            , SH_DEVICE_FAN
                             ]:
                 return True
         elif actionType == AT_PUB_LEVEL :
-            if deviceId in [
-                            SH_DEVICE_LED,
-                            SH_DEVICE_FAN,
-                            SH_DEVICE_S_LUX,
-                            SH_DEVICE_S_RH,
-                            SH_DEVICE_S_TEMP,
-                            SH_DEVICE_S_CO2,
-                            SH_DEVICE_S_PIR
+            if deviceId in [SH_DEVICE_LED
+                            , SH_DEVICE_FAN
+                            , SH_DEVICE_S_LUX
+                            , SH_DEVICE_S_RH
+                            , SH_DEVICE_S_TEMP
+                            , SH_DEVICE_S_CO2
+                            , SH_DEVICE_S_PIR
                             ]:
                 return True
         elif actionType == AT_PUB_STATE :
-            if deviceId in [
-                            SH_DEVICE_LED_DEBUG,
-                            SH_DEVICE_LED,
-                            SH_DEVICE_FAN
+            if deviceId in [SH_DEVICE_LED_DEBUG
+                            , SH_DEVICE_LED
+                            , SH_DEVICE_FAN
                             ]:
                 return True
-        elif actionType in [
-                            AT_GET_THPP,
-                            AT_SET_THPP,
-                            AT_PUB_THPP
-                            ] :
-            if deviceId in [
-                            SH_DEVICE_LED,
-                            SH_DEVICE_FAN
+        elif actionType in [AT_GET_THPP
+                            , AT_SET_THPP
+                            , AT_PUB_THPP
+                            ]:
+            if deviceId in [SH_DEVICE_LED
+                            , SH_DEVICE_FAN
                             ]:
                 return True
         log.exception ("Expection: not a vaild device-action")
