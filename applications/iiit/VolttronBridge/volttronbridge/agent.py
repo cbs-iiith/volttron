@@ -207,11 +207,11 @@ def volttronbridge(config_path, **kwargs):
             
         #register with upstream volttron bridge
         def _register_to_us_bridge(self, url_root, discovery_address, deviceId):
-            return self.do_rpc(url_root, 'rpc_register_ds_bridge',
-                                {'discovery_address': discovery_address
-                                , 'deviceId': deviceId
-                                })
-                                    
+            return ispace_utils.do_rpc(url_root, 'rpc_register_ds_bridge',
+                                        {'discovery_address': discovery_address
+                                        , 'deviceId': deviceId
+                                        })
+                                                    
         @Core.receiver('onstop')
         def onstop(self, sender, **kwargs):
             _log.debug('onstop()')
@@ -227,10 +227,10 @@ def volttronbridge(config_path, **kwargs):
                 if self._usConnected:
                     _log.debug("unregistering with upstream VolttronBridge")
                     url_root = 'http://' + self._us_ip_addr + ':' + str(self._us_port) + '/VolttronBridge'
-                    result = self.do_rpc(url_root, 'rpc_unregister_ds_bridge',
-                                        {'discovery_address': self._discovery_address
-                                        , 'deviceId': self._deviceId
-                                        })
+                    result = ispace_utils.do_rpc(url_root, 'rpc_unregister_ds_bridge',
+                                                    {'discovery_address': self._discovery_address
+                                                    , 'deviceId': self._deviceId
+                                                    })
                     self._usConnected = False
                 
             _log.debug('un registering rpc routes')
@@ -426,17 +426,17 @@ def volttronbridge(config_path, **kwargs):
             _log.debug('_usConnected: ' + str(self._usConnected))
             
             _log.debug("posting energy demand to upstream VolttronBridge")
-            success = self.do_rpc(url_root, 'rpc_post_ed',
-                            {'discovery_address': self._discovery_address
-                            , 'deviceId': self._deviceId
-                            , 'new_ed': self._ed_current
-                            , 'ed_datatype': self._ed_datatype
-                            , 'ed_pp_id': self._ed_pp_id
-                            , 'ed_isoptimal': self._ed_isoptimal
-                            , 'ed_duration': self._ed_duration
-                            , 'ed_ttl': self._ed_ttl
-                            , 'ed_ts': self._ed_ts
-                            })
+            success = ispace_utils.do_rpc(url_root, 'rpc_post_ed',
+                                            {'discovery_address': self._discovery_address
+                                            , 'deviceId': self._deviceId
+                                            , 'new_ed': self._ed_current
+                                            , 'ed_datatype': self._ed_datatype
+                                            , 'ed_pp_id': self._ed_pp_id
+                                            , 'ed_isoptimal': self._ed_isoptimal
+                                            , 'ed_duration': self._ed_duration
+                                            , 'ed_ttl': self._ed_ttl
+                                            , 'ed_ts': self._ed_ts
+                                            })
             #_log.debug('success: ' + str(success))
             if success:
                 _log.debug("Success!!!")
@@ -469,17 +469,17 @@ def volttronbridge(config_path, **kwargs):
                     continue
                     
                 url_root = 'http://' + discovery_address + '/VolttronBridge'
-                result = self.do_rpc(url_root, 'rpc_post_pp',
-                                        {'discovery_address': self._discovery_address
-                                        , 'deviceId': self._deviceId
-                                        , 'new_pp': self._pp_current
-                                        , 'new_pp_id': self._pp_id
-                                        , 'new_pp_isoptimal': self._pp_isoptimal
-                                        , 'new_pp_datatype': self._pp_datatype
-                                        , 'new_pp_duration': self._pp_duration
-                                        , 'new_pp_ttl': self._pp_ttl
-                                        , 'new_pp_ts': self._pp_ts
-                                        })
+                result = ispace_utils.do_rpc(url_root, 'rpc_post_pp',
+                                            {'discovery_address': self._discovery_address
+                                            , 'deviceId': self._deviceId
+                                            , 'new_pp': self._pp_current
+                                            , 'new_pp_id': self._pp_id
+                                            , 'new_pp_isoptimal': self._pp_isoptimal
+                                            , 'new_pp_datatype': self._pp_datatype
+                                            , 'new_pp_duration': self._pp_duration
+                                            , 'new_pp_ttl': self._pp_ttl
+                                            , 'new_pp_ts': self._pp_ts
+                                            })
                 if result:
                     #success, reset retry count
                     self._ds_retrycount[index] = MAX_RETRIES + 1    #no need to retry on the next run
@@ -600,7 +600,7 @@ def volttronbridge(config_path, **kwargs):
                                         , ed_ts
                                         )
                                         
-            if not msg_from_registered_ds(discovery_address, deviceId):
+            if not self._msg_from_registered_ds(discovery_address, deviceId):
                 #either the post to ds failed in previous iteration and de-registered from the _ds_register
                 # or the msg is corrupted
                 _log.warning('msg not from registered ds, do nothing!!!')
@@ -625,47 +625,11 @@ def volttronbridge(config_path, **kwargs):
             _log.debug('...Done!!!')
             return True
             
-        def msg_from_registered_ds(self, discovery_address, device_id):
+        def _msg_from_registered_ds(self, discovery_address, device_id):
             return (True if discovery_address in self._ds_register
                          and device_id == self._ds_device_ids[self._ds_register.index(discovery_address)]
                          else False)
                          
-        def do_rpc(self, url_root, method, params=None ):
-            #_log.debug('do_rpc()')
-            result = False
-            json_package = {
-                'jsonrpc': '2.0',
-                'id': self._agent_id,
-                'method':method,
-            }
-            
-            if params:
-                json_package['params'] = params
-                
-            data = json.dumps(json_package)
-            try:
-                response = requests.post(url_root, data=json.dumps(json_package), timeout=10)
-                
-                if response.ok:
-                    success = response.json()['result']
-                    if success:
-                        #_log.debug('response - ok, {} result:{}'.format(method, success))
-                        result = True
-                    else:
-                        _log.debug('respone - not ok, {} result:{}'.format(method, success))
-                else:
-                    _log.debug('no respone, {} result: {}'.format(method, response))
-            except KeyError:
-                error = response.json()['error']
-                #print (error)
-                _log.exception('KeyError: SHOULD NEVER REACH THIS ERROR - contact developer')
-                return False
-            except Exception as e:
-                #print (e)
-                _log.warning('Exception: do_rpc() unhandled exception, most likely dest is down')
-                return False
-            return result
-            
     Agent.__name__ = 'VolttronBridge_Agent'
     return VolttronBridge(**kwargs)
     
