@@ -121,7 +121,7 @@ class SmartHub(Agent):
     _price_point_current = 0.4
     _price_point_latest = 0.45
     _pp_id = randint(0, 99999999)
-    _pp_id_new = randint(0, 99999999)
+    _pp_id_latest = randint(0, 99999999)
     
     #downstream energy demand and deviceId
     _ds_ed = []
@@ -669,11 +669,11 @@ class SmartHub(Agent):
         
     def _process_opt_pp(self, message):
         self._price_point_latest = message[ParamPP.idx_pp]
-        self._pp_datatype_new = message[ParamPP.idx_pp_datatype]
-        self._pp_id_new = message[ParamPP.idx_pp_id]
-        self._pp_duration_new = message[ParamPP.idx_pp_duration]
-        self._pp_ttl_new = message[ParamPP.idx_pp_ttl]
-        self._pp_ts_new = message[ParamPP.idx_pp_ts]
+        self._pp_datatype_latest = message[ParamPP.idx_pp_datatype]
+        self._pp_id_latest = message[ParamPP.idx_pp_id]
+        self._pp_duration_latest = message[ParamPP.idx_pp_duration]
+        self._pp_ttl_latest = message[ParamPP.idx_pp_ttl]
+        self._pp_ts_latest = message[ParamPP.idx_pp_ts]
         self.processNewPricePoint()     #initiate the periodic process
         return
         

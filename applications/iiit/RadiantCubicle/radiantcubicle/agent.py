@@ -67,7 +67,7 @@ class RadiantCubicle(Agent):
     _price_point_current = 0.4 
     _price_point_latest = 0.45
     _pp_id = randint(0, 99999999)
-    _pp_id_new = randint(0, 99999999)
+    _pp_id_latest = randint(0, 99999999)
     
     _rcAutoCntrlState = RC_AUTO_CNTRL_OFF
     _rcTspLevel = 25
@@ -212,7 +212,7 @@ class RadiantCubicle(Agent):
             return
             
         self._price_point_latest = new_pp
-        self._pp_id_new = new_pp_id
+        self._pp_id_latest = new_pp_id
         self.processNewPricePoint()
         return
         
