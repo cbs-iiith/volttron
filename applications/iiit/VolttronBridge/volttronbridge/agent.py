@@ -330,20 +330,20 @@ def volttronbridge(config_path, **kwargs):
             if self._bridge_host == 'LEVEL_TAILEND':
                 return
                 
-            self._pp_current    = message[ParamPP.idx_pp]
-            self._pp_datatype   = message[ParamPP.idx_pp_datatype]
+            self._pp_current = message[ParamPP.idx_pp]
+            self._pp_datatype = message[ParamPP.idx_pp_datatype]
                                     if message[ParamPP.idx_pp_datatype] is not None
                                     else {'units': 'cents', 'tz': 'UTC', 'type': 'float'}
-            self._pp_id         = message[ParamPP.idx_pp_id]
+            self._pp_id = message[ParamPP.idx_pp_id]
                                     if message[ParamPP.idx_pp_id] is not None
                                     else randint(0, 99999999)
-            self._pp_isoptimal  = message[ParamPP.idx_pp_isoptimal]
+            self._pp_isoptimal = message[ParamPP.idx_pp_isoptimal]
                                     if message[ParamPP.idx_pp_isoptimal] is not None
                                     else False
-            self._pp_ttl        = message[ParamPP.idx_pp_ttl]
+            self._pp_ttl = message[ParamPP.idx_pp_ttl]
                                     if message[ParamPP.idx_pp_ttl] is not None
                                     else -1
-            self._pp_ts  = message[ParamPP.idx_pp_ts]
+            self._pp_ts = message[ParamPP.idx_pp_ts]
                                     if message[ParamPP.idx_pp_ts] is not None
                                     else datetime.datetime.utcnow().isoformat(' ') + 'Z'
                                     
@@ -385,16 +385,7 @@ def volttronbridge(config_path, **kwargs):
                                     if message[ParamED.idx_ed_ts] is not None
                                     else datetime.datetime.utcnow().isoformat(' ') + 'Z'
                                     
-            ispace_utils.print_ed(self, self._ed_current
-                            , self._ed_datatype
-                            , self._ed_pp_id
-                            , self._ed_isoptimal
-                            , None
-                            , None
-                            , None
-                            , self._ed_ttl
-                            , self._ed_ts
-                            )
+            ispace_utils.print_ed_msg(message)
                             
             #post ed to us only if pp_id corresponds to these ids (i.e., ed for either us opt_pp_id or bid_pp_id)
             if self._ed_pp_id not in [self.us_opt_pp_id, self.us_bid_pp_id]:
@@ -498,7 +489,9 @@ def volttronbridge(config_path, **kwargs):
             return
             
         def _register_ds_bridge(self, discovery_address, deviceId):
-            _log.debug('_register_ds_bridge(), discovery_address: ' + discovery_address + ' deviceId: ' + deviceId)
+            _log.debug('_register_ds_bridge(), discovery_address: ' + discovery_address 
+                        + ' deviceId: ' + deviceId
+                        )
             if discovery_address in self._ds_voltBr:
                 _log.debug('already registered!!!')
                 index = self._ds_voltBr.index(discovery_address)
@@ -515,7 +508,9 @@ def volttronbridge(config_path, **kwargs):
             return True
             
         def _unregister_ds_bridge(self, discovery_address, deviceId):
-            _log.debug('_unregister_ds_bridge(), discovery_address: ' + discovery_address + ' deviceId: ' + deviceId)
+            _log.debug('_unregister_ds_bridge(), discovery_address: '+ discovery_address 
+                        + ' deviceId: ' + deviceId
+                        )
             if discovery_address not in self._ds_voltBr:
                 _log.debug('already unregistered')
                 return True
@@ -586,18 +581,18 @@ def volttronbridge(config_path, **kwargs):
                             , ed_ttl
                             , ed_ts
                             ):
-            
+                            
             ispace_utils.print_ed(self, new_ed
-                , ed_datatype
-                , ed_pp_id
-                , ed_isoptimal
-                , discovery_address
-                , deviceId
-                , ed_duration
-                , ed_ttl
-                , ed_ts
-                )
-                
+                                        , ed_datatype
+                                        , ed_pp_id
+                                        , ed_isoptimal
+                                        , discovery_address
+                                        , deviceId
+                                        , ed_duration
+                                        , ed_ttl
+                                        , ed_ts
+                                        )
+                                        
             if discovery_address in self._ds_voltBr:
                 index = self._ds_voltBr.index(discovery_address)
                 if self._ds_deviceId[index] == deviceId:
