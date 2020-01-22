@@ -185,13 +185,13 @@ class SmartHub(Agent):
         self.core.periodic(self._period_read_data, self.publishSensorData, wait=None)
         
         #perodically publish sensor data to volttron bus
-        self.core.periodic(self._period_read_data, self.publishTed, wait=None)
+        self.core.periodic(self._period_read_data, self.publish_ted, wait=None)
         
         #subscribing to smarthub price point, sh gc published sh pp
         self.vip.pubsub.subscribe("pubsub", self.topic_price_point, self.onNewPrice)
         
         #subscribing to ds energy demand, vb publishes ed from registered ds to this topic
-        self.vip.pubsub.subscribe("pubsub", self.energyDemand_topic_ds, self.onDsEd)
+        self.vip.pubsub.subscribe("pubsub", self.energyDemand_topic_ds, self.on_ds_ed)
         
         self.vip.rpc.call(MASTER_WEB, 'register_agent_route'
                             , r'^/SmartHub'
@@ -946,26 +946,26 @@ class SmartHub(Agent):
         
     def _getPubTopic(self, deviceId, actionType):
         if actionType == AT_PUB_STATE:
-            if deviceId ==SH_DEVICE_LED_DEBUG:
+            if deviceId == SH_DEVICE_LED_DEBUG:
                 return self.topic_root + '/leddebugstate'
-            elif deviceId ==SH_DEVICE_LED:
+            elif deviceId == SH_DEVICE_LED:
                 return self.topic_root + '/ledstate'
-            elif deviceId ==SH_DEVICE_FAN:
+            elif deviceId == SH_DEVICE_FAN:
                 return self.topic_root + '/fanstate'
         elif actionType == AT_PUB_LEVEL:
             if deviceId == SH_DEVICE_LED:
                 return self.topic_root + '/ledlevel'
             elif deviceId == SH_DEVICE_FAN:
                 return self.topic_root + '/fanlevel'
-            elif deviceId ==SH_DEVICE_S_LUX:
+            elif deviceId == SH_DEVICE_S_LUX:
                 return self.topic_root + '/sensors/luxlevel'
-            elif deviceId ==SH_DEVICE_S_RH:
+            elif deviceId == SH_DEVICE_S_RH:
                 return self.topic_root + '/sensors/rhlevel'
-            elif deviceId ==SH_DEVICE_S_TEMP:
+            elif deviceId == SH_DEVICE_S_TEMP:
                 return self.topic_root + '/sensors/templevel'
-            elif deviceId ==SH_DEVICE_S_CO2:
+            elif deviceId == SH_DEVICE_S_CO2:
                 return self.topic_root + '/sensors/co2level'
-            elif deviceId ==SH_DEVICE_S_PIR:
+            elif deviceId == SH_DEVICE_S_PIR:
                 return self.topic_root + '/sensors/pirlevel'
         elif actionType == AT_PUB_THPP:
             if deviceId == SH_DEVICE_LED:
@@ -1150,7 +1150,7 @@ class SmartHub(Agent):
         
         return ted
         
-    def publishTed(self):
+    def publish_ted(self):
         self._ted = self._calculateTed()
         _log.info( "New TED: {0:.2f}, publishing to bus.".format(self._ted))
         pubTopic = self.energyDemand_topic
@@ -1168,7 +1168,7 @@ class SmartHub(Agent):
         ispace_utils.publish_to_bus(self, pubTopic, pubMsg)
         return  
         
-    def onDsEd(self, peer, sender, bus,  topic, headers, message):
+    def on_ds_ed(self, peer, sender, bus,  topic, headers, message):
         if sender == 'pubsub.compat':
             message = compat.unpack_legacy_message(headers, message)
             message = compat.unpack_legacy_message(headers, message)

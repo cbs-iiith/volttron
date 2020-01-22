@@ -108,7 +108,7 @@ class ZoneController(Agent):
         #TODO: publish initial data to volttron bus
         
         #perodically publish total energy demand to volttron bus
-        self.core.periodic(self._period_read_data, self.publishTed, wait=None)
+        self.core.periodic(self._period_read_data, self.publish_ted, wait=None)
         
         #perodically process new pricing point that keeps trying to apply the new pp till success
         self.core.periodic(self._period_process_pp, self.processNewPricePoint, wait=None)
@@ -117,7 +117,7 @@ class ZoneController(Agent):
         self.vip.pubsub.subscribe("pubsub", self.topic_price_point, self.onNewPrice)
         
         #subscribing to ds energy demand, vb publishes ed from registered ds to this topic
-        self.vip.pubsub.subscribe("pubsub", self.energyDemand_topic_ds, self.onDsEd)
+        self.vip.pubsub.subscribe("pubsub", self.energyDemand_topic_ds, self.on_ds_ed)
         
         self.vip.rpc.call(MASTER_WEB, 'register_agent_route'
                             , r'^/ZoneController'
@@ -495,7 +495,7 @@ class ZoneController(Agent):
         
         return ted
 
-    def publishTed(self):
+    def publish_ted(self):
         self._ted = self._calculateTed()
         _log.info( "New TED: {0:.2f}, publishing to bus.".format(self._ted))
         pubTopic = self.energyDemand_topic
@@ -538,7 +538,7 @@ class ZoneController(Agent):
             ted = 500
         return ted
         
-    def onDsEd(self, peer, sender, bus,  topic, headers, message):
+    def on_ds_ed(self, peer, sender, bus,  topic, headers, message):
         if sender == 'pubsub.compat':
             message = compat.unpack_legacy_message(headers, message)
         _log.debug('New ed from ds, topic: ' + topic +

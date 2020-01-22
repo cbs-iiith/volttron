@@ -129,7 +129,7 @@ class SmartStrip(Agent):
         self.core.periodic(self._period_read_data, self.publishPlugThPP, wait=None)
         
         #perodically publish total energy demand to volttron bus
-        self.core.periodic(self._period_read_data, self.publishTed, wait=None)
+        self.core.periodic(self._period_read_data, self.publish_ted, wait=None)
         
         #perodically process new pricing point that keeps trying to apply the new pp till success
         self.core.periodic(self._period_process_pp, self.processNewPricePoint, wait=None)
@@ -837,7 +837,7 @@ class SmartStrip(Agent):
                 bid_ted = bid_ted + self._plugActivePwr[idx]
         return bid_ted
         
-    def publishTed(self):
+    def publishBidTed(self):
         self._bid_ted = self._bid_ted()
         _log.info( "New Bid TED: {0:.2f}, publishing to bus.".format(self._bid_ted))
         pubTopic = self.energyDemand_topic
@@ -864,7 +864,7 @@ class SmartStrip(Agent):
                 ted = ted + self._plugActivePwr[idx]
         return ted
         
-    def publishTed(self):
+    def publish_ted(self):
         self._ted = self._calculateTed()
         _log.info( "New TED: {0:.2f}, publishing to bus.".format(self._ted))
         pubTopic = self.energyDemand_topic

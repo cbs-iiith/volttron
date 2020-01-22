@@ -105,7 +105,7 @@ class RadiantCubicle(Agent):
         #TODO: publish initial data to volttron bus
         
         #perodically publish total energy demand to volttron bus
-        self.core.periodic(self._period_read_data, self.publishTed, wait=None)
+        self.core.periodic(self._period_read_data, self.publish_ted, wait=None)
         
         #perodically process new pricing point that keeps trying to apply the new pp till success
         self.core.periodic(self._period_process_pp, self.processNewPricePoint, wait=None)
@@ -422,7 +422,7 @@ class RadiantCubicle(Agent):
         ispace_utils.publish_to_bus(self, pubTopic, pubMsg)
         return
         
-    def publishTed(self):
+    def publish_ted(self):
         self._ted = self.rpc_getRcCalcCoolingEnergy()
         _log.info( "New TED: {0:.2f}, publishing to bus.".format(self._ted))
         pubTopic = self.energyDemand_topic + "/" + self._deviceId
