@@ -136,7 +136,7 @@ def volttronbridge(config_path, **kwargs):
                 
                 #downstream volttron instances
                 #post price point to these instances
-                self._ds_voltBr = []
+                self._ds_register = []
                 self._ds_deviceId = []
                 self._ds_retrycount = []
                 
@@ -170,7 +170,7 @@ def volttronbridge(config_path, **kwargs):
                                             pricePoint_topic,
                                             self.on_new_pp
                                             )
-                self._ds_voltBr[:] = []
+                self._ds_register[:] = []
                 self._ds_deviceId[:] = []
                 self._ds_retrycount[:] = []
                 
@@ -216,7 +216,7 @@ def volttronbridge(config_path, **kwargs):
             self._us_retrycount = 0
             
             if self._bridge_host != 'LEVEL_TAILEND':
-                del self._ds_voltBr[:]
+                del self._ds_register[:]
                 del self._ds_deviceId[:]
                 del self._ds_retrycount[:]
                 
@@ -317,7 +317,7 @@ def volttronbridge(config_path, **kwargs):
                 
         @RPC.export
         def count_ds_devices(self):
-            return len(self._ds_voltBr)
+            return len(self._ds_register)
             
         #price point on local bus published, post it to all downstream bridges
         def on_new_pp(self, peer, sender, bus,  topic, headers, message):
@@ -459,8 +459,8 @@ def volttronbridge(config_path, **kwargs):
                 return
                 
             self._all_ds_posts_success  = True          #assume all ds post success, if any failed set to False
-            for discovery_address in self._ds_voltBr:
-                index = self._ds_voltBr.index(discovery_address)
+            for discovery_address in self._ds_register:
+                index = self._ds_register.index(discovery_address)
                 
                 if self._ds_retrycount[index] > MAX_RETRIES:
                     #maybe already posted or failed more than max retries, do nothing
@@ -495,15 +495,15 @@ def volttronbridge(config_path, **kwargs):
             _log.debug('_register_ds_bridge(), discovery_address: ' + discovery_address 
                         + ' deviceId: ' + deviceId
                         )
-            if discovery_address in self._ds_voltBr:
+            if discovery_address in self._ds_register:
                 _log.debug('already registered!!!')
-                index = self._ds_voltBr.index(discovery_address)
+                index = self._ds_register.index(discovery_address)
                 self._ds_retrycount[index] = 0
                 return True
                 
             #TODO: potential bug in this method, not atomic
-            self._ds_voltBr.append(discovery_address)
-            index = self._ds_voltBr.index(discovery_address)
+            self._ds_register.append(discovery_address)
+            index = self._ds_register.index(discovery_address)
             self._ds_deviceId.insert(index, deviceId)
             self._ds_retrycount.insert(index, 0)
             
@@ -514,21 +514,21 @@ def volttronbridge(config_path, **kwargs):
             _log.debug('_unregister_ds_bridge(), discovery_address: '+ discovery_address 
                         + ' deviceId: ' + deviceId
                         )
-            if discovery_address not in self._ds_voltBr:
+            if discovery_address not in self._ds_register:
                 _log.debug('already unregistered')
                 return True
                 
             #TODO: potential bug in this method, not atomic
-            index = self._ds_voltBr.index(discovery_address)
-            self._ds_voltBr.remove(discovery_address)
+            index = self._ds_register.index(discovery_address)
+            self._ds_register.remove(discovery_address)
             del self._ds_deviceId[index]
             del self._ds_retrycount[index]
             _log.debug('unregistered!!!')
             return True
             
         def _reset_ds_retrycount(self):
-            for discovery_address in self._ds_voltBr:
-                index = self._ds_voltBr.index(discovery_address)
+            for discovery_address in self._ds_register:
+                index = self._ds_register.index(discovery_address)
                 self._ds_retrycount[index] = 0
             return
             
@@ -600,8 +600,8 @@ def volttronbridge(config_path, **kwargs):
             if not msg_from_registered_ds(discovery_address, deviceId):
                 _log.warning("msg not from registered ds, do nothing!!!")
             
-            if discovery_address in self._ds_voltBr:
-                index = self._ds_voltBr.index(discovery_address)
+            if discovery_address in self._ds_register:
+                index = self._ds_register.index(discovery_address)
                 if self._ds_deviceId[index] == deviceId:
                     #post to bus
                     pubTopic = energyDemand_topic_ds + "/" + deviceId
@@ -623,8 +623,8 @@ def volttronbridge(config_path, **kwargs):
             return False
             
         def msg_from_registered_ds(self, discovery_address, device_id):
-            return (True if discovery_address in self._ds_voltBr
-                         and device_id == self._ds_deviceId[self._ds_voltBr.index(discovery_address)]
+            return (True if discovery_address in self._ds_register
+                         and device_id == self._ds_deviceId[self._ds_register.index(discovery_address)]
                          else False)
                          
         def do_rpc(self, url_root, method, params=None ):
