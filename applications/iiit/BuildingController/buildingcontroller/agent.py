@@ -209,7 +209,7 @@ class BuildingController(Agent):
         self._pp_failed = False     #any process that failed to apply pp sets this flag True
         self.publishPriceToBMS(self._price_point_latest)
         if not self._pp_failed:
-            self.applyPricingPolicy()
+            self._apply_pricing_policy()
             
         if self._pp_failed:
             _log.debug("unable to process_opt_pp(), will try again in " + str(self._period_process_pp))
@@ -220,8 +220,8 @@ class BuildingController(Agent):
         self._pp_id = self._pp_id_new
         return
 
-    def applyPricingPolicy(self):
-        _log.debug("applyPricingPolicy()")
+    def _apply_pricing_policy(self):
+        _log.debug("_apply_pricing_policy()")
         #TODO: control the energy demand of devices at building level accordingly
         #if applying self._price_point_latest failed, set self._pp_failed = True
         return

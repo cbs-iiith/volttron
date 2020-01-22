@@ -533,10 +533,10 @@ class SmartStrip(Agent):
             self._pp_failed = True
             return
             
-        self.applyPricingPolicy(PLUG_ID_1, SCHEDULE_AVLB)
-        self.applyPricingPolicy(PLUG_ID_2, SCHEDULE_AVLB)
-        self.applyPricingPolicy(PLUG_ID_3, SCHEDULE_AVLB)
-        self.applyPricingPolicy(PLUG_ID_4, SCHEDULE_AVLB)
+        self._apply_pricing_policy(PLUG_ID_1, SCHEDULE_AVLB)
+        self._apply_pricing_policy(PLUG_ID_2, SCHEDULE_AVLB)
+        self._apply_pricing_policy(PLUG_ID_3, SCHEDULE_AVLB)
+        self._apply_pricing_policy(PLUG_ID_4, SCHEDULE_AVLB)
         #cancel the schedule
         ispace_utils.cancel_task_schdl(self, task_id)
         
@@ -549,7 +549,7 @@ class SmartStrip(Agent):
         self._pp_id = self._pp_id_new
         return
         
-    def applyPricingPolicy(self, plugID, schdExist):
+    def _apply_pricing_policy(self, plugID, schdExist):
         plug_pp_th = self._plug_pricepoint_th[plugID]
         if self._price_point_latest > plug_pp_th:
             if self._plugRelayState[plugID] == RELAY_ON:

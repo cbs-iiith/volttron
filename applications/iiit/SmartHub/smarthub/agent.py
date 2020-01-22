@@ -159,8 +159,8 @@ class SmartHub(Agent):
         self.getInitialHwState()
         
         #apply pricing policy for default values
-        self.applyPricingPolicy(SH_DEVICE_LED, SCHEDULE_NOT_AVLB)
-        self.applyPricingPolicy(SH_DEVICE_FAN, SCHEDULE_NOT_AVLB)
+        self._apply_pricing_policy(SH_DEVICE_LED, SCHEDULE_NOT_AVLB)
+        self._apply_pricing_policy(SH_DEVICE_FAN, SCHEDULE_NOT_AVLB)
         
         #publish initial data to volttron bus
         self.publishDeviceState();
@@ -554,7 +554,7 @@ class SmartHub(Agent):
         
         self._shDevicesPP_th[deviceId] = thPP
         self._publishShDeviceThPP(deviceId, thPP)
-        self.applyPricingPolicy(deviceId, SCHEDULE_NOT_AVLB)
+        self._apply_pricing_policy(deviceId, SCHEDULE_NOT_AVLB)
         
         return
         
@@ -762,8 +762,8 @@ class SmartHub(Agent):
             _log.debug("unable to process_opt_pp(), will try again in " + str(self._period_process_pp))
             return
             
-        self.applyPricingPolicy(SH_DEVICE_LED, SCHEDULE_AVLB)
-        self.applyPricingPolicy(SH_DEVICE_FAN, SCHEDULE_AVLB)
+        self._apply_pricing_policy(SH_DEVICE_LED, SCHEDULE_AVLB)
+        self._apply_pricing_policy(SH_DEVICE_FAN, SCHEDULE_AVLB)
         #cancel the schedule
         ispace_utils.cancel_task_schdl(self, task_id)
         
@@ -780,8 +780,8 @@ class SmartHub(Agent):
         _log.info("New Price Point processed.")
         return
         
-    def applyPricingPolicy(self, deviceId, schdExist):
-        _log.debug("applyPricingPolicy()")
+    def _apply_pricing_policy(self, deviceId, schdExist):
+        _log.debug("_apply_pricing_policy()")
         shDevicesPP_th = self._shDevicesPP_th[deviceId]
         if self._price_point_latest > shDevicesPP_th: 
             if self._shDevicesState[deviceId] == SH_DEVICE_STATE_ON:

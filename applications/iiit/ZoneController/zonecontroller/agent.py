@@ -236,7 +236,7 @@ class ZoneController(Agent):
             return
             
         self._pp_failed = False     #any process that failed to apply pp sets this flag True
-        self.applyPricingPolicy()
+        self._apply_pricing_policy()
         
         if self._pp_failed:
             _log.debug("unable to process_opt_pp(), will try again in " + str(self._period_process_pp))
@@ -247,8 +247,8 @@ class ZoneController(Agent):
         self._pp_id = self._pp_id_new
         return
         
-    def applyPricingPolicy(self):
-        _log.debug("applyPricingPolicy()")
+    def _apply_pricing_policy(self):
+        _log.debug("_apply_pricing_policy()")
         
         #apply for ambient ac
         tsp = self.getNewTsp(self._price_point_latest)
