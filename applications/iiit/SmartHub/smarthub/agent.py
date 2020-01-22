@@ -233,7 +233,7 @@ class SmartHub(Agent):
     def _configGetInitValues(self):
         self._period_read_data          = self.config.get('period_read_data', 30)
         self._period_process_pp         = self.config.get('period_process_pp', 10)
-        self._price_point_current       = self.config.get('price_point_latest', 0.2)
+        self._price_point_old       = self.config.get('price_point_latest', 0.2)
         return
         
     def _configGetPoints(self):
@@ -640,9 +640,9 @@ class SmartHub(Agent):
         
     def publishCurrentPP(self) :
         #_log.debug('publishCurrentPP()')
-        _log.debug("current price point: " + "{0:0.4f}".format(float(self._price_point_current)))
+        _log.debug("current price point: " + "{0:0.4f}".format(float(self._price_point_new)))
                     
-        pubMsg = [self._price_point_current, {'units': 'cent', 'tz': 'UTC', 'type': 'float'}]
+        pubMsg = [self._price_point_new, {'units': 'cent', 'tz': 'UTC', 'type': 'float'}]
         ispace_utils.publish_to_bus(self, self.topic_price_point, pubMsg)
         return
         
@@ -719,7 +719,7 @@ class SmartHub(Agent):
         
     #this is a perodic function that keeps trying to apply the new pp till success
     def processNewPricePoint(self):
-        if ispace_utils.isclose(self._price_point_current, self._price_point_new, EPSILON) and self._pp_id == self._pp_id_new:
+        if ispace_utils.isclose(self._price_point_old, self._price_point_new, EPSILON) and self._pp_id == self._pp_id_new:
             return
             
         self._pp_failed = False     #any process that failed to apply pp sets this flag True
@@ -742,14 +742,14 @@ class SmartHub(Agent):
             return
             
         _log.info("New Price Point processed.")
-        self._price_point_current = self._price_point_new
+        self._price_point_old = self._price_point_new
         self._pp_id = self._pp_id_new
         return
         
     def applyPricingPolicy(self, deviceId, schdExist):
         _log.debug("applyPricingPolicy()")
         shDevicesPP_th = self._shDevicesPP_th[deviceId]
-        if self._price_point_current > shDevicesPP_th: 
+        if self._price_point_new > shDevicesPP_th: 
             if self._shDevicesState[deviceId] == SH_DEVICE_STATE_ON:
                 _log.info(self._getEndPoint(deviceId, AT_GET_STATE) \
                             + 'Current price point > threshold' \
@@ -772,7 +772,7 @@ class SmartHub(Agent):
                 self._pp_failed = True
                 
             if deviceId == SH_DEVICE_FAN:
-                fan_speed = self.getNewFanSpeed(self._price_point_current)/100
+                fan_speed = self.getNewFanSpeed(self._price_point_new)/100
                 _log.info ( "New Fan Speed: {0:.4f}".format(fan_speed))
                 self.setShDeviceLevel(SH_DEVICE_FAN, fan_speed, schdExist)
                 if not ispace_utils.isclose(fan_speed, self._shDevicesLevel[deviceId], EPSILON):

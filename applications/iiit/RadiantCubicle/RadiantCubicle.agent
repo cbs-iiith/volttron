@@ -8,7 +8,7 @@
     "topic_root": "radiantcubicle",
     "topic_price_point": "smarthub/pricepoint",
     "topic_energy_demand": "ds/energydemand",
-    "default_base_price": 0.2,
+    "default_base_price": 0.1,
     "price_point_latest": 0.2,
     
     #price functions(pf), quadratic functions of the form f(x) = ax2 + bx + c, 

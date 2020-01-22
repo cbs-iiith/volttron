@@ -170,7 +170,7 @@ class SmartStrip(Agent):
     def _configGetInitValues(self):
         self._period_read_data = self.config.get('period_read_data', 30)
         self._period_process_pp = self.config.get('period_process_pp', 10)
-        self._price_point_current = self.config.get('price_point_latest', 0.2)
+        self._price_point_old = self.config.get('price_point_latest', 0.2)
         self._tag_ids = self.config['tag_ids']
         self._plug_pricepoint_th = self.config['plug_pricepoint_th']
         self._sh_plug_id = self.config.get('smarthub_plug', 4) - 1
@@ -430,7 +430,7 @@ class SmartStrip(Agent):
                 self._plugConnected[plugID] = 1
                 if self.tagAuthorised(newTagId):
                     plug_pp_th = self._plug_pricepoint_th[plugID]
-                    if self._price_point_current < plug_pp_th:
+                    if self._price_point_new < plug_pp_th:
                         _log.info(('Plug {0:d}: '.format(plugID + 1),
                                 'Current price point < '
                                 'threshold {0:.2f}, '.format(plug_pp_th),
@@ -510,7 +510,7 @@ class SmartStrip(Agent):
         
     #this is a perodic function that keeps trying to apply the new pp till success
     def processNewPricePoint(self):
-        if ispace_utils.isclose(self._price_point_current, self._price_point_new, EPSILON) and self._pp_id == self._pp_id_new:
+        if ispace_utils.isclose(self._price_point_old, self._price_point_new, EPSILON) and self._pp_id == self._pp_id_new:
             return
             
         self._pp_failed = False     #any process that failed to apply pp, sets this flag True
@@ -535,7 +535,7 @@ class SmartStrip(Agent):
             return
             
         _log.info("New Price Point processed.")
-        self._price_point_current = self._price_point_new
+        self._price_point_old = self._price_point_new
         self._pp_id = self._pp_id_new
         return
         

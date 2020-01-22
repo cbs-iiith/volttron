@@ -137,7 +137,7 @@ class RadiantCubicle(Agent):
     def _configGetInitValues(self):
         self._period_read_data = self.config.get('period_read_data', 30)
         self._period_process_pp = self.config.get('period_process_pp', 10)
-        self._price_point_current = self.config.get('price_point_latest', 0.2)
+        self._price_point_old = self.config.get('price_point_latest', 0.2)
         self._deviceId = self.config.get('deviceId', 'RadiantCubicle-61')
         return
         
@@ -217,7 +217,7 @@ class RadiantCubicle(Agent):
         
     #this is a perodic function that keeps trying to apply the new pp till success
     def processNewPricePoint(self):
-        if ispace_utils.isclose(self._price_point_current, self._price_point_new, EPSILON) and self._pp_id == self._pp_id_new:
+        if ispace_utils.isclose(self._price_point_old, self._price_point_new, EPSILON) and self._pp_id == self._pp_id_new:
             return
             
         self._pp_failed = False     #any process that failed to apply pp sets this flag True
@@ -228,13 +228,13 @@ class RadiantCubicle(Agent):
             return
             
         _log.info("New Price Point processed.")
-        self._price_point_current = self._price_point_new
+        self._price_point_old = self._price_point_new
         self._pp_id = self._pp_id_new
         return
         
     def applyPricingPolicy(self):
         _log.debug("applyPricingPolicy()")
-        tsp = self.getNewTsp(self._price_point_current)
+        tsp = self.getNewTsp(self._price_point_new)
         _log.debug('New Setpoint: {0:0.1f}'.format( tsp))
         self.setRcTspLevel(tsp)
         if not ispace_utils.isclose(tsp, self._rcTspLevel, EPSILON):
