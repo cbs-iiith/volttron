@@ -542,16 +542,17 @@ def volttronbridge(config_path, **kwargs):
                             , new_pp_ttl
                             , new_pp_ts
                             ):
-            ispace_utils.print_pp(self, new_pp
-                            , new_pp_datatype
-                            , new_pp_id
-                            , new_pp_isoptimal
-                            , discovery_address
-                            , deviceId
-                            , new_pp_ttl
-                            , new_pp_ts
-                            )
-                            
+            ispace_utils.print_pp(self, 'pp from us'
+                                        , new_pp
+                                        , new_pp_datatype
+                                        , new_pp_id
+                                        , new_pp_isoptimal
+                                        , discovery_address
+                                        , deviceId
+                                        , new_pp_ttl
+                                        , new_pp_ts
+                                        )
+                                        
             #keep track of us opt_pp_id & bid_pp_id
             if new_pp_isoptimal:
                 self.us_opt_pp_id = new_pp_id
@@ -584,8 +585,8 @@ def volttronbridge(config_path, **kwargs):
                             , ed_ttl
                             , ed_ts
                             ):
-                            
-            ispace_utils.print_ed(self, new_ed
+            ispace_utils.print_ed(self, 'ed from ds'
+                                        , new_ed
                                         , ed_datatype
                                         , ed_pp_id
                                         , ed_isoptimal
@@ -596,6 +597,9 @@ def volttronbridge(config_path, **kwargs):
                                         , ed_ts
                                         )
                                         
+            if not msg_from_registered_ds(discovery_address, deviceId):
+                _log.warning("msg not from registered ds, do nothing!!!")
+            
             if discovery_address in self._ds_voltBr:
                 index = self._ds_voltBr.index(discovery_address)
                 if self._ds_deviceId[index] == deviceId:
@@ -618,6 +622,11 @@ def volttronbridge(config_path, **kwargs):
             _log.debug("...Failed!!!")
             return False
             
+        def msg_from_registered_ds(self, discovery_address, device_id):
+            return (True if discovery_address in self._ds_voltBr
+                         and device_id == self._ds_deviceId[self._ds_voltBr.index(discovery_address)]
+                         else False)
+                         
         def do_rpc(self, url_root, method, params=None ):
             #_log.debug('do_rpc()')
             result = False

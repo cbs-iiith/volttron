@@ -52,7 +52,7 @@ def ttl_timeout(self, str_ts, ttl):
             return False
         ts  = dateutil.parser.parse(str_ts)
         now = dateutil.parser.parse(datetime.datetime.utcnow().isoformat(' ') + 'Z')
-        return True if (now - ts) > ttl else False
+        return (True if (now - ts) > ttl else False)
         
 def print_pp(self, hint, new_pp
                     , pp_datatype
