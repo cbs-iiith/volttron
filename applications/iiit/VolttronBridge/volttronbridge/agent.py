@@ -58,14 +58,14 @@ def volttronbridge(config_path, **kwargs):
     config = utils.load_config(config_path)
     agent_id = config['agentid']
     
-    energyDemand_topic      = config.get('energyDemand_topic',
+    energyDemand_topic = config.get('energyDemand_topic',
                                             'zone/energydemand')
-    energyDemand_topic_ds   = config.get('energyDemand_topic_ds',
+    energyDemand_topic_ds = config.get('energyDemand_topic_ds',
                                             'smarthub/energydemand')
                                             
-    pricePoint_topic_us     = config.get('pricePoint_topic_us',
+    pricePoint_topic_us = config.get('pricePoint_topic_us',
                                             'building/pricepoint')
-    pricePoint_topic        = config.get('pricePoint_topic',
+    pricePoint_topic = config.get('pricePoint_topic',
                                             'zone/pricepoint')
                                             
     '''
@@ -100,34 +100,34 @@ def volttronbridge(config_path, **kwargs):
             
             self._usConnected = False
             self._bridge_host = config.get('bridge_host', 'LEVEL_HEAD')
-            self._deviceId    = config.get('deviceId', 'Building-1')
+            self._deviceId = config.get('deviceId', 'Building-1')
             
             #price point
-            self._pp_current            = 0
-            self._pp_id                 = randint(0, 99999999)
-            self._pp_datatype           = {'units': 'cents', 'tz': 'UTC', 'type': 'float'}
-            self._pp_isoptimal          = False
-            self._pp_duration           = 0
-            self._pp_ttl                = -1
-            self._pp_ts                 = datetime.datetime.utcnow().isoformat(' ') + 'Z'
-            self._all_ds_posts_success  = False
+            self._pp_current = 0
+            self._pp_id = randint(0, 99999999)
+            self._pp_datatype = {'units': 'cents', 'tz': 'UTC', 'type': 'float'}
+            self._pp_isoptimal = False
+            self._pp_duration = 0
+            self._pp_ttl = -1
+            self._pp_ts = datetime.datetime.utcnow().isoformat(' ') + 'Z'
+            self._all_ds_posts_success = False
             
             #energy demand
-            self._ed_current            = 0
-            self._ed_datatype           = {'units': 'W', 'tz': 'UTC', 'type': 'float'}
-            self._ed_pp_id              = randint(0, 99999999)
-            self._ed_isoptimal          = True
-            self._ed_discovery_addrs    = None
-            self._ed_device_id          = None
-            self._ed_duration           = 0
-            self._ed_ttl                = -1
-            self._ed_ts                 = datetime.datetime.utcnow().isoformat(' ') + 'Z'
-            self._all_us_posts_success  = False
+            self._ed_current = 0
+            self._ed_datatype = {'units': 'W', 'tz': 'UTC', 'type': 'float'}
+            self._ed_pp_id = randint(0, 99999999)
+            self._ed_isoptimal = True
+            self._ed_discovery_addrs = None
+            self._ed_device_id = None
+            self._ed_duration = 0
+            self._ed_ttl = -1
+            self._ed_ts = datetime.datetime.utcnow().isoformat(' ') + 'Z'
+            self._all_us_posts_success = False
             
             self._us_retrycount = 0
             
-            self._this_ip_addr    = config.get('ip_addr', "192.168.1.51")
-            self._this_port       = int(config.get('port', 8082))
+            self._this_ip_addr = config.get('ip_addr', "192.168.1.51")
+            self._this_port = int(config.get('port', 8082))
             
             self._period_process_pp = int(config.get('period_process_pp', 10))
             
@@ -144,15 +144,15 @@ def volttronbridge(config_path, **kwargs):
                 _log.debug(self._bridge_host)
                 
                 #upstream volttron instance
-                self._us_ip_addr      = config.get('us_ip_addr', "192.168.1.51")
-                self._us_port         = int(config.get('us_port', 8082))
+                self._us_ip_addr = config.get('us_ip_addr', "192.168.1.51")
+                self._us_port = int(config.get('us_port', 8082))
                 _log.debug('self._us_ip_addr: ' + self._us_ip_addr + ' self._us_port: ' + str(self._us_port))
                 
             self._discovery_address = self._this_ip_addr + ':' + str(self._this_port)
             _log.debug('self._discovery_address: ' + self._discovery_address)
             return
             
-        @Core.receiver('onstart')            
+        @Core.receiver('onstart')
         def startup(self, sender, **kwargs):
             _log.debug('startup()')
             _log.debug(self._bridge_host)
@@ -232,9 +232,9 @@ def volttronbridge(config_path, **kwargs):
                     self._usConnected = False
                 
             _log.debug('un registering rpc routes')
-            self.vip.rpc.call(MASTER_WEB,
-                                'unregister_all_agent_routes'\
-#                                , self.core.identity\
+            self.vip.rpc.call(MASTER_WEB
+                                , 'unregister_all_agent_routes'
+#                                , self.core.identity
                                 ).get(timeout=30)
                                 
             _log.debug('done!!!')
@@ -247,18 +247,18 @@ def volttronbridge(config_path, **kwargs):
                 rpcdata = jsonrpc.JsonRpcData.parse(message)
                 '''
                 _log.debug('rpc_from_net()...' +
-                            ', rpc method: {}'.format(rpcdata.method) +\
+                            ', rpc method: {}'.format(rpcdata.method) +
                             ', rpc params: {}'.format(rpcdata.params))
                 '''
                 if rpcdata.method == "rpc_register_ds_bridge":
-                    args = {'discovery_address': rpcdata.params['discovery_address'],
-                            'deviceId':rpcdata.params['deviceId']
+                    args = {'discovery_address': rpcdata.params['discovery_address']
+                            , 'deviceId':rpcdata.params['deviceId']
                             }
                     result = self._register_ds_bridge(**args)
                     
                 elif rpcdata.method == "rpc_unregister_ds_bridge":
-                    args = {'discovery_address': rpcdata.params['discovery_address'],
-                            'deviceId':rpcdata.params['deviceId']
+                    args = {'discovery_address': rpcdata.params['discovery_address']
+                            , 'deviceId':rpcdata.params['deviceId']
                             }
                     result = self._unregister_ds_bridge(**args)
                     
@@ -403,8 +403,8 @@ def volttronbridge(config_path, **kwargs):
             if self._ed_pp_id not in [self.us_opt_pp_id, self.us_bid_pp_id]:
                 _log.debug("self._ed_pp_id: " + str(self._ed_pp_id)
                             + " not in [self.us_opt_pp_id, self.us_bid_pp_id]: "
-                            + str([self.us_opt_pp_id, self.us_bid_pp_id])\
-                            + ", do nothing"\
+                            + str([self.us_opt_pp_id, self.us_bid_pp_id])
+                            + ", do nothing"
                             )
                 return
             self._all_us_posts_success = False         #initiate us post
@@ -423,9 +423,10 @@ def volttronbridge(config_path, **kwargs):
             _log.debug('check us connection...')
             if not self._usConnected:
                 _log.debug('not connected, Trying to register once...')
-                self._usConnected = self._registerToUsBridge(url_root,\
-                                                                self._discovery_address,\
-                                                                self._deviceId)
+                self._usConnected = self._registerToUsBridge(url_root,
+                                                                , self._discovery_address
+                                                                , self._deviceId
+                                                                )
                 if not self._usConnected:
                     _log.debug('_usConnected: ' + str(self._usConnected))
                     _log.debug('Failed to register, May be upstream bridge is not running!!!')

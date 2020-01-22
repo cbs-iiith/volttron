@@ -75,21 +75,21 @@ def smarthubui_clnt(config_path, **kwargs):
             return
         
         def _configGetPoints(self):
-            self.topic_price_point              = config.get('topic_price_point',
+            self.topic_price_point = config.get('topic_price_point',
                                                             'smarthub/pricepoint')
-            self.topic_sensorsLevelAll_point    = config.get('sensorsLevelAll_point',
+            self.topic_sensorsLevelAll_point = config.get('sensorsLevelAll_point',
                                                             'smarthub/sensors/all')
-            self.topic_ledState_point           = config.get('ledState_point',
-                                                            'smarthub/ledstate')    
-            self.topic_fanState_point           = config.get('fanState_point',
-                                                            'smarthub/fanstate')    
-            self.topic_ledLevel_point           = config.get('ledLevel_point',
-                                                            'smarthub/ledlevel')    
-            self.topic_fanLevel_point           = config.get('fanLevel_point',
+            self.topic_ledState_point = config.get('ledState_point',
+                                                            'smarthub/ledstate')
+            self.topic_fanState_point = config.get('fanState_point',
+                                                            'smarthub/fanstate')
+            self.topic_ledLevel_point = config.get('ledLevel_point',
+                                                            'smarthub/ledlevel')
+            self.topic_fanLevel_point = config.get('fanLevel_point',
                                                             'smarthub/fanlevel')
-            self.topic_ledThPP_point            = config.get('ledThPP_point',
-                                                            'smarthub/ledthpp')    
-            self.topic_fanThPP_point            = config.get('fanThPP_point',
+            self.topic_ledThPP_point = config.get('ledThPP_point',
+                                                            'smarthub/ledthpp')
+            self.topic_fanThPP_point = config.get('fanThPP_point',
                                                             'smarthub/fanthpp')
             return
             
@@ -160,13 +160,12 @@ def smarthubui_clnt(config_path, **kwargs):
 
         def uiPostSensorData(self, headers, message) :
             _log.debug('uiPostSensorData()')
-            luxLevel   = message[0]['luxlevel']
-            rhLevel    = message[0]['rhlevel']
-            tempLevel  = message[0]['templevel']
-            co2Level   = message[0]['co2level']
-            pirLevel   = message[0]['pirlevel']
-            self.do_rpc('shSensorsData', {\
-                                            'luxLevel': luxLevel,
+            luxLevel = message[0]['luxlevel']
+            rhLevel = message[0]['rhlevel']
+            tempLevel = message[0]['templevel']
+            co2Level = message[0]['co2level']
+            pirLevel = message[0]['pirlevel']
+            self.do_rpc('shSensorsData', {'luxLevel': luxLevel,
                                             'rhLevel':  rhLevel,
                                             'tempLevel': tempLevel,
                                             'co2Level': co2Level,
@@ -174,37 +173,37 @@ def smarthubui_clnt(config_path, **kwargs):
                                             })
             return
             
-        def uiPostLedState(self, headers, message) :
+        def uiPostLedState(self, headers, message):
             _log.debug('uiPostLedState()')
             state = message[0]
             self.do_rpc('shDeviceState', {'deviceId': SH_DEVICE_LED,
                                             'state': state})
             return
-        def uiPostFanState(self, headers, message) :
+        def uiPostFanState(self, headers, message):
             _log.debug('uiPostFanState()')
             state = message[0]
             self.do_rpc('shDeviceState', {'deviceId': SH_DEVICE_FAN,
                                             'state': state})
             return
-        def uiPostLedLevel(self, headers, message) :
+        def uiPostLedLevel(self, headers, message):
             _log.debug('uiPostLedLevel()')
             level = message[0]
             self.do_rpc('shDeviceLevel', {'deviceId': SH_DEVICE_LED,
                                             'level': level})
             return
-        def uiPostFanLevel(self, headers, message) :
+        def uiPostFanLevel(self, headers, message):
             _log.debug('uiPostFanLevel()')
             level = message[0]
             self.do_rpc('shDeviceLevel', {'deviceId': SH_DEVICE_FAN,
                                             'level': level})
             return
-        def uiPostLedThPP(self, headers, message) :
+        def uiPostLedThPP(self, headers, message):
             _log.debug('uiPostLedThPP()')
             thPP = message[0]
             self.do_rpc('shDeviceThPP', {'deviceId': SH_DEVICE_LED,
                                             'thPP': thPP})
             return
-        def uiPostFanThPP(self, headers, message) :
+        def uiPostFanThPP(self, headers, message):
             _log.debug('uiPostFanThPP()')
             thPP = message[0]
             self.do_rpc('shDeviceThPP', {'deviceId': SH_DEVICE_FAN,

@@ -42,8 +42,8 @@ def ss_sh_device(config_path, **kwargs):
     '''
     This agent runs on the smart strip and controls the plug to which the smart hub is connected.
         
-    sh_btry_th  = 1 if the battery charge level is above a certain charge threshold
-                = 0 
+    sh_btry_th = 1 if the battery charge level is above a certain charge threshold
+               = 0
 
     sh_brty_level = 100 (0-100)
     sh_on_btry = True
@@ -113,12 +113,12 @@ def ss_sh_device(config_path, **kwargs):
             return
             
         def _configGetInitValues(self):
-            self.period_read    = config.get("period_read", 10)
-            self.sh_ip_addr     = config.get("sh_ip_addr", "192.168.1.50")
-            self.sh_port        = config.get("sh_port", 8080)
-            self.sh_plug_id     = config.get("sh_plug_id", 4)
-            self.sh_th_pp       = config.get("sh_threshold_pp", 0.5)
-            self.ss_pp_topic    = config.get("ss_pp_topic", "smartstrip/pricepoint")
+            self.period_read = config.get("period_read", 10)
+            self.sh_ip_addr = config.get("sh_ip_addr", "192.168.1.50")
+            self.sh_port = config.get("sh_port", 8080)
+            self.sh_plug_id = config.get("sh_plug_id", 4)
+            self.sh_th_pp = config.get("sh_threshold_pp", 0.5)
+            self.ss_pp_topic = config.get("ss_pp_topic", "smartstrip/pricepoint")
             return
             
         def _onNewPrice(self, peer, sender, bus,  topic, headers, message):

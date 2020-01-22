@@ -202,22 +202,22 @@ class ZoneController(Agent):
         if sender == 'pubsub.compat':
             message = compat.unpack_legacy_message(headers, message)
             
-        new_pp              = message[ParamPP.idx_pp]
-        new_pp_datatype     = message[ParamPP.idx_pp_datatype]
-        new_pp_id           = message[ParamPP.idx_pp_id]
-        new_pp_isoptimal    = message[ParamPP.idx_pp_isoptimal]
-        discovery_address   = message[ParamPP.idx_pp_discovery_addrs]
-        deviceId            = message[ParamPP.idx_pp_device_id]
-        new_pp_ttl          = message[ParamPP.idx_pp_ttl]
-        new_pp_ts           = message[ParamPP.idx_pp_ts]
-        ispace_utils.print_pp(self, new_pp\
-                , new_pp_datatype\
-                , new_pp_id\
-                , new_pp_isoptimal\
-                , discovery_address\
-                , deviceId\
-                , new_pp_ttl\
-                , new_pp_ts\
+        new_pp = message[ParamPP.idx_pp]
+        new_pp_datatype = message[ParamPP.idx_pp_datatype]
+        new_pp_id = message[ParamPP.idx_pp_id]
+        new_pp_isoptimal = message[ParamPP.idx_pp_isoptimal]
+        discovery_address = message[ParamPP.idx_pp_discovery_addrs]
+        deviceId = message[ParamPP.idx_pp_device_id]
+        new_pp_ttl = message[ParamPP.idx_pp_ttl]
+        new_pp_ts = message[ParamPP.idx_pp_ts]
+        ispace_utils.print_pp(self, new_pp
+                , new_pp_datatype
+                , new_pp_id
+                , new_pp_isoptimal
+                , discovery_address
+                , deviceId
+                , new_pp_ttl
+                , new_pp_ts
                 )
                 
         if not new_pp_isoptimal:

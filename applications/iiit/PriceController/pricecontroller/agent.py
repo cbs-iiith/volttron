@@ -54,14 +54,14 @@ def pricecontroller(config_path, **kwargs):
             #current grid price
             self._current_gd_pp = 0
             
-            self.topic_price_point_us   = config.get('pricePoint_topic_us', 'us/pricepoint')
-            self.topic_price_point      = config.get('pricePoint_topic', 'building/pricepoint')
-            self.agent_disabled         = False
-            self.pp_optimize_option     = config.get('pp_optimize_option', 'PASS_ON_PP')
-            self.topic_extrn_pp         = config.get('extrn_optimize_pp_topic', 'pca/pricepoint')
+            self.topic_price_point_us = config.get('pricePoint_topic_us', 'us/pricepoint')
+            self.topic_price_point = config.get('pricePoint_topic', 'building/pricepoint')
+            self.agent_disabled = False
+            self.pp_optimize_option = config.get('pp_optimize_option', 'PASS_ON_PP')
+            self.topic_extrn_pp = config.get('extrn_optimize_pp_topic', 'pca/pricepoint')
             return
 
-        @Core.receiver('onstart')            
+        @Core.receiver('onstart')
         def startup(self, sender, **kwargs):
             _log.debug('startup()')
             
@@ -71,13 +71,13 @@ def pricecontroller(config_path, **kwargs):
 #                    self.core.identity,
                     "rpc_from_net").get(timeout=30)
                     
-            self.us_pp              = 0
-            self.us_pp_id           = randint(0, 99999999)
-            self.us_pp_datatype     = {'units': 'cents', 'tz': 'UTC', 'type': 'float'}
-            self.us_pp_isoptimal    = False
-            self.us_pp_ttl          = -1
-            self.us_pp_ts           = datetime.datetime.utcnow().isoformat(' ') + 'Z'
-            self.us_pp_isoptimal    = False
+            self.us_pp = 0
+            self.us_pp_id = randint(0, 99999999)
+            self.us_pp_datatype = {'units': 'cents', 'tz': 'UTC', 'type': 'float'}
+            self.us_pp_isoptimal = False
+            self.us_pp_ttl = -1
+            self.us_pp_ts = datetime.datetime.utcnow().isoformat(' ') + 'Z'
+            self.us_pp_isoptimal = False
             
             #subscribing to topic_price_point_us
             self.vip.pubsub.subscribe("pubsub", self.topic_price_point_us, self.on_new_pp)
@@ -90,7 +90,7 @@ def pricecontroller(config_path, **kwargs):
                 rpcdata = jsonrpc.JsonRpcData.parse(message)
                 '''
                 _log.debug('rpc_from_net()...' +
-                            ', rpc method: {}'.format(rpcdata.method) +\
+                            ', rpc method: {}'.format(rpcdata.method) +
                             ', rpc params: {}'.format(rpcdata.params))
                 '''
                 if rpcdata.method == "rpc_disable_agent":
@@ -152,20 +152,20 @@ def pricecontroller(config_path, **kwargs):
             
         def on_new_pp(self, peer, sender, bus,  topic, headers, message):
             #new zone price point
-            new_pp              = message[ParamPP.idx_pp]
-            new_pp_datatype     = message[ParamPP.idx_pp_datatype]
+            new_pp = message[ParamPP.idx_pp]
+            new_pp_datatype = message[ParamPP.idx_pp_datatype]
                                     if message[ParamPP.idx_pp_datatype] is not None
                                     else {'units': 'cents', 'tz': 'UTC', 'type': 'float'}
-            new_pp_id           = message[ParamPP.idx_pp_id]
+            new_pp_id = message[ParamPP.idx_pp_id]
                                     if message[ParamPP.idx_pp_id] is not None
                                     else randint(0, 99999999)
-            new_pp_isoptimal    = message[ParamPP.idx_pp_isoptimal]
+            new_pp_isoptimal = message[ParamPP.idx_pp_isoptimal]
                                     if message[ParamPP.idx_pp_isoptimal] is not None
                                     else False
-            new_pp_ttl          = message[ParamPP.idx_pp_ttl]
+            new_pp_ttl = message[ParamPP.idx_pp_ttl]
                                     if message[ParamPP.idx_pp_ttl] is not None
                                     else -1
-            new_pp_ts           = message[ParamPP.idx_pp_ts]
+            new_pp_ts = message[ParamPP.idx_pp_ts]
                                     if message[ParamPP.idx_pp_ts] is not None
                                     else datetime.datetime.utcnow().isoformat(' ') + 'Z'
             ispace_utils.print_pp(self, new_pp
@@ -221,10 +221,10 @@ def pricecontroller(config_path, **kwargs):
             #       publish to bus
             
             #optimization algo
-            #   ed_target   = r% x ed_optimal
-            #   EPSILON     = 10       #deadband
-            #   gamma       = stepsize
-            #   max_iter    = 20        (assuming each iter is 30sec and max time spent is 10 min)
+            #   ed_target = r% x ed_optimal
+            #   EPSILON = 10       #deadband
+            #   gamma = stepsize
+            #   max_iter = 20        (assuming each iter is 30sec and max time spent is 10 min)
             #   
             #   count_iter = 0
             #   pp_old = pp_opt
@@ -236,12 +236,12 @@ def pricecontroller(config_path, **kwargs):
             #    
             #   pp_opt = pp_new
             #
-            new_pp              = self.us_pp * 1.25
-            new_pp_datatype     = self.us_pp_datatype
-            new_pp_id           = randint(0, 99999999)
-            new_pp_isoptimal    = False
-            new_pp_ttl          = 5  #5 sec
-            new_pp_ts           = datetime.datetime.utcnow().isoformat(' ') + 'Z'
+            new_pp = self.us_pp * 1.25
+            new_pp_datatype = self.us_pp_datatype
+            new_pp_id = randint(0, 99999999)
+            new_pp_isoptimal = False
+            new_pp_ttl = 5  #5 sec
+            new_pp_ts = datetime.datetime.utcnow().isoformat(' ') + 'Z'
             
             ispace_utils.print_pp(self, new_pp
                             , new_pp_datatype

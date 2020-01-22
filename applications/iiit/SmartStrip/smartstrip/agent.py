@@ -468,31 +468,31 @@ class SmartStrip(Agent):
         if sender == 'pubsub.compat':
             message = compat.unpack_legacy_message(headers, message)
             
-        new_pp              = message[ParamPP.idx_pp]
-        new_pp_datatype     = message[ParamPP.idx_pp_datatype]
-        new_pp_id           = message[ParamPP.idx_pp_id]
-        new_pp_isoptimal    = message[ParamPP.idx_pp_isoptimal]
-        discovery_address   = message[ParamPP.idx_pp_discovery_addrs]
-        deviceId            = message[ParamPP.idx_pp_device_id]
-        new_pp_ttl          = message[ParamPP.idx_pp_ttl]
-        new_pp_ts           = message[ParamPP.idx_pp_ts]
-        ispace_utils.print_pp(self, new_pp\
-                , new_pp_datatype\
-                , new_pp_id\
-                , new_pp_isoptimal\
-                , discovery_address\
-                , deviceId\
-                , new_pp_ttl\
-                , new_pp_ts\
+        new_pp = message[ParamPP.idx_pp]
+        new_pp_datatype = message[ParamPP.idx_pp_datatype]
+        new_pp_id = message[ParamPP.idx_pp_id]
+        new_pp_isoptimal = message[ParamPP.idx_pp_isoptimal]
+        discovery_address = message[ParamPP.idx_pp_discovery_addrs]
+        deviceId = message[ParamPP.idx_pp_device_id]
+        new_pp_ttl = message[ParamPP.idx_pp_ttl]
+        new_pp_ts = message[ParamPP.idx_pp_ts]
+        ispace_utils.print_pp(self, new_pp
+                , new_pp_datatype
+                , new_pp_id
+                , new_pp_isoptimal
+                , discovery_address
+                , deviceId
+                , new_pp_ttl
+                , new_pp_ts
                 )
                 
         if not new_pp_isoptimal:
             _log.debug('not optimal pp!!!')
-            self._bid_pp            = new_pp
-            self._bid_pp_datatype   = new_pp_datatype
-            self._bid_pp_id         = new_pp_id
-            self._bid_pp_ttl        = new_pp_ttl
-            self._bid_pp_ts         = new_pp_ts
+            self._bid_pp = new_pp
+            self._bid_pp_datatype = new_pp_datatype
+            self._bid_pp_id = new_pp_id
+            self._bid_pp_ttl = new_pp_ttl
+            self._bid_pp_ts = new_pp_ts
             #process bid_pp
             self.process_bid_pp()
             return
@@ -544,10 +544,11 @@ class SmartStrip(Agent):
         plug_pp_th = self._plug_pricepoint_th[plugID]
         if self._price_point_new > plug_pp_th: 
             if self._plugRelayState[plugID] == RELAY_ON:
-                _log.info(('Plug {0:d}: '.format(plugID + 1),
-                        'Current price point > threshold',
-                        '({0:.2f}), '.format(plug_pp_th),
-                        'Switching-Off Power'))
+                _log.info(('Plug {0:d}: '.format(plugID + 1)
+                            , 'Current price point > threshold'
+                            , '({0:.2f}), '.format(plug_pp_th)
+                            , 'Switching-Off Power'
+                            ))
                 self.switchRelay(plugID, RELAY_OFF, schdExist)
                 if not self._plugRelayState[plugID] == RELAY_OFF:
                     self._pp_failed = True
@@ -556,10 +557,11 @@ class SmartStrip(Agent):
                 #do nothing
         else:
             if self._plugConnected[plugID] == 1 and self.tagAuthorised(self._plug_tag_id[plugID]):
-                _log.info(('Plug {0:d}: '.format(plugID + 1),
-                        'Current price point < threshold',
-                        '({0:.2f}), '.format(plug_pp_th),
-                        'Switching-On Power'))
+                _log.info(('Plug {0:d}: '.format(plugID + 1)
+                            , 'Current price point < threshold'
+                            , '({0:.2f}), '.format(plug_pp_th)
+                            , 'Switching-On Power'
+                            ))
                 self.switchRelay(plugID, RELAY_ON, schdExist)
                 if not self._plugRelayState[plugID] == RELAY_ON:
                     self._pp_failed = True

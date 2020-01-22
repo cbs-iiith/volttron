@@ -70,19 +70,19 @@ E_UNKNOWN_STATE = -2
 E_UNKNOWN_LEVEL = -3
 
 #action types
-AT_GET_STATE    = 321
-AT_GET_LEVEL    = 322
-AT_SET_STATE    = 323
-AT_SET_LEVEL    = 324
-AT_PUB_LEVEL    = 325
-AT_PUB_STATE    = 326
-AT_GET_THPP     = 327
-AT_SET_THPP     = 328
-AT_PUB_THPP     = 329
+AT_GET_STATE = 321
+AT_GET_LEVEL = 322
+AT_SET_STATE = 323
+AT_SET_LEVEL = 324
+AT_PUB_LEVEL = 325
+AT_PUB_STATE = 326
+AT_GET_THPP = 327
+AT_SET_THPP = 328
+AT_PUB_THPP = 329
 
-SMARTHUB_BASE_ENERGY    = 8.0
-SMARTHUB_FAN_ENERGY     = 7.0
-SMARTHUB_LED_ENERGY     = 10.0
+SMARTHUB_BASE_ENERGY = 10.0
+SMARTHUB_FAN_ENERGY = 8.0
+SMARTHUB_LED_ENERGY = 10.0
 
 def smarthub(config_path, **kwargs):
     config = utils.load_config(config_path)
@@ -238,20 +238,20 @@ class SmartHub(Agent):
         return
         
     def _configGetPoints(self):
-        self.vb_vip_identity = self.config.get('vb_vip_identity',
-                                                'volttronbridgeagent-0.3_1')
+        self.vb_vip_identity = self.config.get('vb_vip_identity'
+                                                , 'volttronbridgeagent-0.3_1')
         self.topic_root = self.config.get('topic_root', 'smarthub')
-        self.topic_price_point = self.config.get('topic_price_point',
-                                                    'smarthub/pricepoint')
-        self.energyDemand_topic = self.config.get('topic_energy_demand',
-                                                    'smarthub/energydemand')
-        self.energyDemand_topic_ds = self.config.get('topic_energy_demand_ds',
-                                                        'smartstrip/energydemand')
+        self.topic_price_point = self.config.get('topic_price_point'
+                                                    , 'smarthub/pricepoint')
+        self.energyDemand_topic = self.config.get('topic_energy_demand'
+                                                    , 'smarthub/energydemand')
+        self.energyDemand_topic_ds = self.config.get('topic_energy_demand_ds'
+                                                        , 'smartstrip/energydemand')
         return
         
     def _configGetPriceFucntions(self):
         _log.debug("_configGetPriceFucntions()")
-        self.pf_sh_fan                  = self.config.get('pf_sh_fan')
+        self.pf_sh_fan = self.config.get('pf_sh_fan')
         return
         
     def runSmartHubTest(self):
