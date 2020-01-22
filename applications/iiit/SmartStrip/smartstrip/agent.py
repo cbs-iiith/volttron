@@ -519,11 +519,10 @@ class SmartStrip(Agent):
         #_log.debug("task_id: " + task_id)
         result = get_task_schdl(self, task_id,'iiit/cbs/smartstrip')
         if result['result'] != 'SUCCESS':
-            self._pp_failed = True
-            
-        if self._pp_failed:
             _log.debug("unable to processNewPricePoint(), will try again in " + str(self._period_process_pp))
+            self._pp_failed = True
             return
+            
         self.applyPricingPolicy(PLUG_ID_1, SCHEDULE_AVLB)
         self.applyPricingPolicy(PLUG_ID_2, SCHEDULE_AVLB)
         self.applyPricingPolicy(PLUG_ID_3, SCHEDULE_AVLB)
@@ -535,14 +534,14 @@ class SmartStrip(Agent):
             _log.debug("unable to processNewPricePoint(), will try again in " + str(self._period_process_pp))
             return
             
-        _log.info("*** New Price Point processed.")
+        _log.info("New Price Point processed.")
         self._price_point_current = self._price_point_new
         self._pp_id = self._pp_id_new
         return
         
     def applyPricingPolicy(self, plugID, schdExist):
         plug_pp_th = self._plug_pricepoint_th[plugID]
-        if self._price_point_current > plug_pp_th: 
+        if self._price_point_new > plug_pp_th: 
             if self._plugRelayState[plugID] == RELAY_ON:
                 _log.info(('Plug {0:d}: '.format(plugID + 1),
                         'Current price point > threshold',
@@ -828,7 +827,7 @@ class SmartStrip(Agent):
         
     def publishTed(self):
         self._bid_ted = self._bid_ted()
-        _log.info( "*** New Bid TED: {0:.2f}, publishing to bus ***".format(self._bid_ted))
+        _log.info( "New Bid TED: {0:.2f}, publishing to bus.".format(self._bid_ted))
         pubTopic = self.energyDemand_topic
         #_log.debug("Bid TED pubTopic: " + pubTopic)
         pubMsg = [self._bid_ted \
@@ -855,7 +854,7 @@ class SmartStrip(Agent):
         
     def publishTed(self):
         self._ted = self._calculateTed()
-        _log.info( "*** New TED: {0:.2f}, publishing to bus ***".format(self._ted))
+        _log.info( "New TED: {0:.2f}, publishing to bus.".format(self._ted))
         pubTopic = self.energyDemand_topic
         #_log.debug("TED pubTopic: " + pubTopic)
         pubMsg = [self._ted \

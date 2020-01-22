@@ -227,7 +227,7 @@ class RadiantCubicle(Agent):
             _log.debug("unable to processNewPricePoint(), will try again in " + str(self._period_process_pp))
             return
             
-        _log.info("*** New Price Point processed.")
+        _log.info("New Price Point processed.")
         self._price_point_current = self._price_point_new
         self._pp_id = self._pp_id_new
         return
@@ -421,7 +421,7 @@ class RadiantCubicle(Agent):
         
     def publishTed(self):
         self._ted = self.rpc_getRcCalcCoolingEnergy()
-        _log.info( "*** New TED: {0:.2f}, publishing to bus ***".format(self._ted))
+        _log.info( "New TED: {0:.2f}, publishing to bus.".format(self._ted))
         pubTopic = self.energyDemand_topic + "/" + self._deviceId
         #_log.debug("TED pubTopic: " + pubTopic)
         pubMsg = [self._ted \

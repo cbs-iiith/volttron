@@ -701,7 +701,7 @@ class SmartHub(Agent):
         return
         
     def publish_bid_ted(self):
-        _log.info( "*** New Bid TED: {0:.2f}, publishing to bus ***".format(self._bid_ted))
+        _log.info( "New Bid TED: {0:.2f}, publishing to bus.".format(self._bid_ted))
         pubTopic = self.energyDemand_topic
         #_log.debug("Bid TED pubTopic: " + pubTopic)
         pubMsg = [self._bid_ted \
@@ -741,7 +741,7 @@ class SmartHub(Agent):
             _log.debug("unable to processNewPricePoint(), will try again in " + str(self._period_process_pp))
             return
             
-        _log.info("*** New Price Point processed.")
+        _log.info("New Price Point processed.")
         self._price_point_current = self._price_point_new
         self._pp_id = self._pp_id_new
         return
@@ -773,7 +773,7 @@ class SmartHub(Agent):
                 
             if deviceId == SH_DEVICE_FAN:
                 fan_speed = self.getNewFanSpeed(self._price_point_current)/100
-                _log.info ( "*** New Fan Speed: {0:.4f} ***".format(fan_speed))
+                _log.info ( "New Fan Speed: {0:.4f}".format(fan_speed))
                 self.setShDeviceLevel(SH_DEVICE_FAN, fan_speed, schdExist)
                 if not isclose(fan_speed, self._shDevicesLevel[deviceId], EPSILON):
                     self._pp_failed = True
@@ -1165,7 +1165,7 @@ class SmartHub(Agent):
         
     def publishTed(self):
         self._ted = self._calculateTed()
-        _log.info( "*** New TED: {0:.2f}, publishing to bus ***".format(self._ted))
+        _log.info( "New TED: {0:.2f}, publishing to bus.".format(self._ted))
         pubTopic = self.energyDemand_topic
         #_log.debug("TED pubTopic: " + pubTopic)
         pubMsg = [self._ted \
@@ -1185,7 +1185,7 @@ class SmartHub(Agent):
         if sender == 'pubsub.compat':
             message = compat.unpack_legacy_message(headers, message)
             
-        _log.debug('*********** New ed from ds, topic: ' + topic + \
+        _log.debug('New ed from ds, topic: ' + topic + \
                     ' & ed: {0:.4f}'.format(message[ParamED.idx_ed]))
         print_ed_msg(message)
         

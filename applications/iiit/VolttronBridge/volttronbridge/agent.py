@@ -400,7 +400,7 @@ def volttronbridge(config_path, **kwargs):
                             
             #post ed to us only if pp_id corresponds to these ids (i.e., ed for either us opt_pp_id or bid_pp_id)
             if self._ed_pp_id not in [self.us_opt_pp_id, self.us_bid_pp_id]:
-                _log.debug("*** self._ed_pp_id: " + str(self._ed_pp_id) \
+                _log.debug("self._ed_pp_id: " + str(self._ed_pp_id) \
                             + " not in [self.us_opt_pp_id, self.us_bid_pp_id]: " \
                             + str([self.us_opt_pp_id, self.us_bid_pp_id])\
                             + ", do nothing"\

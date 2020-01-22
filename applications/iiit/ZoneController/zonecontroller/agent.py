@@ -241,7 +241,7 @@ class ZoneController(Agent):
             _log.debug("unable to processNewPricePoint(), will try again in " + str(self._period_process_pp))
             return
             
-        _log.info("*** New Price Point processed.")
+        _log.info("New Price Point processed.")
         self._price_point_current = self._price_point_new
         self._pp_id = self._pp_id_new
         return
@@ -492,7 +492,7 @@ class ZoneController(Agent):
 
     def publishTed(self):
         self._ted = self._calculateTed()
-        _log.info( "*** New TED: {0:.2f}, publishing to bus ***".format(self._ted))
+        _log.info( "New TED: {0:.2f}, publishing to bus.".format(self._ted))
         pubTopic = self.energyDemand_topic
         #_log.debug("TED pubTopic: " + pubTopic)
         pubMsg = [self._ted \
@@ -536,7 +536,7 @@ class ZoneController(Agent):
     def onDsEd(self, peer, sender, bus,  topic, headers, message):
         if sender == 'pubsub.compat':
             message = compat.unpack_legacy_message(headers, message)
-        _log.debug('*********** New ed from ds, topic: ' + topic + \
+        _log.debug('New ed from ds, topic: ' + topic + \
                     ' & ed: {0:.4f}'.format(message[ParamED.idx_ed]))
                     
         ed_pp_id = message[ParamED.idx_ed_pp_id]
