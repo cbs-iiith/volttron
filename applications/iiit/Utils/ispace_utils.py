@@ -25,6 +25,7 @@ from volttron.platform.messaging import headers as headers_mod
 utils.setup_logging()
 _log = logging.getLogger(__name__)
 
+#TODO: need to add a msg uuid, also convert ed_pp_id to use uuid instead for radint
 class ParamPP(IntEnum):
     idx_pp = 0
     idx_pp_datatype = 1
@@ -36,6 +37,7 @@ class ParamPP(IntEnum):
     idx_pp_ttl = 7
     idx_pp_ts = 8
     
+#TODO: need to add a msg uuid, also convert ed_pp_id to use uuid instead for radint
 class ParamED(IntEnum):
     idx_ed = 0
     idx_ed_datatype = 1
