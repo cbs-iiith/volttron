@@ -138,16 +138,33 @@ def pricecontroller(config_path, **kwargs):
                 result = False
             return result
             
-        #
+        #subscribe to local/ed (i.e., ted) from the controller (building/zone/smarthub controller)
         def on_new_ed(self, peer, sender, bus,  topic, headers, message):
-            #subscribe to ds/energydemand,
-            #accumulate ed from all ds, also get local ed
-            #publish ted to local(building/zone/smarthub/smartstrip)/enedgydemand
+            # (_ed, _is_opt, _ed_pp_id) = get_data(message)
+            #if _ed_pp_id = us_opt_pp_id:
+            #   #ed for global opt, do nothing
+            #   #vb moves this ed to next level
+            #   return
+            #if pass_on and _ed_pp_id in us_pp_ids[]
+            #   #do nothing
+            #   #vb moves this ed to next level
+            #   return
+            #if default_opt and _ed_pp_id in local_pp_ids[]
+            #       (new_pp, new_pp_isopt) = _computeNewPrice()
+            #       if new_pp_isopt
+            #           #local optimal reached
+            #           publish_ed(local/ed, _ed, us_bid_pp_id)
+            #           #if next level accepts this bid, the new target is this ed
+            #       based on opt conditon _computeNewPrice can publish new bid_pp or 
+            #if extrn_opt and _ed_pp_id in extrn_pp_ids[]
+            #   publish_ed(extrn/ed, _ed, _ed_pp_id)
+            #   return
             
-            #subscribe to local(building/zone/smarthub/smartstrip)/pricepoint
-            #keep a note of pp_id
             return
             
+        #subscribe to us/price (building/zone/smarthub/smartstrip)/pricepoint
+        #and also includes extern_pp_control_algo/pricepoint
+        #keep track of all the 6 pp_ids = (us, extrn, pca_generated_ids) x 2 (opt & bid)
         def on_new_pp(self, peer, sender, bus,  topic, headers, message):
             #new zone price point
             new_pp = message[ParamPP.idx_pp]
