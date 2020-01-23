@@ -326,6 +326,9 @@ class VolttronBridge(Agent):
         if self._bridge_host == 'LEVEL_TAILEND':
             return
             
+        if sender != 'iiit.pricecontroller':
+            return
+            
         #all pp ids are valid
         valid_pp_ids = []
         
@@ -353,6 +356,11 @@ class VolttronBridge(Agent):
         self._pp_ttl = message[ParamPP.idx_pp_ttl]
         self._pp_ts = message[ParamPP.idx_pp_ts]
         
+        #keep a track of local pp_ids
+        if self._pp_id not in [self.us_opt_pp_id, self.us_bid_pp_id]:
+            self.local_bid_pp_id = self._pp_id if not self._pp_isoptimal
+            self.local_opt_pp_id = self._pp_id if self._pp_isoptimal
+            
         #reset counters & flags
         self._reset_ds_retrycount()
         self._all_ds_posts_success  = False
@@ -368,7 +376,7 @@ class VolttronBridge(Agent):
             return
             
         #post ed to us only if pp_id corresponds to these ids (i.e., ed for either us opt_pp_id or bid_pp_id)
-        valid_pp_ids = [self.us_opt_pp_id, self.us_bid_pp_id]
+        valid_pp_ids = [self.us_opt_pp_id, self.us_bid_pp_id, self.local_opt_pp_id, self.local_bid_pp_id]
         
         #mandatory fields in the message
         mandatory_fields = [ParamPP.idx_ed
@@ -555,7 +563,7 @@ class VolttronBridge(Agent):
                                     , new_pp_ts
                                     )
                                     
-        #keep track of us opt_pp_id & bid_pp_id
+        #keep a track of us pp_ids
         if new_pp_isoptimal:
             self.us_opt_pp_id = new_pp_id
         else:
