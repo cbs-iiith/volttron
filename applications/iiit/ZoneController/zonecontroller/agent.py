@@ -506,7 +506,7 @@ class ZoneController(Agent):
 
     def publish_ted(self):
         self._ted = self._calculate_ted()
-        _log.info( "New TED: {0:.2f}, publishing to bus.".format(self._ted))
+        _log.info( "New TED: {0:.4f}, publishing to bus.".format(self._ted))
         pubTopic = self.energyDemand_topic
         #_log.debug("TED pubTopic: " + pubTopic)
         pubMsg = [self._ted

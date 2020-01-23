@@ -433,7 +433,7 @@ class RadiantCubicle(Agent):
         
     def publish_ted(self):
         self._ted = self.rpc_getRcCalcCoolingEnergy()
-        _log.info( "New TED: {0:.2f}, publishing to bus.".format(self._ted))
+        _log.info( "New TED: {0:.4f}, publishing to bus.".format(self._ted))
         pubTopic = self.energyDemand_topic + "/" + self._deviceId
         #_log.debug("TED pubTopic: " + pubTopic)
         pubMsg = [self._ted

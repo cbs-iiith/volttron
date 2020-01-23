@@ -846,24 +846,6 @@ class SmartStrip(Agent):
                 bid_ted = bid_ted + self._plugActivePwr[idx]
         return bid_ted
         
-    def publishBidTed(self):
-        self._bid_ted = self._bid_ted()
-        _log.info( "New Bid TED: {0:.2f}, publishing to bus.".format(self._bid_ted))
-        pubTopic = self.energyDemand_topic
-        #_log.debug("Bid TED pubTopic: " + pubTopic)
-        pubMsg = [self._bid_ted
-                    , {'units': 'W', 'tz': 'UTC', 'type': 'float'}
-                    , self._bid_pp_id
-                    , False
-                    , None
-                    , None
-                    , None
-                    , self._bid_pp_ttl
-                    , self._bid_pp_ts
-                    ]
-        ispace_utils.publish_to_bus(self, pubTopic, pubMsg)
-        return
-        
     #calculate the total energy demand (TED)
     def _calculate_ted(self):
         #_log.debug('_calculate_ted()')
@@ -875,7 +857,7 @@ class SmartStrip(Agent):
         
     def publish_ted(self):
         self._ted = self._calculate_ted()
-        _log.info( "New TED: {0:.2f}, publishing to bus.".format(self._ted))
+        _log.info( "New TED: {0:.4f}, publishing to bus.".format(self._ted))
         pubTopic = self.energyDemand_topic
         #_log.debug("TED pubTopic: " + pubTopic)
         pubMsg = [self._ted
