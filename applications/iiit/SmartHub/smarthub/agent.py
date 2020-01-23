@@ -80,9 +80,9 @@ AT_GET_THPP = 327
 AT_SET_THPP = 328
 AT_PUB_THPP = 329
 
-SMARTHUB_BASE_ENERGY = 1.2      #kWh (10 watts @30sec interval observed during physical verification)
-SMARTHUB_FAN_ENERGY = 0.96      #kWh (08 watts @30sec interval observed during physical verification)
-SMARTHUB_LED_ENERGY = 1.2       #kWh (10 watts @30sec interval observed during physical verification)
+SMARTHUB_BASE_ENERGY = 10       #Wh (observed during physical verification)
+SMARTHUB_FAN_ENERGY = 8         #Wh (observed during physical verification)
+SMARTHUB_LED_ENERGY = 10        #Wh (observed during physical verification)
 
 def smarthub(config_path, **kwargs):
     config = utils.load_config(config_path)
@@ -695,7 +695,7 @@ class SmartHub(Agent):
         self._bid_pp_duration = message[ParamPP.idx_pp_duration]
         self._bid_pp_ttl = message[ParamPP.idx_pp_ttl]
         self._bid_pp_ts = message[ParamPP.idx_pp_ts]
-        self._bid_ed = 0        #reset bid_ed to zero on new bid_pp
+        self._bid_ed = -1        #reset bid_ed to zero on new bid_pp
         self._ds_bid_ed[:] = []
         self.process_bid_pp()   #initiate the periodic process
         return
@@ -704,7 +704,7 @@ class SmartHub(Agent):
     def process_bid_pp(self):
         if self._bid_ed_published:
             return
-        if self._bid_ed == 0:
+        if self._bid_ed == -1:
             self._bid_ed = self._local_bid_ed(self._bid_pp, self._bid_pp_duration)
         
         ds_devices = self.vip.rpc.call('iiit.volttronbridge', 'count_ds_devices').get(timeout=10)
@@ -717,7 +717,7 @@ class SmartHub(Agent):
             #publish ted
             self.publish_bid_ted()
             #reset counters
-            self._bid_ed = 0 
+            self._bid_ed = -1 
             self._bid_ed_published = True
         else:
             #do nothing, wait for all ds ed or ttl timeout
@@ -726,19 +726,19 @@ class SmartHub(Agent):
         
     #calculate the local energy demand for bid_pp
     def _local_bid_ed(self, bid_pp, pp_duration):
-        ed = SMARTHUB_BASE_ENERGY
-        if bid_pp <= self._shDevicesPP_th[SH_DEVICE_LED]:
+        pp_duration = self._period_read_data
+        # ed should be measured in realtime from the connected plug
+        # however, since we don't have model for the battery charge controller
+        # we are using below algo based on experimental data
+        ed = ispace_utils.calc_energy(SMARTHUB_BASE_ENERGY, pp_duration)
+        if self._shDevicesState[SH_DEVICE_LED] == SH_DEVICE_STATE_ON:
             level_led = self._shDevicesLevel[SH_DEVICE_LED]
-            ed = ed + (SMARTHUB_LED_ENERGY * 0.30 * (3600 / pp_duration) ) 
-                        if level_led < 0.30
-                        else (SMARTHUB_LED_ENERGY * level_led * (3600 / pp_duration) )
-                        
-        if bid_pp <= self._shDevicesPP_th[SH_DEVICE_FAN]:
+            led_energy = self.calc_energy(SMARTHUB_LED_ENERGY, pp_duration)
+            ed = ed + ( led_energy * 0.30 if level_led <= 0.30 else led_energy * level_led)
+        if self._shDevicesState[SH_DEVICE_FAN] == SH_DEVICE_STATE_ON:
             level_fan = self._get_new_fan_speed(bid_pp)/100
-            ed = ed + (SMARTHUB_FAN_ENERGY * 0.30 * (3600 / pp_duration) )
-                        if level_fan < 0.30
-                        else (SMARTHUB_FAN_ENERGY * level_fan * (3600 / pp_duration) )
-                        
+            fan_energy = self.calc_energy(SMARTHUB_FAN_ENERGY, pp_duration)
+            ed = ed + (fan_energy * 0.30 if level_led <= 0.30 else fan_energy * level_fan)
         return ed
         
     def publish_bid_ted(self):
@@ -1202,23 +1202,18 @@ class SmartHub(Agent):
     #calculate the local energy demand for opt_pp
     def _local_opt_ed(self):
         pp_duration = self._period_read_data
-        
         # ed should be measured in realtime from the connected plug
         # however, since we don't have model for the battery charge controller
         # we are using below algo based on experimental data
-        ed = SMARTHUB_BASE_ENERGY
+        ed = ispace_utils.calc_energy(SMARTHUB_BASE_ENERGY, pp_duration)
         if self._shDevicesState[SH_DEVICE_LED] == SH_DEVICE_STATE_ON:
             level_led = self._shDevicesLevel[SH_DEVICE_LED]
-            ed = ed + (SMARTHUB_LED_ENERGY * 0.30 * (3600 / pp_duration) ) 
-                        if level_led < 0.30
-                        else (SMARTHUB_LED_ENERGY * level_led * (3600 / pp_duration) )
-                        
+            led_energy = self.calc_energy(SMARTHUB_LED_ENERGY, pp_duration)
+            ed = ed + ( led_energy * 0.30 if level_led <= 0.30 else led_energy * level_led)
         if self._shDevicesState[SH_DEVICE_FAN] == SH_DEVICE_STATE_ON:
             level_fan = self._shDevicesLevel[SH_DEVICE_FAN]
-            ed = ed + (SMARTHUB_FAN_ENERGY * 0.30 * (3600 / pp_duration) )
-                        if level_fan < 0.30
-                        else (SMARTHUB_FAN_ENERGY * level_fan * (3600 / pp_duration) )
-                        
+            fan_energy = self.calc_energy(SMARTHUB_FAN_ENERGY, pp_duration)
+            ed = ed + (fan_energy * 0.30 if level_led <= 0.30 else fan_energy * level_fan)
         return ed
         
     def on_ds_ed(self, peer, sender, bus, topic, headers, message):
