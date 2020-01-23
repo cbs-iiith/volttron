@@ -80,9 +80,16 @@ AT_GET_THPP = 327
 AT_SET_THPP = 328
 AT_PUB_THPP = 329
 
-SMARTHUB_BASE_ENERGY = 10       #Wh (observed during physical verification)
-SMARTHUB_FAN_ENERGY = 8         #Wh (observed during physical verification)
-SMARTHUB_LED_ENERGY = 10        #Wh (observed during physical verification)
+#these provide the average active power (Wh) of the devices, observed based on experiments data
+#for bid - calculate total energy (kWh)
+#for opt - calculate total active power (W)
+#TODO: currently using _ted for variable names for both the cases, 
+#       rename the variable names accordingly
+SH_BASE_ENERGY = 10
+SH_FAN_ENERGY = 8
+SH_LED_ENERGY = 10
+SH_FAN_THRESHOLD_PCT = 0.30
+SH_LED_THRESHOLD_PCT = 0.30
 
 def smarthub(config_path, **kwargs):
     config = utils.load_config(config_path)
@@ -128,7 +135,7 @@ class SmartHub(Agent):
     _ds_deviceId = []
     
     #smarthub total energy demand (including downstream smartstrips)
-    _ted = SMARTHUB_BASE_ENERGY
+    _ted = SH_BASE_ENERGY
 
     def __init__(self, config_path, **kwargs):
         super(SmartHub, self).__init__(**kwargs)
@@ -685,6 +692,8 @@ class SmartHub(Agent):
         self._pp_duration_latest = message[ParamPP.idx_pp_duration]
         self._pp_ttl_latest = message[ParamPP.idx_pp_ttl]
         self._pp_ts_latest = message[ParamPP.idx_pp_ts]
+        self._total_act_pwr = -1        #reset total active pwr to zero on new opt_pp
+        self._ds_total_act_pwr[:] = []
         self.process_opt_pp()     #initiate the periodic process
         return
         
@@ -704,7 +713,7 @@ class SmartHub(Agent):
     def process_bid_pp(self):
         if self._bid_ed_published:
             return
-        if self._bid_ed == -1:
+        if self._bid_ed < -1:
             self._bid_ed = self._local_bid_ed(self._bid_pp, self._bid_pp_duration)
         
         ds_devices = self.vip.rpc.call('iiit.volttronbridge', 'count_ds_devices').get(timeout=10)
@@ -725,28 +734,33 @@ class SmartHub(Agent):
         return
         
     #calculate the local energy demand for bid_pp
-    def _local_bid_ed(self, bid_pp, pp_duration):
-        pp_duration = self._period_read_data
-        # ed should be measured in realtime from the connected plug
+    #the bid energy is for self._bid_pp_duration (default 1hr)
+    #and this msg is valid for self._period_read_data (ttl - default 30s)
+    def _local_bid_ed(self):
+        # bid_ed should be measured in realtime from the connected plug
         # however, since we don't have model for the battery charge controller
         # we are using below algo based on experimental data
-        ed = ispace_utils.calc_energy(SMARTHUB_BASE_ENERGY, pp_duration)
+        bid_ed = ispace_utils.calc_energy(SH_BASE_ENERGY, self._bid_pp_duration)
         if self._shDevicesState[SH_DEVICE_LED] == SH_DEVICE_STATE_ON:
             level_led = self._shDevicesLevel[SH_DEVICE_LED]
-            led_energy = self.calc_energy(SMARTHUB_LED_ENERGY, pp_duration)
-            ed = ed + ( led_energy * 0.30 if level_led <= 0.30 else led_energy * level_led)
+            led_energy = self.calc_energy(SH_LED_ENERGY, self._bid_pp_duration)
+            bid_ed = bid_ed + ((led_energy * SH_LED_THRESHOLD_PCT)
+                                    if level_led <= SH_LED_THRESHOLD_PCT 
+                                    else (led_energy * level_led))
         if self._shDevicesState[SH_DEVICE_FAN] == SH_DEVICE_STATE_ON:
-            level_fan = self._get_new_fan_speed(bid_pp)/100
-            fan_energy = self.calc_energy(SMARTHUB_FAN_ENERGY, pp_duration)
-            ed = ed + (fan_energy * 0.30 if level_led <= 0.30 else fan_energy * level_fan)
-        return ed
+            level_fan = self._get_new_fan_speed(self._bid_pp)/100
+            fan_energy = self.calc_energy(SH_FAN_ENERGY, self._bid_pp_duration)
+            bid_ed = bid_ed + ((fan_energy * SH_FAN_THRESHOLD_PCT)
+                                    if level_led <= SH_FAN_THRESHOLD_PCT
+                                    else (fan_energy * level_fan))
+        return bid_ed
         
     def publish_bid_ted(self):
-        _log.info( "New Bid TED: {0:.2f}, publishing to bus.".format(self._bid_ted))
+        _log.info( "New Bid TED: {0:.4f}, publishing to bus.".format(self._bid_ted))
         pubTopic = self.energyDemand_topic
         #_log.debug("Bid TED pubTopic: " + pubTopic)
         pubMsg = [self._bid_ted
-                    , {'units': 'W', 'tz': 'UTC', 'type': 'float'}
+                    , {'units': 'kWh', 'tz': 'UTC', 'type': 'float'}
                     , self._bid_pp_id
                     , False
                     , None
@@ -1174,47 +1188,55 @@ class SmartHub(Agent):
             print(e)
             return jsonrpc.json_error('NA', UNHANDLED_EXCEPTION, e)
             
+        self._total_act_pwr = -1        #reset total active pwr to zero on new opt_pp
+        self._ds_total_act_pwr[:] = []
+
     def publish_ted(self):
-        self._ted = self._calculate_ted()
-        _log.info( "New TED: {0:.2f}, publishing to bus.".format(self._ted))
+        self._total_act_pwr = self._calc_total_act_pwr()
+        _log.info( "New Total Active Pwr: {0:.4f}, publishing to bus.".format(self._total_act_pwr))
         pubTopic = self.energyDemand_topic
         #_log.debug("TED pubTopic: " + pubTopic)
-        pubMsg = [self._ted
+        #the act_pwr is for self._period_read_data (default 30s)
+        #and this msg is valid for (ttl) self._pp_duration_old (default 1hour)
+        pubMsg = [self._total_act_pwr
                     , {'units': 'W', 'tz': 'UTC', 'type': 'float'}
                     , self._pp_id_old
                     , True
                     , None
                     , None
-                    , self._pp_duration_old
                     , self._period_read_data
+                    , self._pp_duration_old
                     , datetime.datetime.utcnow().isoformat(' ') + 'Z'
                     ]
         ispace_utils.publish_to_bus(self, pubTopic, pubMsg)
         return
         
-    #calculate the total energy demand (TED)
-    def _calculate_ted(self):
-        ted = self._local_opt_ed()
-        for ed in self._ds_ed:
-            ted = ted + ed
-        return ted
+    #calculate the total active power
+    def _calc_total_act_pwr(self):
+        total_act_pwr = self._local_opt_act_pwr()
+        for act_pwr in self._ds_total_act_pwr:
+            total_act_pwr = total_act_pwr + act_pwr
+        return total_act_pwr
         
-    #calculate the local energy demand for opt_pp
-    def _local_opt_ed(self):
-        pp_duration = self._period_read_data
-        # ed should be measured in realtime from the connected plug
+    '''return active power only -- W
+    '''
+    #calculate the local active power for opt_pp
+    def _local_opt_act_pwr(self):
+        # active pwr should be measured in realtime from the connected plug
         # however, since we don't have model for the battery charge controller
-        # we are using below algo based on experimental data
-        ed = ispace_utils.calc_energy(SMARTHUB_BASE_ENERGY, pp_duration)
+        # we are assumuing constant energy dfor the devices based on experimental data
+        act_pwr = SH_BASE_ENERGY
         if self._shDevicesState[SH_DEVICE_LED] == SH_DEVICE_STATE_ON:
             level_led = self._shDevicesLevel[SH_DEVICE_LED]
-            led_energy = self.calc_energy(SMARTHUB_LED_ENERGY, pp_duration)
-            ed = ed + ( led_energy * 0.30 if level_led <= 0.30 else led_energy * level_led)
+            act_pwr = act_pwr + ((SH_LED_ENERGY * SH_LED_THRESHOLD_PCT)
+                                    if level_led <= SH_LED_THRESHOLD_PCT
+                                    else (SH_LED_ENERGY * level_led))
         if self._shDevicesState[SH_DEVICE_FAN] == SH_DEVICE_STATE_ON:
             level_fan = self._shDevicesLevel[SH_DEVICE_FAN]
-            fan_energy = self.calc_energy(SMARTHUB_FAN_ENERGY, pp_duration)
-            ed = ed + (fan_energy * 0.30 if level_led <= 0.30 else fan_energy * level_fan)
-        return ed
+            act_pwr = act_pwr + ((SH_FAN_ENERGY * SH_LED_THRESHOLD_PCT)
+                                    if level_led <= SH_LED_THRESHOLD_PCT
+                                    else (SH_FAN_ENERGY * level_fan))
+        return act_pwr
         
     def on_ds_ed(self, peer, sender, bus, topic, headers, message):
         #post ed to us only if pp_id corresponds to these ids (i.e., ed for either us opt_pp_id or bid_pp_id)
@@ -1228,7 +1250,7 @@ class SmartHub(Agent):
         idx = self._get_ds_device_idx(message[ParamED.idx_ed_device_id])
         if message[ParamED.idx_ed_isoptimal]:
             _log.debug(" - opt_pp - ed!!!")
-            self._ds_ed[idx] = message[ParamED.idx_ed]
+            self._ds_total_act_pwr[idx] = message[ParamED.idx_ed]
         else:
             _log.debug(" - bid_pp - ed!!!")
             self._ds_bid_ed[idx] = message[ParamED.idx_ed]
@@ -1238,7 +1260,7 @@ class SmartHub(Agent):
         if deviceID not in self._ds_deviceId:
             self._ds_deviceId.append(deviceID)
             idx = self._ds_deviceId.index(deviceID)
-            self._ds_ed.insert(idx, 0.0)
+            self._ds_total_act_pwr.insert(idx, 0.0)
             self._ds_bid_ed.insert(idx, 0.0)
         return self._ds_deviceId.index(deviceID)
         
