@@ -53,6 +53,15 @@ E_UNKNOWN_CCE = -4
 E_UNKNOWN_TSP = -5
 E_UNKNOWN_BPP = -7
 
+def buildingcontroller(config_path, **kwargs):
+    config = utils.load_config(config_path)
+    vip_identity = config.get('vip_identity', 'iiit.buildingcontroller')
+    # This agent needs to be named iiit.buildingcontroller. Pop the uuid id off the kwargs
+    kwargs.pop('identity', None)
+    
+    Agent.__name__ = 'BuildingController_Agent'
+    return BuildingController(config_path, identity=vip_identity, **kwargs)
+    
 class BuildingController(Agent):
     '''Building Controller
     '''
@@ -75,7 +84,7 @@ class BuildingController(Agent):
     def __init__(self, config_path, **kwargs):
         super(BuildingController, self).__init__(**kwargs)
         _log.debug("vip_identity: " + self.core.identity)
-
+        
         self.config = utils.load_config(config_path)
         self._configGetPoints()
         self._configGetInitValues()
@@ -353,7 +362,7 @@ class BuildingController(Agent):
 def main(argv=sys.argv):
     '''Main method called by the eggsecutable.'''
     try:
-        utils.vip_main(BuildingController)
+        utils.vip_main(buildingcontroller)
     except Exception as e:
         print (e)
         _log.exception('unhandled exception')

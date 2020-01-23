@@ -89,10 +89,10 @@ def smarthub(config_path, **kwargs):
     vip_identity = config.get('vip_identity', 'iiit.smarthub')
     # This agent needs to be named iiit.smarthub. Pop the uuid id off the kwargs
     kwargs.pop('identity', None)
-
+    
     Agent.__name__ = 'SmartHub_Agent'
     return SmartHub(config_path, identity=vip_identity, **kwargs)
-
+    
 class SmartHub(Agent):
     '''Smart Hub
     '''
@@ -133,12 +133,11 @@ class SmartHub(Agent):
     def __init__(self, config_path, **kwargs):
         super(SmartHub, self).__init__(**kwargs)
         _log.debug("vip_identity: " + self.core.identity)
-
+        
         self.config = utils.load_config(config_path)
         self._configGetPoints()
         self._configGetInitValues()
         self._configGetPriceFucntions()
-        
         return
 
     @Core.receiver('onsetup')
@@ -708,7 +707,7 @@ class SmartHub(Agent):
         if self._bid_ed == 0:
             self._bid_ed = self._local_bid_ed(self._bid_pp, self._bid_pp_duration)
         
-        ds_devices = self.vip.rpc.call(self.vb_vip_identity, 'count_ds_devices').get(timeout=10)
+        ds_devices = self.vip.rpc.call('iiit.volttronbridge', 'count_ds_devices').get(timeout=10)
         rcvd_all_ds_bid_ed = True if ds_devices == len(self._ds_bid_ed) else False
         
         if rcvd_all_ds_bid_ed or ispace_utils.ttl_timeout(self._bid_pp_ts, self._bid_pp_ttl):

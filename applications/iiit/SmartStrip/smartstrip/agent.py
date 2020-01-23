@@ -60,8 +60,17 @@ SCHEDULE_NOT_AVLB = 0
 # smartstrip base peak energy (200mA * 12V)
 SMARTSTRIP_BASE_ENERGY = 2
 
+def smartstrip(config_path, **kwargs):
+    config = utils.load_config(config_path)
+    vip_identity = config.get('vip_identity', 'iiit.smartstrip')
+    # This agent needs to be named iiit.smartstrip. Pop the uuid id off the kwargs
+    kwargs.pop('identity', None)
+    
+    Agent.__name__ = 'SmartStrip_Agent'
+    return SmartStrip(config_path, identity=vip_identity, **kwargs)
+    
 class SmartStrip(Agent):
-    '''Smart Strip with 2 plug
+    '''Smart Strip
     '''
     _pp_failed = False
     
@@ -94,7 +103,7 @@ class SmartStrip(Agent):
     def __init__(self, config_path, **kwargs):
         super(SmartStrip, self).__init__(**kwargs)
         _log.debug("vip_identity: " + self.core.identity)
-
+        
         self.config = utils.load_config(config_path)
         self._configGetPoints()
         self._configGetInitValues()
@@ -891,7 +900,7 @@ class SmartStrip(Agent):
 def main(argv=sys.argv):
     '''Main method called by the eggsecutable.'''
     try:
-        utils.vip_main(SmartStrip)
+        utils.vip_main(smartstrip)
     except Exception as e:
         print (e)
         _log.exception('unhandled exception')

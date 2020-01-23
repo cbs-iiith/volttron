@@ -59,6 +59,15 @@ E_UNKNOWN_CCE = -4
 RC_AUTO_CNTRL_ON = 1
 RC_AUTO_CNTRL_OFF = 0
 
+def radiantcubicle(config_path, **kwargs):
+    config = utils.load_config(config_path)
+    vip_identity = config.get('vip_identity', 'iiit.radiantcubicle')
+    # This agent needs to be named iiit.radiantcubicle. Pop the uuid id off the kwargs
+    kwargs.pop('identity', None)
+    
+    Agent.__name__ = 'RadiantCubicle_Agent'
+    return RadiantCubicle(config_path, identity=vip_identity, **kwargs)
+    
 class RadiantCubicle(Agent):
     '''Radiant Cubicle
     '''
@@ -443,11 +452,11 @@ class RadiantCubicle(Agent):
 def main(argv=sys.argv):
     '''Main method called by the eggsecutable.'''
     try:
-        utils.vip_main(RadiantCubicle)
+        utils.vip_main(radiantcubicle)
     except Exception as e:
         print (e)
         _log.exception('unhandled exception')
-
+        
 if __name__ == '__main__':
     # Entry point for script
     try:
