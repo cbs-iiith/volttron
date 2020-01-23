@@ -9,18 +9,18 @@
 
 #}}}
 
-#Sam - Test
+#Sam
 
 import datetime
 import logging
 import math
 import gevent
 import gevent.event
+import requests
+from enum import IntEnum
 
 from volttron.platform.agent import utils
 from volttron.platform.messaging import headers as headers_mod
-
-from enum import IntEnum
 
 utils.setup_logging()
 _log = logging.getLogger(__name__)
@@ -47,14 +47,14 @@ class ParamED(IntEnum):
     idx_ed_ttl = 7
     idx_ed_ts = 8
     
-def ttl_timeout(self, str_ts, ttl):
+def ttl_timeout(str_ts, ttl):
         if ttl < 0:
             return False
         ts  = dateutil.parser.parse(str_ts)
         now = dateutil.parser.parse(datetime.datetime.utcnow().isoformat(' ') + 'Z')
         return (True if (now - ts) > ttl else False)
         
-def print_pp(self, hint, new_pp
+def print_pp(self, new_pp
                     , pp_datatype
                     , pp_id
                     , pp_isoptimal
@@ -63,6 +63,7 @@ def print_pp(self, hint, new_pp
                     , pp_duration
                     , pp_ttl
                     , pp_ts
+                    , hint
                     ):
     _log.info('New PP ({}): {0:.2f}'.format(hint, new_pp)
                     #+ ', pp_datatype: ' + str(pp_datatype)
@@ -76,8 +77,8 @@ def print_pp(self, hint, new_pp
                     )
     return
     
-def print_pp_msg(self, message, hint):
-    print_pp(hint, message[ParamPP.idx_pp]
+def print_pp_msg(self, message, hint=None):
+    print_pp(message[ParamPP.idx_pp]
             , message[ParamPP.idx_pp_datatype]
             , message[ParamPP.idx_pp_id]
             , message[ParamPP.idx_pp_isoptimal]
@@ -85,10 +86,11 @@ def print_pp_msg(self, message, hint):
             , message[ParamPP.idx_pp_device_id]
             , message[ParamPP.idx_pp_ttl]
             , message[ParamPP.idx_pp_ts]
+            , hint
             )
     return
     
-def print_ed(self, hint, new_ed
+def print_ed(self, new_ed
                     , ed_datatype
                     , ed_pp_id
                     , ed_isoptimal
@@ -97,6 +99,7 @@ def print_ed(self, hint, new_ed
                     , ed_no_of_devices
                     , ed_ttl
                     , ed_ts
+                    , hint
                     ):
     _log.info('New ED ({}): {0:.2f}'.format(hint, new_ed)
                     #+ ', ed_datatype: ' + str(ed_datatype)
@@ -111,8 +114,8 @@ def print_ed(self, hint, new_ed
                     )
     return
     
-def print_ed_msg(self, hint, message):
-    print_ed(hint, message[ParamED.idx_ed]
+def print_ed_msg(self, message, hint=None):
+    print_ed(message[ParamED.idx_ed]
             , message[ParamED.idx_ed_datatype]
             , message[ParamED.idx_ed_pp_id]
             , message[ParamED.idx_ed_isoptimal]
@@ -121,6 +124,7 @@ def print_ed_msg(self, hint, message):
             , message[ParamED.idx_ed_no_of_devices]
             , message[ParamED.idx_ed_ttl]
             , message[ParamED.idx_ed_ts]
+            , hint
             )
     return
     

@@ -34,7 +34,6 @@ from random import randint
 import time
 import gevent
 import gevent.event
-import requests
 import json
 
 import ispace_utils
@@ -188,8 +187,11 @@ def volttronbridge(config_path, **kwargs):
             if self._bridge_host != 'LEVEL_HEAD':
                 url_root = 'http://' + self._us_ip_addr + ':' + str(self._us_port) + '/VolttronBridge'
                 _log.debug("registering with upstream VolttronBridge: " + url_root)
-                self._usConnected = self._register_to_us_bridge(url_root, self._discovery_address, self._deviceId)
-                
+                self._usConnected = ispace_utils.do_rpc(url_root, 'rpc_register_ds_bridge'
+                                                        , {'discovery_address': discovery_address
+                                                            , 'deviceId': deviceId
+                                                            })
+                                                            
             #keep track of us opt_pp_id & bid_pp_id
             if self._bridge_host != 'LEVEL_HEAD':
                 self.us_opt_pp_id = 0
@@ -205,13 +207,6 @@ def volttronbridge(config_path, **kwargs):
                 
             return
             
-        #register with upstream volttron bridge
-        def _register_to_us_bridge(self, url_root, discovery_address, deviceId):
-            return ispace_utils.do_rpc(url_root, 'rpc_register_ds_bridge',
-                                        {'discovery_address': discovery_address
-                                        , 'deviceId': deviceId
-                                        })
-                                                    
         @Core.receiver('onstop')
         def onstop(self, sender, **kwargs):
             _log.debug('onstop()')
@@ -227,8 +222,8 @@ def volttronbridge(config_path, **kwargs):
                 if self._usConnected:
                     _log.debug("unregistering with upstream VolttronBridge")
                     url_root = 'http://' + self._us_ip_addr + ':' + str(self._us_port) + '/VolttronBridge'
-                    result = ispace_utils.do_rpc(url_root, 'rpc_unregister_ds_bridge',
-                                                    {'discovery_address': self._discovery_address
+                    result = ispace_utils.do_rpc(url_root, 'rpc_unregister_ds_bridge'
+                                                    , {'discovery_address': self._discovery_address
                                                     , 'deviceId': self._deviceId
                                                     })
                     self._usConnected = False
@@ -414,7 +409,7 @@ def volttronbridge(config_path, **kwargs):
             _log.debug('check us connection...')
             if not self._usConnected:
                 _log.debug('not connected, Trying to register once...')
-                self._usConnected = self._register_to_us_bridge(url_root,
+                self._usConnected = self._register_to_us_bridge(url_root
                                                                 , self._discovery_address
                                                                 , self._deviceId
                                                                 )
@@ -426,8 +421,8 @@ def volttronbridge(config_path, **kwargs):
             _log.debug('_usConnected: ' + str(self._usConnected))
             
             _log.debug("posting energy demand to upstream VolttronBridge")
-            success = ispace_utils.do_rpc(url_root, 'rpc_post_ed',
-                                            {'discovery_address': self._discovery_address
+            success = ispace_utils.do_rpc(url_root, 'rpc_post_ed'
+                                            , {'discovery_address': self._discovery_address
                                             , 'deviceId': self._deviceId
                                             , 'new_ed': self._ed_current
                                             , 'ed_datatype': self._ed_datatype
@@ -469,8 +464,8 @@ def volttronbridge(config_path, **kwargs):
                     continue
                     
                 url_root = 'http://' + discovery_address + '/VolttronBridge'
-                result = ispace_utils.do_rpc(url_root, 'rpc_post_pp',
-                                            {'discovery_address': self._discovery_address
+                result = ispace_utils.do_rpc(url_root, 'rpc_post_pp'
+                                            , {'discovery_address': self._discovery_address
                                             , 'deviceId': self._deviceId
                                             , 'new_pp': self._pp_current
                                             , 'new_pp_id': self._pp_id
@@ -604,6 +599,18 @@ def volttronbridge(config_path, **kwargs):
                 #either the post to ds failed in previous iteration and de-registered from the _ds_register
                 # or the msg is corrupted
                 _log.warning('msg not from registered ds, do nothing!!!')
+                return False
+                
+            #process ed only if pp_id corresponds to either us/local opt/bid pp_ids)
+            valid_pp_ids = [self.us_opt_pp_id, self.us_bid_pp_id, self._pp_id]
+            if ed_pp_id not in [self.us_opt_pp_id, self.us_bid_pp_id, self._pp_id]
+                _log.debug('pp_id: {}'.format(message[ParamPP.idx_pp_id])
+                        + ' not in valid_pp_ids: {}, do nothing!!!'.format(valid_pp_ids))
+                return False
+                
+            #process ed only if msg is alive (didnot timeout)
+            if ispace_utils.ttl_timeout(message[ParamPP.idx_ed_pp_ts], message[ParamPP.idx_ed_pp_ttl]):
+                _log.warning('msg timed out, do nothing')
                 return False
                 
             #post to bus
