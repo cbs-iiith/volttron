@@ -143,7 +143,6 @@ class ISPACE_Msg:
             now = dateutil.parser.parse(datetime.datetime.utcnow().isoformat(' ') + 'Z')
             #_log.debug('ts: {}, now: {}'.format(ts, now))
             self.ttl = self.ttl - (mround((now -ts).total_seconds(),1) + 1)
-            _log.info('new ttl: {}.'.format(self.ttl))
             return True
         else:
             _log.warning('decrement_ttl(), unknown tz: {}'.format(self.tz))
@@ -192,7 +191,7 @@ class ISPACE_Msg:
             return False
             
         #print only if a valid msg
-        _log.debug('Hint: {}, Msg: {}'.format(hint, self))
+        _log.info('Hint: {}, Msg: {}'.format(hint, self))
         
         #process msg only if price_id corresponds to these ids
         if valid_price_ids != [] and self.price_id not in valid_price_ids:
@@ -256,11 +255,11 @@ class ISPACE_Msg:
         
     #setters
     def set_type(self, type):
-        _log.debug('set_type()')
+        #_log.debug('set_type()')
         self.type = type
         
     def set_value(self, value):
-        _log.debug('set_value()')
+        #_log.debug('set_value()')
         if self.type == MessageType.price_point:
             self.value = mround(value, ROUNDOFF_PRICE_POINT)
         elif self.type == MessageType.budget:
@@ -270,7 +269,7 @@ class ISPACE_Msg:
         elif self.type == MessageType.energy:
             self.value = mround(value, ROUNDOFF_ENERGY)
         else:
-            _log.debug('else')
+            #_log.debug('else')
             self.value = value
         
     def set_value_data_type(self, value_data_type):
@@ -324,7 +323,7 @@ def parse_jsonrpc_msg(message, attributes_list = []):
 def _parse_data(data, attributes_list = []):
     new_msg = ISPACE_Msg()
     if attributes_list == []:
-        _log.debug('attributes_list is empty!!!')
+        _log.warning('attributes_list to check against empty!!!')
         new_msg.set_type(data['type'])
         new_msg.set_value(data['value'])
         new_msg.set_value_data_type(data['value_data_type']
@@ -358,7 +357,7 @@ def _parse_data(data, attributes_list = []):
                                         else 'UTC'
                                         )
     else:
-        _log.debug('attributes_list is NOT empty!!!')
+        #_log.debug('attributes_list is NOT empty!!!')
         for attrib in attributes_list:
             if attrib == 'type':
                 new_msg.set_type(data['type'])

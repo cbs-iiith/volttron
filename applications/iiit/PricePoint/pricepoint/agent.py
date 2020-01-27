@@ -122,7 +122,6 @@ class PricePoint(Agent):
             return jsonrpc.json_error('NA', UNHANDLED_EXCEPTION, e)
         return
         
-    @RPC.export
     def updatePricePoint(self, message):
         try:
             attributes_list = []
@@ -139,12 +138,16 @@ class PricePoint(Agent):
         hint = 'New Price Point'
         mandatory_fields = []
         valid_price_ids = []
+        #validate various sanity measure like, valid fields, valid pp ids, ttl expiry, etc.,
         if not pp_msg.sanity_check_ok(hint, mandatory_fields, valid_price_ids):
             _log.warning('sanity checks failed!!!')
             return False
             
-        pp_msg.decrement_ttl()
+        #decrement the ttl by time consumed to process till now + 1 sec
+        if pp_msg.decrement_ttl():
+            _log.info('new ttl: {}.'.format(pp_msg.get_ttl()))
         
+        #publish the new price point to the local message bus
         pubTopic = self.topic_price_point
         pubMsg = pp_msg.get_json_params()
         _log.debug('publishing to local bus topic: {}, message: {}'.format(pubTopic, pubMsg))
