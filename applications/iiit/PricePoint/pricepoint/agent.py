@@ -90,13 +90,6 @@ class PricePoint(Agent):
         self.topic_price_point = self.config.get('topic_price_point', 'zone/pricepoint')
         return
         
-    def fake_price_points(self):
-        #Make a random price point
-        _log.debug('fake_price_points()')
-        new_price_reading = random.uniform(self.min_price, self.max_price)
-        self.updatePricePoint(new_pp)
-        return
-        
     @RPC.export
     def rpc_from_net(self, header, message):
         return self._processMessage(message)
@@ -110,24 +103,7 @@ class PricePoint(Agent):
             _log.debug('rpc params: {}'.format(rpcdata.params))
             
             if rpcdata.method == "rpc_updatePricePoint":
-                args = {'new_pp': rpcdata.params['new_pp']
-                            , 'new_pp_id': rpcdata.params['new_pp_id']
-                                        if rpcdata.params['new_pp_id'] is not None
-                                        else randint(0, 99999999)
-                            , 'new_pp_datatype': rpcdata.params['new_pp_datatype']
-                                        if rpcdata.params['new_pp_datatype'] is not None
-                                        else {'units': 'cents', 'tz': 'UTC', 'type': 'float'}
-                            , 'new_pp_isoptimal': rpcdata.params['new_pp_isoptimal']
-                                        if rpcdata.params['new_pp_isoptimal'] is not None
-                                            else False
-                            , 'new_pp_ttl': rpcdata.params['new_pp_ttl']
-                                        if rpcdata.params['new_pp_ttl'] is not None
-                                        else -1
-                            , 'new_pp_ts': rpcdata.params['new_pp_ts']
-                                        if rpcdata.params['new_pp_ts'] is not None
-                                        else datetime.datetime.utcnow().isoformat(' ') + 'Z'
-                        }
-                result = self.updatePricePoint(**args)
+                result = self.updatePricePoint(message)
             elif rpcdata.method == "rpc_ping":
                 result = True
             else:
@@ -146,28 +122,35 @@ class PricePoint(Agent):
         return
         
     @RPC.export
-    def updatePricePoint(self, new_pp, new_pp_datatype, new_pp_id, new_pp_isoptimal, new_pp_ttl, new_pp_ts):
-        print_pp(self, new_pp
-                        , new_pp_datatype
-                        , new_pp_id
-                        , new_pp_isoptimal
-                        , None
-                        , None
-                        , new_pp_ttl
-                        , new_pp_ts
-                        )
-                        
+    def updatePricePoint(self, message):
+    
+        try:
+            rpcdata = jsonrpc.JsonRpcData.parse(message)
+            _log.debug('rpc method: {}'.format(rpcdata.method))
+            _log.debug('rpc params: {}'.format(rpcdata.params))
+            attributes_list = []
+            pp_msg = ISPACE_Msg.parse_jsonrpc_msg(message, attributes_list)
+            _log.info('pp_msg: {}'.format(pp_msg))
+        except KeyError:
+            print('KeyError')
+            return jsonrpc.json_error('NA', INVALID_PARAMS,
+                    'Invalid params {}'.format(rpcdata.params))
+        except Exception as e:
+            print(e)
+            return jsonrpc.json_error('NA', UNHANDLED_EXCEPTION, e)
+            
+        mandatory_fields = []
+        valid_price_ids = []
+        if pp_msg.sanity_check(mandatory_fields, valid_price_ids):
+            return False
+            
+        pp_msg.decrement_ttl()
+        
         pubTopic = self.topic_price_point
-        pubMsg = [new_pp
-                    , new_pp_datatype
-                    , new_pp_id
-                    , new_pp_isoptimal
-                    , None
-                    , None
-                    , new_pp_ttl
-                    , new_pp_ts
-                    ]
-        _log.debug('publishing to local bus topic: ' + pubTopic)
+        pubMsg = pp_msg.get_json_params()
+        _log.debug('publishing to local bus topic: '.fortmat(pubTopic)
+                    , + '                      message: '.format(pubMsg)
+                    )
         publish_to_bus(self, pubTopic, pubMsg)
         return True
         
