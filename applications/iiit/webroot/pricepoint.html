@@ -11,12 +11,6 @@
     <META HTTP-EQUIV="Pragma" CONTENT="no-cache">
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     
-    <link rel="stylesheet" type="text/css" href="lib/appframework/icons.css" />
-    <link rel="stylesheet" type="text/css" href="lib/appframework/af.ui.css" />
-    
-    <script type="text/javascript" charset="utf-8" src="lib/jquery.min.js"></script>
-    <script type="text/javascript" charset="utf-8" src="lib/fastclick.min.js"></script>
-    <script type="text/javascript" charset="utf-8" src="lib/appframework/appframework.ui.min.js"></script>
     <script language="javascript" src="http://code.jquery.com/jquery-2.1.4.min.js"></script>
     <style>
         .switch {
@@ -94,7 +88,7 @@
         </header>
         
         <div class="pages" >
-
+            
             <div class="panel" data-title="Publish New PricePoint" id="setPricePoint" >
                 
                 <p>New Price Point</p>
@@ -103,10 +97,10 @@
                         &nbsp;
                     </div>
                     <div class="large-2 columns">
-                        <input id="slider_pp" type="range" min="0.01" max="1.1" step="0.01" value="0.5" onchange="printValue('slider_pp','new_pp')"/>
+                        <input id="slider_pp" type="range" min="0.01" max="1.1" step="0.01" value="0.5" onchange="printValue('slider_pp','new_pp_value')"/>
                     </div>
                     <div class="large-2 columns">
-                        <input id="new_pp" type="text" size="4"/>
+                        <input id="new_pp_value" type="text" size="4"/>
                     </div>
                     <div class="large-2 columns">
                         &nbsp;
@@ -155,7 +149,7 @@
                         &nbsp;
                     </div>
                 </div>
-
+                
                 <div class="row" >
                     <div class="large-2 columns">
                         &nbsp;
@@ -167,29 +161,39 @@
     </div>
     <script>
         $('#publishPricePoint').click(function(){
-            var new_pp = parseFloat($('#new_pp').val());
-            var new_pp_id = getRndInteger(0,99999999);
+            var new_pp_type = null;
+            var new_pp_value = parseFloat($('#new_pp_value').val());
+            var new_pp_value_data_type = 'float';
+            var new_pp_units = 'cents';
+            var new_pp_price_id = getRndInteger(0,99999999);
             var new_pp_isoptimal = document.getElementById("new_pp_isoptimal").checked;
-            var new_pp_ttl = parseFloat($('#new_pp_ttl').val());
+            var new_pp_src_ip = null;
+            var new_pp_src_device_id = null;
+            var new_pp_dst_ip = null;
+            var new_pp_dst_device_id = null;
             var new_pp_dur = parseFloat($('#new_pp_dur').val());
+            var new_pp_ttl = parseFloat($('#new_pp_ttl').val());
+            var new_pp_ts = null;
+            var new_pp_tz = null;
+            
             var pdata = {
                      jsonrpc: '2.0',
                      method:  "rpc_updatePricePoint",
                      params: {
-                        type = null,
-                        value = new_pp,
-                        value_data_type = 'float',
-                        units = 'cents',
-                        price_id = new_pp_id,
-                        isoptimal = new_pp_isoptimal,
-                        src_ip = null,
-                        src_device_id = null,
-                        dst_ip = null,
-                        dst_device_id = null,
-                        duration = new_pp_dur,
-                        ttl = new_pp_ttl,
-                        ts = null,
-                        tz = null,
+                        type: new_pp_type,
+                        value: new_pp_value,
+                        value_data_type: new_pp_value_data_type,
+                        units: new_pp_units,
+                        price_id: new_pp_price_id,
+                        isoptimal: new_pp_isoptimal,
+                        src_ip: new_pp_src_ip,
+                        src_device_id: new_pp_src_device_id,
+                        dst_ip: new_pp_dst_ip,
+                        dst_device_id: new_pp_dst_device_id,
+                        duration: new_pp_dur,
+                        ttl: new_pp_ttl,
+                        ts: new_pp_ts,
+                        tz: new_pp_tz,
                      },
                      id: '72581-4'
              };
@@ -216,7 +220,11 @@
         function getRndInteger(min, max) {
             return Math.floor(Math.random() * (max - min) ) + min;
         }
-        window.onload = function() { printValue('slider_pp', 'new_pp'); printValue('slider_pp_ttl', 'new_pp_ttl'); }
+        window.onload = function() { 
+                                    printValue('slider_pp', 'new_pp_value'); 
+                                    printValue('slider_pp_ttl', 'new_pp_ttl'); 
+                                    printValue('slider_pp_dur', 'new_pp_dur'); 
+                                    }
     </script>
 </body>
 </html>
