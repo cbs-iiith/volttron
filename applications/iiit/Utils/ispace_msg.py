@@ -97,6 +97,17 @@ class ISPACE_Msg:
         now = dateutil.parser.parse(datetime.datetime.utcnow().isoformat(' ') + 'Z')
         return (True if (now - ts) > self.ttl else False)
         
+    def decrement_ttl():
+        if self.ttl < 0:
+            #do nothing
+            _log.debug('ttl: {} < 0, do nothing!!!'.format(self.ttl))
+            return
+        ts  = dateutil.parser.parse(self.ts)
+        now = dateutil.parser.parse(datetime.datetime.utcnow().isoformat(' ') + 'Z')
+        self.ttl = self.ttl - ((now -ts) + 1)
+        _log.info('new ttl: {}.'.format(self.ttl))
+        return
+        
     def get_pub_msg(self):
         '''
         return [self.type, self.value, self.value_data_type, self.units
