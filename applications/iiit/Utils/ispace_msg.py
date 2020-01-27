@@ -16,10 +16,11 @@ from enum import IntEnum
 
 
 class MessageType(IntEnum):
-    price_point = 0
-    budget = 1
-    active_power = 2
-    energy = 3
+    opt_price_point = 0
+    bid_price_point = 1
+    budget = 2
+    active_power = 3
+    energy = 4
     pass
 
 
@@ -68,15 +69,12 @@ class ISPACE_Msg:
         return
         
     def __str__(self):
-        return ('{type: {}, value: {0.2f}, value_data_type: {}, units:{}'.format(type, 
-                                                                                    value
-                                                                                    , value_data_type
-                                                                                    , units)
+        return ('{type: {}, value: {0.2f}'.format(type, value)
+                + ', value_data_type: {}, units:{}'.format(value_data_type, units)
                 + ', {price_id: {}, isoptimal: {}'.format(price_id, isoptimal)
-                + ', {src_ip: {}, src_device_id: {}'.format(src_ip
-                                                                            , src_device_id)
-                + ', {dst_ip: {}, dst_device_id: {}, id: {}, isoptimal:{}'.format(dst_ip, dst_device_id)
-                + ', {duration: {}, ttl: {}, ts: {}, tz:{}'.format()
+                + ', {src_ip: {}, src_device_id: {}'.format(src_ip, src_device_id)
+                + ', {dst_ip: {}, dst_device_id: {}'.format(dst_ip, dst_device_id)
+                + ', {duration: {}, ttl: {}, ts: {}, tz:{}'.format(duration, ttl, ts, tz)
                 )
                 
     def ttl_timeout():
@@ -269,6 +267,35 @@ class ISPACE_Msg:
     def set_tz(self, tz):
         self.tz = tz
         
+    pass
+    
+    
+class ISPACE_Msg_OptPricePoint(ISPACE_Msg):
+    def __init__(self, ):
+        super().__init__(MessageType.opt_price_point)
+    pass
+    
+    
+class ISPACE_Msg_BidPricePoint(ISPACE_Msg):
+    def __init__(self, ):
+        super().__init__(MessageType.bid_price_point)
+    pass
+    
+class ISPACE_Msg_ActivePower(ISPACE_Msg):
+    def __init__(self, ):
+        super().__init__(MessageType.active_power)
+    pass
+    
+    
+class ISPACE_Msg_Energy(ISPACE_Msg):
+    def __init__(self, ):
+        super().__init__(MessageType.energy)
+    pass
+    
+    
+class ISPACE_Msg_Budget(ISPACE_Msg):
+    def __init__(self, ):
+        super().__init__(MessageType.budget)
     pass
     
     
