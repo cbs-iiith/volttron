@@ -1,5 +1,5 @@
 {
-    "exec":"pricepoint-0.3-py2.7.egg --config \"%c\"--sub\"%s\"--pub \"%p\"",  
+    "exec":"pricepoint-0.4-py2.7.egg --config \"%c\"--sub\"%s\"--pub \"%p\"",  
     "agentid": "PricePoint",
     "message": "iSPACE - Price Point Agent",
     "default_base_price": 0.4,

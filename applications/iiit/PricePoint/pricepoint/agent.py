@@ -35,11 +35,12 @@ from volttron.platform.jsonrpc import (
 from random import randint
 import settings
 import time
-from ispace_utils import publish_to_bus, print_pp, print_ed
+from ispace_utils import publish_to_bus
+from ispace_msg import ISPACE_Msg
 
 utils.setup_logging()
 _log = logging.getLogger(__name__)
-__version__ = '0.3'
+__version__ = '0.4'
 
 class PricePoint(Agent):
     '''Agent for posting a price point to msg bus
