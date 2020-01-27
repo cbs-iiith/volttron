@@ -100,7 +100,7 @@
                         <input id="slider_pp" type="range" min="0.01" max="1.1" step="0.01" value="0.5" onchange="printValue('slider_pp','new_pp_value')"/>
                     </div>
                     <div class="large-2 columns">
-                        <input id="new_pp_value" type="text" size="4"/>
+                        <input id="new_pp_value" type="text" size="4" onchange="printValue2('new_pp_value', 'slider_pp')"/>
                     </div>
                     <div class="large-2 columns">
                         &nbsp;
@@ -127,7 +127,7 @@
                         <input id="slider_pp_ttl" type="range" min="0" max="3600" step="5" value="3600" onchange="printValue('slider_pp_ttl','new_pp_ttl')"/>
                     </div>
                     <div class="large-2 columns">
-                        <input id="new_pp_ttl" type="text" size="4"/>
+                        <input id="new_pp_ttl" type="text" size="4" onchange="printValue2('new_pp_ttl', 'slider_pp_ttl')"/>
                     </div>
                     <div class="large-2 columns">
                         &nbsp;
@@ -143,7 +143,7 @@
                         <input id="slider_pp_dur" type="range" min="0" max="3600" step="5" value="3600" onchange="printValue('slider_pp_dur','new_pp_dur')"/>
                     </div>
                     <div class="large-2 columns">
-                        <input id="new_pp_dur" type="text" size="4"/>
+                        <input id="new_pp_dur" type="text" size="4" onchange="printValue2('new_pp_dur', 'slider_pp_dur')"/>
                     </div>
                     <div class="large-2 columns">
                         &nbsp;
@@ -215,6 +215,12 @@
             var x = document.getElementById(textbox);
             var y = document.getElementById(sliderID);
             x.value = y.value;
+        }
+        
+        function printValue2(textbox, sliderID) {
+            var x = document.getElementById(textbox);
+            var y = document.getElementById(sliderID);
+            y.value = x.value;
         }
         
         function getRndInteger(min, max) {
