@@ -29,6 +29,14 @@ class MessageType(IntEnum):
 
 class ISPACE_Msg:
     
+    '''
+    [type, value, value_data_type, units
+                , price_id, isoptimal
+                , src_ip, src_device_id
+                , dst_ip, dst_device_id
+                , duration, ttl, ts, tz
+                ]
+    '''
     type = None
     value = None
     value_data_type = None
@@ -73,13 +81,14 @@ class ISPACE_Msg:
         return
         
     def __str__(self):
-        return ('{type: {}, value: {0.2f}'.format(type, value)
-                + ', value_data_type: {}, units:{}'.format(value_data_type, units)
-                + ', {price_id: {}, isoptimal: {}'.format(price_id, isoptimal)
-                + ', {src_ip: {}, src_device_id: {}'.format(src_ip, src_device_id)
-                + ', {dst_ip: {}, dst_device_id: {}'.format(dst_ip, dst_device_id)
-                + ', {duration: {}, ttl: {}, ts: {}, tz:{}'.format(duration, ttl, ts, tz)
-                )
+        return ('{type: {}, value: {0.2f}'.format(self.type, self.value)
+                + ', value_data_type: {}, units:{}'.format(self.value_data_type, self.units)
+                + ', price_id: {}, isoptimal: {}'.format(self.price_id, self.isoptimal)
+                + ', src_ip: {}, src_device_id: {}'.format(self.src_ip, self.src_device_id)
+                + ', dst_ip: {}, dst_device_id: {}'.format(self.dst_ip, self.dst_device_id)
+                + ', duration: {}, ttl: {}, ts: {}, tz:{}'.format(self.duration, self.ttl)
+                + ', ts: {}, tz:{}'.format(self.ts, self.tz)
+                + '}')
                 
     def ttl_timeout():
             if self.ttl < 0:
@@ -90,11 +99,11 @@ class ISPACE_Msg:
         return
         
     def get_pub_msg(self):
-        return [type, value, value_data_type, units
-                , price_id, isoptimal
-                , src_ip, src_device_id
-                , dst_ip, dst_device_id
-                , duration, ttl, ts, tz
+        return [self.type, self.value, self.value_data_type, self.units
+                , self.price_id, self.isoptimal
+                , self.src_ip, self.src_device_id
+                , self.dst_ip, self.dst_device_id
+                , self.duration, self.ttl, self.ts, self.tz
                 ]
                 
     #check for mandatory fields in the message
@@ -187,34 +196,34 @@ class ISPACE_Msg:
         
     #getters
     def get_type(self):
-        return type
+        return self.type
         
     def get_value(self):
-        return value
+        return self.value
         
     def get_value_data_type(self):
-        return value_data_type
+        return self.value_data_type
         
     def get_units(self):
-        return units
+        return self.units
         
     def get_price_id(self):
-        return price_id
+        return self.price_id
         
     def get_isoptimal(self):
-        return isoptimal
+        return self.isoptimal
         
     def get_src_ip(self):
-        return src_ip
+        return self.src_ip
         
     def get_src_device_id(self):
-        return src_device_id
+        return self.src_device_id
         
     def get_dst_ip(self):
-        return dst_ip
+        return self.dst_ip
         
     def get_dst_device_id(self):
-        return dst_device_id
+        return self.dst_device_id
         
     def get_duration(self):
         return self.duration
