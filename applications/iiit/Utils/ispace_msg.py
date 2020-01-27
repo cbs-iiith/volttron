@@ -285,10 +285,16 @@ class ISPACE_Msg:
     pass
     
     
+#converts bus message into an ispace_msg
+def parse_jsonrpc_msg(self, message, attributes_list = []):
+    return self._parse_data(message, attributes_list)
+    
 #converts jsonrpc_msg into an ispace_msg
 def parse_jsonrpc_msg(self, message, attributes_list = []):
-    rpcdata = jsonrpc.JsonRpcData.parse(message)
+    data = jsonrpc.JsonRpcData.parse(message).params
+    return self._parse_data(data, attributes_list)
     
+def _parse_data(data, attributes_list = []):
     new_msg = ISPACE_Msg()
     if attributes_list == []:
         new_msg.set_type(rpcdata.params['type'])
