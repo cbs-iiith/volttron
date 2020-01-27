@@ -36,7 +36,7 @@ from random import randint
 import settings
 import time
 from ispace_utils import publish_to_bus
-from ispace_msg import ISPACE_Msg
+from ispace_msg import ISPACE_Msg, parse_jsonrpc_msg
 
 utils.setup_logging()
 _log = logging.getLogger(__name__)
@@ -124,14 +124,10 @@ class PricePoint(Agent):
         
     @RPC.export
     def updatePricePoint(self, message):
-    
         try:
-            rpcdata = jsonrpc.JsonRpcData.parse(message)
-            _log.debug('rpc method: {}'.format(rpcdata.method))
-            _log.debug('rpc params: {}'.format(rpcdata.params))
             attributes_list = []
-            pp_msg = ISPACE_Msg.parse_jsonrpc_msg(message, attributes_list)
-            _log.info('pp_msg: {}'.format(pp_msg))
+            pp_msg = parse_jsonrpc_msg(message, attributes_list)
+            #_log.info('pp_msg: {}'.format(pp_msg))
         except KeyError:
             print('KeyError')
             return jsonrpc.json_error('NA', INVALID_PARAMS,
@@ -140,18 +136,18 @@ class PricePoint(Agent):
             print(e)
             return jsonrpc.json_error('NA', UNHANDLED_EXCEPTION, e)
             
+        hint = 'New Price Point'
         mandatory_fields = []
         valid_price_ids = []
-        if pp_msg.sanity_check(mandatory_fields, valid_price_ids):
+        if not pp_msg.sanity_check_ok(hint, mandatory_fields, valid_price_ids):
+            _log.warning('sanity checks failed!!!')
             return False
             
         pp_msg.decrement_ttl()
         
         pubTopic = self.topic_price_point
         pubMsg = pp_msg.get_json_params()
-        _log.debug('publishing to local bus topic: '.fortmat(pubTopic)
-                    , + '                      message: '.format(pubMsg)
-                    )
+        _log.debug('publishing to local bus topic: {}, message: {}'.format(pubTopic, pubMsg))
         publish_to_bus(self, pubTopic, pubMsg)
         return True
         

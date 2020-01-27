@@ -177,7 +177,10 @@ class PriceController(Agent):
             _log.info("self.agent_disabled: " + str(self.agent_disabled) + ", do nothing!!!")
             return True
             
-        if (sender != 'iiit.volttronbridge' or sender != 'pricepointagent-0.3_1':
+        valid_senders_list = ['iiit.volttronbridge', 'pricepointagent-0.3_1']
+        if sender not in valid_senders_list:
+            _log.debug('sender: {}'.format(sender)
+                        + ' not in sender list: {}, do nothing!!!'.format(valid_senders_list))
             return
             
         #check sanity
@@ -202,24 +205,24 @@ class PriceController(Agent):
         #store pp data to global to be retrived later
         #new zone price point
         new_pp = message[ParamPP.idx_pp]
-        new_pp_datatype = message[ParamPP.idx_pp_datatype]
+        new_pp_datatype = (message[ParamPP.idx_pp_datatype]
                                 if message[ParamPP.idx_pp_datatype] is not None
-                                else {'units': 'cents', 'tz': 'UTC', 'type': 'float'}
-        new_pp_id = message[ParamPP.idx_pp_id]
+                                else {'units': 'cents', 'tz': 'UTC', 'type': 'float'})
+        new_pp_id = (message[ParamPP.idx_pp_id]
                                 if message[ParamPP.idx_pp_id] is not None
-                                else randint(0, 99999999)
-        new_pp_isoptimal = message[ParamPP.idx_pp_isoptimal]
+                                else randint(0, 99999999))
+        new_pp_isoptimal = (message[ParamPP.idx_pp_isoptimal]
                                 if message[ParamPP.idx_pp_isoptimal] is not None
-                                else False
-        new_duration = message[ParamPP.idx_pp_duration]
+                                else False)
+        new_duration = (message[ParamPP.idx_pp_duration]
                                 if message[ParamPP.idx_pp_duration] is not None
-                                else 3600
-        new_pp_ttl = message[ParamPP.idx_pp_ttl]
+                                else 3600)
+        new_pp_ttl = (message[ParamPP.idx_pp_ttl]
                                 if message[ParamPP.idx_pp_ttl] is not None
-                                else -1
-        new_pp_ts = message[ParamPP.idx_pp_ts]
+                                else -1)
+        new_pp_ts = (message[ParamPP.idx_pp_ts]
                                 if message[ParamPP.idx_pp_ts] is not None
-                                else datetime.datetime.utcnow().isoformat(' ') + 'Z'
+                                else datetime.datetime.utcnow().isoformat(' ') + 'Z')
         ispace_utils.print_pp(self, new_pp
                         , new_pp_datatype
                         , new_pp_id
@@ -253,9 +256,9 @@ class PriceController(Agent):
                 self.local_bid_pp_id = new_pp_id
 
         if new_pp_isoptimal or self.pp_optimize_option in ["PASS_ON_PP", "EXTERN_OPT"]:
-            pubTopic =  self.topic_extrn_pp
+            pubTopic =  (self.topic_extrn_pp
                             if self.pp_optimize_option == "EXTERN_OPT"
-                            else self.topic_price_point 
+                            else self.topic_price_point )
             pubMsg = [new_pp
                         , new_pp_datatype
                         , new_pp_id

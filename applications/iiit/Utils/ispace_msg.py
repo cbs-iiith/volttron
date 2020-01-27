@@ -12,12 +12,24 @@
 #Sam
 
 import datetime
+import dateutil
 from enum import IntEnum
+import logging
+from random import randint
 
 from volttron.platform.agent import utils
+from volttron.platform import jsonrpc
+
+from ispace_utils import mround
 
 utils.setup_logging()
 _log = logging.getLogger(__name__)
+
+
+ROUNDOFF_PRICE_POINT = 0.01
+ROUNDOFF_BUDGET = 10
+ROUNDOFF_ACTIVE_POWER = 0.0001
+ROUNDOFF_ENERGY = 0.0001
 
 class MessageType(IntEnum):
     price_point = 0
@@ -59,8 +71,10 @@ class ISPACE_Msg:
                     , value_data_type = None
                     , units = None
                     , price_id = None
-                    , discovery_addrs = None
-                    , device_id = None
+                    , src_ip = None
+                    , src_device_id = None
+                    , dst_ip = None
+                    , dst_device_id = None
                     , duration = None
                     , ttl = None
                     , ts = None
@@ -72,52 +86,71 @@ class ISPACE_Msg:
         self.units = units
         self.price_id = price_id
         self.isoptimal = isoptimal
-        self.discovery_addrs = discovery_addrs
-        self.device_id = device_id
+        self.src_ip = src_ip
+        self.src_device_id = src_device_id
+        self.dst_ip = dst_ip
+        self.dst_device_id = dst_device_id
         self.duration = duration
         self.ttl = ttl
         self.ts = ts
         self.tz = tz
         return
         
+    #str overload to return class attributes as json params str
     def __str__(self):
-        return ('{type: {}, value: {0.2f}'.format(self.type, self.value)
-                + ', value_data_type: {}, units:{}'.format(self.value_data_type, self.units)
-                + ', price_id: {}, isoptimal: {}'.format(self.price_id, self.isoptimal)
-                + ', src_ip: {}, src_device_id: {}'.format(self.src_ip, self.src_device_id)
-                + ', dst_ip: {}, dst_device_id: {}'.format(self.dst_ip, self.dst_device_id)
-                + ', duration: {}, ttl: {}, ts: {}, tz:{}'.format(self.duration, self.ttl)
-                + ', ts: {}, tz:{}'.format(self.ts, self.tz)
-                + '}')
+        #_log.debug('__str__()')
+        params = {}
+        params['type'] = self.type
+        params['value'] = self.value
+        params['value_data_type'] = self.value_data_type
+        params['units'] = self.units
+        params['price_id'] = self.price_id
+        params['isoptimal'] = self.isoptimal
+        params['src_ip'] = self.src_ip
+        params['src_device_id'] = self.src_device_id
+        params['dst_ip'] = self.dst_ip
+        params['dst_device_id'] = self.dst_device_id
+        params['duration'] = self.duration
+        params['ttl'] = self.ttl
+        params['ts'] = self.ts
+        params['tz'] = self.tz
+        #_log.debug('params: {}'.format(params))
+        return str(params)
                 
-    def ttl_timeout():
+    def ttl_timeout(self):
+        #live for ever
         if self.ttl < 0:
+            _log.warning('ttl: {} < 0, do nothing!!!'.format(self.ttl))
             return False
-        ts  = dateutil.parser.parse(self.ts)
-        now = dateutil.parser.parse(datetime.datetime.utcnow().isoformat(' ') + 'Z')
-        return (True if (now - ts) > self.ttl else False)
-        
-    def decrement_ttl():
+            
+        if self.tz == 'UTC':
+            ts  = dateutil.parser.parse(self.ts)
+            now = dateutil.parser.parse(datetime.datetime.utcnow().isoformat(' ') + 'Z')
+            check = True if (now - ts).total_seconds() > self.ttl else False
+            return check
+        else:
+            _log.warning('ttl_timeout(), unknown tz: {}'.format(self.tz))
+            return False
+            
+    def decrement_ttl(self):
+        #live for ever
         if self.ttl < 0:
-            #do nothing
-            _log.debug('ttl: {} < 0, do nothing!!!'.format(self.ttl))
-            return
-        ts  = dateutil.parser.parse(self.ts)
-        now = dateutil.parser.parse(datetime.datetime.utcnow().isoformat(' ') + 'Z')
-        self.ttl = self.ttl - ((now -ts) + 1)
-        _log.info('new ttl: {}.'.format(self.ttl))
-        return
-        
+            _log.warning('ttl: {} < 0, do nothing!!!'.format(self.ttl))
+            return False
+            
+        if self.tz == 'UTC':
+            ts  = dateutil.parser.parse(self.ts)
+            now = dateutil.parser.parse(datetime.datetime.utcnow().isoformat(' ') + 'Z')
+            #_log.debug('ts: {}, now: {}'.format(ts, now))
+            self.ttl = self.ttl - (mround((now -ts).total_seconds(),1) + 1)
+            _log.info('new ttl: {}.'.format(self.ttl))
+            return True
+        else:
+            _log.warning('decrement_ttl(), unknown tz: {}'.format(self.tz))
+            return False
+            
     def get_pub_msg(self):
-        '''
-        return [self.type, self.value, self.value_data_type, self.units
-                , self.price_id, self.isoptimal
-                , self.src_ip, self.src_device_id
-                , self.dst_ip, self.dst_device_id
-                , self.duration, self.ttl, self.ts, self.tz
-                ]
-        '''
-        return self.get_json_params()
+        return str(self)
                 
     #check for mandatory fields in the message
     def valid_msg(self, mandatory_fields = []):
@@ -152,13 +185,14 @@ class ISPACE_Msg:
                 return False
         return True
     
-    def sanity_check(self, mandatory_fields = [], valid_price_ids = []):
+    #validate various sanity measure like, valid fields, valid pp ids, ttl expire, etc.,
+    def sanity_check_ok(self, hint = None, mandatory_fields = [], valid_price_ids = []):
         if not self.valid_msg(mandatory_fields):
             _log.warning('rcvd a invalid msg, message: {}, do nothing!!!'.format(message))
             return False
             
         #print only if a valid msg
-        #print_pp_msg(message)
+        _log.debug('Hint: {}, Msg: {}'.format(hint, self))
         
         #process msg only if price_id corresponds to these ids
         if valid_price_ids != [] and self.price_id not in valid_price_ids:
@@ -168,44 +202,14 @@ class ISPACE_Msg:
             
         #process msg only if msg is alive (didnot timeout)
         if self.ttl_timeout():
-            _log.warning('msg timed out, do nothing!!!')
+            _log.warning('msg ttl expired, do nothing!!!')
             return False
             
         return True
     
     #return class attributes as json params that can be passed to do_rpc()
     def get_json_params(self):
-        params = {}
-        if self.type is None:
-            params['type'] = self.type
-        if self.value is None:
-            params['value'] = self.value
-        if self.value_data_type is None:
-            params['value_data_type'] = self.value_data_type
-        if self.units is None:
-            params['units'] = self.units
-        if self.price_id is None:
-            params['price_id'] = self.price_id
-        if self.isoptimal is None:
-            params['isoptimal'] = self.isoptimal
-        if self.src_ip is None:
-            params['src_ip'] = self.src_ip
-        if self.src_device_id is None:
-            params['src_device_id'] = self.src_device_id
-        if self.dst_ip is None:
-            params['dst_ip'] = self.dst_ip
-        if self.dst_device_id is None:
-            params['dst_device_id'] = self.dst_device_id
-        if self.duration is None:
-            params['duration'] = self.duration
-        if self.ttl is None:
-            params['ttl'] = self.ttl
-        if self.ts is None:
-            params['ts'] = self.ts
-        if self.tz is None:
-            params['tz'] = self.tz
-            
-        return params
+        return str(self)
         
     #getters
     def get_type(self):
@@ -252,10 +256,22 @@ class ISPACE_Msg:
         
     #setters
     def set_type(self, type):
+        _log.debug('set_type()')
         self.type = type
         
-    def set_value(value):
-        self.value = value
+    def set_value(self, value):
+        _log.debug('set_value()')
+        if self.type == MessageType.price_point:
+            self.value = mround(value, ROUNDOFF_PRICE_POINT)
+        elif self.type == MessageType.budget:
+            self.value = mround(value, ROUNDOFF_BUDGET)
+        elif self.type == MessageType.active_power:
+            self.value = mround(value, ROUNDOFF_ACTIVE_POWER)
+        elif self.type == MessageType.energy:
+            self.value = mround(value, ROUNDOFF_ENERGY)
+        else:
+            _log.debug('else')
+            self.value = value
         
     def set_value_data_type(self, value_data_type):
         self.value_data_type = value_data_type
@@ -297,92 +313,94 @@ class ISPACE_Msg:
     
     
 #converts bus message into an ispace_msg
-def parse_bustopic_msg(self, message, attributes_list = []):
-    return self._parse_data(message, attributes_list)
+def parse_bustopic_msg(message, attributes_list = []):
+    return _parse_data(message, attributes_list)
     
 #converts jsonrpc_msg into an ispace_msg
-def parse_jsonrpc_msg(self, message, attributes_list = []):
+def parse_jsonrpc_msg(message, attributes_list = []):
     data = jsonrpc.JsonRpcData.parse(message).params
-    return self._parse_data(data, attributes_list)
+    return _parse_data(data, attributes_list)
     
 def _parse_data(data, attributes_list = []):
     new_msg = ISPACE_Msg()
     if attributes_list == []:
-        new_msg.set_type(rpcdata.params['type'])
-        new_msg.set_value(rpcdata.params['value'])
-        new_msg.set_value_data_type(rpcdata.params['value_data_type']
-                                        if rpcdata.params['tz'] is not None
+        _log.debug('attributes_list is empty!!!')
+        new_msg.set_type(data['type'])
+        new_msg.set_value(data['value'])
+        new_msg.set_value_data_type(data['value_data_type']
+                                        if data['tz'] is not None
                                         else 'float'
                                         )
-        new_msg.set_units(rpcdata.params['units'])
-        new_msg.set_price_id(rpcdata.params['price_id']
-                                        if rpcdata.params['price_id'] is not None
+        new_msg.set_units(data['units'])
+        new_msg.set_price_id(data['price_id']
+                                        if data['price_id'] is not None
                                         else randint(0, 99999999)
                                         )
-        new_msg.set_isoptimal(rpcdata.params['isoptimal'])
-        new_msg.set_src_ip(rpcdata.params['src_ip'])
-        new_msg.set_src_device_id(rpcdata.params['src_device_id'])
-        new_msg.set_dst_ip(rpcdata.params['dst_ip'])
-        new_msg.set_dst_device_id(rpcdata.params['dst_device_id'])
-        new_msg.set_duration(rpcdata.params['duration']
-                                        if rpcdata.params['duration'] is not None
+        new_msg.set_isoptimal(data['isoptimal'])
+        new_msg.set_src_ip(data['src_ip'])
+        new_msg.set_src_device_id(data['src_device_id'])
+        new_msg.set_dst_ip(data['dst_ip'])
+        new_msg.set_dst_device_id(data['dst_device_id'])
+        new_msg.set_duration(data['duration']
+                                        if data['duration'] is not None
                                         else 3600
                                         )
-        new_msg.set_ttl(rpcdata.params['ttl']
-                                        if rpcdata.params['ttl'] is not None
+        new_msg.set_ttl(data['ttl']
+                                        if data['ttl'] is not None
                                         else -1
                                         )
-        new_msg.set_ts(rpcdata.params['ts']
-                                        if rpcdata.params['ts'] is not None
+        new_msg.set_ts(data['ts']
+                                        if data['ts'] is not None
                                         else datetime.datetime.utcnow().isoformat(' ') + 'Z'
                                         )
-        new_msg.set_tz(rpcdata.params['tz']
-                                        if rpcdata.params['tz'] is not None
+        new_msg.set_tz(data['tz']
+                                        if data['tz'] is not None
                                         else 'UTC'
                                         )
     else:
+        _log.debug('attributes_list is NOT empty!!!')
         for attrib in attributes_list:
             if attrib == 'type':
-                new_msg.set_type(rpcdata.params['type'])
-            elif attrib == 'type':
-                new_msg.set_value(rpcdata.params['value'])
+                new_msg.set_type(data['type'])
+            elif attrib == 'value':
+                new_msg.set_value(data['value'])
             elif attrib == 'value_data_type':
-                new_msg.set_value_data_type(rpcdata.params['value_data_type'])
+                new_msg.set_value_data_type(data['value_data_type'])
             elif attrib == 'units':
-                new_msg.set_units(rpcdata.params['units'])
+                new_msg.set_units(data['units'])
             elif attrib == 'price_id':
-                new_msg.set_price_id(rpcdata.params['price_id']
-                                        if rpcdata.params['price_id'] is not None
+                new_msg.set_price_id(data['price_id']
+                                        if data['price_id'] is not None
                                         else randint(0, 99999999)
                                         )
             elif attrib == 'isoptimal':
-                new_msg.set_isoptimal(rpcdata.params['isoptimal'])
+                new_msg.set_isoptimal(data['isoptimal'])
             elif attrib == 'src_ip':
-                new_msg.set_src_ip(rpcdata.params['src_ip'])
+                new_msg.set_src_ip(data['src_ip'])
             elif attrib == 'src_device_id':
-                new_msg.set_src_device_id(rpcdata.params['src_device_id'])
+                new_msg.set_src_device_id(data['src_device_id'])
             elif attrib == 'dst_ip':
-                new_msg.set_dst_ip(rpcdata.params['dst_ip'])
+                new_msg.set_dst_ip(data['dst_ip'])
             elif attrib == 'dst_device_id':
-                new_msg.set_dst_device_id(rpcdata.params['dst_device_id'])
+                new_msg.set_dst_device_id(data['dst_device_id'])
             elif attrib == 'duration':
-                new_msg.set_duration(rpcdata.params['duration']
-                                        if rpcdata.params['duration'] is not None
+                new_msg.set_duration(data['duration']
+                                        if data['duration'] is not None
                                         else 3600
                                         )
             elif attrib == 'ttl':
-                new_msg.set_ttl(rpcdata.params['ttl']
-                                        if rpcdata.params['ttl'] is not None
+                new_msg.set_ttl(data['ttl']
+                                        if data['ttl'] is not None
                                         else -1
                                         )
             elif attrib == 'ts':
-                new_msg.set_ts(rpcdata.params['ts']
-                                        if rpcdata.params['ts'] is not None
+                new_msg.set_ts(data['ts']
+                                        if data['ts'] is not None
                                         else datetime.datetime.utcnow().isoformat(' ') + 'Z'
                                         )
             elif attrib == 'tz':
-                new_msg.set_tz(rpcdata.params['tz']
-                                        if rpcdata.params['tz'] is not None
+                new_msg.set_tz(data['tz']
+                                        if data['tz'] is not None
                                         else 'UTC'
                                         )
                                         
@@ -390,35 +408,35 @@ def _parse_data(data, attributes_list = []):
     
 class ISPACE_Msg_OptPricePoint(ISPACE_Msg):
     def __init__(self):
-        super().__init__(MessageType.price_point, True)
+        super().__init__(self, MessageType.price_point, True)
         return
     pass
     
     
 class ISPACE_Msg_BidPricePoint(ISPACE_Msg):
     def __init__(self):
-        super().__init__(MessageType.price_point, False)
+        super().__init__(self, MessageType.price_point, False)
         return
     pass
     
     
 class ISPACE_Msg_ActivePower(ISPACE_Msg):
     def __init__(self):
-        super().__init__(MessageType.active_power, True)
+        super().__init__(self, MessageType.active_power, True)
         return
     pass
     
     
 class ISPACE_Msg_Energy(ISPACE_Msg):
     def __init__(self):
-        super().__init__(MessageType.energy, False)
+        super().__init__(self, MessageType.energy, False)
         return
     pass
     
     
 class ISPACE_Msg_Budget(ISPACE_Msg):
     def __init__(self):
-        super().__init__(MessageType.budget)
+        super().__init__(self, MessageType.budget)
         return
     pass
     
