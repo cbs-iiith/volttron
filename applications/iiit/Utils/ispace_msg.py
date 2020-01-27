@@ -286,7 +286,7 @@ class ISPACE_Msg:
     
     
 #converts bus message into an ispace_msg
-def parse_jsonrpc_msg(self, message, attributes_list = []):
+def parse_bustopic_msg(self, message, attributes_list = []):
     return self._parse_data(message, attributes_list)
     
 #converts jsonrpc_msg into an ispace_msg
