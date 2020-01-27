@@ -50,8 +50,8 @@ class PricePoint(Agent):
         _log.debug("vip_identity: " + self.core.identity)
         
         self.config = utils.load_config(config_path)
-        self._configGetPoints()
-        self._configGetInitValues()
+        self._config_get_points()
+        self._config_get_init_values()
         return
         
     @Core.receiver('onsetup')
@@ -80,31 +80,31 @@ class PricePoint(Agent):
         _log.debug('onfinish()')
         return
         
-    def _configGetInitValues(self):
+    def _config_get_init_values(self):
         self.default_base_price = self.config.get('default_base_price', 0.4)
         self.min_price = self.config.get('min_price', 0.0)
         self.max_price = self.config.get('max_price', 1.0)
         self.period_read_price_point = self.config.get('period_read_price_point', 5)
         return
         
-    def _configGetPoints(self):
+    def _config_get_points(self):
         self.topic_price_point = self.config.get('topic_price_point', 'zone/pricepoint')
         return
         
     @RPC.export
     def rpc_from_net(self, header, message):
-        return self._processMessage(message)
+        return self._process_rpc_msg(message)
         
-    def _processMessage(self, message):
-        _log.debug('processResponse()')
+    def _process_rpc_msg(self, message):
+        _log.debug('_process_rpc_msg()')
         result = False
         try:
             rpcdata = jsonrpc.JsonRpcData.parse(message)
             _log.debug('rpc method: {}'.format(rpcdata.method))
             _log.debug('rpc params: {}'.format(rpcdata.params))
             
-            if rpcdata.method == "rpc_updatePricePoint":
-                result = self.updatePricePoint(message)
+            if rpcdata.method == "rpc_update_price_point":
+                result = self.update_price_point(message)
             elif rpcdata.method == "rpc_ping":
                 result = True
             else:
@@ -122,7 +122,7 @@ class PricePoint(Agent):
             return jsonrpc.json_error('NA', UNHANDLED_EXCEPTION, e)
         return
         
-    def updatePricePoint(self, message):
+    def update_price_point(self, message):
         try:
             attributes_list = []
             pp_msg = parse_jsonrpc_msg(message, attributes_list)
@@ -136,7 +136,7 @@ class PricePoint(Agent):
             return jsonrpc.json_error('NA', UNHANDLED_EXCEPTION, e)
             
         hint = 'New Price Point'
-        mandatory_fields = []
+        mandatory_fields = ['value', 'value_data_type', 'units', 'price_id', 'isoptimal', 'duration', 'ttl']
         valid_price_ids = []
         #validate various sanity measure like, valid fields, valid pp ids, ttl expiry, etc.,
         if not pp_msg.sanity_check_ok(hint, mandatory_fields, valid_price_ids):
@@ -148,10 +148,10 @@ class PricePoint(Agent):
             _log.info('new ttl: {}.'.format(pp_msg.get_ttl()))
         
         #publish the new price point to the local message bus
-        pubTopic = self.topic_price_point
-        pubMsg = pp_msg.get_json_params()
-        _log.debug('publishing to local bus topic: {}, message: {}'.format(pubTopic, pubMsg))
-        publish_to_bus(self, pubTopic, pubMsg)
+        pub_topic = self.topic_price_point
+        pub_msg = pp_msg.get_json_params()
+        _log.debug('publishing to local bus topic: {}, message: {}'.format(pub_topic, pub_msg))
+        publish_to_bus(self, pub_topic, pub_msg)
         return True
         
 def main(argv=sys.argv):

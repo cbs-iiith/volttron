@@ -321,9 +321,17 @@ def parse_jsonrpc_msg(message, attributes_list = []):
     return _parse_data(data, attributes_list)
     
 def _parse_data(data, attributes_list = []):
+    full_list = [ 'type', 'value', 'value_data_type', 'units'
+                    , 'price_id', 'isoptimal'
+                    , 'src_ip', 'src_device_id'
+                    , 'dst_ip', 'dst_device_id'
+                    , 'duration', 'ttl', 'ts', 'tz'
+                    ]
+                    
     new_msg = ISPACE_Msg()
     if attributes_list == []:
-        _log.warning('attributes_list to check against empty!!!')
+        _log.warning('attributes_list to check against is empty!!!')
+        #if the param is not found, throws a keyerror exception
         new_msg.set_type(data['type'])
         new_msg.set_value(data['value'])
         new_msg.set_value_data_type(data['value_data_type']
@@ -359,52 +367,44 @@ def _parse_data(data, attributes_list = []):
     else:
         #_log.debug('attributes_list is NOT empty!!!')
         for attrib in attributes_list:
-            if attrib == 'type':
-                new_msg.set_type(data['type'])
-            elif attrib == 'value':
-                new_msg.set_value(data['value'])
-            elif attrib == 'value_data_type':
-                new_msg.set_value_data_type(data['value_data_type'])
-            elif attrib == 'units':
-                new_msg.set_units(data['units'])
-            elif attrib == 'price_id':
-                new_msg.set_price_id(data['price_id']
-                                        if data['price_id'] is not None
-                                        else randint(0, 99999999)
-                                        )
-            elif attrib == 'isoptimal':
-                new_msg.set_isoptimal(data['isoptimal'])
-            elif attrib == 'src_ip':
-                new_msg.set_src_ip(data['src_ip'])
-            elif attrib == 'src_device_id':
-                new_msg.set_src_device_id(data['src_device_id'])
-            elif attrib == 'dst_ip':
-                new_msg.set_dst_ip(data['dst_ip'])
-            elif attrib == 'dst_device_id':
-                new_msg.set_dst_device_id(data['dst_device_id'])
-            elif attrib == 'duration':
-                new_msg.set_duration(data['duration']
-                                        if data['duration'] is not None
-                                        else 3600
-                                        )
-            elif attrib == 'ttl':
-                new_msg.set_ttl(data['ttl']
-                                        if data['ttl'] is not None
-                                        else -1
-                                        )
-            elif attrib == 'ts':
-                new_msg.set_ts(data['ts']
-                                        if data['ts'] is not None
-                                        else datetime.datetime.utcnow().isoformat(' ') + 'Z'
-                                        )
-            elif attrib == 'tz':
-                new_msg.set_tz(data['tz']
-                                        if data['tz'] is not None
-                                        else 'UTC'
-                                        )
-                                        
+            #if the param is not found, throws a keyerror exception
+            update_value(attrib, data[attrib.name])
+        #for attrib in full_list:
     return new_msg
     
+    def update_value(attrib, new_value):
+        if attrib == 'type':
+            new_msg.set_type(new_value)
+        elif attrib == 'value':
+            new_msg.set_value(new_value)
+        elif attrib == 'value_data_type':
+            new_msg.set_value_data_type(new_value)
+        elif attrib == 'units':
+            new_msg.set_units(new_value)
+        elif attrib == 'price_id':
+            new_msg.set_price_id(new_value if new_value is not None else randint(0, 99999999))
+        elif attrib == 'isoptimal':
+            new_msg.set_isoptimal(new_value)
+        elif attrib == 'src_ip':
+            new_msg.set_src_ip(new_value)
+        elif attrib == 'src_device_id':
+            new_msg.set_src_device_id(new_value)
+        elif attrib == 'dst_ip':
+            new_msg.set_dst_ip(new_value)
+        elif attrib == 'dst_device_id':
+            new_msg.set_dst_device_id(new_value)
+        elif attrib == 'duration':
+            new_msg.set_duration(new_value if new_value is not None else 3600)
+        elif attrib == 'ttl':
+            new_msg.set_ttl(new_value if new_value is not None else -1)
+        elif attrib == 'ts':
+            new_msg.set_ts(new_value if new_value is not None
+                                    else datetime.datetime.utcnow().isoformat(' ') + 'Z')
+        elif attrib == 'tz':
+            new_msg.set_tz(new_value if new_value is not None else 'UTC')
+        return
+        
+        
 class ISPACE_Msg_OptPricePoint(ISPACE_Msg):
     def __init__(self):
         super().__init__(self, MessageType.price_point, True)
