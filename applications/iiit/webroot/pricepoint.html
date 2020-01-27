@@ -88,7 +88,7 @@
         </header>
         
         <div class="pages" >
-            
+
             <div class="panel" data-title="Publish New PricePoint" id="setPricePoint" >
                 
                 <p>New Price Point</p>
@@ -149,7 +149,7 @@
                         &nbsp;
                     </div>
                 </div>
-                
+
                 <div class="row" >
                     <div class="large-2 columns">
                         &nbsp;
@@ -161,7 +161,7 @@
     </div>
     <script>
         $('#publishPricePoint').click(function(){
-            var new_pp_type = null;
+            var new_pp_type = 0;
             var new_pp_value = parseFloat($('#new_pp_value').val());
             var new_pp_value_data_type = 'float';
             var new_pp_units = 'cents';
@@ -220,11 +220,10 @@
         function getRndInteger(min, max) {
             return Math.floor(Math.random() * (max - min) ) + min;
         }
-        window.onload = function() { 
-                                    printValue('slider_pp', 'new_pp_value'); 
-                                    printValue('slider_pp_ttl', 'new_pp_ttl'); 
-                                    printValue('slider_pp_dur', 'new_pp_dur'); 
-                                    }
+        window.onload = function() { printValue('slider_pp', 'new_pp_value'); 
+                                        printValue('slider_pp_ttl', 'new_pp_ttl'); 
+                                        printValue('slider_pp_dur', 'new_pp_dur'); 
+                                        }
     </script>
 </body>
 </html>
