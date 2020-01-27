@@ -14,6 +14,10 @@
 import datetime
 from enum import IntEnum
 
+from volttron.platform.agent import utils
+
+utils.setup_logging()
+_log = logging.getLogger(__name__)
 
 class MessageType(IntEnum):
     opt_price_point = 0
@@ -26,20 +30,21 @@ class MessageType(IntEnum):
 
 class ISPACE_Msg:
     
-    type = MessageType.price_point
-    value = 0
-    value_data_type = 'float'
-    units = 'cents'
+    type = None
+    value = None
+    value_data_type = None
+    units = None
     price_id = None
     isoptimal = None
+    #msg_from_remote_device = True if src_ip == local_ip else False
     src_ip = None
     src_device_id = None
     dst_ip = None
     dst_device_id = None
-    duration = 3600
-    ttl = -1
-    ts = datetime.datetime.utcnow().isoformat(' ') + 'Z'
-    tz  = 'UTC'
+    duration = None
+    ttl = None
+    ts = None
+    tz  = None
     
     __init__(self, type = None
                     , value = None
@@ -86,7 +91,7 @@ class ISPACE_Msg:
         return
         
     def get_pub_msg(self):
-        return[type, value, value_data_type, units
+        return [type, value, value_data_type, units
                 , price_id, isoptimal
                 , src_ip, src_device_id
                 , dst_ip, dst_device_id
@@ -271,30 +276,30 @@ class ISPACE_Msg:
     
     
 class ISPACE_Msg_OptPricePoint(ISPACE_Msg):
-    def __init__(self, ):
+    def __init__(self):
         super().__init__(MessageType.opt_price_point)
     pass
     
     
 class ISPACE_Msg_BidPricePoint(ISPACE_Msg):
-    def __init__(self, ):
+    def __init__(self):
         super().__init__(MessageType.bid_price_point)
     pass
     
 class ISPACE_Msg_ActivePower(ISPACE_Msg):
-    def __init__(self, ):
+    def __init__(self):
         super().__init__(MessageType.active_power)
     pass
     
     
 class ISPACE_Msg_Energy(ISPACE_Msg):
-    def __init__(self, ):
+    def __init__(self):
         super().__init__(MessageType.energy)
     pass
     
     
 class ISPACE_Msg_Budget(ISPACE_Msg):
-    def __init__(self, ):
+    def __init__(self):
         super().__init__(MessageType.budget)
     pass
     
