@@ -53,7 +53,7 @@ class ISPACE_Msg:
     ts = None
     tz  = None
     
-    __init__(self, type = None
+    def __init__(self, type = None
                     , isoptimal = None
                     , value = None
                     , value_data_type = None
@@ -91,20 +91,22 @@ class ISPACE_Msg:
                 + '}')
                 
     def ttl_timeout():
-            if self.ttl < 0:
-                return False
-            ts  = dateutil.parser.parse(self.ts)
-            now = dateutil.parser.parse(datetime.datetime.utcnow().isoformat(' ') + 'Z')
-            return (True if (now - ts) > self.ttl else False)
-        return
+        if self.ttl < 0:
+            return False
+        ts  = dateutil.parser.parse(self.ts)
+        now = dateutil.parser.parse(datetime.datetime.utcnow().isoformat(' ') + 'Z')
+        return (True if (now - ts) > self.ttl else False)
         
     def get_pub_msg(self):
+        '''
         return [self.type, self.value, self.value_data_type, self.units
                 , self.price_id, self.isoptimal
                 , self.src_ip, self.src_device_id
                 , self.dst_ip, self.dst_device_id
                 , self.duration, self.ttl, self.ts, self.tz
                 ]
+        '''
+        return self.get_json_params()
                 
     #check for mandatory fields in the message
     def valid_msg(self, mandatory_fields = []):
@@ -137,7 +139,7 @@ class ISPACE_Msg:
                 return False
             elif idx == 'tz' and self.tz is None:
                 return False
-    return True
+        return True
     
     def sanity_check(self, mandatory_fields = [], valid_price_ids = []):
         if not self.valid_msg(mandatory_fields):
@@ -158,7 +160,7 @@ class ISPACE_Msg:
             _log.warning('msg timed out, do nothing!!!')
             return False
             
-    return True
+        return True
     
     #return class attributes as json params that can be passed to do_rpc()
     def get_json_params(self):
