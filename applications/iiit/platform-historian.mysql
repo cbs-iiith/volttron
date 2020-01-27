@@ -1,0 +1,13 @@
+{
+    "agentid": "sqlhistorian-mysql",
+    "connection": {
+        "type": "mysql",
+        "params": {
+            "host": "192.168.1.8",
+            "port": 3306,
+            "database": "volttron",
+            "user": "bsrc_sam",
+            "passwd": "Bsrc12#$"
+        }
+    }
+}
