@@ -20,11 +20,10 @@ utils.setup_logging()
 _log = logging.getLogger(__name__)
 
 class MessageType(IntEnum):
-    opt_price_point = 0
-    bid_price_point = 1
-    budget = 2
-    active_power = 3
-    energy = 4
+    price_point = 0
+    budget = 1
+    active_power = 2
+    energy = 3
     pass
 
 
@@ -47,11 +46,11 @@ class ISPACE_Msg:
     tz  = None
     
     __init__(self, type = None
+                    , isoptimal = None
                     , value = None
                     , value_data_type = None
                     , units = None
                     , price_id = None
-                    , isoptimal = None
                     , discovery_addrs = None
                     , device_id = None
                     , duration = None
@@ -274,7 +273,8 @@ class ISPACE_Msg:
         
     pass
     
-#converts jsonrpc_msg to ispace_msg
+    
+#converts jsonrpc_msg into an ispace_msg
 def parse_jsonrpc_msg(self, message, attributes_list = []):
     rpcdata = jsonrpc.JsonRpcData.parse(message)
     
@@ -362,30 +362,36 @@ def parse_jsonrpc_msg(self, message, attributes_list = []):
     
 class ISPACE_Msg_OptPricePoint(ISPACE_Msg):
     def __init__(self):
-        super().__init__(MessageType.opt_price_point)
+        super().__init__(MessageType.price_point, True)
+        return
     pass
     
     
 class ISPACE_Msg_BidPricePoint(ISPACE_Msg):
     def __init__(self):
-        super().__init__(MessageType.bid_price_point)
+        super().__init__(MessageType.price_point, False)
+        return
     pass
+    
     
 class ISPACE_Msg_ActivePower(ISPACE_Msg):
     def __init__(self):
-        super().__init__(MessageType.active_power)
+        super().__init__(MessageType.active_power, True)
+        return
     pass
     
     
 class ISPACE_Msg_Energy(ISPACE_Msg):
     def __init__(self):
-        super().__init__(MessageType.energy)
+        super().__init__(MessageType.energy, False)
+        return
     pass
     
     
 class ISPACE_Msg_Budget(ISPACE_Msg):
     def __init__(self):
         super().__init__(MessageType.budget)
+        return
     pass
     
     
