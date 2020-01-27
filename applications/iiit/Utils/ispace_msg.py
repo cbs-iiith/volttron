@@ -312,13 +312,13 @@ class ISPACE_Msg:
     
     
 #converts bus message into an ispace_msg
-def parse_bustopic_msg(message, attributes_list = []):
-    return _parse_data(message, attributes_list)
+def parse_bustopic_msg(message, mandatory_fields = []):
+    return _parse_data(message, mandatory_fields)
     
 #converts jsonrpc_msg into an ispace_msg
-def parse_jsonrpc_msg(message, attributes_list = []):
+def parse_jsonrpc_msg(message, mandatory_fields = []):
     data = jsonrpc.JsonRpcData.parse(message).params
-    return _parse_data(data, attributes_list)
+    return _parse_data(data, mandatory_fields)
     
 def _update_value(new_msg, attrib, new_value):
     if attrib == 'type':
@@ -352,7 +352,7 @@ def _update_value(new_msg, attrib, new_value):
         new_msg.set_tz(new_value if new_value is not None else 'UTC')
     return
     
-def _parse_data(data, attributes_list = []):
+def _parse_data(data, mandatory_fields = []):
     full_list = [ 'type', 'value', 'value_data_type', 'units'
                     , 'price_id', 'isoptimal'
                     , 'src_ip', 'src_device_id'
@@ -361,8 +361,9 @@ def _parse_data(data, attributes_list = []):
                     ]
                     
     new_msg = ISPACE_Msg()
-    if attributes_list == []:
-        _log.warning('attributes_list to check against is empty!!!')
+    #if list is empty, parse all attributes
+    if mandatory_fields == []:
+        _log.warning('mandatory_fields to check against is empty!!!')
         #if the param is not found, throws a keyerror exception
         new_msg.set_type(data['type'])
         new_msg.set_value(data['value'])
@@ -397,13 +398,14 @@ def _parse_data(data, attributes_list = []):
                                         else 'UTC'
                                         )
     else:
-        #_log.debug('attributes_list is NOT empty!!!')
-        for attrib in attributes_list:
+        #_log.debug('mandatory_fields is NOT empty!!!')
+        for attrib in mandatory_fields:
             #if the param is not found, throws a keyerror exception
             _update_value(new_msg, attrib, data[attrib])
-        #do a second pass to also get params not in attributes_list
+        #do a second pass to also get params not in the mandatory_fields
+        #if key not found, catch the exception and pass to continue with next key
         for attrib in full_list:
-            if attrib not in attributes_list:
+            if attrib not in mandatory_fields:
                 try:
                     _update_value(new_msg, attrib, data[attrib])
                 except KeyError:
