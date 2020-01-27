@@ -274,6 +274,91 @@ class ISPACE_Msg:
         
     pass
     
+#converts jsonrpc_msg to ispace_msg
+def parse_jsonrpc_msg(self, message, attributes_list = []):
+    rpcdata = jsonrpc.JsonRpcData.parse(message)
+    
+    new_msg = ISPACE_Msg()
+    if attributes_list == []:
+        new_msg.set_type(rpcdata.params['type'])
+        new_msg.set_value(rpcdata.params['value'])
+        new_msg.set_value_data_type(rpcdata.params['value_data_type']
+                                        if rpcdata.params['tz'] is not None
+                                        else 'float'
+                                        )
+        new_msg.set_units(rpcdata.params['units'])
+        new_msg.set_price_id(rpcdata.params['price_id']
+                                        if rpcdata.params['price_id'] is not None
+                                        else randint(0, 99999999)
+                                        )
+        new_msg.set_isoptimal(rpcdata.params['isoptimal'])
+        new_msg.set_src_ip(rpcdata.params['src_ip'])
+        new_msg.set_src_device_id(rpcdata.params['src_device_id'])
+        new_msg.set_dst_ip(rpcdata.params['dst_ip'])
+        new_msg.set_dst_device_id(rpcdata.params['dst_device_id'])
+        new_msg.set_duration(rpcdata.params['duration']
+                                        if rpcdata.params['duration'] is not None
+                                        else 3600
+                                        )
+        new_msg.set_ttl(rpcdata.params['ttl']
+                                        if rpcdata.params['ttl'] is not None
+                                        else -1
+                                        )
+        new_msg.set_ts(rpcdata.params['ts']
+                                        if rpcdata.params['ts'] is not None
+                                        else datetime.datetime.utcnow().isoformat(' ') + 'Z'
+                                        )
+        new_msg.set_tz(rpcdata.params['tz']
+                                        if rpcdata.params['tz'] is not None
+                                        else 'UTC'
+                                        )
+    else:
+        for attrib in attributes_list:
+            if attrib == 'type':
+                new_msg.set_type(rpcdata.params['type'])
+            elif attrib == 'type':
+                new_msg.set_value(rpcdata.params['value'])
+            elif attrib == 'value_data_type':
+                new_msg.set_value_data_type(rpcdata.params['value_data_type'])
+            elif attrib == 'units':
+                new_msg.set_units(rpcdata.params['units'])
+            elif attrib == 'price_id':
+                new_msg.set_price_id(rpcdata.params['price_id']
+                                        if rpcdata.params['price_id'] is not None
+                                        else randint(0, 99999999)
+                                        )
+            elif attrib == 'isoptimal':
+                new_msg.set_isoptimal(rpcdata.params['isoptimal'])
+            elif attrib == 'src_ip':
+                new_msg.set_src_ip(rpcdata.params['src_ip'])
+            elif attrib == 'src_device_id':
+                new_msg.set_src_device_id(rpcdata.params['src_device_id'])
+            elif attrib == 'dst_ip':
+                new_msg.set_dst_ip(rpcdata.params['dst_ip'])
+            elif attrib == 'dst_device_id':
+                new_msg.set_dst_device_id(rpcdata.params['dst_device_id'])
+            elif attrib == 'duration':
+                new_msg.set_duration(rpcdata.params['duration']
+                                        if rpcdata.params['duration'] is not None
+                                        else 3600
+                                        )
+            elif attrib == 'ttl':
+                new_msg.set_ttl(rpcdata.params['ttl']
+                                        if rpcdata.params['ttl'] is not None
+                                        else -1
+                                        )
+            elif attrib == 'ts':
+                new_msg.set_ts(rpcdata.params['ts']
+                                        if rpcdata.params['ts'] is not None
+                                        else datetime.datetime.utcnow().isoformat(' ') + 'Z'
+                                        )
+            elif attrib == 'tz':
+                new_msg.set_tz(rpcdata.params['tz']
+                                        if rpcdata.params['tz'] is not None
+                                        else 'UTC'
+                                        )
+                                        
+    return new_msg
     
 class ISPACE_Msg_OptPricePoint(ISPACE_Msg):
     def __init__(self):
