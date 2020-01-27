@@ -149,9 +149,39 @@ class ISPACE_Msg:
             
     return True
     
-    def get_json(self):
-        rsp = None
-        return rsp
+    #return class attributes as json params that can be passed to do_rpc()
+    def get_json_params(self):
+        params = {}
+        if self.type is None:
+            params['type'] = self.type
+        if self.value is None:
+            params['value'] = self.value
+        if self.value_data_type is None:
+            params['value_data_type'] = self.value_data_type
+        if self.units is None:
+            params['units'] = self.units
+        if self.price_id is None:
+            params['price_id'] = self.price_id
+        if self.isoptimal is None:
+            params['isoptimal'] = self.isoptimal
+        if self.src_ip is None:
+            params['src_ip'] = self.src_ip
+        if self.src_device_id is None:
+            params['src_device_id'] = self.src_device_id
+        if self.dst_ip is None:
+            params['dst_ip'] = self.dst_ip
+        if self.dst_device_id is None:
+            params['dst_device_id'] = self.dst_device_id
+        if self.duration is None:
+            params['duration'] = self.duration
+        if self.ttl is None:
+            params['ttl'] = self.ttl
+        if self.ts is None:
+            params['ts'] = self.ts
+        if self.tz is None:
+            params['tz'] = self.tz
+            
+        return params
         
     #getters
     def get_type(self):
