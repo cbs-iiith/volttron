@@ -124,7 +124,7 @@ class PricePoint(Agent):
         
     def update_price_point(self, message):
         try:
-            attributes_list = []
+            attributes_list = ['value', 'value_data_type', 'units', 'price_id']
             pp_msg = parse_jsonrpc_msg(message, attributes_list)
             #_log.info('pp_msg: {}'.format(pp_msg))
         except KeyError:

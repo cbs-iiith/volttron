@@ -368,8 +368,16 @@ def _parse_data(data, attributes_list = []):
         #_log.debug('attributes_list is NOT empty!!!')
         for attrib in attributes_list:
             #if the param is not found, throws a keyerror exception
-            update_value(attrib, data[attrib.name])
-        #for attrib in full_list:
+            update_value(new_msg, attrib, data[attrib.name])
+        #do a second pass to also get params not in attributes_list
+        for attrib in full_list:
+            if attrib not in attributes_list:
+                try:
+                    update_value(new_msg, attrib, data[attrib.name])
+                except KeyError:
+                    _log.warning('key: {}, not available in the data'.format(attrib))
+                    pass
+                    
     return new_msg
     
     def update_value(attrib, new_value):
