@@ -134,7 +134,7 @@ class ISPACE_Msg:
             
     def decrement_ttl(self):
         #live for ever
-        if self.ttl < 0:
+        if self.ttl <= 0:
             _log.warning('ttl: {} < 0, do nothing!!!'.format(self.ttl))
             return False
             

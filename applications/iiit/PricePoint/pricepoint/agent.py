@@ -144,9 +144,13 @@ class PricePoint(Agent):
             return False
             
         #decrement the ttl by time consumed to process till now + 1 sec
-        if pp_msg.decrement_ttl():
+        decrement_status = pp_msg.decrement_ttl()
+        if decrement_status and pp_msg.get_ttl() == 0:
+            _log.warning('msg ttl expired on decrement_ttl(), do nothing!!!')
+            return False
+        elif decrement_status:
             _log.info('new ttl: {}.'.format(pp_msg.get_ttl()))
-        
+            
         #publish the new price point to the local message bus
         pub_topic = self.topic_price_point
         pub_msg = pp_msg.get_json_params()
