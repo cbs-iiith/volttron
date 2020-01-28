@@ -1183,7 +1183,7 @@ class SmartHub(Agent):
         except AssertionError:
             print('AssertionError')
             return jsonrpc.json_error('NA', INVALID_REQUEST,
-                    'Invalid rpc data {}'.format(data))
+                    'Invalid rpc data {}'.format(rpcdata))
         except Exception as e:
             print(e)
             return jsonrpc.json_error('NA', UNHANDLED_EXCEPTION, e)
