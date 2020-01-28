@@ -93,10 +93,7 @@ class PricePoint(Agent):
         
     @RPC.export
     def rpc_from_net(self, header, message):
-        return self._process_rpc_msg(message)
-        
-    def _process_rpc_msg(self, message):
-        _log.debug('_process_rpc_msg()')
+        _log.debug('rpc_from_net()')
         result = False
         try:
             rpcdata = jsonrpc.JsonRpcData.parse(message)
@@ -108,14 +105,12 @@ class PricePoint(Agent):
                 result = True
             else:
                 return jsonrpc.json_error(rpcdata.id, METHOD_NOT_FOUND,
-                    'Invalid method {}'.format(rpcdata.method))
-                    
+                                            'Invalid method {}'.format(rpcdata.method))
             return jsonrpc.json_result(rpcdata.id, result)
-            
         except KeyError:
             print('KeyError')
             return jsonrpc.json_error('NA', INVALID_PARAMS,
-                    'Invalid params {}'.format(rpcdata.params))
+                                        'Invalid params {}'.format(rpcdata.params))
         except Exception as e:
             print(e)
             return jsonrpc.json_error('NA', UNHANDLED_EXCEPTION, e)
@@ -139,7 +134,7 @@ class PricePoint(Agent):
         valid_price_ids = []
         #validate various sanity measure like, valid fields, valid pp ids, ttl expiry, etc.,
         if not pp_msg.sanity_check_ok(hint, mandatory_fields, valid_price_ids):
-            _log.warning('sanity checks failed!!!')
+            _log.warning('Sanity checks failed!!!')
             return False
             
         #publish the new price point to the local message bus

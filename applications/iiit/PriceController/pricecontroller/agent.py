@@ -92,41 +92,32 @@ class PriceController(Agent):
         
     @RPC.export
     def rpc_from_net(self, header, message):
+        _log.debug('rpc_from_net()')
         result = False
         try:
             rpcdata = jsonrpc.JsonRpcData.parse(message)
-            '''
-            _log.debug('rpc_from_net()...' +
-                        ', rpc method: {}'.format(rpcdata.method) +
-                        ', rpc params: {}'.format(rpcdata.params))
-            '''
+            _log.debug('rpc method: {}'.format(rpcdata.method))
+            _log.debug('rpc params: {}'.format(rpcdata.params))
             if rpcdata.method == "rpc_disable_agent":
-                args = {'disable_agent': rpcdata.params['disable_agent'],
-                        }
-                result = self._disable_agent(**args)
-                
+                result = self._disable_agent(message)
             elif rpcdata.method == "rpc_set_pp_optimize_option":
-                args = {'option': rpcdata.params['option'],
-                        }
-                result = self._set_pp_optimize_option(**args)
-                
+                result = self._set_pp_optimize_option(message)
             elif rpcdata.method == "rpc_ping":
                 result = True
             else:
                 return jsonrpc.json_error(rpcdata.id, METHOD_NOT_FOUND,
                                             'Invalid method {}'.format(rpcdata.method))
-                                            
             return jsonrpc.json_result(rpcdata.id, result)
-            
         except KeyError as ke:
             print(ke)
             return jsonrpc.json_error('NA', INVALID_PARAMS,
-                    'Invalid params {}'.format(rpcdata.params))
+                                        'Invalid params {}'.format(rpcdata.params))
         except Exception as e:
             print(e)
             return jsonrpc.json_error('NA', UNHANDLED_EXCEPTION, e)
             
-    def _disable_agent(self, disable_agent):
+    def _disable_agent(self, message):
+        disable_agent = jsonrpc.JsonRpcData.parse(message).params['disable_agent']
         if disable_agent in [True, False]:
             self.agent_disabled = disable_agent
             result = True
@@ -134,10 +125,11 @@ class PriceController(Agent):
             result = False
         return result
         
-    def _set_pp_optimize_option(self, option):
-        if option in ["PASS_ON_PP"
-                        , "DEFAULT_OPT"
-                        , "EXTERN_OPT"
+    def _set_pp_optimize_option(self, message):
+        option = jsonrpc.JsonRpcData.parse(message).params['option']
+        if option in ['PASS_ON_PP'
+                        , 'DEFAULT_OPT'
+                        , 'EXTERN_OPT'
                         ]:
             self.pp_optimize_option = self.pp_optimize_option
             result = True

@@ -241,6 +241,7 @@ class VolttronBridge(Agent):
         
     @RPC.export
     def rpc_from_net(self, header, message):
+        _log.debug('rpc_from_net()')
         result = False
         try:
             rpcdata = jsonrpc.JsonRpcData.parse(message)
