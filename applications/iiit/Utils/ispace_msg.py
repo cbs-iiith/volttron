@@ -193,7 +193,7 @@ class ISPACE_Msg:
             return False
             
         #print only if a valid msg
-        _log.info('Hint: {}, Msg: {}'.format(hint, self))
+        _log.info('{} Msg: {}'.format(hint, self))
         
         #process msg only if price_id corresponds to these ids
         if valid_price_ids != [] and self.price_id not in valid_price_ids:

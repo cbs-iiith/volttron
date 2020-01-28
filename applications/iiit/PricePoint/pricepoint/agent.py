@@ -101,8 +101,7 @@ class PricePoint(Agent):
         try:
             rpcdata = jsonrpc.JsonRpcData.parse(message)
             _log.debug('rpc method: {}'.format(rpcdata.method))
-            _log.debug('rpc params: {}'.format(rpcdata.params))
-            
+            _log.debug('.........rpc params: {}'.format(rpcdata.params))
             if rpcdata.method == "rpc_update_price_point":
                 result = self.update_price_point(message)
             elif rpcdata.method == "rpc_ping":
@@ -154,7 +153,8 @@ class PricePoint(Agent):
         #publish the new price point to the local message bus
         pub_topic = self.topic_price_point
         pub_msg = pp_msg.get_json_params()
-        _log.debug('publishing to local bus topic: {}, Msg: {}'.format(pub_topic, pub_msg))
+        _log.debug('publishing to local bus topic: {}'.format(pub_topic))
+        _log.debug('............... Msg: {}'.format(pub_msg))
         publish_to_bus(self, pub_topic, pub_msg)
         return True
         
