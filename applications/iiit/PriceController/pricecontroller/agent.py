@@ -22,6 +22,13 @@ from volttron.platform.agent import utils
 from volttron.platform.messaging import topics, headers as headers_mod
 from volttron.platform.agent.known_identities import (
     MASTER_WEB, VOLTTRON_CENTRAL, VOLTTRON_CENTRAL_PLATFORM)
+from volttron.platform import jsonrpc
+from volttron.platform.jsonrpc import (
+        INVALID_REQUEST, METHOD_NOT_FOUND,
+        UNHANDLED_EXCEPTION, UNAUTHORIZED,
+        UNABLE_TO_REGISTER_INSTANCE, DISCOVERY_ERROR,
+        UNABLE_TO_UNREGISTER_INSTANCE, UNAVAILABLE_PLATFORM, INVALID_PARAMS,
+        UNAVAILABLE_AGENT)
 
 import time
 import gevent
@@ -110,11 +117,11 @@ class PriceController(Agent):
             return jsonrpc.json_result(rpcdata.id, result)
         except KeyError as ke:
             print(ke)
-            return jsonrpc.json_error('NA', INVALID_PARAMS,
+            return jsonrpc.json_error(rpcdata.id, INVALID_PARAMS,
                                         'Invalid params {}'.format(rpcdata.params))
         except Exception as e:
             print(e)
-            return jsonrpc.json_error('NA', UNHANDLED_EXCEPTION, e)
+            return jsonrpc.json_error(rpcdata.id, UNHANDLED_EXCEPTION, e)
             
     def _disable_agent(self, message):
         disable_agent = jsonrpc.JsonRpcData.parse(message).params['disable_agent']

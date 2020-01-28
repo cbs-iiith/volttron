@@ -109,11 +109,11 @@ class PricePoint(Agent):
             return jsonrpc.json_result(rpcdata.id, result)
         except KeyError:
             print('KeyError')
-            return jsonrpc.json_error('NA', INVALID_PARAMS,
+            return jsonrpc.json_error(rpcdata.id, INVALID_PARAMS,
                                         'Invalid params {}'.format(rpcdata.params))
         except Exception as e:
             print(e)
-            return jsonrpc.json_error('NA', UNHANDLED_EXCEPTION, e)
+            return jsonrpc.json_error(rpcdata.id, UNHANDLED_EXCEPTION, e)
         return
         
     def update_price_point(self, message):
