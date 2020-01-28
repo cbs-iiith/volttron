@@ -36,7 +36,7 @@ from random import randint
 import settings
 import time
 from ispace_utils import publish_to_bus
-from ispace_msg import ISPACE_Msg, parse_jsonrpc_msg
+from ispace_msg import parse_jsonrpc_msg
 
 utils.setup_logging()
 _log = logging.getLogger(__name__)
@@ -132,8 +132,8 @@ class PricePoint(Agent):
             mandatory_fields = ['value', 'value_data_type', 'units', 'price_id']
             pp_msg = parse_jsonrpc_msg(message, mandatory_fields)
             #_log.info('pp_msg: {}'.format(pp_msg))
-        except KeyError:
-            print('KeyError')
+        except KeyError as ke:
+            print(ke)
             return jsonrpc.json_error('NA', INVALID_PARAMS,
                     'Invalid params {}'.format(rpcdata.params))
         except Exception as e:
@@ -150,7 +150,7 @@ class PricePoint(Agent):
             
         #publish the new price point to the local message bus
         pub_topic = self.topic_price_point
-        pub_msg = pp_msg.get_json_params()
+        pub_msg = pp_msg.get_json_params(self._agent_id)
         _log.debug('publishing to local bus topic: {}'.format(pub_topic))
         _log.debug('Msg: {}'.format(pub_msg))
         publish_to_bus(self, pub_topic, pub_msg)

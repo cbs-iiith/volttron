@@ -34,7 +34,8 @@ import time
 import gevent
 import gevent.event
 
-import ispace_utils
+from ispace_utils import publish_to_bus
+from ispace_msg import parse_bustopic_msg, ISPACE_Msg, MessageType
 
 utils.setup_logging()
 _log = logging.getLogger(__name__)
@@ -83,13 +84,16 @@ class PriceController(Agent):
                             , "rpc_from_net"
                             ).get(timeout=30)
                             
-        self.us_pp = 0
-        self.us_pp_id = randint(0, 99999999)
-        self.us_pp_datatype = {'units': 'cents', 'tz': 'UTC', 'type': 'float'}
-        self.us_pp_isoptimal = False
-        self.us_pp_ttl = -1
-        self.us_pp_ts = datetime.datetime.utcnow().isoformat(' ') + 'Z'
-        self.us_pp_isoptimal = False
+        self.tmp_pp_msg = None
+        
+        self.us_opt_pp_msg = None
+        self.us_bid_pp_msg = None
+        self.act_opt_pp_msg = None
+        self.act_bid_pp_msg = None
+        self.local_opt_pp_msg = None
+        self.local_bid_pp_msg = None
+        
+        
         
         #subscribing to topic_price_point_us
         self.vip.pubsub.subscribe("pubsub", self.topic_price_point_us, self.on_new_us_pp)
@@ -174,110 +178,84 @@ class PriceController(Agent):
         return
         
     def on_new_us_pp(self, peer, sender, bus,  topic, headers, message):
-        if self.agent_disabled:
-            _log.info("self.agent_disabled: " + str(self.agent_disabled) + ", do nothing!!!")
-            return True
-            
-        valid_senders_list = ['iiit.volttronbridge', 'pricepointagent-0.4_1']
-        if sender not in valid_senders_list:
-            _log.debug('sender: {}'.format(sender)
-                        + ' not in sender list: {}, do nothing!!!'.format(valid_senders_list))
+        self.tmp_pp_msg = None
+        if not self._validate_msg(sender, message):
+            #cleanup and return
+            self.tmp_pp_msg = None
             return
             
-        #check sanity
-        #all pp ids are valid
-        valid_pp_ids = []
+        pp_msg = self.tmp_pp_msg
+        self.tmp_pp_msg = None      #release self.tmp_pp_msg
         
-        #mandatory fields in the message
-        mandatory_fields = [ParamPP.idx_pp
-                            #, ParamPP.idx_pp_datatype
-                            , ParamPP.idx_pp_id
-                            , ParamPP.idx_pp_isoptimal
-                            , ParamPP.idx_pp_duration
-                            , ParamPP.idx_pp_ttl
-                            , ParamPP.idx_pp_ts
-                            ]
-                            
-        #check for msg validity, pp_id, timeout, etc., also _log.info(message) if a valid msg
-        valid_msg = ispace_utils.sanity_check_pp(message, mandatory_fields, valid_pp_ids)
-        if not valid_msg:
-            return
-            
-        #store pp data to global to be retrived later
-        #new zone price point
-        new_pp = message[ParamPP.idx_pp]
-        new_pp_datatype = (message[ParamPP.idx_pp_datatype]
-                                if message[ParamPP.idx_pp_datatype] is not None
-                                else {'units': 'cents', 'tz': 'UTC', 'type': 'float'})
-        new_pp_id = (message[ParamPP.idx_pp_id]
-                                if message[ParamPP.idx_pp_id] is not None
-                                else randint(0, 99999999))
-        new_pp_isoptimal = (message[ParamPP.idx_pp_isoptimal]
-                                if message[ParamPP.idx_pp_isoptimal] is not None
-                                else False)
-        new_duration = (message[ParamPP.idx_pp_duration]
-                                if message[ParamPP.idx_pp_duration] is not None
-                                else 3600)
-        new_pp_ttl = (message[ParamPP.idx_pp_ttl]
-                                if message[ParamPP.idx_pp_ttl] is not None
-                                else -1)
-        new_pp_ts = (message[ParamPP.idx_pp_ts]
-                                if message[ParamPP.idx_pp_ts] is not None
-                                else datetime.datetime.utcnow().isoformat(' ') + 'Z')
-        ispace_utils.print_pp(self, new_pp
-                        , new_pp_datatype
-                        , new_pp_id
-                        , new_pp_isoptimal
-                        , None
-                        , None
-                        , new_pp_ttl
-                        , new_pp_ts
-                        , 'new pp from sender{}'.format(sender)
-                        )
-                        
-        #keep a track of us pp_ids
+        # at times we operate on two pp_msg from us 
+        # example: opt_pp --> currently in progess and bid_pp --> new bidding has been initiated)
+        # The latest pp_msg is considered as active pp_msg
+        # However, responses from to old opt_pp/bid_pp 
+        self.act_pp_msg = pp_msg
+        
+        #keep a track of us pp_msg
         if sender == 'iiit.volttronbridge':
-            self.us_pp = new_pp
-            self.us_pp_datatype = new_pp_datatype
-            self.us_pp_id = new_pp_id
-            self.us_pp_isoptimal = new_pp_isoptimal
-            self.us_pp_ttl = new_pp_ttl
-            self.us_pp_ts = new_pp_ts
-            
-            if new_pp_isoptimal:
-                self.us_opt_pp_id = new_pp_id
+            if pp_msg.get_isoptimal():
+                self.us_opt_pp_msg = pp_msg
             else:
-                self.us_bid_pp_id = new_pp_id
-                
+                self.us_bid_pp_msg = pp_msg
         #keep a track of local pp_ids
-        if sender == 'pricepointagent-0.3_1':
-            if new_pp_isoptimal:
-                self.local_opt_pp_id = new_pp_id
+        elif sender == 'iiit.pricepoint':
+            if pp_msg.get_isoptimal():
+                self.local_opt_pp_msg = pp_msg
             else:
-                self.local_bid_pp_id = new_pp_id
+                self.local_bid_pp_msg = pp_msg
                 
-        if new_pp_isoptimal or self.pp_optimize_option in ["PASS_ON_PP", "EXTERN_OPT"]:
-            pubTopic =  (self.topic_extrn_pp
+        if pp_msg.get_isoptimal() or self.pp_optimize_option in ["PASS_ON_PP", "EXTERN_OPT"]:
+            pub_topic =  (self.topic_extrn_pp
                             if self.pp_optimize_option == "EXTERN_OPT"
                             else self.topic_price_point )
-            pubMsg = [new_pp
-                        , new_pp_datatype
-                        , new_pp_id
-                        , new_pp_isoptimal
-                        , None
-                        , None
-                        , new_duration
-                        , new_pp_ttl
-                        , new_pp_ts
-                        ]
-            _log.debug('publishing to local bus topic: ' + pubTopic)
-            ispace_utils.publish_to_bus(self, pubTopic, pubMsg)
+            pub_msg = pp_msg.get_json_params(self._agent_id)
+            _log.debug('publishing to local bus topic: {}'.format(pub_topic))
+            _log.debug('Msg: {}'.format(pub_msg))
+            publish_to_bus(self, pub_topic, pub_msg)
             return True
         elif self.pp_optimize_option == "DEFAULT_OPT":
-            
             self._computeNewPrice()
             return True
             
+    def _validate_msg(self, sender, message):
+        _log.debug('_validate_msg()')
+        if self.agent_disabled:
+            _log.info("self.agent_disabled: " + str(self.agent_disabled) + ", do nothing!!!")
+            return False
+            
+        valid_senders_list = ['iiit.volttronbridge', 'iiit.pricepoint']
+        if sender not in valid_senders_list:
+            _log.debug('sender: {}'.format(sender)
+                        + ' not in sender list: {}, do nothing!!!'.format(valid_senders_list))
+            return False
+            
+        try:
+            _log.debug('message: {}'.format(message))
+            mandatory_fields = ['value', 'value_data_type', 'units', 'price_id']
+            self.tmp_pp_msg = parse_bustopic_msg(message, mandatory_fields)
+            #_log.info('self.tmp_pp_msg: {}'.format(self.tmp_pp_msg))
+        except KeyError as ke:
+            _log.exception(ke)
+            _log.exception(jsonrpc.json_error('NA', INVALID_PARAMS,
+                    'Invalid params {}'.format(rpcdata.params)))
+            return False
+        except Exception as e:
+            _log.exception(e)
+            _log.exception(jsonrpc.json_error('NA', UNHANDLED_EXCEPTION, e))
+            return False
+            
+        hint = 'New Price Point'
+        mandatory_fields = ['value', 'value_data_type', 'units', 'price_id', 'isoptimal', 'duration', 'ttl']
+        valid_price_ids = []
+        #validate various sanity measure like, valid fields, valid pp ids, ttl expiry, etc.,
+        if not self.tmp_pp_msg.sanity_check_ok(hint, mandatory_fields, valid_price_ids):
+            _log.warning('Msg sanity checks failed!!!')
+            return False
+            
+        return True
+    
     def _computeNewPrice(self):
         _log.debug('_computeNewPrice()')
         #TODO: implement the algorithm to compute the new price
@@ -309,33 +287,33 @@ class PriceController(Agent):
         new_pp_ttl = 5  #5 sec
         new_pp_ts = datetime.datetime.utcnow().isoformat(' ') + 'Z'
         
-        if new_pp_isoptimal:
-            self.local_opt_pp_id = new_pp_id
-        else:
-            self.local_bid_pp_id = new_pp_id
-
-        ispace_utils.print_pp(self, new_pp
-                        , new_pp_datatype
-                        , new_pp_id
-                        , new_pp_isoptimal
-                        , None
-                        , None
-                        , new_pp_ttl
-                        , new_pp_ts
-                        )
-                        
-        pubTopic =  self.topic_price_point
-        pubMsg = [new_pp
-                    , new_pp_datatype
-                    , new_pp_id
-                    , new_pp_isoptimal
-                    , None
-                    , None
-                    , new_pp_ttl
-                    , new_pp_ts
-                    ]
-        _log.debug('publishing to local bus topic: ' + pubTopic)
-        ispace_utils.publish_to_bus(self, pubTopic, pubMsg)
+        msg_type = MessageType.price_point
+        isoptimal = False
+        value = self.act_pp_msg.get_value()
+        value_data_type = 'float'
+        units = 'cents'
+        price_id = randint(0, 99999999)
+        src_ip = None
+        src_device_id = None
+        dst_ip = None
+        dst_device_id = None
+        duration = self.act_pp_msg.get_duration()
+        ttl = 10
+        ts = datetime.datetime.utcnow().isoformat(' ') + 'Z'
+        tz = 'UTC'
+        
+        pp_msg = ISPACE_Msg(msg_type, isoptimal, value, value_data_type, units, price_id
+                            , src_ip, src_device_id, dst_ip, dst_device_id
+                            , duration, ttl, ts, tz)
+        
+        self.local_bid_pp_msg = pp_msg
+        _log.info('pp_msg: {}'.format(pp_msg))
+        
+        pub_topic =  self.topic_price_point
+        pub_msg = pp_msg.get_json_params(self._agent_id)
+        _log.debug('publishing to local bus topic: {}'.format(pub_topic))
+        _log.debug('Msg: {}'.format(pub_msg))
+        publish_to_bus(self, pub_topic, pub_msg)
         
         #       iterate till optimization condition satistifed
         #       when new pp is published, the new ed for all devices is accumulated by on_new_ed()

@@ -16,6 +16,7 @@ import dateutil
 from enum import IntEnum
 import logging
 from random import randint
+import json
 
 from volttron.platform.agent import utils
 from volttron.platform import jsonrpc
@@ -39,7 +40,7 @@ class MessageType(IntEnum):
     pass
 
 
-ISPACE_MSG_ATTRIB_LIST = [ 'type', 'value', 'value_data_type', 'units'
+ISPACE_MSG_ATTRIB_LIST = [ 'msg_type', 'value', 'value_data_type', 'units'
                             , 'price_id', 'isoptimal'
                             , 'src_ip', 'src_device_id'
                             , 'dst_ip', 'dst_device_id'
@@ -51,7 +52,7 @@ class ISPACE_Msg:
     ''' iSPACE Message base class
     '''
     #TODO: enchancement - need to add a msg uuid, also convert price_id to use uuid instead for radint
-    type = None
+    msg_type = None
     value = None
     value_data_type = None
     units = None
@@ -68,7 +69,7 @@ class ISPACE_Msg:
     ts = None
     tz  = None
     
-    def __init__(self, type = None
+    def __init__(self, msg_type = None
                     , isoptimal = None
                     , value = None
                     , value_data_type = None
@@ -83,7 +84,7 @@ class ISPACE_Msg:
                     , ts = None
                     , tz = None
                     ):
-        self.type = type
+        self.msg_type = msg_type
         self.value = value
         self.value_data_type = value_data_type
         self.units = units
@@ -99,11 +100,15 @@ class ISPACE_Msg:
         self.tz = tz
         return
         
-    #str overload to return class attributes as json params str
+    #str overload to return class attributes as str dict
     def __str__(self):
         #_log.debug('__str__()')
+        params = self._get_params_dict()
+        return str(params)
+                
+    def _get_params_dict(self):
         params = {}
-        params['type'] = self.type
+        params['msg_type'] = self.msg_type
         params['value'] = self.value
         params['value_data_type'] = self.value_data_type
         params['units'] = self.units
@@ -118,8 +123,8 @@ class ISPACE_Msg:
         params['ts'] = self.ts
         params['tz'] = self.tz
         #_log.debug('params: {}'.format(params))
-        return str(params)
-                
+        return params
+
     def ttl_timeout(self):
         #live for ever
         if self.ttl < 0:
@@ -156,7 +161,7 @@ class ISPACE_Msg:
     #check for mandatory fields in the message
     def valid_msg(self, mandatory_fields = []):
         for attrib in mandatory_fields:
-            if attrib == 'type' and self.type is None:
+            if attrib == 'msg_type' and self.msg_type is None:
                 return False
             elif attrib == 'value' and self.value is None:
                 return False
@@ -209,12 +214,19 @@ class ISPACE_Msg:
         return True
     
     #return class attributes as json params that can be passed to do_rpc()
-    def get_json_params(self):
-        return str(self)
+    def get_json_params(self, id='123456789'):
+        json_package = {
+            'jsonrpc': '2.0',
+            'id': id,
+            'method':'bus_topic',
+        }
+        json_package['params'] = self._get_params_dict()
+        data = json.dumps(json_package)
+        return data
         
     #getters
-    def get_type(self):
-        return self.type
+    def get_msg_type(self):
+        return self.msg_type
         
     def get_value(self):
         return self.value
@@ -256,20 +268,20 @@ class ISPACE_Msg:
         return self.tz
         
     #setters
-    def set_type(self, type):
-        #_log.debug('set_type()')
-        self.type = type
+    def set_msg_type(self, msg_type):
+        #_log.debug('set_msg_type()')
+        self.msg_type = msg_type
         
     def set_value(self, value):
         #_log.debug('set_value()')
-        #_log.debug('self.type: {}, MessageType.price_point: {}'.format(self.type, MessageType.price_point))
-        if self.type == MessageType.price_point:
+        #_log.debug('self.msg_type: {}, MessageType.price_point: {}'.format(self.msg_type, MessageType.price_point))
+        if self.msg_type == MessageType.price_point:
             self.value = mround(value, ROUNDOFF_PRICE_POINT)
-        elif self.type == MessageType.budget:
+        elif self.msg_type == MessageType.budget:
             self.value = mround(value, ROUNDOFF_BUDGET)
-        elif self.type == MessageType.active_power:
+        elif self.msg_type == MessageType.active_power:
             self.value = mround(value, ROUNDOFF_ACTIVE_POWER)
-        elif self.type == MessageType.energy:
+        elif self.msg_type == MessageType.energy:
             self.value = mround(value, ROUNDOFF_ENERGY)
         else:
             _log.debug('else')
@@ -316,7 +328,9 @@ class ISPACE_Msg:
     
 #converts bus message into an ispace_msg
 def parse_bustopic_msg(message, mandatory_fields = []):
-    return _parse_data(message, mandatory_fields)
+    #data = json.loads(message)
+    data = jsonrpc.JsonRpcData.parse(message).params
+    return _parse_data(data, mandatory_fields)
     
 #converts jsonrpc_msg into an ispace_msg
 def parse_jsonrpc_msg(message, mandatory_fields = []):
@@ -324,8 +338,8 @@ def parse_jsonrpc_msg(message, mandatory_fields = []):
     return _parse_data(data, mandatory_fields)
     
 def _update_value(new_msg, attrib, new_value):
-    if attrib == 'type':
-        new_msg.set_type(new_value)
+    if attrib == 'msg_type':
+        new_msg.set_msg_type(new_value)
     elif attrib == 'value':
         new_msg.set_value(new_value)
     elif attrib == 'value_data_type':
@@ -356,18 +370,22 @@ def _update_value(new_msg, attrib, new_value):
     return
     
 def _parse_data(data, mandatory_fields = []):
-    #ensure type attrib is set first
+    #_log.debug('_parse_data()')
+    #_log.debug('data: [{}]'.format(data))
+    #_log.debug('datatype: {}'.format(type(data)))
+    
+    #ensure msg_type attrib is set first
     try:
-        type =  data['type']
+        msg_type =  data['msg_type']
     except KeyError:
-        _log.warning('key attrib: {}, not available in the data.'
-                        + ' Setting to default(0)'.format('type'))
-        type = 0
+        _log.warning('key attrib: "msg_type", not available in the data.'
+                        + ' Setting to default(0)'.format('msg_type'))
+        msg_type = 0
         pass
         
-    #TODO: select class type based on msg type, instead of base class
+    #TODO: select class msg_type based on msg_type, instead of base class
     new_msg = ISPACE_Msg()
-    _update_value(new_msg, 'type', type)
+    _update_value(new_msg, 'msg_type', msg_type)
     
     #if list is empty, parse all attributes
     if mandatory_fields == []:
