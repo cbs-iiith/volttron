@@ -154,7 +154,7 @@ class PricePoint(Agent):
         #publish the new price point to the local message bus
         pub_topic = self.topic_price_point
         pub_msg = pp_msg.get_json_params()
-        _log.debug('publishing to local bus topic: {}, message: {}'.format(pub_topic, pub_msg))
+        _log.debug('publishing to local bus topic: {}, Msg: {}'.format(pub_topic, pub_msg))
         publish_to_bus(self, pub_topic, pub_msg)
         return True
         

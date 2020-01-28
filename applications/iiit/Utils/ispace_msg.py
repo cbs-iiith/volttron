@@ -27,7 +27,7 @@ _log = logging.getLogger(__name__)
 
 
 ROUNDOFF_PRICE_POINT = 0.01
-ROUNDOFF_BUDGET = 10
+ROUNDOFF_BUDGET = 0.0001
 ROUNDOFF_ACTIVE_POWER = 0.0001
 ROUNDOFF_ENERGY = 0.0001
 
@@ -39,16 +39,18 @@ class MessageType(IntEnum):
     pass
 
 
+ISPACE_MSG_ATTRIB_LIST = [ 'type', 'value', 'value_data_type', 'units'
+                            , 'price_id', 'isoptimal'
+                            , 'src_ip', 'src_device_id'
+                            , 'dst_ip', 'dst_device_id'
+                            , 'duration', 'ttl', 'ts', 'tz'
+                            ]
+
+
 class ISPACE_Msg:
-    
+    ''' iSPACE Message base class
     '''
-    [type, value, value_data_type, units
-                , price_id, isoptimal
-                , src_ip, src_device_id
-                , dst_ip, dst_device_id
-                , duration, ttl, ts, tz
-                ]
-    '''
+    #TODO: enchancement - need to add a msg uuid, also convert price_id to use uuid instead for radint
     type = None
     value = None
     value_data_type = None
@@ -141,8 +143,7 @@ class ISPACE_Msg:
         if self.tz == 'UTC':
             ts  = dateutil.parser.parse(self.ts)
             now = dateutil.parser.parse(datetime.datetime.utcnow().isoformat(' ') + 'Z')
-            #_log.debug('ts: {}, now: {}'.format(ts, now))
-            self.ttl = self.ttl - (mround((now -ts).total_seconds(),1) + 1)
+            self.ttl = int(self.ttl - (mround((now - ts).total_seconds(), 1) + 1))
             return True
         else:
             _log.warning('decrement_ttl(), unknown tz: {}'.format(self.tz))
@@ -153,34 +154,34 @@ class ISPACE_Msg:
                 
     #check for mandatory fields in the message
     def valid_msg(self, mandatory_fields = []):
-        for idx in mandatory_fields:
-            if idx == 'type' and self.type is None:
+        for attrib in mandatory_fields:
+            if attrib == 'type' and self.type is None:
                 return False
-            elif idx == 'value' and self.value is None:
+            elif attrib == 'value' and self.value is None:
                 return False
-            elif idx == 'value_data_type' and self.value_data_type is None:
+            elif attrib == 'value_data_type' and self.value_data_type is None:
                 return False
-            elif idx == 'units' and self.units is None:
+            elif attrib == 'units' and self.units is None:
                 return False
-            elif idx == 'price_id' and self.price_id is None:
+            elif attrib == 'price_id' and self.price_id is None:
                 return False
-            elif idx == 'isoptimal' and self.isoptimal is None:
+            elif attrib == 'isoptimal' and self.isoptimal is None:
                 return False
-            elif idx == 'src_ip' and self.src_ip is None:
+            elif attrib == 'src_ip' and self.src_ip is None:
                 return False
-            elif idx == 'src_device_id' and self.src_device_id is None:
+            elif attrib == 'src_device_id' and self.src_device_id is None:
                 return False
-            elif idx == 'dst_ip' and self.dst_ip is None:
+            elif attrib == 'dst_ip' and self.dst_ip is None:
                 return False
-            elif idx == 'dst_device_id' and self.dst_device_id is None:
+            elif attrib == 'dst_device_id' and self.dst_device_id is None:
                 return False
-            elif idx == 'duration' and self.duration is None:
+            elif attrib == 'duration' and self.duration is None:
                 return False
-            elif idx == 'ttl' and self.ttl is None:
+            elif attrib == 'ttl' and self.ttl is None:
                 return False
-            elif idx == 'ts' and self.ts is None:
+            elif attrib == 'ts' and self.ts is None:
                 return False
-            elif idx == 'tz' and self.tz is None:
+            elif attrib == 'tz' and self.tz is None:
                 return False
         return True
     
@@ -260,6 +261,7 @@ class ISPACE_Msg:
         
     def set_value(self, value):
         #_log.debug('set_value()')
+        #_log.debug('self.type: {}, MessageType.price_point: {}'.format(self.type, MessageType.price_point))
         if self.type == MessageType.price_point:
             self.value = mround(value, ROUNDOFF_PRICE_POINT)
         elif self.type == MessageType.budget:
@@ -269,7 +271,7 @@ class ISPACE_Msg:
         elif self.type == MessageType.energy:
             self.value = mround(value, ROUNDOFF_ENERGY)
         else:
-            #_log.debug('else')
+            _log.debug('else')
             self.value = value
         
     def set_value_data_type(self, value_data_type):
@@ -353,65 +355,40 @@ def _update_value(new_msg, attrib, new_value):
     return
     
 def _parse_data(data, mandatory_fields = []):
-    full_list = [ 'type', 'value', 'value_data_type', 'units'
-                    , 'price_id', 'isoptimal'
-                    , 'src_ip', 'src_device_id'
-                    , 'dst_ip', 'dst_device_id'
-                    , 'duration', 'ttl', 'ts', 'tz'
-                    ]
-                    
+    #ensure type attrib is set first
+    try:
+        type =  data['type']
+    except KeyError:
+        _log.warning('key attrib: {}, not available in the data.'
+                        + ' Setting to default(0)'.format('type'))
+        type = 0
+        pass
+        
+    #TODO: select class type based on msg type, instead of base class
     new_msg = ISPACE_Msg()
+    _update_value(new_msg, 'type', type)
+    
     #if list is empty, parse all attributes
     if mandatory_fields == []:
+        #if the attrib is not found in the data, throws a keyerror exception
         _log.warning('mandatory_fields to check against is empty!!!')
-        #if the param is not found, throws a keyerror exception
-        new_msg.set_type(data['type'])
-        new_msg.set_value(data['value'])
-        new_msg.set_value_data_type(data['value_data_type']
-                                        if data['tz'] is not None
-                                        else 'float'
-                                        )
-        new_msg.set_units(data['units'])
-        new_msg.set_price_id(data['price_id']
-                                        if data['price_id'] is not None
-                                        else randint(0, 99999999)
-                                        )
-        new_msg.set_isoptimal(data['isoptimal'])
-        new_msg.set_src_ip(data['src_ip'])
-        new_msg.set_src_device_id(data['src_device_id'])
-        new_msg.set_dst_ip(data['dst_ip'])
-        new_msg.set_dst_device_id(data['dst_device_id'])
-        new_msg.set_duration(data['duration']
-                                        if data['duration'] is not None
-                                        else 3600
-                                        )
-        new_msg.set_ttl(data['ttl']
-                                        if data['ttl'] is not None
-                                        else -1
-                                        )
-        new_msg.set_ts(data['ts']
-                                        if data['ts'] is not None
-                                        else datetime.datetime.utcnow().isoformat(' ') + 'Z'
-                                        )
-        new_msg.set_tz(data['tz']
-                                        if data['tz'] is not None
-                                        else 'UTC'
-                                        )
-    else:
-        #_log.debug('mandatory_fields is NOT empty!!!')
-        for attrib in mandatory_fields:
-            #if the param is not found, throws a keyerror exception
+        for attrib in ISPACE_MSG_ATTRIB_LIST:
             _update_value(new_msg, attrib, data[attrib])
-        #do a second pass to also get params not in the mandatory_fields
-        #if key not found, catch the exception and pass to continue with next key
-        for attrib in full_list:
+    else:
+        #if the madatory field is not found in the data, throws a keyerror exception
+        for attrib in mandatory_fields:
+            _update_value(new_msg, attrib, data[attrib])
+            
+        #do a second pass to also get attribs not in the mandatory_fields
+        #if attrib not found, catch the exception(pass) and continue with next attrib
+        for attrib in ISPACE_MSG_ATTRIB_LIST:
             if attrib not in mandatory_fields:
                 try:
                     _update_value(new_msg, attrib, data[attrib])
                 except KeyError:
                     _log.warning('key: {}, not available in the data'.format(attrib))
                     pass
-                    
+                
     return new_msg
         
         
