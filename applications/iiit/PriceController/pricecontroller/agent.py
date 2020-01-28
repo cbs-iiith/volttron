@@ -40,6 +40,7 @@ utils.setup_logging()
 _log = logging.getLogger(__name__)
 __version__ = '0.4'
 
+
 def pricecontroller(config_path, **kwargs):
     config = utils.load_config(config_path)
     vip_identity = config.get('vip_identity', 'iiit.pricecontroller')
@@ -48,6 +49,7 @@ def pricecontroller(config_path, **kwargs):
     
     Agent.__name__ = 'PriceController_Agent'
     return PriceController(config_path, identity=vip_identity, **kwargs)
+    
     
 class PriceController(Agent):
     '''Price Controller
@@ -58,7 +60,7 @@ class PriceController(Agent):
         
         self.config = utils.load_config(config_path)
         return
-
+        
     @Core.receiver('onsetup')
     def setup(self, sender, **kwargs):
         _log.info(self.config['message'])
@@ -70,7 +72,7 @@ class PriceController(Agent):
         self.pp_optimize_option = self.config.get('pp_optimize_option', 'PASS_ON_PP')
         self.topic_extrn_pp = self.config.get('extrn_optimize_pp_topic', 'pca/pricepoint')
         return
-
+        
     @Core.receiver('onstart')
     def startup(self, sender, **kwargs):
         _log.debug('startup()')
@@ -176,7 +178,7 @@ class PriceController(Agent):
             _log.info("self.agent_disabled: " + str(self.agent_disabled) + ", do nothing!!!")
             return True
             
-        valid_senders_list = ['iiit.volttronbridge', 'pricepointagent-0.3_1']
+        valid_senders_list = ['iiit.volttronbridge', 'pricepointagent-0.4_1']
         if sender not in valid_senders_list:
             _log.debug('sender: {}'.format(sender)
                         + ' not in sender list: {}, do nothing!!!'.format(valid_senders_list))
@@ -241,7 +243,7 @@ class PriceController(Agent):
             self.us_pp_isoptimal = new_pp_isoptimal
             self.us_pp_ttl = new_pp_ttl
             self.us_pp_ts = new_pp_ts
-
+            
             if new_pp_isoptimal:
                 self.us_opt_pp_id = new_pp_id
             else:
@@ -253,7 +255,7 @@ class PriceController(Agent):
                 self.local_opt_pp_id = new_pp_id
             else:
                 self.local_bid_pp_id = new_pp_id
-
+                
         if new_pp_isoptimal or self.pp_optimize_option in ["PASS_ON_PP", "EXTERN_OPT"]:
             pubTopic =  (self.topic_extrn_pp
                             if self.pp_optimize_option == "EXTERN_OPT"
@@ -341,6 +343,7 @@ class PriceController(Agent):
         #       publish the new optimal pp
         return
         
+        
 def main(argv=sys.argv):
     '''Main method called by the eggsecutable.'''
     try:
@@ -349,9 +352,11 @@ def main(argv=sys.argv):
         print (e)
         _log.exception('unhandled exception')
         
+        
 if __name__ == '__main__':
     try:
         sys.exit(main(sys.argv))
     except KeyboardInterrupt:
         pass
+        
         

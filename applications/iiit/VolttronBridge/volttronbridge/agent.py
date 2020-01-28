@@ -52,6 +52,7 @@ EPSILON = 1e-03
 #   also if failed too many times to post ed, retry count is reset and the process yeilds for a movement(10sec)
 MAX_RETRIES = 5
 
+
 def volttronbridge(config_path, **kwargs):
     config = utils.load_config(config_path)
     vip_identity = config.get('vip_identity', 'iiit.volttronbridge')
@@ -60,6 +61,7 @@ def volttronbridge(config_path, **kwargs):
     
     Agent.__name__ = 'VolttronBridge_Agent'
     return VolttronBridge(config_path, identity=vip_identity, **kwargs)
+    
     
 '''
 Retrive the data from volttron bus and pushes it to upstream or downstream volttron instance
@@ -662,6 +664,7 @@ class VolttronBridge(Agent):
                      and device_id == self._ds_device_ids[self._ds_register.index(discovery_address)]
                      else False)
                      
+                     
 def main(argv=sys.argv):
     '''Main method called by the eggsecutable.'''
     try:
@@ -670,9 +673,11 @@ def main(argv=sys.argv):
         print (e)
         _log.exception('unhandled exception')
         
+        
 if __name__ == '__main__':
     try:
         sys.exit(main(sys.argv))
     except KeyboardInterrupt:
         pass
+        
         

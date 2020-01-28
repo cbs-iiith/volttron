@@ -42,6 +42,17 @@ utils.setup_logging()
 _log = logging.getLogger(__name__)
 __version__ = '0.4'
 
+
+def pricepoint(config_path, **kwargs):
+    config = utils.load_config(config_path)
+    vip_identity = config.get('vip_identity', 'iiit.pricepoint')
+    # This agent needs to be named iiit.pricepoint. Pop the uuid id off the kwargs
+    kwargs.pop('identity', None)
+    
+    Agent.__name__ = 'PricePoint_Agent'
+    return PricePoint(config_path, identity=vip_identity, **kwargs)
+    
+    
 class PricePoint(Agent):
     '''Agent for posting a price point to msg bus
     '''
@@ -145,17 +156,20 @@ class PricePoint(Agent):
         publish_to_bus(self, pub_topic, pub_msg)
         return True
         
+        
 def main(argv=sys.argv):
     '''Main method called by the eggsecutable.'''
     try:
-        utils.vip_main(PricePoint)
+        utils.vip_main(pricepoint)
     except Exception as e:
         print (e)
         _log.exception('unhandled exception')
+        
         
 if __name__ == '__main__':
     try:
         sys.exit(main(sys.argv))
     except KeyboardInterrupt:
         pass
+        
         
