@@ -101,7 +101,7 @@ class PricePoint(Agent):
         try:
             rpcdata = jsonrpc.JsonRpcData.parse(message)
             _log.debug('rpc method: {}'.format(rpcdata.method))
-            _log.debug('.........rpc params: {}'.format(rpcdata.params))
+            _log.debug('rpc params: {}'.format(rpcdata.params))
             if rpcdata.method == "rpc_update_price_point":
                 result = self.update_price_point(message)
             elif rpcdata.method == "rpc_ping":
@@ -142,19 +142,11 @@ class PricePoint(Agent):
             _log.warning('sanity checks failed!!!')
             return False
             
-        #decrement the ttl by time consumed to process till now + 1 sec
-        decrement_status = pp_msg.decrement_ttl()
-        if decrement_status and pp_msg.get_ttl() == 0:
-            _log.warning('msg ttl expired on decrement_ttl(), do nothing!!!')
-            return False
-        elif decrement_status:
-            _log.info('new ttl: {}.'.format(pp_msg.get_ttl()))
-            
         #publish the new price point to the local message bus
         pub_topic = self.topic_price_point
         pub_msg = pp_msg.get_json_params()
         _log.debug('publishing to local bus topic: {}'.format(pub_topic))
-        _log.debug('............... Msg: {}'.format(pub_msg))
+        _log.debug('Msg: {}'.format(pub_msg))
         publish_to_bus(self, pub_topic, pub_msg)
         return True
         

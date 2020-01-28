@@ -476,6 +476,17 @@ class VolttronBridge(Agent):
                 #maybe already posted or failed more than max retries, do nothing
                 continue
                 
+                
+                    '''before posting to ds, dcrement ttl and update ts
+                    #decrement the ttl by time consumed to process till now + 1 sec
+                    decrement_status = pp_msg.decrement_ttl()
+                    if decrement_status and pp_msg.get_ttl() == 0:
+                        _log.warning('msg ttl expired on decrement_ttl(), do nothing!!!')
+                        return False
+                    elif decrement_status:
+                        _log.info('new ttl: {}.'.format(pp_msg.get_ttl()))
+                    update_ts()
+                    '''
             url_root = 'http://' + discovery_address + '/VolttronBridge'
             result = ispace_utils.do_rpc(url_root, 'rpc_post_pp'
                                         , {'discovery_address': self._discovery_address
