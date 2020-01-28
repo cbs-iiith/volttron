@@ -40,7 +40,8 @@ class MessageType(IntEnum):
     pass
 
 
-ISPACE_MSG_ATTRIB_LIST = [ 'msg_type', 'value', 'value_data_type', 'units'
+ISPACE_MSG_ATTRIB_LIST = [ 'msg_type', 'one_to_one'
+                            , 'value', 'value_data_type', 'units'
                             , 'price_id', 'isoptimal'
                             , 'src_ip', 'src_device_id'
                             , 'dst_ip', 'dst_device_id'
@@ -53,6 +54,7 @@ class ISPACE_Msg:
     '''
     #TODO: enchancement - need to add a msg uuid, also convert price_id to use uuid instead for radint
     msg_type = None
+    one_to_one = None
     value = None
     value_data_type = None
     units = None
@@ -70,6 +72,7 @@ class ISPACE_Msg:
     tz  = None
     
     def __init__(self, msg_type = None
+                    , one_to_one = None
                     , isoptimal = None
                     , value = None
                     , value_data_type = None
@@ -85,6 +88,7 @@ class ISPACE_Msg:
                     , tz = None
                     ):
         self.msg_type = msg_type
+        self.one_to_one = one_to_one
         self.value = value
         self.value_data_type = value_data_type
         self.units = units
@@ -109,6 +113,7 @@ class ISPACE_Msg:
     def _get_params_dict(self):
         params = {}
         params['msg_type'] = self.msg_type
+        params['one_to_one'] = self.one_to_one
         params['value'] = self.value
         params['value_data_type'] = self.value_data_type
         params['units'] = self.units
@@ -155,13 +160,12 @@ class ISPACE_Msg:
             _log.warning('decrement_ttl(), unknown tz: {}'.format(self.tz))
             return False
             
-    def get_pub_msg(self):
-        return str(self)
-                
     #check for mandatory fields in the message
     def valid_msg(self, mandatory_fields = []):
         for attrib in mandatory_fields:
             if attrib == 'msg_type' and self.msg_type is None:
+                return False
+            elif attrib == 'one_to_one' and self.one_to_one is None:
                 return False
             elif attrib == 'value' and self.value is None:
                 return False
@@ -228,6 +232,9 @@ class ISPACE_Msg:
     def get_msg_type(self):
         return self.msg_type
         
+    def get_one_to_one(self):
+        return self.one_to_one
+        
     def get_value(self):
         return self.value
         
@@ -271,6 +278,9 @@ class ISPACE_Msg:
     def set_msg_type(self, msg_type):
         #_log.debug('set_msg_type()')
         self.msg_type = msg_type
+        
+    def set_one_to_one(self, one_to_one):
+        self.one_to_one = one_to_one
         
     def set_value(self, value):
         #_log.debug('set_value()')
@@ -340,6 +350,8 @@ def parse_jsonrpc_msg(message, mandatory_fields = []):
 def _update_value(new_msg, attrib, new_value):
     if attrib == 'msg_type':
         new_msg.set_msg_type(new_value)
+    elif attrib == 'one_to_one':
+        new_msg.set_one_to_one(new_value if new_value is not None else False)
     elif attrib == 'value':
         new_msg.set_value(new_value)
     elif attrib == 'value_data_type':
@@ -379,8 +391,8 @@ def _parse_data(data, mandatory_fields = []):
         msg_type =  data['msg_type']
     except KeyError:
         _log.warning('key attrib: "msg_type", not available in the data.'
-                        + ' Setting to default(0)'.format('msg_type'))
-        msg_type = 0
+                        + ' Setting to default({})'.format(MessageType.price_point))
+        msg_type = MessageType.price_point
         pass
         
     #TODO: select class msg_type based on msg_type, instead of base class

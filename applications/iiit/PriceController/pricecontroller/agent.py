@@ -93,7 +93,7 @@ class PriceController(Agent):
         self.local_opt_pp_msg = None
         self.local_bid_pp_msg = None
         
-        
+        self.external_vip_identity = None
         
         #subscribing to topic_price_point_us
         self.vip.pubsub.subscribe("pubsub", self.topic_price_point_us, self.on_new_us_pp)
@@ -115,6 +115,8 @@ class PriceController(Agent):
                 result = self._disable_agent(message)
             elif rpcdata.method == "rpc_set_pp_optimize_option":
                 result = self._set_pp_optimize_option(message)
+            elif rpcdata.method == "rpc_register_opt_agent":
+                result = self._register_external_opt_agent(message)
             elif rpcdata.method == "rpc_ping":
                 result = True
             else:
@@ -150,6 +152,15 @@ class PriceController(Agent):
             result = 'Invalid option'
         return result
         
+    def _register_opt_agent(self, message):
+        external_vip_identity = jsonrpc.JsonRpcData.parse(message).params['vip_identity']
+        if external_vip_identity is not None:
+            self.external_vip_identity = external_vip_identity
+            result = True
+        else:
+            result = 'Invalid option'
+        return result
+    
     #subscribe to local/ed (i.e., ted) from the controller (building/zone/smarthub controller)
     def on_new_ed(self, peer, sender, bus,  topic, headers, message):
         # (_ed, _is_opt, _ed_pp_id) = get_data(message)
@@ -175,11 +186,36 @@ class PriceController(Agent):
         return
         
     def on_new_extrn_pp(self, peer, sender, bus,  topic, headers, message):
+        self.tmp_pp_msg = None
+        valid_senders_list = [self.external_vip_identity]
+        if not self._validate_msg(sender, valid_senders_list, message):
+            #cleanup and return
+            self.tmp_pp_msg = None
+            return
+        pp_msg = self.tmp_pp_msg
+        self.tmp_pp_msg = None      #release self.tmp_pp_msg
+        
+        self.act_pp_msg = pp_msg
+        
+        if pp_msg.get_isoptimal():
+            self.local_opt_pp_msg = pp_msg
+        else:
+            self.local_bid_pp_msg = pp_msg
+        
+        if self.pp_optimize_option == "EXTERN_OPT":
+            pub_topic =  self.topic_price_point
+            pub_msg = pp_msg.get_json_params(self._agent_id)
+            _log.debug('publishing to local bus topic: {}'.format(pub_topic))
+            _log.debug('Msg: {}'.format(pub_msg))
+            publish_to_bus(self, pub_topic, pub_msg)
+            return True
+            
         return
         
     def on_new_us_pp(self, peer, sender, bus,  topic, headers, message):
         self.tmp_pp_msg = None
-        if not self._validate_msg(sender, message):
+        valid_senders_list = ['iiit.volttronbridge', 'iiit.pricepoint']
+        if not self._validate_msg(sender, valid_senders_list, message):
             #cleanup and return
             self.tmp_pp_msg = None
             return
@@ -206,7 +242,23 @@ class PriceController(Agent):
             else:
                 self.local_bid_pp_msg = pp_msg
                 
-        if pp_msg.get_isoptimal() or self.pp_optimize_option in ["PASS_ON_PP", "EXTERN_OPT"]:
+        if self.pp_optimize_option == "PASS_ON_PP" and sender in ['iiit.volttronbridge', 'iiit.pricepoint']:
+            pub_topic =  self.topic_price_point
+            pub_msg = pp_msg.get_json_params(self._agent_id)
+            _log.debug('publishing to local bus topic: {}'.format(pub_topic))
+            _log.debug('Msg: {}'.format(pub_msg))
+            publish_to_bus(self, pub_topic, pub_msg)
+            return True
+            
+        if self.pp_optimize_option == "EXTERN_OPT" and sender in ['iiit.volttronbridge', 'iiit.pricepoint']:
+            pub_topic =  self.topic_extrn_pp
+            pub_msg = pp_msg.get_json_params(self._agent_id)
+            _log.debug('publishing to local bus topic: {}'.format(pub_topic))
+            _log.debug('Msg: {}'.format(pub_msg))
+            publish_to_bus(self, pub_topic, pub_msg)
+            return True
+
+        if pp_msg.get_isoptimal() or self.pp_optimize_option == "EXTERN_OPT":
             pub_topic =  (self.topic_extrn_pp
                             if self.pp_optimize_option == "EXTERN_OPT"
                             else self.topic_price_point )
@@ -215,17 +267,26 @@ class PriceController(Agent):
             _log.debug('Msg: {}'.format(pub_msg))
             publish_to_bus(self, pub_topic, pub_msg)
             return True
-        elif self.pp_optimize_option == "DEFAULT_OPT":
-            self._computeNewPrice()
+            
+        if self.pp_optimize_option == "DEFAULT_OPT":
+            #list for pp_msg
+            new_pp_msg = self._computeNewPrice()
+            self.local_bid_pp_msg = new_pp_msg
+            _log.info('new bid pp_msg: {}'.format(new_pp_msg))
+            
+            pub_topic =  self.topic_price_point
+            pub_msg = new_pp_msg.get_json_params(self._agent_id)
+            _log.debug('publishing to local bus topic: {}'.format(pub_topic))
+            _log.debug('Msg: {}'.format(pub_msg))
+            publish_to_bus(self, pub_topic, pub_msg)
             return True
             
-    def _validate_msg(self, sender, message):
+    def _validate_msg(self, sender, valid_senders_list, message):
         _log.debug('_validate_msg()')
         if self.agent_disabled:
             _log.info("self.agent_disabled: " + str(self.agent_disabled) + ", do nothing!!!")
             return False
             
-        valid_senders_list = ['iiit.volttronbridge', 'iiit.pricepoint']
         if sender not in valid_senders_list:
             _log.debug('sender: {}'.format(sender)
                         + ' not in sender list: {}, do nothing!!!'.format(valid_senders_list))
@@ -256,6 +317,8 @@ class PriceController(Agent):
             
         return True
     
+    #compute new bid price point for every local device and ds devices
+    #return list for pp_msg
     def _computeNewPrice(self):
         _log.debug('_computeNewPrice()')
         #TODO: implement the algorithm to compute the new price
@@ -288,6 +351,7 @@ class PriceController(Agent):
         new_pp_ts = datetime.datetime.utcnow().isoformat(' ') + 'Z'
         
         msg_type = MessageType.price_point
+        one_to_one = True
         isoptimal = False
         value = self.act_pp_msg.get_value()
         value_data_type = 'float'
@@ -302,24 +366,20 @@ class PriceController(Agent):
         ts = datetime.datetime.utcnow().isoformat(' ') + 'Z'
         tz = 'UTC'
         
-        pp_msg = ISPACE_Msg(msg_type, isoptimal, value, value_data_type, units, price_id
+        pp_msg_1 = ISPACE_Msg(msg_type, one_to_one
+                            , isoptimal, value, value_data_type, units, price_id
                             , src_ip, src_device_id, dst_ip, dst_device_id
                             , duration, ttl, ts, tz)
-        
-        self.local_bid_pp_msg = pp_msg
-        _log.info('pp_msg: {}'.format(pp_msg))
-        
-        pub_topic =  self.topic_price_point
-        pub_msg = pp_msg.get_json_params(self._agent_id)
-        _log.debug('publishing to local bus topic: {}'.format(pub_topic))
-        _log.debug('Msg: {}'.format(pub_msg))
-        publish_to_bus(self, pub_topic, pub_msg)
-        
+        pp_msg_2 = ISPACE_Msg(msg_type, one_to_one
+                            , isoptimal, value, value_data_type, units, price_id
+                            , src_ip, src_device_id, dst_ip, dst_device_id
+                            , duration, ttl, ts, tz)
+                            
         #       iterate till optimization condition satistifed
         #       when new pp is published, the new ed for all devices is accumulated by on_new_ed()
         #       once all the eds are received call this function again
         #       publish the new optimal pp
-        return
+        return [pp_msg_1, pp_msg_2]
         
         
 def main(argv=sys.argv):

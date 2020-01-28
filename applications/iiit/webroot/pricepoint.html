@@ -162,6 +162,7 @@
     <script>
         $('#publishPricePoint').click(function(){
             var new_pp_type = 0;
+            var one_to_one = false;
             var new_pp_value = parseFloat($('#new_pp_value').val());
             var new_pp_value_data_type = 'float';
             var new_pp_units = 'cents';
@@ -181,6 +182,7 @@
                      method:  "rpc_update_price_point",
                      params: {
                         msg_type: new_pp_type,
+                        one_to_one: one_to_one,
                         value: new_pp_value,
                         value_data_type: new_pp_value_data_type,
                         units: new_pp_units,
