@@ -134,8 +134,8 @@ class PricePoint(Agent):
         valid_price_ids = []
         #validate various sanity measure like, valid fields, valid pp ids, ttl expiry, etc.,
         if not pp_msg.sanity_check_ok(hint, mandatory_fields, valid_price_ids):
-            _log.warning('Sanity checks failed!!!')
-            return False
+            _log.warning('Msg sanity checks failed!!!')
+            return 'Msg sanity checks failed!!!'
             
         #publish the new price point to the local message bus
         pub_topic = self.topic_price_point

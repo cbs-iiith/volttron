@@ -112,7 +112,7 @@ def do_rpc(self, url_root, method, params=None ):
         
         if response.ok:
             success = response.json()['result']
-            if success:
+            if success == True:
                 #_log.debug('response - ok, {} result:{}'.format(method, success))
                 result = True
             else:

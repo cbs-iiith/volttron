@@ -16,46 +16,58 @@ import sys
 import json
 authentication=None
 
-def do_rpc(method, params=None ):
-    global authentication
-    url_root = 'http://192.168.1.50:8080/PricePoint'
-
+def do_rpc(url_root, method, params=None ):
+    #_log.debug('do_rpc()')
+    result = False
     json_package = {
         'jsonrpc': '2.0',
-        'id': '2503402',
+        'id': 'testing',
         'method':method,
     }
-
-    if authentication:
-        json_package['authorization'] = authentication
-
+    
     if params:
         json_package['params'] = params
-
+        
     data = json.dumps(json_package)
-
-    return requests.post(url_root, data=json.dumps(json_package))
-
-if __name__ == '__main__':
     try:
-        response = do_rpc("rpc_updatePricePoint1", {'newPricePoint1': 'temp'})
-        print('response: ' +str(response))
+        response = requests.post(url_root, data=json.dumps(json_package), timeout=10)
+        
         if response.ok:
             success = response.json()['result']
-            print(success)
-            if success:
-                print('new price updated')
+            if success == True:
+                result = True
             else:
-                print("new price notupdated")
+                print('respone - not ok, {} result: {}'.format(method, success))
         else:
-            print('do_rpc pricepoint response not ok')
+            print('no respone, {} result: {}'.format(method, response))
     except KeyError:
         error = response.json()['error']
         print (error)
+        print('KeyError: SHOULD NEVER REACH THIS ERROR - contact developer')
+        return False
     except Exception as e:
-        #print (e)
-        print('do_rpc() unhandled exception, most likely server is down')
+        print (e)
+        print('Exception: do_rpc() unhandled exception, most likely dest is down')
+        return False
+    return result
 
+if __name__ == '__main__':
+    url_root = 'http://192.168.1.4:8080/PriceController'
+    result = do_rpc(url_root, "rpc_disable_agent", {'disable_agent': 'Hi'})
+    print('result: ' + str(result))
+    print('******** result should be --> result: False')
+    print('Test passed!!!\n' if result == False else 'Test failed!!!\n')
+    
+    result = do_rpc(url_root, "rpc_disable_agent", {'disable_agent': True})
+    print('result: ' + str(result))
+    print('******** result should be --> result: True')
+    print('Test passed!!!\n' if result == True else 'Test failed!!!\n')
+    
+    result = do_rpc(url_root, "rpc_disable_agent", {'disable_agent': False})
+    print('result: ' + str(result))
+    print('******** result should be --> result: True')
+    print('Test passed!!!\n' if result == True else 'Test failed!!!\n')
+    
     sys.exit(0)
 
 

@@ -59,7 +59,7 @@ def volttronbridge(config_path, **kwargs):
     kwargs.pop('identity', None)
     
     Agent.__name__ = 'VolttronBridge_Agent'
-    return VolttronBridge(**kwargs)
+    return VolttronBridge(config_path, identity=vip_identity, **kwargs)
     
 '''
 Retrive the data from volttron bus and pushes it to upstream or downstream volttron instance
@@ -82,7 +82,7 @@ As and when the downstram bridges register to the bridge, the bridge starts post
 class VolttronBridge(Agent):
     '''Voltron Bridge
     '''
-    def __init__(self, **kwargs):
+    def __init__(self, config_path, **kwargs):
         super(VolttronBridge, self).__init__(**kwargs)
         _log.debug("vip_identity: " + self.core.identity)
         

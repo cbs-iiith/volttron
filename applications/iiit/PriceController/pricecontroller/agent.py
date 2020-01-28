@@ -47,12 +47,12 @@ def pricecontroller(config_path, **kwargs):
     kwargs.pop('identity', None)
     
     Agent.__name__ = 'PriceController_Agent'
-    return PriceController(**kwargs)
+    return PriceController(config_path, identity=vip_identity, **kwargs)
     
 class PriceController(Agent):
     '''Price Controller
     '''
-    def __init__(self, **kwargs):
+    def __init__(self, config_path, **kwargs):
         super(PriceController, self).__init__(**kwargs)
         _log.debug("vip_identity: " + self.core.identity)
         
@@ -129,7 +129,7 @@ class PriceController(Agent):
             self.agent_disabled = disable_agent
             result = True
         else:
-            result = False
+            result = 'Invalid option'
         return result
         
     def _set_pp_optimize_option(self, message):
@@ -141,7 +141,7 @@ class PriceController(Agent):
             self.pp_optimize_option = self.pp_optimize_option
             result = True
         else:
-            result = False
+            result = 'Invalid option'
         return result
         
     #subscribe to local/ed (i.e., ted) from the controller (building/zone/smarthub controller)
