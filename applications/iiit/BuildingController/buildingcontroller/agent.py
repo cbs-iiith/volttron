@@ -40,6 +40,7 @@ import gevent.event
 from ispace_utils import isclose, get_task_schdl, cancel_task_schdl, publish_to_bus
 from ispace_msg import parse_bustopic_msg, ISPACE_Msg, MessageType, check_for_msg_type
 from ispace_msg import tap_helper, ted_helper
+from ispace_utils import retrive_details_from_vb
 
 utils.setup_logging()
 _log = logging.getLogger(__name__)
@@ -85,6 +86,7 @@ class BuildingController(Agent):
         
         self._device_id = None
         self._ip_addr = None
+        self._discovery_address = None
         
         return
         
@@ -108,8 +110,8 @@ class BuildingController(Agent):
         self._price_point_current = 0.4 
         self._price_point_latest = 0.45
         
-        _log.info("yeild 30s for volttron platform to initiate properly...")
-        time.sleep(30) #yeild for a movement
+        _log.info("yeild 10s for volttron platform to initiate properly...")
+        time.sleep(10) #yeild for a movement
         _log.info("Starting BuildingController...")
         
         self._run_bms_test()
@@ -171,18 +173,28 @@ class BuildingController(Agent):
                                                         'ds/energydemand')
         return
         
+    def _test_new_pp(self, pp_msg, new_pp):
+        _log.debug('change pp {}'.format(new_pp))
+        pp_msg.set_value(new_pp)
+        pp_msg.set_price_id(str(randint(0, 99999999)))
+        pp_msg.set_ts(datetime.datetime.utcnow().isoformat(' ') + 'Z')
+        self._process_opt_pp(pp_msg)
+        return
+        
     def _run_bms_test(self):
         _log.debug("Running: _runBMS Commu Test()...")
-        _log.debug('change pp .10')
-        self.publish_price_to_bms(0.10)
+        retrive_details_from_vb(self)
+        pp_msg = ISPACE_Msg(MessageType.price_point, False, True, None, 'float', 'cents'
+                            , None, self._discovery_address, self._device_id, None, None
+                            , 3600, 3600, None, 'UTC')
+                            
+        self._test_new_pp(pp_msg, 0.10)
         time.sleep(10)
         
-        _log.debug('change pp .75')
-        self.publish_price_to_bms(0.75)
+        self._test_new_pp(pp_msg, 0.75)
         time.sleep(10)
         
-        _log.debug('change pp .25')
-        self.publish_price_to_bms(0.25)
+        self._test_new_pp(pp_msg, 0.25)
         time.sleep(10)
         
         _log.debug("EOF Testing")
@@ -236,19 +248,9 @@ class BuildingController(Agent):
             _log.exception(jsonrpc.json_error('NA', UNHANDLED_EXCEPTION, e))
             return False
             
-        try:
-            if self._device_id is not None:
-                self._device_id = self.vip.rpc.call(self.vb_vip_identity, 'devices_id').get(timeout=10)
-                _log.debug('device id as per vb: {}'.format(self._device_id))
-            if self._ip_addr is not None:
-                self._ip_addr = self.vip.rpc.call(self.vb_vip_identity, 'ip_addr').get(timeout=10)
-                _log.debug('ip addr as per vb: {}'.format(self._ip_addr))
-        except Exception as e:
-            _log.exception (e)
-            pass
-            
+        retrive_details_from_vb(self)
         #assuming we have both device_id and ip_addr by this time
-        success = pp_msg.check_dst_addr(self._device_id, self._ip_addr)
+        success = pp_msg.check_dst_addr(self._device_id, self._discovery_address)
         if not success:
             _log.warning('Msg dst addr check failed!!!')
             return False
@@ -294,6 +296,7 @@ class BuildingController(Agent):
         _log.info("New Price Point processed.")
         #on successful process of apply_pricing_policy with the latest opt pp, current = latest
         self._opt_pp_msg_current = self._opt_pp_msg_latest
+        self._price_point_current = self._price_point_latest
         self._process_opt_pp_success = True
         return
         
@@ -308,14 +311,14 @@ class BuildingController(Agent):
     def publish_price_to_bms(self):
         _log.debug('publish_price_to_bms()')
         task_id = str(randint(0, 99999999))
-        result = ispace_utils.get_task_schdl(self, task_id,'iiit/cbs/buildingcontroller')
+        result = get_task_schdl(self, task_id,'iiit/cbs/buildingcontroller')
         if result['result'] == 'SUCCESS':
             try:
                 result = self.vip.rpc.call('platform.actuator'
                                             , 'set_point'
                                             , self._agent_id
                                             , 'iiit/cbs/buildingcontroller/Building_PricePoint'
-                                            , self._opt_pp_msg_latest.get_value()
+                                            , self._price_point_latest
                                             ).get(timeout=10)
                 self.update_building_pp()
             except gevent.Timeout:
@@ -325,7 +328,7 @@ class BuildingController(Agent):
                 print(e)
             finally:
                 #cancel the schedule
-                ispace_utils.cancel_task_schdl(self, task_id)
+                cancel_task_schdl(self, task_id)
         else:
             _log.debug('schedule NOT available')
         return
@@ -334,11 +337,10 @@ class BuildingController(Agent):
         #_log.debug('updateRmTsp()')
         
         building_pp = self.rpc_get_building_pp()
-        latest_pp = self._opt_pp_msg_latest.get_value()
-        _log.debug('latest_pp: {0:0.2f}, building_pp {1:0.2f}'.format(latest_pp, building_pp))
+        _log.debug('latest_pp: {0:0.2f}, building_pp {1:0.2f}'.format(self._price_point_latest, building_pp))
         
         #check if the pp really updated at the bms, only then proceed with new pp
-        if ispace_utils.isclose(latest_pp, building_pp, EPSILON):
+        if isclose(self._price_point_latest, building_pp, EPSILON):
             self.publish_building_pp()
         else:
             self._process_opt_pp_success = False
@@ -347,6 +349,11 @@ class BuildingController(Agent):
         
     def publish_building_pp(self):
         #_log.debug('publish_building_pp()')
+        if self._opt_pp_msg_latest is None:
+            #this happens when the agent starts
+            _log.warning('publish_building_pp() - self._opt_pp_msg_latest is None')
+            return
+            
         pp_msg = self._opt_pp_msg_latest
         
         pub_topic =  self.root_topic+"/Building_PricePoint"
@@ -376,9 +383,9 @@ class BuildingController(Agent):
     def publish_opt_tap(self):
         #create a MessageType.active_power ISPACE_Msg and publishs the message to local bus
         tap_helper(self, self._agent_id
-                            , self._calc_tap()
+                            , self._calc_total_act_pwr()
                             , self._opt_pp_msg_current
-                            , self.topic_energy_demand + "/" + self._deviceId
+                            , self.topic_energy_demand + "/" + self._device_id
                             , self._period_read_data
                             )
         return
@@ -397,9 +404,9 @@ class BuildingController(Agent):
         self._bid_ed = self._calc_total_energy_demand()
         #create a MessageType.energy ISPACE_Msg and publishs the message to local bus
         ted_helper(self, self._agent_id
-                            , self._calc_tap()
+                            , self._calc_total_energy_demand()
                             , self._bid_pp_msg_latest
-                            , self.topic_energy_demand + "/" + self._deviceId
+                            , self.topic_energy_demand + "/" + self._device_id
                             , self._period_read_data
                             )
         self._bid_pp_msg_current = self._bid_pp_msg_latest

@@ -160,17 +160,17 @@ class VolttronBridge(Agent):
         self._us_retrycount = 0
         
         _log.debug('registering rpc routes')
-        self.vip.rpc.call(MASTER_WEB, 'register_agent_route',
-                            r'^/VolttronBridge'
-                            "rpc_from_net"
+        self.vip.rpc.call(MASTER_WEB, 'register_agent_route'
+                            , r'^/VolttronBridge'
+                            , "rpc_from_net"
                             ).get(timeout=30)
                             
         #subscribe to price point so that it can be posted to downstream
         if self._bridge_host != 'LEVEL_TAILEND':
-            _log.debug("subscribing to pricePoint_topic: " + pricePoint_topic)
-            self.vip.pubsub.subscribe("pubsub",
-                                        pricePoint_topic,
-                                        self.on_new_pp
+            _log.debug("subscribing to pricePoint_topic: " + self.pricePoint_topic)
+            self.vip.pubsub.subscribe("pubsub"
+                                        , self.pricePoint_topic
+                                        , self.on_new_pp
                                         )
             self._ds_register[:] = []
             self._ds_device_ids[:] = []
@@ -178,10 +178,10 @@ class VolttronBridge(Agent):
             
         #subscribe to energy demand so that it can be posted to upstream
         if self._bridge_host != 'LEVEL_HEAD':
-            _log.debug("subscribing to energyDemand_topic: " + energyDemand_topic)
-            self.vip.pubsub.subscribe("pubsub",
-                                        energyDemand_topic,
-                                        self.on_new_ed
+            _log.debug("subscribing to energyDemand_topic: " + self.energyDemand_topic)
+            self.vip.pubsub.subscribe("pubsub"
+                                        , self.energyDemand_topic
+                                        , self.on_new_ed
                                         )
                                         
         #register to upstream
@@ -323,16 +323,21 @@ class VolttronBridge(Agent):
             
     @RPC.export
     def count_ds_devices(self):
+        _log.debug('rpc count_ds_devices(): {}'.format(len(self._ds_register)))
         return len(self._ds_register)
         
     @RPC.export
-    def devices_id(self):
+    def device_id(self):
         return self._deviceId
         
     @RPC.export
     def ip_addr(self):
         return self._this_ip_addr
         
+    @RPC.export
+    def discovery_address(self):
+        return self._discovery_address
+    
     #price point on local bus published, post it to all downstream bridges
     def on_new_pp(self, peer, sender, bus,  topic, headers, message):
         if self._bridge_host == 'LEVEL_TAILEND':
@@ -596,7 +601,7 @@ class VolttronBridge(Agent):
             
         #post to bus
         _log.debug('post to the local-us-bus')
-        pubTopic =  pricePoint_topic_us
+        pubTopic =  self.pricePoint_topic_us
         pubMsg = [new_pp
                     , new_pp_datatype
                     , new_pp_id
@@ -653,7 +658,7 @@ class VolttronBridge(Agent):
             
         #post to bus
         _log.debug('post the local-ds-bus')
-        pubTopic = energyDemand_topic_ds + "/" + deviceId
+        pubTopic = self.energyDemand_topic_ds + "/" + deviceId
         pubMsg = [new_ed
                     , ed_datatype
                     , ed_pp_id

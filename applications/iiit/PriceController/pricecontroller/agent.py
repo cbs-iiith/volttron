@@ -36,6 +36,7 @@ import gevent.event
 
 from ispace_utils import publish_to_bus
 from ispace_msg import parse_bustopic_msg, ISPACE_Msg, MessageType, check_for_msg_type
+from ispace_utils import retrive_details_from_vb
 
 utils.setup_logging()
 _log = logging.getLogger(__name__)
@@ -67,18 +68,17 @@ class PriceController(Agent):
         _log.info(self.config['message'])
         self._agent_id = self.config['agentid']
         
+        self._period_read_data = self.config.get('period_read_data', 30)
         self._period_process_pp = self.config.get('period_process_pp', 10)
         
         self._device_id = None
         self._ip_addr = None
+        self._discovery_address = None
         
         self.vb_vip_identity = self.config.get('vb_vip_identity', 'iiit.volttronbridge')
         self.topic_price_point_us = self.config.get('pricePoint_topic_us', 'us/pricepoint')
         self.topic_price_point = self.config.get('pricePoint_topic', 'building/pricepoint')
-        
-        self.topic_energy_demand_ds = self.config.get('topic_energy_demand_ds',
-                                                        'ds/energydemand')
-
+        self.topic_energy_demand_ds = self.config.get('topic_energy_demand_ds', 'ds/energydemand')
         
         self.agent_disabled = False
         self.pp_optimize_option = self.config.get('pp_optimize_option', 'PASS_ON_PP')
@@ -125,10 +125,7 @@ class PriceController(Agent):
         if self.pp_optimize_option == 'DEFAULT_OPT':
             self.core.periodic(self._period_process_pp, self.default_optimization, wait=None)
         
-        self._device_id = self.vip.rpc.call(self.vb_vip_identity, 'devices_id').get(timeout=10)
-        _log.debug('ip addr as per vb: {}'.format(self._ip_addr))
-        self._ip_addr = self.vip.rpc.call(self.vb_vip_identity, 'ip_addr').get(timeout=10)
-        _log.debug('ip addr as per vb: {}'.format(self._ip_addr))
+        retrive_details_from_vb(self)
         return
         
     @Core.receiver('onstop')
@@ -494,13 +491,13 @@ class PriceController(Agent):
         self._ds_ed[idx] = message[ParamED.idx_ed]
         return
         
-        def publish_opt_tap(self):
-            
-            return
-            
-        def publish_bid_ted(self):
-            
-            return
+    def publish_opt_tap(self):
+        #_log.debug('publish_opt_tap()')
+        return
+        
+    def publish_bid_ted(self):
+        #_log.debug('publish_bid_ted()')
+        return
         
         
 def main(argv=sys.argv):

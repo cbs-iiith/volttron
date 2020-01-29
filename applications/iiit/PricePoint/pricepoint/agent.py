@@ -37,6 +37,7 @@ import settings
 import time
 from ispace_utils import publish_to_bus
 from ispace_msg import parse_jsonrpc_msg
+from ispace_utils import retrive_details_from_vb
 
 utils.setup_logging()
 _log = logging.getLogger(__name__)
@@ -72,6 +73,7 @@ class PricePoint(Agent):
         
         self._device_id = None
         self._ip_addr = None
+        self._discovery_address = None
         
         return
         
@@ -153,19 +155,10 @@ class PricePoint(Agent):
             _log.warning('Msg sanity checks failed!!!')
             return 'Msg sanity checks failed!!!'
             
-        try:
-            if self._device_id is not None:
-                self._device_id = self.vip.rpc.call(self.vb_vip_identity, 'devices_id').get(timeout=10)
-                _log.debug('device id as per vb: {}'.format(self._device_id))
-                pp_msg.set_src_device_id(self._device_id)
-            if self._ip_addr is not None:
-                self._ip_addr = self.vip.rpc.call(self.vb_vip_identity, 'ip_addr').get(timeout=10)
-                _log.debug('ip addr as per vb: {}'.format(self._ip_addr))
-                pp_msg.set_src_ip(self._ip_addr)
-        except Exception as e:
-            _log.exception (e)
-            pass
-            
+        retrive_details_from_vb(self)
+        pp_msg.set_src_device_id(self._device_id)
+        pp_msg.set_src_ip(self._discovery_address)
+        
         #publish the new price point to the local message bus
         pub_topic = self.topic_price_point
         pub_msg = pp_msg.get_json_params(self._agent_id)

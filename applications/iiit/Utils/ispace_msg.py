@@ -21,7 +21,7 @@ import json
 from volttron.platform.agent import utils
 from volttron.platform import jsonrpc
 
-from ispace_utils import mround
+from ispace_utils import mround, publish_to_bus
 
 utils.setup_logging()
 _log = logging.getLogger(__name__)
