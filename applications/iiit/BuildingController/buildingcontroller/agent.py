@@ -41,7 +41,7 @@ import ispace_utils
 
 utils.setup_logging()
 _log = logging.getLogger(__name__)
-__version__ = '0.3'
+__version__ = '0.4'
 
 #checking if a floating point value is “numerically zero” by checking if it is lower than epsilon
 EPSILON = 1e-03
@@ -53,6 +53,7 @@ E_UNKNOWN_CCE = -4
 E_UNKNOWN_TSP = -5
 E_UNKNOWN_BPP = -7
 
+
 def buildingcontroller(config_path, **kwargs):
     config = utils.load_config(config_path)
     vip_identity = config.get('vip_identity', 'iiit.buildingcontroller')
@@ -62,47 +63,48 @@ def buildingcontroller(config_path, **kwargs):
     Agent.__name__ = 'BuildingController_Agent'
     return BuildingController(config_path, identity=vip_identity, **kwargs)
     
+    
 class BuildingController(Agent):
     '''Building Controller
     '''
-    _pp_failed = False
-    
-    _price_point_current = 0.4 
-    _price_point_latest = 0.45
-    _pp_id = randint(0, 99999999)
-    _pp_id_latest = randint(0, 99999999)
-
-    _rmTsp = 25
-    
-    #downstream energy demand and deviceId
-    _ds_ed = []
-    _ds_deviceId = []
-    
-    #building total energy demand (including downstream)
-    _ted = 0
-
     def __init__(self, config_path, **kwargs):
         super(BuildingController, self).__init__(**kwargs)
         _log.debug("vip_identity: " + self.core.identity)
         
         self.config = utils.load_config(config_path)
-        self._configGetPoints()
-        self._configGetInitValues()
+        self._config_get_points()
+        self._config_get_init_values()
         return
-
+        
     @Core.receiver('onsetup')
     def setup(self, sender, **kwargs):
         _log.info(self.config['message'])
         self._agent_id = self.config['agentid']
         return
-
+        
     @Core.receiver('onstart')
     def startup(self, sender, **kwargs):
+        self._pp_failed = False
+        
+        self._price_point_current = 0.4 
+        self._price_point_latest = 0.45
+        self._pp_id = randint(0, 99999999)
+        self._pp_id_latest = randint(0, 99999999)
+        
+        self._rmTsp = 25
+        
+        #downstream energy demand and deviceId
+        self._ds_ed = []
+        self._ds_deviceId = []
+        
+        #building total energy demand (including downstream)
+        self._ted = 0
+        
         _log.info("yeild 30s for volttron platform to initiate properly...")
         time.sleep(30) #yeild for a movement
         _log.info("Starting BuildingController...")
         
-        self._runBMSTest()
+        self._run_bms_test()
         
         #TODO: get the latest values (states/levels) from h/w
         #self.getInitialHwState()
@@ -122,60 +124,60 @@ class BuildingController(Agent):
         self.vip.pubsub.subscribe("pubsub", self.topic_price_point, self.on_new_price)
         
         #subscribing to ds energy demand, vb publishes ed from registered ds to this topic
-        self.vip.pubsub.subscribe("pubsub", self.energyDemand_topic_ds, self.on_ds_ed)
+        self.vip.pubsub.subscribe("pubsub", self.topic_energy_demand_ds, self.on_ds_ed)
         
         self.vip.rpc.call(MASTER_WEB, 'register_agent_route'
                             , r'^/BuildingController'
                             , "rpc_from_net"
                             ).get(timeout=10)
         return
-
+        
     @Core.receiver('onstop')
     def onstop(self, sender, **kwargs):
         _log.debug('onstop()')
-
+        
         _log.debug('un registering rpc routes')
         self.vip.rpc.call(MASTER_WEB, 'unregister_all_agent_routes').get(timeout=10)
         return
-
+        
     @Core.receiver('onfinish')
     def onfinish(self, sender, **kwargs):
         _log.debug('onfinish()')
         return
-
-    def _configGetInitValues(self):
+        
+    def _config_get_init_values(self):
         self._period_read_data = self.config.get('period_read_data', 30)
         self._period_process_pp = self.config.get('period_process_pp', 10)
         self._price_point_old = self.config.get('default_base_price', 0.1)
         self._price_point_latest = self.config.get('price_point_latest', 0.2)
         return
         
-    def _configGetPoints(self):
+    def _config_get_points(self):
         self.vb_vip_identity = self.config.get('vb_vip_identity',
                                                 'volttronbridgeagent-0.3_1')
         self.root_topic = self.config.get('topic_root', 'building')
-        self.energyDemand_topic = self.config.get('topic_energy_demand',
+        self.topic_energy_demand = self.config.get('topic_energy_demand',
                                                     'building/energydemand')
         self.topic_price_point = self.config.get('topic_price_point',
                                                     'building/pricepoint')
-        self.energyDemand_topic_ds = self.config.get('topic_energy_demand_ds',
+        self.topic_energy_demand_ds = self.config.get('topic_energy_demand_ds',
                                                         'ds/energydemand')
         return
         
-    def _runBMSTest(self):
+    def _run_bms_test(self):
         _log.debug("Running: _runBMS Commu Test()...")
         _log.debug('change pp .10')
-        self.publishPriceToBMS(0.10)
+        self.publish_price_to_bms(0.10)
         time.sleep(10)
-
+        
         _log.debug('change pp .75')
-        self.publishPriceToBMS(0.75)
+        self.publish_price_to_bms(0.75)
         time.sleep(10)
-
+        
         _log.debug('change pp .25')
-        self.publishPriceToBMS(0.25)
+        self.publish_price_to_bms(0.25)
         time.sleep(10)
-
+        
         _log.debug("EOF Testing")
         return
         
@@ -216,7 +218,7 @@ class BuildingController(Agent):
             return
             
         self._pp_failed = False     #any process that failed to apply pp sets this flag True
-        self.publishPriceToBMS(self._price_point_latest)
+        self.publish_price_to_bms(self._price_point_latest)
         if not self._pp_failed:
             self._apply_pricing_policy()
             
@@ -224,20 +226,20 @@ class BuildingController(Agent):
             _log.debug("unable to process_opt_pp(), will try again in " + str(self._period_process_pp))
             return
             
-        _log.info(New Price Point processed.")
+        _log.info("New Price Point processed.")
         self._price_point_old = self._price_point_latest
         self._pp_id = self._pp_id_new
         return
-
+        
     def _apply_pricing_policy(self):
         _log.debug("_apply_pricing_policy()")
         #TODO: control the energy demand of devices at building level accordingly
         #if applying self._price_point_latest failed, set self._pp_failed = True
         return
         
-    # change rc surface temperature set point
-    def publishPriceToBMS(self, pp):
-        _log.debug('publishPriceToBMS()')
+    # Publish new price to bms (for logging (o)r for further processing by the BMS)
+    def publish_price_to_bms(self, pp):
+        _log.debug('publish_price_to_bms()')
         task_id = str(randint(0, 99999999))
         result = ispace_utils.get_task_schdl(self, task_id,'iiit/cbs/buildingcontroller')
         if result['result'] == 'SUCCESS':
@@ -246,11 +248,11 @@ class BuildingController(Agent):
                                             , 'set_point'
                                             , self._agent_id
                                             , 'iiit/cbs/buildingcontroller/Building_PricePoint'
-                                            pp
+                                            , pp
                                             ).get(timeout=10)
-                self.updateBuildingPP()
+                self.update_building_pp()
             except gevent.Timeout:
-                _log.exception("Expection: gevent.Timeout in publishPriceToBMS()")
+                _log.exception("Expection: gevent.Timeout in publish_price_to_bms()")
             except Exception as e:
                 _log.exception ("Expection: changing device level")
                 print(e)
@@ -260,34 +262,34 @@ class BuildingController(Agent):
         else:
             _log.debug('schedule NOT available')
         return
-
-    def updateBuildingPP(self):
+        
+    def update_building_pp(self):
         #_log.debug('updateRmTsp()')
         _log.debug('building_pp {0:0.2f}'.format( self._price_point_latest))
         
-        building_pp = self.rpc_getBuildingPP()
+        building_pp = self.rpc_get_building_pp()
         
         #check if the pp really updated at the bms, only then proceed with new pp
         if ispace_utils.isclose(self._price_point_latest, building_pp, EPSILON):
-            self.publishBuildingPP()
+            self.publish_building_pp()
         else:
             self._pp_failed = True
             
         _log.debug('Current Building PP: ' + "{0:0.2f}".format( self._price_point_latest))
         return
-
-    def publishBuildingPP(self):
-        #_log.debug('publishBuildingPP()')
-        pubTopic = self.root_topic+"/Building_PricePoint"
-        pubMsg = [self._price_point_latest,
+        
+    def publish_building_pp(self):
+        #_log.debug('publish_building_pp()')
+        pub_topic = self.root_topic+"/Building_PricePoint"
+        pub_msg = [self._price_point_latest,
                     {'units': 'cents', 'tz': 'UTC', 'type': 'float'},
                     self._pp_id_new,
                     True
                     ]
-        ispace_utils.publish_to_bus(self, pubTopic, pubMsg)
+        ispace_utils.publish_to_bus(self, pub_topic, pub_msg)
         return
-
-    def rpc_getBuildingPP(self):
+        
+    def rpc_get_building_pp(self):
         try:
             pp = self.vip.rpc.call('platform.actuator'
                                     ,'get_point'
@@ -295,33 +297,33 @@ class BuildingController(Agent):
                                     ).get(timeout=10)
             return pp
         except gevent.Timeout:
-            _log.exception("Expection: gevent.Timeout in rpc_getBuildingPP()")
+            _log.exception("Expection: gevent.Timeout in rpc_get_building_pp()")
             return E_UNKNOWN_BPP
         except Exception as e:
             _log.exception ("Expection: Could not contact actuator. Is it running?")
             print(e)
             return E_UNKNOWN_BPP
         return E_UNKNOWN_BPP
-
-    def rpc_getBuildingLevelEnergy(self):
+        
+    def rpc_get_building_level_energy(self):
         #compute the energy of the other devices which are at building level
         return 0
         
     def _calculate_ted(self):
         #_log.debug('_calculate_ted()')
         
-        ted = self.rpc_getBuildingLevelEnergy()
+        ted = self.rpc_get_building_level_energy()
         for ed in self._ds_ed:
             ted = ted + ed
         
         return ted
-
+        
     def publish_ted(self):
         self._ted = self._calculate_ted()
         _log.info( "New TED: {0:.4f}, publishing to bus.".format(self._ted))
-        pubTopic = self.energyDemand_topic
-        #_log.debug("TED pubTopic: " + pubTopic)
-        pubMsg = [self._ted
+        pub_topic = self.topic_energy_demand
+        #_log.debug("TED pub_topic: " + pub_topic)
+        pub_msg = [self._ted
                     , {'units': 'W', 'tz': 'UTC', 'type': 'float'}
                     , self._pp_id
                     , True
@@ -331,7 +333,7 @@ class BuildingController(Agent):
                     , self._period_read_data
                     , datetime.datetime.utcnow().isoformat(' ') + 'Z'
                     ]
-        ispace_utils.publish_to_bus(self, pubTopic, pubMsg)
+        ispace_utils.publish_to_bus(self, pub_topic, pub_msg)
         return
         
     def on_ds_ed(self, peer, sender, bus,  topic, headers, message):
@@ -359,6 +361,7 @@ class BuildingController(Agent):
             self._ds_ed.insert(idx, 0.0)
         return self._ds_deviceId.index(deviceID)
         
+        
 def main(argv=sys.argv):
     '''Main method called by the eggsecutable.'''
     try:
@@ -367,10 +370,12 @@ def main(argv=sys.argv):
         print (e)
         _log.exception('unhandled exception')
         
+        
 if __name__ == '__main__':
     # Entry point for script
     try:
         sys.exit(main())
     except KeyboardInterrupt:
         pass
+        
         
