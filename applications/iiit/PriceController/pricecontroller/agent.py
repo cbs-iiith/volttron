@@ -106,7 +106,7 @@ class PriceController(Agent):
         self.vip.pubsub.subscribe("pubsub", self.topic_extrn_pp, self.on_new_extrn_pp)
         
         if self.pp_optimize_option == 'DEFAULT_OPT':
-            self.core.periodic(self._period_process_pp, self._default_optimization, wait=None)
+            self.core.periodic(self._period_process_pp, self.default_optimization, wait=None)
         
         return
         
@@ -417,7 +417,7 @@ class PriceController(Agent):
         return new_pricepoints
         
     #perodically run this function to check if ted from all ds received or ted_timed_out
-    def _default_optimization(self):
+    def default_optimization(self):
         
         ds_devices = self.vip.rpc.call('iiit.volttronbridge', 'count_ds_devices').get(timeout=10)
         rcvd_all_ds_bid_ed = True if ds_devices == len(self._ds_bid_ed) else False
