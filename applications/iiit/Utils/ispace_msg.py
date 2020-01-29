@@ -286,7 +286,8 @@ class ISPACE_Msg:
         #_log.debug('set_value()')
         #_log.debug('self.msg_type: {}, MessageType.price_point: {}'.format(self.msg_type, MessageType.price_point))
         if self.msg_type == MessageType.price_point:
-            self.value = mround(value, ROUNDOFF_PRICE_POINT)
+            tmp_value = mround(value, ROUNDOFF_PRICE_POINT)
+            self.value = 0 if tmp_value <= 0 else 1 if tmp_value >= 1 else tmp_value
         elif self.msg_type == MessageType.budget:
             self.value = mround(value, ROUNDOFF_BUDGET)
         elif self.msg_type == MessageType.active_power:

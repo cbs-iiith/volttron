@@ -103,6 +103,18 @@ class PriceController(Agent):
         
         return
         
+    @Core.receiver('onstop')
+    def onstop(self, sender, **kwargs):
+        _log.debug('onstop()')
+        _log.debug('un registering rpc routes')
+        self.vip.rpc.call(MASTER_WEB, 'unregister_all_agent_routes').get(timeout=10)
+        return
+        
+    @Core.receiver('onfinish')
+    def onfinish(self, sender, **kwargs):
+        _log.debug('onfinish()')
+        return
+        
     @RPC.export
     def rpc_from_net(self, header, message):
         _log.debug('rpc_from_net()')
