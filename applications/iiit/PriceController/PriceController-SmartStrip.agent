@@ -9,5 +9,6 @@
     "pricePoint_topic": "smartstrip/pricepoint",
     "_comment": "valid options - PASS_ON_PP, DEFAULT_OPT, EXTERN_OPT",
     "pp_optimize_option": "PASS_ON_PP",
-    "extrn_optimize_pp_topic": "pca/pricepoint"
+    "extrn_optimize_pp_topic": "pca/pricepoint",
+    "period_process_pp": 10
 }

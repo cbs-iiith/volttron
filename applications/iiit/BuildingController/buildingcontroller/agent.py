@@ -37,7 +37,8 @@ import struct
 import gevent
 import gevent.event
 
-import ispace_utils
+from ispace_utils import isclose, get_task_schdl, cancel_task_schdl, publish_to_bus
+from ispace_msg import parse_jsonrpc_msg
 
 utils.setup_logging()
 _log = logging.getLogger(__name__)
@@ -84,14 +85,32 @@ class BuildingController(Agent):
         
     @Core.receiver('onstart')
     def startup(self, sender, **kwargs):
-        self._pp_failed = False
+        _log.debug('startup()')
+        
+        self._valid_senders_list_pp = ['iiit.pricecontroller']
+        
+        #any process that failed to apply pp sets this flag False
+        self._process_opt_pp_success = False
+        
+        self._ds_tap
+        self._total_act_pwr
+        
+        #on successful process of apply_pricing_policy with the latest opt pp, current = latest
+        self._opt_pp_msg_current = None
+        #latest opt pp msg received on the message bus
+        self._opt_pp_msg_latest = None
         
         self._price_point_current = 0.4 
         self._price_point_latest = 0.45
-        self._pp_id = randint(0, 99999999)
-        self._pp_id_latest = randint(0, 99999999)
         
-        self._rmTsp = 25
+        self._opt_pp_id = randint(0, 99999999)
+        self._bid_pp_id = randint(0, 99999999)
+        
+        #reset to zero on receiving new opt_pp_msg
+        self._total_act_pwr = -1
+        self._ds_total_act_pwr[:] = []
+        
+
         
         #downstream energy demand and deviceId
         self._ds_ed = []
@@ -114,8 +133,11 @@ class BuildingController(Agent):
         
         #TODO: publish initial data to volttron bus
         
-        #perodically publish total energy demand to volttron bus
-        self.core.periodic(self._period_read_data, self.publish_ted, wait=None)
+        #perodically publish total active power to volttron bus
+        #active power is comupted are regurlar interval (_period_process_pp default(30s))
+        #this power corresponds to current opt pp
+        #tap --> total active power (Wh)
+        self.core.periodic(self._period_read_data, self.publish_tap, wait=None)
         
         #perodically process new pricing point that keeps trying to apply the new pp till success
         self.core.periodic(self._period_process_pp, self.process_opt_pp, wait=None)
@@ -148,7 +170,7 @@ class BuildingController(Agent):
     def _config_get_init_values(self):
         self._period_read_data = self.config.get('period_read_data', 30)
         self._period_process_pp = self.config.get('period_process_pp', 10)
-        self._price_point_old = self.config.get('default_base_price', 0.1)
+        self._price_point_current = self.config.get('default_base_price', 0.1)
         self._price_point_latest = self.config.get('price_point_latest', 0.2)
         return
         
@@ -182,63 +204,106 @@ class BuildingController(Agent):
         return
         
     def on_new_price(self, peer, sender, bus,  topic, headers, message):
-        if sender == 'pubsub.compat':
-            message = compat.unpack_legacy_message(headers, message)
-            
-        new_pp = message[ParamPP.idx_pp]
-        new_pp_datatype = message[ParamPP.idx_pp_datatype]
-        new_pp_id = message[ParamPP.idx_pp_id]
-        new_pp_isoptimal = message[ParamPP.idx_pp_isoptimal]
-        discovery_address = message[ParamPP.idx_pp_discovery_addrs]
-        deviceId = message[ParamPP.idx_pp_device_id]
-        new_pp_ttl = message[ParamPP.idx_pp_ttl]
-        new_pp_ts = message[ParamPP.idx_pp_ts]
-        ispace_utils.print_pp(self, new_pp
-                , new_pp_datatype
-                , new_pp_id
-                , new_pp_isoptimal
-                , discovery_address
-                , deviceId
-                , new_pp_ttl
-                , new_pp_ts
-                )
-                
-        if not new_pp_isoptimal:
-            _log.debug('not optimal pp!!!, do nothing')
+        self.tmp_pp_msg = None
+        valid_senders_list = self._valid_senders_list_pp
+        if not self._validate_msg(sender, valid_senders_list, message):
+            #cleanup and return
+            self.tmp_pp_msg = None
             return
+        pp_msg = self.tmp_pp_msg
+        self.tmp_pp_msg = None      #release self.tmp_pp_msg
+        
+        if pp_msg.get_isoptimal():
+            _log.debug('optimal pp!!!')
+            self._process_opt_pp(pp_msg)
+        else:
+            _log.debug('not optimal pp!!!')
+            self._process_bid_pp(pp_msg)
+        return
             
-        self._price_point_latest = new_pp
-        self._pp_id_latest = new_pp_id
-        self.process_opt_pp()
         return
         
+    def _validate_msg(self, sender, valid_senders_list, message):
+        _log.debug('_validate_msg()')
+        if self.agent_disabled:
+            _log.info("self.agent_disabled: " + str(self.agent_disabled) + ", do nothing!!!")
+            return False
+            
+        if sender not in valid_senders_list:
+            _log.debug('sender: {}'.format(sender)
+                        + ' not in sender list: {}, do nothing!!!'.format(valid_senders_list))
+            return False
+            
+        try:
+            _log.debug('message: {}'.format(message))
+            mandatory_fields = ['value', 'value_data_type', 'units', 'price_id']
+            self.tmp_pp_msg = parse_bustopic_msg(message, mandatory_fields)
+            #_log.info('self.tmp_pp_msg: {}'.format(self.tmp_pp_msg))
+        except KeyError as ke:
+            _log.exception(ke)
+            _log.exception(jsonrpc.json_error('NA', INVALID_PARAMS,
+                    'Invalid params {}'.format(rpcdata.params)))
+            return False
+        except Exception as e:
+            _log.exception(e)
+            _log.exception(jsonrpc.json_error('NA', UNHANDLED_EXCEPTION, e))
+            return False
+            
+        hint = 'New Price Point'
+        mandatory_fields = ['value', 'value_data_type', 'units', 'price_id', 'isoptimal', 'duration', 'ttl']
+        valid_price_ids = []
+        #validate various sanity measure like, valid fields, valid pp ids, ttl expiry, etc.,
+        if not self.tmp_pp_msg.sanity_check_ok(hint, mandatory_fields, valid_price_ids):
+            _log.warning('Msg sanity checks failed!!!')
+            return False
+            
+        return True
+        
+    def _process_opt_pp(self, pp_msg):
+        self._opt_pp_msg_latest = pp_msg
+        
+        self._process_opt_pp_success = False    #any process that failed to apply pp sets this flag False
+        self._total_act_pwr = -1                #reset total active pwr to zero on new opt_pp
+        self._ds_total_act_pwr[:] = []          #
+        self.process_opt_pp()                   #initiate the periodic process
+        return
+        
+    def _process_bid_pp(self, pp_msg):
+        self._bid_pp_msg_new = pp_msg
+        
+        self._bid_ed = -1        #reset bid_ed to zero on new bid_pp
+        self._ds_bid_ed[:] = []
+        self.process_bid_pp()   #initiate the periodic process
+        return
+
     #this is a perodic function that keeps trying to apply the new pp till success
     def process_opt_pp(self):
-        if ispace_utils.isclose(self._price_point_old, self._price_point_latest, EPSILON) and self._pp_id == self._pp_id_new:
+        if self._process_opt_pp_success:
+            #_log.debug('all apply opt pp processess success, do nothing')
             return
             
-        self._pp_failed = False     #any process that failed to apply pp sets this flag True
-        self.publish_price_to_bms(self._price_point_latest)
-        if not self._pp_failed:
+        self.publish_price_to_bms()
+        if not self._process_opt_pp_success:
             self._apply_pricing_policy()
             
-        if self._pp_failed:
+        if self._process_opt_pp_success:
             _log.debug("unable to process_opt_pp(), will try again in " + str(self._period_process_pp))
             return
             
         _log.info("New Price Point processed.")
-        self._price_point_old = self._price_point_latest
-        self._pp_id = self._pp_id_new
+        #on successful process of apply_pricing_policy with the latest opt pp, current = latest
+        self._opt_pp_msg_current = self._opt_pp_msg_latest
         return
         
     def _apply_pricing_policy(self):
         _log.debug("_apply_pricing_policy()")
         #TODO: control the energy demand of devices at building level accordingly
-        #if applying self._price_point_latest failed, set self._pp_failed = True
+        #      use self._opt_pp_msg_latest
+        #      if applying self._price_point_latest failed, set self._process_opt_pp_success = False
         return
         
     # Publish new price to bms (for logging (o)r for further processing by the BMS)
-    def publish_price_to_bms(self, pp):
+    def publish_price_to_bms(self):
         _log.debug('publish_price_to_bms()')
         task_id = str(randint(0, 99999999))
         result = ispace_utils.get_task_schdl(self, task_id,'iiit/cbs/buildingcontroller')
@@ -248,7 +313,7 @@ class BuildingController(Agent):
                                             , 'set_point'
                                             , self._agent_id
                                             , 'iiit/cbs/buildingcontroller/Building_PricePoint'
-                                            , pp
+                                            , self._opt_pp_msg_latest.get_value()
                                             ).get(timeout=10)
                 self.update_building_pp()
             except gevent.Timeout:
@@ -265,28 +330,28 @@ class BuildingController(Agent):
         
     def update_building_pp(self):
         #_log.debug('updateRmTsp()')
-        _log.debug('building_pp {0:0.2f}'.format( self._price_point_latest))
         
         building_pp = self.rpc_get_building_pp()
+        latest_pp = self._opt_pp_msg_latest.get_value()
+        _log.debug('latest_pp: {0:0.2f}, building_pp {1:0.2f}'.format(latest_pp, building_pp))
         
         #check if the pp really updated at the bms, only then proceed with new pp
-        if ispace_utils.isclose(self._price_point_latest, building_pp, EPSILON):
+        if ispace_utils.isclose(latest_pp, building_pp, EPSILON):
             self.publish_building_pp()
         else:
-            self._pp_failed = True
+            self._process_opt_pp_success = False
             
-        _log.debug('Current Building PP: ' + "{0:0.2f}".format( self._price_point_latest))
         return
         
     def publish_building_pp(self):
         #_log.debug('publish_building_pp()')
-        pub_topic = self.root_topic+"/Building_PricePoint"
-        pub_msg = [self._price_point_latest,
-                    {'units': 'cents', 'tz': 'UTC', 'type': 'float'},
-                    self._pp_id_new,
-                    True
-                    ]
-        ispace_utils.publish_to_bus(self, pub_topic, pub_msg)
+        pp_msg = self._opt_pp_msg_latest
+        
+        pub_topic =  self.root_topic+"/Building_PricePoint"
+        pub_msg = pp_msg.get_json_params(self._agent_id)
+        _log.debug('publishing to local bus topic: {}'.format(pub_topic))
+        _log.debug('Msg: {}'.format(pub_msg))
+        publish_to_bus(self, pub_topic, pub_msg)
         return
         
     def rpc_get_building_pp(self):
@@ -309,36 +374,53 @@ class BuildingController(Agent):
         #compute the energy of the other devices which are at building level
         return 0
         
-    def _calculate_ted(self):
-        #_log.debug('_calculate_ted()')
-        
-        ted = self.rpc_get_building_level_energy()
-        for ed in self._ds_ed:
-            ted = ted + ed
-        
+    #calculate total active power (tap), ap --> active power
+    def _calc_tap(self):
+        #_log.debug('_calc_tap()')
+        tap = self.rpc_get_building_level_energy()
+        for ap in self._ds_tap:
+            tap = tap + ap
         return ted
         
-    def publish_ted(self):
-        self._ted = self._calculate_ted()
-        _log.info( "New TED: {0:.4f}, publishing to bus.".format(self._ted))
-        pub_topic = self.topic_energy_demand
-        #_log.debug("TED pub_topic: " + pub_topic)
-        pub_msg = [self._ted
-                    , {'units': 'W', 'tz': 'UTC', 'type': 'float'}
-                    , self._pp_id
-                    , True
-                    , None
-                    , None
-                    , None
-                    , self._period_read_data
-                    , datetime.datetime.utcnow().isoformat(' ') + 'Z'
-                    ]
-        ispace_utils.publish_to_bus(self, pub_topic, pub_msg)
+    def publish_tap(self):
+        self._total_act_pwr = self._calc_tap()
+        _log.info( "New Total Active Pwr: {0:.4f}, publishing to bus.".format(self._total_act_pwr))
+        
+        pp_msg = self._opt_pp_msg_latest
+        
+        msg_type = MessageType.energy
+        one_to_one = pp_msg.get_one_to_one()
+        isoptimal = pp_msg.get_isoptimal()
+        value = self._total_act_pwr
+        value_data_type = 'float'
+        units = 'Wh'
+        price_id = pp_msg.get_price_id()
+        src_ip = pp_msg.get_dst_ip()
+        src_device_id = pp_msg.get_dst_device_id()
+        dst_ip = pp_msg.get_src_ip()
+        dst_device_id = pp_msg.get_src_device_id()
+        duration = self.act_pp_msg.get_duration()
+        ttl = 10
+        ts = datetime.datetime.utcnow().isoformat(' ') + 'Z'
+        tz = 'UTC'
+        
+        tap_msg = ISPACE_Msg(msg_type, one_to_one
+                            , isoptimal, value, value_data_type, units, price_id
+                            , src_ip, src_device_id, dst_ip, dst_device_id
+                            , duration, ttl, ts, tz)
+                            
+        pub_topic =  self.topic_energy_demand
+        pub_msg = tap_msg.get_json_params(self._agent_id)
+        _log.debug('publishing to local bus topic: {}'.format(pub_topic))
+        _log.debug('Msg: {}'.format(pub_msg))
+        publish_to_bus(self, pub_topic, pub_msg)
         return
         
     def on_ds_ed(self, peer, sender, bus,  topic, headers, message):
-        if sender == 'pubsub.compat':
-            message = compat.unpack_legacy_message(headers, message)
+        #post ed to us only if pp_id corresponds to these ids (i.e., ed for either us opt_pp_id or bid_pp_id)
+        valid_pp_ids = [self.self._pp_id, self._bid_pp_id]
+
+        
         _log.debug('New ed from ds, topic: ' + topic +
                     ' & ed: {0:.4f}'.format(message[ParamED.idx_ed]))
                     

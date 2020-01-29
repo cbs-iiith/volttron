@@ -67,6 +67,8 @@ class PriceController(Agent):
         _log.info(self.config['message'])
         self._agent_id = self.config['agentid']
         
+        self._period_process_pp = self.config.get('period_process_pp', 10)
+        
         self.topic_price_point_us = self.config.get('pricePoint_topic_us', 'us/pricepoint')
         self.topic_price_point = self.config.get('pricePoint_topic', 'building/pricepoint')
         self.agent_disabled = False
@@ -77,6 +79,8 @@ class PriceController(Agent):
     @Core.receiver('onstart')
     def startup(self, sender, **kwargs):
         _log.debug('startup()')
+        
+        self._valid_senders_list = ['iiit.volttronbridge', 'iiit.pricepoint']
         
         _log.debug('registering rpc routes')
         self.vip.rpc.call(MASTER_WEB, 'register_agent_route'
@@ -100,6 +104,9 @@ class PriceController(Agent):
         
         #subscribing to topic_price_point_extr
         self.vip.pubsub.subscribe("pubsub", self.topic_extrn_pp, self.on_new_extrn_pp)
+        
+        if self.pp_optimize_option == 'DEFAULT_OPT':
+            self.core.periodic(self._period_process_pp, self._default_optimization, wait=None)
         
         return
         
@@ -175,25 +182,31 @@ class PriceController(Agent):
     
     #subscribe to local/ed (i.e., ted) from the controller (building/zone/smarthub controller)
     def on_new_ed(self, peer, sender, bus,  topic, headers, message):
+        # parse message & validate
         # (_ed, _is_opt, _ed_pp_id) = get_data(message)
+        
         #if _ed_pp_id = us_opt_pp_id:
         #   #ed for global opt, do nothing
         #   #vb moves this ed to next level
         #   return
+        
         #if pass_on and _ed_pp_id in us_pp_ids[]
         #   #do nothing
         #   #vb moves this ed to next level
         #   return
-        #if default_opt and _ed_pp_id in local_pp_ids[]
-        #       (new_pp, new_pp_isopt) = _computeNewPrice()
+        
+        #if extrn_opt and _ed_pp_id in extrn_pp_ids[]
+        #   publish_ed(extrn/ed, _ed, _ed_pp_id)
+        #   return
+        
+        # if default_opt and _ed_pp_id in local_pp_ids[]
+        #       (new_pp, new_pp_isopt) = _compute_new_price()
         #       if new_pp_isopt
         #           #local optimal reached
         #           publish_ed(local/ed, _ed, us_bid_pp_id)
         #           #if next level accepts this bid, the new target is this ed
         #       based on opt conditon _computeNewPrice can publish new bid_pp or 
-        #if extrn_opt and _ed_pp_id in extrn_pp_ids[]
-        #   publish_ed(extrn/ed, _ed, _ed_pp_id)
-        #   return
+        # and save data to self._ds_bid_ed
         
         return
         
@@ -226,7 +239,7 @@ class PriceController(Agent):
         
     def on_new_us_pp(self, peer, sender, bus,  topic, headers, message):
         self.tmp_pp_msg = None
-        valid_senders_list = ['iiit.volttronbridge', 'iiit.pricepoint']
+        valid_senders_list = self._valid_senders_list
         if not self._validate_msg(sender, valid_senders_list, message):
             #cleanup and return
             self.tmp_pp_msg = None
@@ -293,6 +306,7 @@ class PriceController(Agent):
             publish_to_bus(self, pub_topic, pub_msg)
             return True
             
+    #validate incomming price message from the message bus and convert to self.tmp_pp_msg if check pass
     def _validate_msg(self, sender, valid_senders_list, message):
         _log.debug('_validate_msg()')
         if self.agent_disabled:
@@ -331,7 +345,7 @@ class PriceController(Agent):
     
     #compute new bid price point for every local device and ds devices
     #return list for pp_msg
-    def _computeNewPrice(self):
+    def _compute_new_price(self):
         _log.debug('_computeNewPrice()')
         #TODO: implement the algorithm to compute the new price
         #      based on walras algorithm.
@@ -355,43 +369,68 @@ class PriceController(Agent):
         #    
         #   pp_opt = pp_new
         #
-        new_pp = self.us_pp * 1.25
-        new_pp_datatype = self.us_pp_datatype
-        new_pp_id = randint(0, 99999999)
-        new_pp_isoptimal = False
-        new_pp_ttl = 5  #5 sec
-        new_pp_ts = datetime.datetime.utcnow().isoformat(' ') + 'Z'
+        #       iterate till optimization condition satistifed
+        #       when new pp is published, the new ed for all devices is accumulated by on_new_ed()
+        #       once all the eds are received call this function again
+        #       publish the new optimal pp
         
+        #price id of the new pp
+        #set one_to_one = false if the pp is same for all the devices,
+        #                 true if the pp pp is different for every device
+        #             However, use the SAME price id for all pp_msg
+        #
         msg_type = MessageType.price_point
         one_to_one = True
-        isoptimal = False
-        value = self.act_pp_msg.get_value()
         value_data_type = 'float'
         units = 'cents'
         price_id = randint(0, 99999999)
         src_ip = None
         src_device_id = None
-        dst_ip = None
-        dst_device_id = None
         duration = self.act_pp_msg.get_duration()
         ttl = 10
         ts = datetime.datetime.utcnow().isoformat(' ') + 'Z'
         tz = 'UTC'
         
-        pp_msg_1 = ISPACE_Msg(msg_type, one_to_one
-                            , isoptimal, value, value_data_type, units, price_id
-                            , src_ip, src_device_id, dst_ip, dst_device_id
-                            , duration, ttl, ts, tz)
-        pp_msg_2 = ISPACE_Msg(msg_type, one_to_one
-                            , isoptimal, value, value_data_type, units, price_id
-                            , src_ip, src_device_id, dst_ip, dst_device_id
-                            , duration, ttl, ts, tz)
-                            
-        #       iterate till optimization condition satistifed
-        #       when new pp is published, the new ed for all devices is accumulated by on_new_ed()
-        #       once all the eds are received call this function again
-        #       publish the new optimal pp
-        return [pp_msg_1, pp_msg_2]
+        device_list = []
+        dst_ip = []
+        dst_device_id = []
+        
+        old_pricepoint = []
+        old_ted = []
+        target = 0
+        
+        self._target_acheived = False
+        new_pricepoint = self._some_cost_fn(old_pricepoint, old_ted, target)
+        isoptimal = True if self._target_acheived else False
+
+        pp_messages = []
+        for device_idx in device_list:
+            pp_msg = ISPACE_Msg(msg_type, one_to_one
+                    , isoptimal, new_pricepoint[device_idx], value_data_type, units, price_id
+                    , src_ip, src_device_id, dst_ip[device_idx], dst_device_id[device_idx]
+                    , duration, ttl, ts, tz)
+            pp_messages.insert(pp_msg)
+        return pp_messages
+        
+    def _some_cost_fn(self, old_pricepoint, old_ted, target):
+        new_pricepoints = []
+        return new_pricepoints
+        
+    #perodically run this function to check if ted from all ds received or ted_timed_out
+    def _default_optimization(self):
+        
+        ds_devices = self.vip.rpc.call('iiit.volttronbridge', 'count_ds_devices').get(timeout=10)
+        rcvd_all_ds_bid_ed = True if ds_devices == len(self._ds_bid_ed) else False
+        
+        ts  = dateutil.parser.parse(self._bid_pp_ts)
+        now = dateutil.parser.parse(datetime.datetime.utcnow().isoformat(' ') + 'Z')
+        ds_ted_timeout = True if (now - ts).total_seconds() > self._bid_pp_ttl else False
+
+        if rcvd_all_ds_bid_ed or ds_ted_timeout:
+            pp_messages = self._compute_new_price()
+            self._ds_bid_ed[:] = []
+            #publish these pp_messages
+        return
         
         
 def main(argv=sys.argv):
