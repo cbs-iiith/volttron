@@ -216,7 +216,12 @@ class ISPACE_Msg:
             return False
             
         return True
-    
+        
+    def check_dst_addr(self, device_id, ip_addr):
+        return (False if self.one_to_one and 
+                            (device_id != self.dst_device_id or ip_addr != self.dst_ip)
+                            else True)
+                            
     #return class attributes as json params that can be passed to do_rpc()
     def get_json_params(self, id='123456789'):
         json_package = {
@@ -336,6 +341,74 @@ class ISPACE_Msg:
         
     pass
     
+    
+#create a MessageType.energy ISPACE_Msg and publishs the message to local bus
+def ted_helper(self, agent_id, ted, pp_msg, pub_topic, new_ttl=10):
+    msg_type = MessageType.energy
+    one_to_one = pp_msg.get_one_to_one()
+    isoptimal = pp_msg.get_isoptimal()
+    value = ted
+    value_data_type = 'float'
+    units = 'kWh'
+    price_id = pp_msg.get_price_id()
+    src_ip = pp_msg.get_dst_ip()
+    src_device_id = pp_msg.get_dst_device_id()
+    dst_ip = pp_msg.get_src_ip()
+    dst_device_id = pp_msg.get_src_device_id()
+    duration = pp_msg.get_duration()
+    ttl = new_ttl
+    ts = datetime.datetime.utcnow().isoformat(' ') + 'Z'
+    tz = 'UTC'
+    
+    tap_msg = ISPACE_Msg(msg_type, one_to_one
+                        , isoptimal, value, value_data_type, units, price_id
+                        , src_ip, src_device_id, dst_ip, dst_device_id
+                        , duration, ttl, ts, tz)
+                        
+    pub_msg = tap_msg.get_json_params(agent_id)
+    _log.debug('publishing to local bus topic: {}'.format(pub_topic))
+    _log.debug('Msg: {}'.format(pub_msg))
+    publish_to_bus(self, pub_topic, pub_msg)
+    return
+    
+#create a MessageType.active_power ISPACE_Msg and publishs the message to local bus
+def tap_helper(self, agent_id, tap, pp_msg, pub_topic, new_ttl=10):
+    msg_type = MessageType.active_power
+    one_to_one = pp_msg.get_one_to_one()
+    isoptimal = pp_msg.get_isoptimal()
+    value = tap
+    value_data_type = 'float'
+    units = 'Wh'
+    price_id = pp_msg.get_price_id()
+    src_ip = pp_msg.get_dst_ip()
+    src_device_id = pp_msg.get_dst_device_id()
+    dst_ip = pp_msg.get_src_ip()
+    dst_device_id = pp_msg.get_src_device_id()
+    duration = pp_msg.get_duration()
+    ttl = new_ttl
+    ts = datetime.datetime.utcnow().isoformat(' ') + 'Z'
+    tz = 'UTC'
+    
+    tap_msg = ISPACE_Msg(msg_type, one_to_one
+                        , isoptimal, value, value_data_type, units, price_id
+                        , src_ip, src_device_id, dst_ip, dst_device_id
+                        , duration, ttl, ts, tz)
+                        
+    pub_msg = tap_msg.get_json_params(agent_id)
+    _log.debug('publishing to local bus topic: {}'.format(pub_topic))
+    _log.debug('Msg: {}'.format(pub_msg))
+    publish_to_bus(self, pub_topic, pub_msg)
+    return
+    
+def check_for_msg_type(message, msg_type):
+    data = jsonrpc.JsonRpcData.parse(message).params
+    try:
+        if data['msg_type'] == msg_type:
+            return True
+    except Exception:
+        _log.warning('key attrib: "msg_type", not available in the message.')
+        pass
+    return False
     
 #converts bus message into an ispace_msg
 def parse_bustopic_msg(message, mandatory_fields = []):

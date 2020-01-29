@@ -69,6 +69,10 @@ class PricePoint(Agent):
     def setup(self, sender, **kwargs):
         _log.info(self.config['message'])
         self._agent_id = self.config['agentid']
+        
+        self._device_id = None
+        self._ip_addr = None
+        
         return
         
     @Core.receiver('onstart')
@@ -99,6 +103,7 @@ class PricePoint(Agent):
         return
         
     def _config_get_points(self):
+        self.vb_vip_identity = self.config.get('vb_vip_identity', 'iiit.volttronbridge')
         self.topic_price_point = self.config.get('topic_price_point', 'zone/pricepoint')
         return
         
@@ -147,6 +152,19 @@ class PricePoint(Agent):
         if not pp_msg.sanity_check_ok(hint, mandatory_fields, valid_price_ids):
             _log.warning('Msg sanity checks failed!!!')
             return 'Msg sanity checks failed!!!'
+            
+        try:
+            if self._device_id is not None:
+                self._device_id = self.vip.rpc.call(self.vb_vip_identity, 'devices_id').get(timeout=10)
+                _log.debug('device id as per vb: {}'.format(self._device_id))
+                pp_msg.set_src_device_id(self._device_id)
+            if self._ip_addr is not None:
+                self._ip_addr = self.vip.rpc.call(self.vb_vip_identity, 'ip_addr').get(timeout=10)
+                _log.debug('ip addr as per vb: {}'.format(self._ip_addr))
+                pp_msg.set_src_ip(self._ip_addr)
+        except Exception as e:
+            _log.exception (e)
+            pass
             
         #publish the new price point to the local message bus
         pub_topic = self.topic_price_point

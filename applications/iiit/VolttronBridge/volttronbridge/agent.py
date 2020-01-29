@@ -37,6 +37,7 @@ import gevent.event
 import json
 
 import ispace_utils
+from ispace_msg import parse_bustopic_msg, ISPACE_Msg, MessageType, check_for_msg_type
 
 utils.setup_logging()
 _log = logging.getLogger(__name__)
@@ -324,6 +325,14 @@ class VolttronBridge(Agent):
     def count_ds_devices(self):
         return len(self._ds_register)
         
+    @RPC.export
+    def devices_id(self):
+        return self._deviceId
+        
+    @RPC.export
+    def ip_addr(self):
+        return self._this_ip_addr
+        
     #price point on local bus published, post it to all downstream bridges
     def on_new_pp(self, peer, sender, bus,  topic, headers, message):
         if self._bridge_host == 'LEVEL_TAILEND':
@@ -361,9 +370,11 @@ class VolttronBridge(Agent):
         
         #keep a track of local pp_ids
         if self._pp_id not in [self.us_opt_pp_id, self.us_bid_pp_id]:
-            self.local_bid_pp_id = self._pp_id if not self._pp_isoptimal
-            self.local_opt_pp_id = self._pp_id if self._pp_isoptimal
-            
+            if self._pp_isoptimal: 
+                self.local_opt_pp_id = self._pp_id 
+            else : 
+                self.local_bid_pp_id = self._pp_id
+                
         #reset counters & flags
         self._reset_ds_retrycount()
         self._all_ds_posts_success  = False
@@ -480,16 +491,16 @@ class VolttronBridge(Agent):
                 continue
                 
                 
-                    '''before posting to ds, dcrement ttl and update ts
-                    #decrement the ttl by time consumed to process till now + 1 sec
-                    decrement_status = pp_msg.decrement_ttl()
-                    if decrement_status and pp_msg.get_ttl() == 0:
-                        _log.warning('msg ttl expired on decrement_ttl(), do nothing!!!')
-                        return False
-                    elif decrement_status:
-                        _log.info('new ttl: {}.'.format(pp_msg.get_ttl()))
-                    update_ts()
-                    '''
+            '''before posting to ds, dcrement ttl and update ts
+            #decrement the ttl by time consumed to process till now + 1 sec
+            decrement_status = pp_msg.decrement_ttl()
+            if decrement_status and pp_msg.get_ttl() == 0:
+                _log.warning('msg ttl expired on decrement_ttl(), do nothing!!!')
+                return False
+            elif decrement_status:
+                _log.info('new ttl: {}.'.format(pp_msg.get_ttl()))
+            update_ts()
+            '''
             url_root = 'http://' + discovery_address + '/VolttronBridge'
             result = ispace_utils.do_rpc(url_root, 'rpc_post_pp'
                                         , {'discovery_address': self._discovery_address
@@ -630,7 +641,7 @@ class VolttronBridge(Agent):
             
         #process ed only if pp_id corresponds to either us/local opt/bid pp_ids)
         valid_pp_ids = [self.us_opt_pp_id, self.us_bid_pp_id, self._pp_id]
-        if ed_pp_id not in [self.us_opt_pp_id, self.us_bid_pp_id, self._pp_id]
+        if ed_pp_id not in [self.us_opt_pp_id, self.us_bid_pp_id, self._pp_id]:
             _log.debug('pp_id: {}'.format(message[ParamPP.idx_pp_id])
                     + ' not in valid_pp_ids: {}, do nothing!!!'.format(valid_pp_ids))
             return False

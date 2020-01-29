@@ -35,7 +35,7 @@ import gevent
 import gevent.event
 
 from ispace_utils import publish_to_bus
-from ispace_msg import parse_bustopic_msg, ISPACE_Msg, MessageType
+from ispace_msg import parse_bustopic_msg, ISPACE_Msg, MessageType, check_for_msg_type
 
 utils.setup_logging()
 _log = logging.getLogger(__name__)
@@ -69,8 +69,17 @@ class PriceController(Agent):
         
         self._period_process_pp = self.config.get('period_process_pp', 10)
         
+        self._device_id = None
+        self._ip_addr = None
+        
+        self.vb_vip_identity = self.config.get('vb_vip_identity', 'iiit.volttronbridge')
         self.topic_price_point_us = self.config.get('pricePoint_topic_us', 'us/pricepoint')
         self.topic_price_point = self.config.get('pricePoint_topic', 'building/pricepoint')
+        
+        self.topic_energy_demand_ds = self.config.get('topic_energy_demand_ds',
+                                                        'ds/energydemand')
+
+        
         self.agent_disabled = False
         self.pp_optimize_option = self.config.get('pp_optimize_option', 'PASS_ON_PP')
         self.topic_extrn_pp = self.config.get('extrn_optimize_pp_topic', 'pca/pricepoint')
@@ -102,12 +111,24 @@ class PriceController(Agent):
         #subscribing to topic_price_point_us
         self.vip.pubsub.subscribe("pubsub", self.topic_price_point_us, self.on_new_us_pp)
         
+        #subscribing to ds energy demand, vb publishes ed from registered ds to this topic
+        self.vip.pubsub.subscribe("pubsub", self.topic_energy_demand_ds, self.on_ds_ed)
+
+        #at regular interval publish total active power. does not wait to receive from all ds
+        self.core.periodic(self._period_read_data, self.publish_opt_tap, wait=None)
+        #at regular interval check if all ds ted received, if so publish and stop
+        self.core.periodic(self._period_process_pp, self.publish_bid_ted, wait=None)
+        
         #subscribing to topic_price_point_extr
         self.vip.pubsub.subscribe("pubsub", self.topic_extrn_pp, self.on_new_extrn_pp)
         
         if self.pp_optimize_option == 'DEFAULT_OPT':
             self.core.periodic(self._period_process_pp, self.default_optimization, wait=None)
         
+        self._device_id = self.vip.rpc.call(self.vb_vip_identity, 'devices_id').get(timeout=10)
+        _log.debug('ip addr as per vb: {}'.format(self._ip_addr))
+        self._ip_addr = self.vip.rpc.call(self.vb_vip_identity, 'ip_addr').get(timeout=10)
+        _log.debug('ip addr as per vb: {}'.format(self._ip_addr))
         return
         
     @Core.receiver('onstop')
@@ -255,7 +276,7 @@ class PriceController(Agent):
         self.act_pp_msg = pp_msg
         
         #keep a track of us pp_msg
-        if sender == 'iiit.volttronbridge':
+        if sender == self.vb_vip_identity:
             if pp_msg.get_isoptimal():
                 self.us_opt_pp_msg = pp_msg
             else:
@@ -316,6 +337,11 @@ class PriceController(Agent):
         if sender not in valid_senders_list:
             _log.debug('sender: {}'.format(sender)
                         + ' not in sender list: {}, do nothing!!!'.format(valid_senders_list))
+            return False
+            
+        #check message type before parsing
+        success = check_for_msg_type(message, MessageType.price_point)
+        if not success:
             return False
             
         try:
@@ -419,8 +445,11 @@ class PriceController(Agent):
     #perodically run this function to check if ted from all ds received or ted_timed_out
     def default_optimization(self):
         
-        ds_devices = self.vip.rpc.call('iiit.volttronbridge', 'count_ds_devices').get(timeout=10)
-        rcvd_all_ds_bid_ed = True if ds_devices == len(self._ds_bid_ed) else False
+        #TODO: may be some devices may have disconnected 
+        #      i.e., ds_devices_count > len(self._ds_bid_ed)
+        #       reconcile the device ids and match ds_ted[] with device_ids[]
+        ds_devices_count = self.vip.rpc.call(self.vb_vip_identity, 'count_ds_devices').get(timeout=10)
+        rcvd_all_ds_bid_ed = True if ds_devices_count >= len(self._ds_bid_ed) else False
         
         ts  = dateutil.parser.parse(self._bid_pp_ts)
         now = dateutil.parser.parse(datetime.datetime.utcnow().isoformat(' ') + 'Z')
@@ -430,7 +459,48 @@ class PriceController(Agent):
             pp_messages = self._compute_new_price()
             self._ds_bid_ed[:] = []
             #publish these pp_messages
+        else:
+            _log.debug("rcvd_all_ds_bid_ed: {}, ds_ted_timeout: {}unable to process_opt_pp(), will try again in " + str(self._period_process_pp))
         return
+        
+    def on_ds_ed(self, peer, sender, bus,  topic, headers, message):
+        # 1. validate message
+        # 2. check againt valid pp ids
+        # 3. if (src_id_add == self._ip_addr) and opt_pp:
+        # 5.         local_opt_tap      #local opt active power
+        # 6. elif (src_id_add == self._ip_addr) and not opt_pp:
+        # 7.         local_bid_ted      #local bid energy demand
+        # 8. elif opt_pp:
+        #             ds_opt_tap
+        #    else
+        #               ds_bid_ted
+        # 9.      if opt_pp
+        #post ed to us only if pp_id corresponds to these ids (i.e., ed for either us opt_pp_id or bid_pp_id)
+        valid_pp_ids = [self.self._pp_id, self._bid_pp_id]
+
+        
+        _log.debug('New ed from ds, topic: ' + topic +
+                    ' & ed: {0:.4f}'.format(message[ParamED.idx_ed]))
+                    
+        ed_pp_id = message[ParamED.idx_ed_pp_id]
+        ed_isoptimal = message[ParamED.idx_ed_isoptimal]
+        if not ed_isoptimal:         #only accumulate the ed of an optimal pp
+            _log.debug(" - Not optimal ed!!!, do nothing")
+            return
+            
+        #deviceID = (topic.split('/', 3))[2]
+        deviceID = message[ParamED.idx_ed_device_id]
+        idx = self._get_ds_device_idx(deviceID)
+        self._ds_ed[idx] = message[ParamED.idx_ed]
+        return
+        
+        def publish_opt_tap(self):
+            
+            return
+            
+        def publish_bid_ted(self):
+            
+            return
         
         
 def main(argv=sys.argv):
