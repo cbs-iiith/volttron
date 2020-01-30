@@ -144,9 +144,15 @@ class PricePoint(Agent):
         return
         
     def update_price_point(self, message):
+        #Note: this is a rpc message do the check here ONLY
+        #check message for MessageType.price_point
+        success = check_for_msg_type(message, MessageType.price_point)
+        if not success:
+            return jsonrpc.json_error('NA', INVALID_PARAMS,
+                    'Invalid params {}'.format(rpcdata.params))
         try:
-            mandatory_fields = ['value', 'value_data_type', 'units', 'price_id']
-            pp_msg = parse_jsonrpc_msg(message, mandatory_fields)
+            minimum_fields = ['value', 'value_data_type', 'units', 'price_id']
+            pp_msg = parse_jsonrpc_msg(message, minimum_fields)
             #_log.info('pp_msg: {}'.format(pp_msg))
         except KeyError as ke:
             print(ke)
@@ -156,14 +162,15 @@ class PricePoint(Agent):
             print(e)
             return jsonrpc.json_error('NA', UNHANDLED_EXCEPTION, e)
             
-        hint = 'New Price Point'
-        mandatory_fields = ['value', 'value_data_type', 'units', 'price_id', 'isoptimal', 'duration', 'ttl']
-        valid_price_ids = []
         #validate various sanity measure like, valid fields, valid pp ids, ttl expiry, etc.,
-        if not pp_msg.sanity_check_ok(hint, mandatory_fields, valid_price_ids):
+        hint = 'New Price Point'
+        validate_fields = ['value', 'value_data_type', 'units', 'price_id', 'isoptimal', 'duration', 'ttl']
+        valid_price_ids = []
+        if not pp_msg.sanity_check_ok(hint, validate_fields, valid_price_ids):
             _log.warning('Msg sanity checks failed!!!')
             return 'Msg sanity checks failed!!!'
             
+        #set source id & addr
         retrive_details_from_vb(self)
         pp_msg.set_src_device_id(self._device_id)
         pp_msg.set_src_ip(self._discovery_address)
