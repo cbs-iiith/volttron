@@ -37,7 +37,8 @@ import gevent.event
 import json
 
 import ispace_utils
-from ispace_msg import parse_bustopic_msg, ISPACE_Msg, MessageType, check_for_msg_type
+from ispace_msg import ISPACE_Msg, MessageType
+from ispace_msg_utils import parse_bustopic_msg, check_for_msg_type
 
 utils.setup_logging()
 _log = logging.getLogger(__name__)

@@ -29,13 +29,10 @@ _log = logging.getLogger(__name__)
 def retrive_details_from_vb(self):
     try:
         if self._device_id is None:
-            self._device_id = self.vip.rpc.call(self.vb_vip_identity, 'device_id').get(timeout=10)
+            self._device_id = self.vip.rpc.call(self._vb_vip_identity, 'device_id').get(timeout=10)
             _log.debug('device id as per vb: {}'.format(self._device_id))
-        if self._ip_addr is None:
-            self._ip_addr = self.vip.rpc.call(self.vb_vip_identity, 'ip_addr').get(timeout=10)
-            _log.debug('ip addr as per vb: {}'.format(self._ip_addr))
         if self._discovery_address is None:
-            self._discovery_address = self.vip.rpc.call(self.vb_vip_identity, 'discovery_address').get(timeout=10)
+            self._discovery_address = self.vip.rpc.call(self._vb_vip_identity, 'discovery_address').get(timeout=10)
             _log.debug('discovery_address as per vb: {}'.format(self._discovery_address))
     except Exception as e:
         _log.exception (e)

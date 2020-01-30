@@ -35,9 +35,9 @@ from volttron.platform.jsonrpc import (
 from random import randint
 import settings
 import time
-from ispace_utils import publish_to_bus
-from ispace_msg import parse_jsonrpc_msg
-from ispace_utils import retrive_details_from_vb
+
+from ispace_utils import publish_to_bus, retrive_details_from_vb
+from ispace_msg_utils import parse_jsonrpc_msg
 
 utils.setup_logging()
 _log = logging.getLogger(__name__)

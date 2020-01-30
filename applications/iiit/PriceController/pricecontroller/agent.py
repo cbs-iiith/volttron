@@ -56,8 +56,8 @@ def pricecontroller(config_path, **kwargs):
 class PriceController(Agent):
     '''Price Controller
     '''
-    _period_read_data = self.config.get('period_read_data', 30)
-    _period_process_pp = self.config.get('period_process_pp', 10)
+    _period_read_data = None
+    _period_process_pp = None
     
     _vb_vip_identity = None
     _topic_price_point_us = None

@@ -22,7 +22,7 @@ from volttron.platform.agent import utils
 from volttron.platform import jsonrpc
 
 from ispace_utils import mround
-from ispace_msg import ISPACE_Msg, MessageType
+from ispace_msg import ISPACE_Msg, MessageType, ISPACE_MSG_ATTRIB_LIST
 
 utils.setup_logging()
 _log = logging.getLogger(__name__)
