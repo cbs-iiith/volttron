@@ -36,8 +36,8 @@ ROUNDOFF_ENERGY = 0.0001
 
 #create a MessageType.energy ISPACE_Msg
 def ted_helper(pp_msg, device_id, discovery_address, ted, new_ttl=10):
-    print(MessageType.energy)
-    msg_type = MessageType.energy
+    print(MessageType.energy_demand)
+    msg_type = MessageType.energy_demand
     one_to_one = pp_msg.get_one_to_one()
     isoptimal = pp_msg.get_isoptimal()
     value = ted
@@ -91,15 +91,15 @@ def check_for_msg_type(message, msg_type):
     return False
     
 #converts bus message into an ispace_msg
-def parse_bustopic_msg(message, mandatory_fields = []):
+def parse_bustopic_msg(message, minimum_fields = []):
     #data = json.loads(message)
     data = jsonrpc.JsonRpcData.parse(message).params
-    return _parse_data(data, mandatory_fields)
+    return _parse_data(data, minimum_fields)
     
 #converts jsonrpc_msg into an ispace_msg
-def parse_jsonrpc_msg(message, mandatory_fields = []):
+def parse_jsonrpc_msg(message, minimum_fields = []):
     data = jsonrpc.JsonRpcData.parse(message).params
-    return _parse_data(data, mandatory_fields)
+    return _parse_data(data, minimum_fields)
     
 def _update_value(new_msg, attrib, new_value):
     if attrib == 'msg_type':
@@ -135,7 +135,7 @@ def _update_value(new_msg, attrib, new_value):
         new_msg.set_tz(new_value if new_value is not None else 'UTC')
     return
     
-def _parse_data(data, mandatory_fields = []):
+def _parse_data(data, minimum_fields = []):
     #_log.debug('_parse_data()')
     #_log.debug('data: [{}]'.format(data))
     #_log.debug('datatype: {}'.format(type(data)))
@@ -147,21 +147,22 @@ def _parse_data(data, mandatory_fields = []):
     new_msg = ISPACE_Msg(msg_type)
     _update_value(new_msg, 'msg_type', msg_type)
     
-    #if list is empty, parse all attributes
-    if mandatory_fields == []:
+    #if list is empty, parse for all attributes, if any attrib not found throw keynot found error
+    if minimum_fields == []:
         #if the attrib is not found in the data, throws a keyerror exception
-        _log.warning('mandatory_fields to check against is empty!!!')
+        _log.warning('minimum_fields to check against is empty!!!')
         for attrib in ISPACE_MSG_ATTRIB_LIST:
             _update_value(new_msg, attrib, data[attrib])
     else:
-        #if the madatory field is not found in the data, throws a keyerror exception
-        for attrib in mandatory_fields:
+        #first pass for minimum_fields
+        #if the field is not found in the data, throws a keyerror exception
+        for attrib in minimum_fields:
             _update_value(new_msg, attrib, data[attrib])
             
-        #do a second pass to also get attribs not in the mandatory_fields
+        #do a second pass to also get attribs not in the minimum_fields
         #if attrib not found, catch the exception(pass) and continue with next attrib
         for attrib in ISPACE_MSG_ATTRIB_LIST:
-            if attrib not in mandatory_fields:
+            if attrib not in minimum_fields:        #data parsed in first pass
                 try:
                     _update_value(new_msg, attrib, data[attrib])
                 except KeyError:

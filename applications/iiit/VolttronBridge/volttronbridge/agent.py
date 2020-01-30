@@ -108,6 +108,10 @@ class VolttronBridge(Agent):
         
         self._period_process_pp = int(self.config.get('period_process_pp', 10))
         
+        #register to keep track of local agents posting active_power/energy_demand
+        self._local_devices_register = []
+        self._local_devices_device_ids = []
+
         if self._bridge_host != 'LEVEL_TAILEND':
             _log.debug(self._bridge_host)
             
@@ -213,6 +217,9 @@ class VolttronBridge(Agent):
     def onstop(self, sender, **kwargs):
         _log.debug('onstop()')
         self._us_retrycount = 0
+        
+        del self._local_devices_register[:]
+        del self._local_devices_device_ids[:]
         
         if self._bridge_host != 'LEVEL_TAILEND':
             del self._ds_register[:]
@@ -323,9 +330,24 @@ class VolttronBridge(Agent):
             return jsonrpc.json_error('NA', UNHANDLED_EXCEPTION, e)
             
     @RPC.export
+    def get_ds_devices(self):
+        _log.debug('rpc get_ds_devices(): {}'.format(self._ds_device_ids))
+        return self._ds_device_ids
+        
+    @RPC.export
+    def get_local_devices(self):
+        _log.debug('rpc get_local_devices(): {}'.format(self._local_devices_device_ids))
+        return self._local_devices_device_ids
+        
+    @RPC.export
     def count_ds_devices(self):
-        _log.debug('rpc count_ds_devices(): {}'.format(len(self._ds_register)))
-        return len(self._ds_register)
+        _log.debug('rpc count_ds_devices(): {}'.format(len(self._ds_device_ids)))
+        return len(self._ds_device_ids)
+        
+    @RPC.export
+    def count_local_devices(self):
+        _log.debug('rpc count_ds_devices(): {}'.format(len(self._local_devices_device_ids)))
+        return len(self._local_devices_device_ids)
         
     @RPC.export
     def device_id(self):
@@ -338,6 +360,42 @@ class VolttronBridge(Agent):
     @RPC.export
     def discovery_address(self):
         return self._discovery_address
+        
+    @RPC.export
+    def register_local_ed_agent(self, discovery_address, deviceId):
+        _log.debug('register_local_ed_agent(), discovery_address: ' + discovery_address 
+                    + ' deviceId: ' + deviceId
+                    )
+        if discovery_address in self._local_devices_register:
+            _log.debug('already registered!!!')
+            index = self._local_devices_register.index(discovery_address)
+            return True
+            
+        #TODO: potential bug in this method, not atomic
+        self._local_devices_register.append(discovery_address)
+        index = self._local_devices_register.index(discovery_address)
+        self._local_devices_device_ids.insert(index, deviceId)
+        
+        _log.debug('registered!!!')
+        return True
+        
+    @RPC.export
+    def unregister_local_ed_agent(self, discovery_address, deviceId):
+        _log.debug('_unregister_ds_bridge(), discovery_address: '+ discovery_address 
+                    + ' deviceId: ' + deviceId
+                    )
+        if discovery_address not in self._local_devices_register:
+            _log.debug('already unregistered')
+            return True
+            
+        #TODO: potential bug in this method, not atomic
+        index = self._local_devices_register.index(discovery_address)
+        self._local_devices_register.remove(discovery_address)
+        del self._local_devices_device_ids[index]
+        _log.debug('unregistered!!!')
+        return True
+
+
     
     #price point on local bus published, post it to all downstream bridges
     def on_new_pp(self, peer, sender, bus,  topic, headers, message):
@@ -489,8 +547,34 @@ class VolttronBridge(Agent):
             return
             
         self._all_ds_posts_success  = True          #assume all ds post success, if any failed set to False
+
+        #for msg in msg_queue:
+            #if one_to_one:
+                #post only to matching dst_ip_addr
+                #if success:
+                #   remove msg from queue
+                #else:
+                #   _all_ds_posts_success = False
+                #continue       #with next msg in the queue
+            #try to post all ds device (same as old concept)
+            #else:
+                #all_success = True
+                #for discovery_address in self._ds_register
+                #         and discovery_address not in msg__que_idx__success[que_idx].[list of success discovery_address]
+                #          :
+                    #post msg
+                    #if success:
+                    #    msg__que_idx__success[que_idx].[list of success discovery_address].append(discovery_address)
+                    #else:
+                        #_all_ds_posts_success = False
+                        #all_success = False
+                #if all_success:
+                #   remove msg from msg_que
+
+
         for discovery_address in self._ds_register:
             index = self._ds_register.index(discovery_address)
+            
             
             if self._ds_retrycount[index] > MAX_RETRIES:
                 #maybe already posted or failed more than max retries, do nothing
@@ -616,7 +700,7 @@ class VolttronBridge(Agent):
         _log.debug('...Done!!!')
         return True
         
-    #post the new energy demand from ds to the local bus
+    #post the new energy demand from ds to the local-ds-bus
     def _post_ed(self, discovery_address
                         , deviceId
                         , new_ed

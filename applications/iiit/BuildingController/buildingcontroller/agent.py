@@ -211,11 +211,25 @@ class BuildingController(Agent):
         
     def on_new_price(self, peer, sender, bus,  topic, headers, message):
         self.tmp_pp_msg = None
+        
+        #check message type before parsing
+        success = check_for_msg_type(message, MessageType.price_point)
+        if not success:
+            return False
+            
         valid_senders_list = self._valid_senders_list_pp
-        if not self._validate_pp_msg(sender, valid_senders_list, message):
+        minimum_fields = ['msg_type', 'value', 'value_data_type', 'units', 'price_id']
+        validate_fields = ['value', 'value_data_type', 'units', 'price_id', 'isoptimal', 'duration', 'ttl']
+        valid_price_ids = []
+        if not self._valid_bustopic_msg(sender, valid_senders_list
+                                                , minimum_fields
+                                                , validate_fields
+                                                , valid_price_ids
+                                                , message):
             #cleanup and return
             self.tmp_pp_msg = None
             return
+            
         pp_msg = self.tmp_pp_msg
         self.tmp_pp_msg = None      #release self.tmp_pp_msg
         
@@ -228,24 +242,19 @@ class BuildingController(Agent):
             
         return
         
-    def _validate_pp_msg(self, sender, valid_senders_list, message):
-        _log.debug('_validate_msg()')
+    def _valid_bustopic_msg(self, sender, valid_senders_list, minimum_fields
+                                    , validate_fields, valid_price_ids, message):
+        _log.debug('_validate_bustopic_msg()')
         pp_msg = None
         
-        if sender not in valid_senders_list:
+        if sender not in valid_senders_list and valid_senders_list != []:
             _log.debug('sender: {}'.format(sender)
                         + ' not in sender list: {}, do nothing!!!'.format(valid_senders_list))
             return False
             
-        #check message type before parsing
-        success = check_for_msg_type(message, MessageType.price_point)
-        if not success:
-            return False
-            
         try:
             _log.debug('message: {}'.format(message))
-            mandatory_fields = ['msg_type', 'value', 'value_data_type', 'units', 'price_id']
-            pp_msg = parse_bustopic_msg(message, mandatory_fields)
+            pp_msg = parse_bustopic_msg(message, minimum_fields)
             #_log.info('pp_msg: {}'.format(pp_msg))
         except KeyError as ke:
             _log.exception(ke)
@@ -265,10 +274,8 @@ class BuildingController(Agent):
             return False
                 
         hint = 'New Price Point'
-        mandatory_fields = ['value', 'value_data_type', 'units', 'price_id', 'isoptimal', 'duration', 'ttl']
-        valid_price_ids = []
         #validate various sanity measure like, valid fields, valid pp ids, ttl expiry, etc.,
-        if not pp_msg.sanity_check_ok(hint, mandatory_fields, valid_price_ids):
+        if not pp_msg.sanity_check_ok(hint, validate_fields, valid_price_ids):
             _log.warning('Msg sanity checks failed!!!')
             return False
             

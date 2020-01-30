@@ -45,7 +45,7 @@ class MessageType(IntEnum):
     price_point = 0
     budget = 1
     active_power = 2
-    energy = 3
+    energy_demand = 3
     pass
     
     
@@ -161,43 +161,50 @@ class ISPACE_Msg:
             return False
             
     #check for mandatory fields in the message
-    def valid_msg(self, mandatory_fields = []):
-        for attrib in mandatory_fields:
-            if attrib == 'msg_type' and self.msg_type is None:
+    def valid_msg(self, validate_fields = []):
+        for attrib in validate_fields:
+            #null value check
+            if self._is_attrib_null(attrib):
                 return False
-            elif attrib == 'one_to_one' and self.one_to_one is None:
-                return False
-            elif attrib == 'value' and self.value is None:
-                return False
-            elif attrib == 'value_data_type' and self.value_data_type is None:
-                return False
-            elif attrib == 'units' and self.units is None:
-                return False
-            elif attrib == 'price_id' and self.price_id is None:
-                return False
-            elif attrib == 'isoptimal' and self.isoptimal is None:
-                return False
-            elif attrib == 'src_ip' and self.src_ip is None:
-                return False
-            elif attrib == 'src_device_id' and self.src_device_id is None:
-                return False
-            elif attrib == 'dst_ip' and self.dst_ip is None:
-                return False
-            elif attrib == 'dst_device_id' and self.dst_device_id is None:
-                return False
-            elif attrib == 'duration' and self.duration is None:
-                return False
-            elif attrib == 'ttl' and self.ttl is None:
-                return False
-            elif attrib == 'ts' and self.ts is None:
-                return False
-            elif attrib == 'tz' and self.tz is None:
-                return False
+            #TODO: data validations checks based on message type and field type
         return True
     
+    def _is_attrib_null(self, attrib):
+        if attrib == 'msg_type' and self.msg_type is None:
+            return True
+        elif attrib == 'one_to_one' and self.one_to_one is None:
+            return True
+        elif attrib == 'value' and self.value is None:
+            return True
+        elif attrib == 'value_data_type' and self.value_data_type is None:
+            return True
+        elif attrib == 'units' and self.units is None:
+            return True
+        elif attrib == 'price_id' and self.price_id is None:
+            return True
+        elif attrib == 'isoptimal' and self.isoptimal is None:
+            return True
+        elif attrib == 'src_ip' and self.src_ip is None:
+            return True
+        elif attrib == 'src_device_id' and self.src_device_id is None:
+            return True
+        elif attrib == 'dst_ip' and self.dst_ip is None:
+            return True
+        elif attrib == 'dst_device_id' and self.dst_device_id is None:
+            return True
+        elif attrib == 'duration' and self.duration is None:
+            return True
+        elif attrib == 'ttl' and self.ttl is None:
+            return True
+        elif attrib == 'ts' and self.ts is None:
+            return True
+        elif attrib == 'tz' and self.tz is None:
+            return True
+        return False
+        
     #validate various sanity measure like, valid fields, valid pp ids, ttl expire, etc.,
-    def sanity_check_ok(self, hint = None, mandatory_fields = [], valid_price_ids = []):
-        if not self.valid_msg(mandatory_fields):
+    def sanity_check_ok(self, hint = None, validate_fields = [], valid_price_ids = []):
+        if not self.valid_msg(validate_fields):
             _log.warning('rcvd a invalid msg, message: {}, do nothing!!!'.format(message))
             return False
             
@@ -297,7 +304,7 @@ class ISPACE_Msg:
             self.value = mround(value, ROUNDOFF_BUDGET)
         elif self.msg_type == MessageType.active_power:
             self.value = mround(value, ROUNDOFF_ACTIVE_POWER)
-        elif self.msg_type == MessageType.energy:
+        elif self.msg_type == MessageType.energy_demand:
             self.value = mround(value, ROUNDOFF_ENERGY)
         else:
             _log.debug('else')
@@ -365,7 +372,7 @@ class ISPACE_Msg_ActivePower(ISPACE_Msg):
     
 class ISPACE_Msg_Energy(ISPACE_Msg):
     def __init__(self):
-        super().__init__(self, MessageType.energy, False)
+        super().__init__(self, MessageType.energy_demand, False)
         return
     pass
     

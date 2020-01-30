@@ -144,6 +144,7 @@ class PricePoint(Agent):
         return
         
     def update_price_point(self, message):
+        pp_msg = None
         #Note: this is a rpc message do the check here ONLY
         #check message for MessageType.price_point
         success = check_for_msg_type(message, MessageType.price_point)
