@@ -6,5 +6,6 @@
     "min_price": 0.0,
     "max_price": 1.0,
     "period_read_price_point": 5,
-    "topic_price_point": "us/pricepoint"
+    "topic_price_point": "us/pricepoint",
+	"vb_vip_identity": "iiit.volttronbridge",
 }

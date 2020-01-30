@@ -6,9 +6,9 @@
     "period_process_pp": 10,
     "topic_root": 'smarthub',
     "topic_price_point": "smarthub/pricepoint",
-    "topic_energy_demand": "smarthub/energydemand",
+    "topic_energy_demand": "ds/energydemand",
     "topic_energy_demand_ds": "ds/energydemand",
-    "local_vb_vip_identity": "volttronbridgeagent-0.3_1",
+    "vb_vip_identity": "iiit.volttronbridge",
     
     "default_base_price": 0.1,
     "price_point_latest": 0.2,
