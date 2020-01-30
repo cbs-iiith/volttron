@@ -34,9 +34,9 @@ import time
 import gevent
 import gevent.event
 
-from ispace_utils import publish_to_bus
-from ispace_msg import parse_bustopic_msg, ISPACE_Msg, MessageType, check_for_msg_type
-from ispace_utils import retrive_details_from_vb
+from ispace_utils import publish_to_bus, retrive_details_from_vb
+from ispace_msg import ISPACE_Msg, MessageType
+from ispace_msg_utils import parse_bustopic_msg, check_for_msg_type
 
 utils.setup_logging()
 _log = logging.getLogger(__name__)

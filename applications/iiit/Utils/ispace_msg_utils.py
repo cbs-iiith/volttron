@@ -21,7 +21,8 @@ import json
 from volttron.platform.agent import utils
 from volttron.platform import jsonrpc
 
-from ispace_utils import mround, publish_to_bus
+from ispace_utils import mround
+from ispace_msg import ISPACE_Msg, MessageType
 
 utils.setup_logging()
 _log = logging.getLogger(__name__)
@@ -31,8 +32,8 @@ ROUNDOFF_PRICE_POINT = 0.01
 ROUNDOFF_BUDGET = 0.0001
 ROUNDOFF_ACTIVE_POWER = 0.0001
 ROUNDOFF_ENERGY = 0.0001
-    
-    
+
+
 #create a MessageType.energy ISPACE_Msg
 def ted_helper(pp_msg, device_id, discovery_address, ted, new_ttl=10):
     msg_type = MessageType.energy

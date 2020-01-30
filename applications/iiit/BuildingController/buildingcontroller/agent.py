@@ -38,9 +38,9 @@ import gevent
 import gevent.event
 
 from ispace_utils import isclose, get_task_schdl, cancel_task_schdl, publish_to_bus
-from ispace_msg import parse_bustopic_msg, ISPACE_Msg, MessageType, check_for_msg_type
-from ispace_msg import tap_helper, ted_helper
 from ispace_utils import retrive_details_from_vb
+from ispace_msg import ISPACE_Msg, MessageType
+from ispace_msg_utils import parse_bustopic_msg, check_for_msg_type, tap_helper, ted_helper
 
 utils.setup_logging()
 _log = logging.getLogger(__name__)
@@ -70,6 +70,18 @@ def buildingcontroller(config_path, **kwargs):
 class BuildingController(Agent):
     '''Building Controller
     '''
+    #initialized  during __init__ from config
+    _period_read_data = None
+    _period_process_pp = None
+    _price_point_current = None
+    _price_point_latest = None
+    
+    _vb_vip_identity = None
+    _root_topic = None
+    _topic_energy_demand = None
+    _topic_price_point = None
+    _topic_energy_demand_ds = None
+
     def __init__(self, config_path, **kwargs):
         super(BuildingController, self).__init__(**kwargs)
         _log.debug("vip_identity: " + self.core.identity)
@@ -107,9 +119,6 @@ class BuildingController(Agent):
         self._bid_pp_msg_current = None
         self._bid_pp_msg_latest = None
         
-        self._price_point_current = 0.4 
-        self._price_point_latest = 0.45
-        
         _log.info("yeild 10s for volttron platform to initiate properly...")
         time.sleep(10) #yeild for a movement
         _log.info("Starting BuildingController...")
@@ -134,7 +143,7 @@ class BuildingController(Agent):
         self.core.periodic(self._period_process_pp, self.process_opt_pp, wait=None)
         
         #subscribing to topic_price_point
-        self.vip.pubsub.subscribe("pubsub", self.topic_price_point, self.on_new_price)
+        self.vip.pubsub.subscribe("pubsub", self._topic_price_point, self.on_new_price)
         
         self.vip.rpc.call(MASTER_WEB, 'register_agent_route'
                             , r'^/BuildingController'
@@ -163,14 +172,11 @@ class BuildingController(Agent):
         return
         
     def _config_get_points(self):
-        self.vb_vip_identity = self.config.get('vb_vip_identity', 'iiit.volttronbridge')
-        self.root_topic = self.config.get('topic_root', 'building')
-        self.topic_energy_demand = self.config.get('topic_energy_demand',
-                                                    'building/energydemand')
-        self.topic_price_point = self.config.get('topic_price_point',
-                                                    'building/pricepoint')
-        self.topic_energy_demand_ds = self.config.get('topic_energy_demand_ds',
-                                                        'ds/energydemand')
+        self._vb_vip_identity = self.config.get('vb_vip_identity', 'iiit.volttronbridge')
+        self._root_topic = self.config.get('topic_root', 'building')
+        self._topic_energy_demand = self.config.get('topic_energy_demand', 'building/energydemand')
+        self._topic_price_point = self.config.get('topic_price_point', 'building/pricepoint')
+        self._topic_energy_demand_ds = self.config.get('topic_energy_demand_ds', 'ds/energydemand')
         return
         
     def _test_new_pp(self, pp_msg, new_pp):
@@ -356,7 +362,7 @@ class BuildingController(Agent):
             
         pp_msg = self._opt_pp_msg_latest
         
-        pub_topic =  self.root_topic+"/Building_PricePoint"
+        pub_topic =  self._root_topic + "/Building_PricePoint"
         pub_msg = pp_msg.get_json_params(self._agent_id)
         _log.debug('publishing to local bus topic: {}'.format(pub_topic))
         _log.debug('Msg: {}'.format(pub_msg))
@@ -390,7 +396,7 @@ class BuildingController(Agent):
                             )
                             
         #publish the new price point to the local message bus
-        pub_topic = self.topic_energy_demand + "/" + self._device_id
+        pub_topic = self._topic_energy_demand + "/" + self._device_id
         pub_msg = pp_msg.get_json_params(self._agent_id)
         _log.debug('publishing to local bus topic: {}'.format(pub_topic))
         _log.debug('Msg: {}'.format(pub_msg))
@@ -405,6 +411,7 @@ class BuildingController(Agent):
         
     def process_bid_pp(self):
         self.publish_bid_ted()
+        self._bid_pp_msg_current = self._bid_pp_msg_latest
         return
         
     def publish_bid_ted(self):
@@ -417,13 +424,11 @@ class BuildingController(Agent):
                             )
                             
         #publish the new price point to the local message bus
-        pub_topic = self.topic_energy_demand + "/" + self._device_id
+        pub_topic = self._topic_energy_demand + "/" + self._device_id
         pub_msg = pp_msg.get_json_params(self._agent_id)
         _log.debug('publishing to local bus topic: {}'.format(pub_topic))
         _log.debug('Msg: {}'.format(pub_msg))
         publish_to_bus(self, pub_topic, pub_msg)
-        #?????????????? Check this ???????????????????
-        self._bid_pp_msg_current = self._bid_pp_msg_latest
         return
         
     #calculate the local total energy demand for bid_pp
