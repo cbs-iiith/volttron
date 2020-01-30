@@ -32,23 +32,23 @@ ROUNDOFF_BUDGET = 0.0001
 ROUNDOFF_ACTIVE_POWER = 0.0001
 ROUNDOFF_ENERGY = 0.0001
 
-class MessageType(IntEnum):
-    price_point = 0
-    budget = 1
-    active_power = 2
-    energy = 3
-    pass
-
-
-ISPACE_MSG_ATTRIB_LIST = [ 'msg_type', 'one_to_one'
+ISPACE_MSG_ATTRIB_LIST = ['msg_type', 'one_to_one'
                             , 'value', 'value_data_type', 'units'
                             , 'price_id', 'isoptimal'
                             , 'src_ip', 'src_device_id'
                             , 'dst_ip', 'dst_device_id'
                             , 'duration', 'ttl', 'ts', 'tz'
                             ]
-
-
+                            
+                            
+class MessageType(IntEnum):
+    price_point = 0
+    budget = 1
+    active_power = 2
+    energy = 3
+    pass
+    
+    
 class ISPACE_Msg:
     ''' iSPACE Message base class
     '''
@@ -87,21 +87,21 @@ class ISPACE_Msg:
                     , ts = None
                     , tz = None
                     ):
-        self.msg_type = msg_type
-        self.one_to_one = one_to_one
-        self.value = value
-        self.value_data_type = value_data_type
-        self.units = units
-        self.price_id = price_id
-        self.isoptimal = isoptimal
-        self.src_ip = src_ip
-        self.src_device_id = src_device_id
-        self.dst_ip = dst_ip
-        self.dst_device_id = dst_device_id
-        self.duration = duration
-        self.ttl = ttl
-        self.ts = ts
-        self.tz = tz
+        self.set_msg_type(msg_type)
+        self.set_one_to_one(one_to_one)
+        self.set_value(value)
+        self.set_value_data_type(value_data_type)
+        self.set_units(units)
+        self.set_price_id(price_id)
+        self.set_isoptimal(isoptimal)
+        self.set_src_ip(src_ip)
+        self.set_src_device_id(src_device_id)
+        self.set_dst_ip(dst_ip)
+        self.set_dst_device_id(dst_device_id)
+        self.set_duration(duration)
+        self.set_ttl(ttl)
+        self.set_ts(ts)
+        self.set_tz(tz)
         return
         
     #str overload to return class attributes as str dict
@@ -281,7 +281,7 @@ class ISPACE_Msg:
         
     #setters
     def set_msg_type(self, msg_type):
-        #_log.debug('set_msg_type()')
+        _log.debug('set_msg_type({})'.format(msg_type))
         self.msg_type = msg_type
         
     def set_one_to_one(self, one_to_one):
@@ -342,161 +342,6 @@ class ISPACE_Msg:
     pass
     
     
-#create a MessageType.energy ISPACE_Msg and publishs the message to local bus
-def ted_helper(self, agent_id, ted, pp_msg, pub_topic, new_ttl=10):
-    msg_type = MessageType.energy
-    one_to_one = pp_msg.get_one_to_one()
-    isoptimal = pp_msg.get_isoptimal()
-    value = ted
-    value_data_type = 'float'
-    units = 'kWh'
-    price_id = pp_msg.get_price_id()
-    src_ip = pp_msg.get_dst_ip()
-    src_device_id = pp_msg.get_dst_device_id()
-    dst_ip = pp_msg.get_src_ip()
-    dst_device_id = pp_msg.get_src_device_id()
-    duration = pp_msg.get_duration()
-    ttl = new_ttl
-    ts = datetime.datetime.utcnow().isoformat(' ') + 'Z'
-    tz = 'UTC'
-    
-    tap_msg = ISPACE_Msg(msg_type, one_to_one
-                        , isoptimal, value, value_data_type, units, price_id
-                        , src_ip, src_device_id, dst_ip, dst_device_id
-                        , duration, ttl, ts, tz)
-                        
-    pub_msg = tap_msg.get_json_params(agent_id)
-    _log.debug('publishing to local bus topic: {}'.format(pub_topic))
-    _log.debug('Msg: {}'.format(pub_msg))
-    publish_to_bus(self, pub_topic, pub_msg)
-    return
-    
-#create a MessageType.active_power ISPACE_Msg and publishs the message to local bus
-def tap_helper(self, agent_id, tap, pp_msg, pub_topic, new_ttl=10):
-    msg_type = MessageType.active_power
-    one_to_one = pp_msg.get_one_to_one()
-    isoptimal = pp_msg.get_isoptimal()
-    value = tap
-    value_data_type = 'float'
-    units = 'Wh'
-    price_id = pp_msg.get_price_id()
-    src_ip = pp_msg.get_dst_ip()
-    src_device_id = pp_msg.get_dst_device_id()
-    dst_ip = pp_msg.get_src_ip()
-    dst_device_id = pp_msg.get_src_device_id()
-    duration = pp_msg.get_duration()
-    ttl = new_ttl
-    ts = datetime.datetime.utcnow().isoformat(' ') + 'Z'
-    tz = 'UTC'
-    
-    tap_msg = ISPACE_Msg(msg_type, one_to_one
-                        , isoptimal, value, value_data_type, units, price_id
-                        , src_ip, src_device_id, dst_ip, dst_device_id
-                        , duration, ttl, ts, tz)
-                        
-    pub_msg = tap_msg.get_json_params(agent_id)
-    _log.debug('publishing to local bus topic: {}'.format(pub_topic))
-    _log.debug('Msg: {}'.format(pub_msg))
-    publish_to_bus(self, pub_topic, pub_msg)
-    return
-    
-def check_for_msg_type(message, msg_type):
-    data = jsonrpc.JsonRpcData.parse(message).params
-    try:
-        if data['msg_type'] == msg_type:
-            return True
-    except Exception:
-        _log.warning('key attrib: "msg_type", not available in the message.')
-        pass
-    return False
-    
-#converts bus message into an ispace_msg
-def parse_bustopic_msg(message, mandatory_fields = []):
-    #data = json.loads(message)
-    data = jsonrpc.JsonRpcData.parse(message).params
-    return _parse_data(data, mandatory_fields)
-    
-#converts jsonrpc_msg into an ispace_msg
-def parse_jsonrpc_msg(message, mandatory_fields = []):
-    data = jsonrpc.JsonRpcData.parse(message).params
-    return _parse_data(data, mandatory_fields)
-    
-def _update_value(new_msg, attrib, new_value):
-    if attrib == 'msg_type':
-        new_msg.set_msg_type(new_value)
-    elif attrib == 'one_to_one':
-        new_msg.set_one_to_one(new_value if new_value is not None else False)
-    elif attrib == 'value':
-        new_msg.set_value(new_value)
-    elif attrib == 'value_data_type':
-        new_msg.set_value_data_type(new_value)
-    elif attrib == 'units':
-        new_msg.set_units(new_value)
-    elif attrib == 'price_id':
-        new_msg.set_price_id(new_value if new_value is not None else randint(0, 99999999))
-    elif attrib == 'isoptimal':
-        new_msg.set_isoptimal(new_value)
-    elif attrib == 'src_ip':
-        new_msg.set_src_ip(new_value)
-    elif attrib == 'src_device_id':
-        new_msg.set_src_device_id(new_value)
-    elif attrib == 'dst_ip':
-        new_msg.set_dst_ip(new_value)
-    elif attrib == 'dst_device_id':
-        new_msg.set_dst_device_id(new_value)
-    elif attrib == 'duration':
-        new_msg.set_duration(new_value if new_value is not None else 3600)
-    elif attrib == 'ttl':
-        new_msg.set_ttl(new_value if new_value is not None else -1)
-    elif attrib == 'ts':
-        new_msg.set_ts(new_value if new_value is not None
-                                else datetime.datetime.utcnow().isoformat(' ') + 'Z')
-    elif attrib == 'tz':
-        new_msg.set_tz(new_value if new_value is not None else 'UTC')
-    return
-    
-def _parse_data(data, mandatory_fields = []):
-    #_log.debug('_parse_data()')
-    #_log.debug('data: [{}]'.format(data))
-    #_log.debug('datatype: {}'.format(type(data)))
-    
-    #ensure msg_type attrib is set first
-    try:
-        msg_type =  data['msg_type']
-    except KeyError:
-        _log.warning('key attrib: "msg_type", not available in the data.'
-                        + ' Setting to default({})'.format(MessageType.price_point))
-        msg_type = MessageType.price_point
-        pass
-        
-    #TODO: select class msg_type based on msg_type, instead of base class
-    new_msg = ISPACE_Msg()
-    _update_value(new_msg, 'msg_type', msg_type)
-    
-    #if list is empty, parse all attributes
-    if mandatory_fields == []:
-        #if the attrib is not found in the data, throws a keyerror exception
-        _log.warning('mandatory_fields to check against is empty!!!')
-        for attrib in ISPACE_MSG_ATTRIB_LIST:
-            _update_value(new_msg, attrib, data[attrib])
-    else:
-        #if the madatory field is not found in the data, throws a keyerror exception
-        for attrib in mandatory_fields:
-            _update_value(new_msg, attrib, data[attrib])
-            
-        #do a second pass to also get attribs not in the mandatory_fields
-        #if attrib not found, catch the exception(pass) and continue with next attrib
-        for attrib in ISPACE_MSG_ATTRIB_LIST:
-            if attrib not in mandatory_fields:
-                try:
-                    _update_value(new_msg, attrib, data[attrib])
-                except KeyError:
-                    _log.warning('key: {}, not available in the data'.format(attrib))
-                    pass
-                
-    return new_msg
-        
-        
 class ISPACE_Msg_OptPricePoint(ISPACE_Msg):
     def __init__(self):
         super().__init__(self, MessageType.price_point, True)
