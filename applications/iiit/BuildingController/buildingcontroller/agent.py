@@ -381,13 +381,20 @@ class BuildingController(Agent):
         
     #perodic function to publish active power
     def publish_opt_tap(self):
-        #create a MessageType.active_power ISPACE_Msg and publishs the message to local bus
-        tap_helper(self, self._agent_id
+        #create a MessageType.active_power ISPACE_Msg
+        pp_msg = tap_helper(self._opt_pp_msg_current
+                            , self._device_id
+                            , self._discovery_address
                             , self._calc_total_act_pwr()
-                            , self._opt_pp_msg_current
-                            , self.topic_energy_demand + "/" + self._device_id
                             , self._period_read_data
                             )
+                            
+        #publish the new price point to the local message bus
+        pub_topic = self.topic_energy_demand + "/" + self._device_id
+        pub_msg = pp_msg.get_json_params(self._agent_id)
+        _log.debug('publishing to local bus topic: {}'.format(pub_topic))
+        _log.debug('Msg: {}'.format(pub_msg))
+        publish_to_bus(self, pub_topic, pub_msg)
         return
         
     #calculate total active power (tap)
@@ -401,14 +408,21 @@ class BuildingController(Agent):
         return
         
     def publish_bid_ted(self):
-        self._bid_ed = self._calc_total_energy_demand()
-        #create a MessageType.energy ISPACE_Msg and publishs the message to local bus
-        ted_helper(self, self._agent_id
+        #create a MessageType.energy ISPACE_Msg
+        pp_msg = ted_helper(self._bid_pp_msg_latest
+                            , self._device_id
+                            , self._discovery_address
                             , self._calc_total_energy_demand()
-                            , self._bid_pp_msg_latest
-                            , self.topic_energy_demand + "/" + self._device_id
                             , self._period_read_data
                             )
+                            
+        #publish the new price point to the local message bus
+        pub_topic = self.topic_energy_demand + "/" + self._device_id
+        pub_msg = pp_msg.get_json_params(self._agent_id)
+        _log.debug('publishing to local bus topic: {}'.format(pub_topic))
+        _log.debug('Msg: {}'.format(pub_msg))
+        publish_to_bus(self, pub_topic, pub_msg)
+        #?????????????? Check this ???????????????????
         self._bid_pp_msg_current = self._bid_pp_msg_latest
         return
         
