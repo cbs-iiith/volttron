@@ -82,6 +82,9 @@ class BuildingController(Agent):
     _topic_price_point = None
     _topic_energy_demand_ds = None
     
+    _device_id = None
+    _discovery_address = None
+    
     def __init__(self, config_path, **kwargs):
         super(BuildingController, self).__init__(**kwargs)
         _log.debug("vip_identity: " + self.core.identity)
@@ -95,10 +98,6 @@ class BuildingController(Agent):
     def setup(self, sender, **kwargs):
         _log.info(self.config['message'])
         self._agent_id = self.config['agentid']
-        
-        self._device_id = None
-        self._ip_addr = None
-        self._discovery_address = None
         
         return
         

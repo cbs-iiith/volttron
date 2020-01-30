@@ -56,6 +56,21 @@ def pricecontroller(config_path, **kwargs):
 class PriceController(Agent):
     '''Price Controller
     '''
+    _period_read_data = self.config.get('period_read_data', 30)
+    _period_process_pp = self.config.get('period_process_pp', 10)
+    
+    _vb_vip_identity = None
+    _topic_price_point_us = None
+    _topic_price_point = None
+    _topic_energy_demand_ds = None
+    
+    _agent_disabled = False
+    _pp_optimize_option = None
+    _topic_extrn_pp = None
+    
+    _device_id = None
+    _discovery_address = None
+    
     def __init__(self, config_path, **kwargs):
         super(PriceController, self).__init__(**kwargs)
         _log.debug("vip_identity: " + self.core.identity)
@@ -75,14 +90,14 @@ class PriceController(Agent):
         self._ip_addr = None
         self._discovery_address = None
         
-        self.vb_vip_identity = self.config.get('vb_vip_identity', 'iiit.volttronbridge')
-        self.topic_price_point_us = self.config.get('pricePoint_topic_us', 'us/pricepoint')
-        self.topic_price_point = self.config.get('pricePoint_topic', 'building/pricepoint')
-        self.topic_energy_demand_ds = self.config.get('topic_energy_demand_ds', 'ds/energydemand')
+        self._vb_vip_identity = self.config.get('vb_vip_identity', 'iiit.volttronbridge')
+        self._topic_price_point_us = self.config.get('pricePoint_topic_us', 'us/pricepoint')
+        self._topic_price_point = self.config.get('pricePoint_topic', 'building/pricepoint')
+        self._topic_energy_demand_ds = self.config.get('topic_energy_demand_ds', 'ds/energydemand')
         
-        self.agent_disabled = False
-        self.pp_optimize_option = self.config.get('pp_optimize_option', 'PASS_ON_PP')
-        self.topic_extrn_pp = self.config.get('extrn_optimize_pp_topic', 'pca/pricepoint')
+        self._agent_disabled = False
+        self._pp_optimize_option = self.config.get('pp_optimize_option', 'PASS_ON_PP')
+        self._topic_extrn_pp = self.config.get('extrn_optimize_pp_topic', 'pca/pricepoint')
         return
         
     @Core.receiver('onstart')
@@ -108,11 +123,11 @@ class PriceController(Agent):
         
         self.external_vip_identity = None
         
-        #subscribing to topic_price_point_us
-        self.vip.pubsub.subscribe("pubsub", self.topic_price_point_us, self.on_new_us_pp)
+        #subscribing to _topic_price_point_us
+        self.vip.pubsub.subscribe("pubsub", self._topic_price_point_us, self.on_new_us_pp)
         
         #subscribing to ds energy demand, vb publishes ed from registered ds to this topic
-        self.vip.pubsub.subscribe("pubsub", self.topic_energy_demand_ds, self.on_ds_ed)
+        self.vip.pubsub.subscribe("pubsub", self._topic_energy_demand_ds, self.on_ds_ed)
 
         #at regular interval publish total active power. does not wait to receive from all ds
         self.core.periodic(self._period_read_data, self.publish_opt_tap, wait=None)
@@ -120,9 +135,9 @@ class PriceController(Agent):
         self.core.periodic(self._period_process_pp, self.publish_bid_ted, wait=None)
         
         #subscribing to topic_price_point_extr
-        self.vip.pubsub.subscribe("pubsub", self.topic_extrn_pp, self.on_new_extrn_pp)
+        self.vip.pubsub.subscribe("pubsub", self._topic_extrn_pp, self.on_new_extrn_pp)
         
-        if self.pp_optimize_option == 'DEFAULT_OPT':
+        if self._pp_optimize_option == 'DEFAULT_OPT':
             self.core.periodic(self._period_process_pp, self.default_optimization, wait=None)
         
         retrive_details_from_vb(self)
@@ -171,7 +186,7 @@ class PriceController(Agent):
     def _disable_agent(self, message):
         disable_agent = jsonrpc.JsonRpcData.parse(message).params['disable_agent']
         if disable_agent in [True, False]:
-            self.agent_disabled = disable_agent
+            self._agent_disabled = disable_agent
             result = True
         else:
             result = 'Invalid option'
@@ -183,7 +198,7 @@ class PriceController(Agent):
                         , 'DEFAULT_OPT'
                         , 'EXTERN_OPT'
                         ]:
-            self.pp_optimize_option = self.pp_optimize_option
+            self._pp_optimize_option = option
             result = True
         else:
             result = 'Invalid option'
@@ -245,8 +260,8 @@ class PriceController(Agent):
         else:
             self.local_bid_pp_msg = pp_msg
         
-        if self.pp_optimize_option == "EXTERN_OPT":
-            pub_topic =  self.topic_price_point
+        if self._pp_optimize_option == "EXTERN_OPT":
+            pub_topic =  self._topic_price_point
             pub_msg = pp_msg.get_json_params(self._agent_id)
             _log.debug('publishing to local bus topic: {}'.format(pub_topic))
             _log.debug('Msg: {}'.format(pub_msg))
@@ -273,7 +288,7 @@ class PriceController(Agent):
         self.act_pp_msg = pp_msg
         
         #keep a track of us pp_msg
-        if sender == self.vb_vip_identity:
+        if sender == self._vb_vip_identity:
             if pp_msg.get_isoptimal():
                 self.us_opt_pp_msg = pp_msg
             else:
@@ -285,15 +300,15 @@ class PriceController(Agent):
             else:
                 self.local_bid_pp_msg = pp_msg
                 
-        if self.pp_optimize_option == "PASS_ON_PP" and sender in ['iiit.volttronbridge', 'iiit.pricepoint']:
-            pub_topic =  self.topic_price_point
+        if self._pp_optimize_option == "PASS_ON_PP" and sender in ['iiit.volttronbridge', 'iiit.pricepoint']:
+            pub_topic =  self._topic_price_point
             pub_msg = pp_msg.get_json_params(self._agent_id)
             _log.debug('publishing to local bus topic: {}'.format(pub_topic))
             _log.debug('Msg: {}'.format(pub_msg))
             publish_to_bus(self, pub_topic, pub_msg)
             return True
             
-        if self.pp_optimize_option == "EXTERN_OPT" and sender in ['iiit.volttronbridge', 'iiit.pricepoint']:
+        if self._pp_optimize_option == "EXTERN_OPT" and sender in ['iiit.volttronbridge', 'iiit.pricepoint']:
             pub_topic =  self.topic_extrn_pp
             pub_msg = pp_msg.get_json_params(self._agent_id)
             _log.debug('publishing to local bus topic: {}'.format(pub_topic))
@@ -301,23 +316,23 @@ class PriceController(Agent):
             publish_to_bus(self, pub_topic, pub_msg)
             return True
 
-        if pp_msg.get_isoptimal() or self.pp_optimize_option == "EXTERN_OPT":
+        if pp_msg.get_isoptimal() or self._pp_optimize_option == "EXTERN_OPT":
             pub_topic =  (self.topic_extrn_pp
-                            if self.pp_optimize_option == "EXTERN_OPT"
-                            else self.topic_price_point )
+                            if self._pp_optimize_option == "EXTERN_OPT"
+                            else self._topic_price_point )
             pub_msg = pp_msg.get_json_params(self._agent_id)
             _log.debug('publishing to local bus topic: {}'.format(pub_topic))
             _log.debug('Msg: {}'.format(pub_msg))
             publish_to_bus(self, pub_topic, pub_msg)
             return True
             
-        if self.pp_optimize_option == "DEFAULT_OPT":
+        if self._pp_optimize_option == "DEFAULT_OPT":
             #list for pp_msg
             new_pp_msg = self._computeNewPrice()
             self.local_bid_pp_msg = new_pp_msg
             _log.info('new bid pp_msg: {}'.format(new_pp_msg))
             
-            pub_topic =  self.topic_price_point
+            pub_topic =  self._topic_price_point
             pub_msg = new_pp_msg.get_json_params(self._agent_id)
             _log.debug('publishing to local bus topic: {}'.format(pub_topic))
             _log.debug('Msg: {}'.format(pub_msg))
@@ -327,8 +342,8 @@ class PriceController(Agent):
     #validate incomming price message from the message bus and convert to self.tmp_pp_msg if check pass
     def _validate_msg(self, sender, valid_senders_list, message):
         _log.debug('_validate_msg()')
-        if self.agent_disabled:
-            _log.info("self.agent_disabled: " + str(self.agent_disabled) + ", do nothing!!!")
+        if self._agent_disabled:
+            _log.info("self.agent_disabled: " + str(self._agent_disabled) + ", do nothing!!!")
             return False
             
         if sender not in valid_senders_list:

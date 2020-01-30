@@ -57,6 +57,19 @@ def pricepoint(config_path, **kwargs):
 class PricePoint(Agent):
     '''Agent for posting a price point to msg bus
     '''
+    
+    #initialized  during __init__ from config
+    _default_base_price = None
+    _min_price = None
+    _max_price = None
+    _period_read_price_point = None
+    
+    _topic_price_point = None
+    _vb_vip_identity = None
+    
+    _device_id = None
+    _discovery_address = None
+    
     def __init__(self, config_path, **kwargs):
         super(PricePoint, self).__init__(**kwargs)
         _log.debug("vip_identity: " + self.core.identity)
@@ -70,10 +83,6 @@ class PricePoint(Agent):
     def setup(self, sender, **kwargs):
         _log.info(self.config['message'])
         self._agent_id = self.config['agentid']
-        
-        self._device_id = None
-        self._ip_addr = None
-        self._discovery_address = None
         
         return
         
@@ -98,15 +107,15 @@ class PricePoint(Agent):
         return
         
     def _config_get_init_values(self):
-        self.default_base_price = self.config.get('default_base_price', 0.4)
-        self.min_price = self.config.get('min_price', 0.0)
-        self.max_price = self.config.get('max_price', 1.0)
-        self.period_read_price_point = self.config.get('period_read_price_point', 5)
+        self._default_base_price = self.config.get('default_base_price', 0.4)
+        self._min_price = self.config.get('min_price', 0.0)
+        self._max_price = self.config.get('max_price', 1.0)
+        self._period_read_price_point = self.config.get('period_read_price_point', 5)
         return
         
     def _config_get_points(self):
-        self.vb_vip_identity = self.config.get('vb_vip_identity', 'iiit.volttronbridge')
-        self.topic_price_point = self.config.get('topic_price_point', 'zone/pricepoint')
+        self._vb_vip_identity = self.config.get('vb_vip_identity', 'iiit.volttronbridge')
+        self._topic_price_point = self.config.get('topic_price_point', 'zone/pricepoint')
         return
         
     @RPC.export
@@ -160,7 +169,7 @@ class PricePoint(Agent):
         pp_msg.set_src_ip(self._discovery_address)
         
         #publish the new price point to the local message bus
-        pub_topic = self.topic_price_point
+        pub_topic = self._topic_price_point
         pub_msg = pp_msg.get_json_params(self._agent_id)
         _log.debug('publishing to local bus topic: {}'.format(pub_topic))
         _log.debug('Msg: {}'.format(pub_msg))
