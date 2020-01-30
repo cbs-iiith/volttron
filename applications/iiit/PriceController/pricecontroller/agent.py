@@ -488,7 +488,7 @@ class PriceController(Agent):
         #               ds_bid_ted
         # 9.      if opt_pp
         #post ed to us only if pp_id corresponds to these ids (i.e., ed for either us opt_pp_id or bid_pp_id)
-        valid_pp_ids = [self.self._pp_id, self._bid_pp_id]
+        valid_pp_ids = [self._pp_id, self._bid_pp_id]
 
         
         _log.debug('New ed from ds, topic: ' + topic +
