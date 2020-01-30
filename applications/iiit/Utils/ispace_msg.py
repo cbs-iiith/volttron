@@ -32,9 +32,9 @@ ROUNDOFF_BUDGET = 0.0001
 ROUNDOFF_ACTIVE_POWER = 0.0001
 ROUNDOFF_ENERGY = 0.0001
 
-ISPACE_MSG_ATTRIB_LIST = ['msg_type', 'one_to_one'
+ISPACE_MSG_ATTRIB_LIST = ['msg_type', 'one_to_one', 'isoptimal'
                             , 'value', 'value_data_type', 'units'
-                            , 'price_id', 'isoptimal'
+                            , 'price_id'
                             , 'src_ip', 'src_device_id'
                             , 'dst_ip', 'dst_device_id'
                             , 'duration', 'ttl', 'ts', 'tz'
@@ -55,11 +55,11 @@ class ISPACE_Msg:
     #TODO: enchancement - need to add a msg uuid, also convert price_id to use uuid instead for radint
     msg_type = None
     one_to_one = None
+    isoptimal = None
     value = None
     value_data_type = None
     units = None
     price_id = None
-    isoptimal = None
     #msg_from_remote_device = True if src_ip == local_ip else False
     src_ip = None
     src_device_id = None
@@ -71,7 +71,7 @@ class ISPACE_Msg:
     ts = None
     tz  = None
     
-    def __init__(self, msg_type = None
+    def __init__(self, msg_type
                     , one_to_one = None
                     , isoptimal = None
                     , value = None
@@ -281,8 +281,8 @@ class ISPACE_Msg:
         
     #setters
     def set_msg_type(self, msg_type):
-        _log.debug('set_msg_type({})'.format(msg_type))
-        self.msg_type = msg_type
+        #_log.debug('set_msg_type({})'.format(msg_type))
+        self.msg_type = int(msg_type)
         
     def set_one_to_one(self, one_to_one):
         self.one_to_one = one_to_one

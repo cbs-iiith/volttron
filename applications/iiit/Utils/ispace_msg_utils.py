@@ -36,6 +36,7 @@ ROUNDOFF_ENERGY = 0.0001
 
 #create a MessageType.energy ISPACE_Msg
 def ted_helper(pp_msg, device_id, discovery_address, ted, new_ttl=10):
+    print(MessageType.energy)
     msg_type = MessageType.energy
     one_to_one = pp_msg.get_one_to_one()
     isoptimal = pp_msg.get_isoptimal()
@@ -58,6 +59,7 @@ def ted_helper(pp_msg, device_id, discovery_address, ted, new_ttl=10):
                         
 #create a MessageType.active_power ISPACE_Msg
 def tap_helper(pp_msg, device_id, discovery_address, tap, new_ttl=10):
+    print(MessageType.active_power)
     msg_type = MessageType.active_power
     one_to_one = pp_msg.get_one_to_one()
     isoptimal = pp_msg.get_isoptimal()
@@ -139,16 +141,10 @@ def _parse_data(data, mandatory_fields = []):
     #_log.debug('datatype: {}'.format(type(data)))
     
     #ensure msg_type attrib is set first
-    try:
-        msg_type =  data['msg_type']
-    except KeyError:
-        _log.warning('key attrib: "msg_type", not available in the data.'
-                        + ' Setting to default({})'.format(MessageType.price_point))
-        msg_type = MessageType.price_point
-        pass
+    msg_type =  data['msg_type']
         
     #TODO: select class msg_type based on msg_type, instead of base class
-    new_msg = ISPACE_Msg()
+    new_msg = ISPACE_Msg(msg_type)
     _update_value(new_msg, 'msg_type', msg_type)
     
     #if list is empty, parse all attributes

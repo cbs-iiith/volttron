@@ -189,9 +189,13 @@ class BuildingController(Agent):
     def _run_bms_test(self):
         _log.debug("Running: _runBMS Commu Test()...")
         retrive_details_from_vb(self)
-        pp_msg = ISPACE_Msg(MessageType.price_point, False, True, 0, 'float', 'cents'
-                            , None, self._discovery_address, self._device_id, None, None
-                            , 3600, 3600, None, 'UTC')
+        pp_msg = ISPACE_Msg(MessageType.price_point, False, True
+                            , 0, 'float', 'cents'
+                            , None
+                            , self._discovery_address, self._device_id
+                            , None, None
+                            , 3600, 3600, 10, 'UTC'
+                            )
                             
         self._test_new_pp(pp_msg, 0.10)
         time.sleep(10)
