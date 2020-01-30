@@ -87,21 +87,21 @@ class ISPACE_Msg:
                     , ts = None
                     , tz = None
                     ):
-        self.set_msg_type(msg_type)
-        self.set_one_to_one(one_to_one)
-        self.set_value(value)
-        self.set_value_data_type(value_data_type)
-        self.set_units(units)
-        self.set_price_id(price_id)
-        self.set_isoptimal(isoptimal)
-        self.set_src_ip(src_ip)
-        self.set_src_device_id(src_device_id)
-        self.set_dst_ip(dst_ip)
-        self.set_dst_device_id(dst_device_id)
-        self.set_duration(duration)
-        self.set_ttl(ttl)
-        self.set_ts(ts)
-        self.set_tz(tz)
+        if msg_type is not None: self.set_msg_type(msg_type)
+        if one_to_one is not None: self.set_one_to_one(one_to_one)
+        if value is not None: self.set_value(value)
+        if value_data_type is not None: self.set_value_data_type(value_data_type)
+        if units is not None: self.set_units(units)
+        if price_id is not None: self.set_price_id(price_id)
+        if isoptimal is not None: self.set_isoptimal(isoptimal)
+        if src_ip is not None: self.set_src_ip(src_ip)
+        if src_device_id is not None: self.set_src_device_id(src_device_id)
+        if dst_ip is not None: self.set_dst_ip(dst_ip)
+        if dst_device_id is not None: self.set_dst_device_id(dst_device_id)
+        if duration is not None: self.set_duration(duration)
+        if ttl is not None: self.set_ttl(ttl)
+        if ts is not None: self.set_ts(ts)
+        if tz is not None: self.set_tz(tz)
         return
         
     #str overload to return class attributes as str dict
