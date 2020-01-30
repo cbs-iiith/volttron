@@ -81,7 +81,7 @@ class BuildingController(Agent):
     _topic_energy_demand = None
     _topic_price_point = None
     _topic_energy_demand_ds = None
-
+    
     def __init__(self, config_path, **kwargs):
         super(BuildingController, self).__init__(**kwargs)
         _log.debug("vip_identity: " + self.core.identity)
