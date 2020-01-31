@@ -144,6 +144,17 @@ class BuildingController(Agent):
         #subscribing to topic_price_point
         self.vip.pubsub.subscribe("pubsub", self._topic_price_point, self.on_new_price)
         
+        #retrive self._device_id and self._discovery_address from vb
+        retrive_details_from_vb(self)
+        
+        #register this agent with vb as local device for posting active power & bid energy demand
+        #pca picks up the active power & energy demand bids only if registered with vb as local device
+        self.vip.rpc.call(self._vb_vip_identity
+                            , 'register_local_ed_agent'
+                            , self.core.identity
+                            , self._device_id
+                            ).get(timeout=10)
+                            
         self.vip.rpc.call(MASTER_WEB, 'register_agent_route'
                             , r'^/BuildingController'
                             , "rpc_from_net"
@@ -153,6 +164,10 @@ class BuildingController(Agent):
     @Core.receiver('onstop')
     def onstop(self, sender, **kwargs):
         _log.debug('onstop()')
+        self.vip.rpc.call(self._vb_vip_identity
+                            , 'unregister_local_ed_agent'
+                            , self.core.identity
+                            ).get(timeout=10)
         
         _log.debug('un registering rpc routes')
         self.vip.rpc.call(MASTER_WEB, 'unregister_all_agent_routes').get(timeout=10)
@@ -266,7 +281,6 @@ class BuildingController(Agent):
             _log.exception(jsonrpc.json_error('NA', UNHANDLED_EXCEPTION, e))
             return False
             
-        retrive_details_from_vb(self)
         #assuming we have both device_id and ip_addr by this time
         success = pp_msg.check_dst_addr(self._device_id, self._discovery_address)
         if not success:
