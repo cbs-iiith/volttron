@@ -8,7 +8,7 @@
     "energyDemand_topic_ds": "ds/energydemand",
     "pricePoint_topic_us": "us/pricepoint",
     "pricePoint_topic": "smartstrip/pricepoint",
-    "vb_vip_identity": "iiit.volttronbridge",	
+    "vb_vip_identity": "iiit.volttronbridge",
 
     "_comment": "valid pca modes - ONLINE, STANDALONE, STANDBY",
     "pca_mode": "ONLINE",
