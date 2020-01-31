@@ -154,7 +154,7 @@ class ISPACE_Msg:
         if self.tz == 'UTC':
             ts  = dateutil.parser.parse(self.ts)
             now = dateutil.parser.parse(datetime.datetime.utcnow().isoformat(' ') + 'Z')
-            self.ttl = int((self.ttl - mround((now - ts).total_seconds(), 1)) / 2)
+            self.ttl = int((self.ttl - mround((now - ts).total_seconds(), 1)) - 1 )
             return True
         else:
             _log.warning('decrement_ttl(), unknown tz: {}'.format(self.tz))

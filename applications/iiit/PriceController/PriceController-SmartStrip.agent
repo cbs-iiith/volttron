@@ -2,7 +2,8 @@
     "exec":"pricecontroller-0.4-py2.7.egg --config \"%c\"--sub\"%s\"--pub \"%p\"",  
     "agentid": "PriceController",
     "message": "I am Price Controller Agent",
-    "period_read_price_point": 5,
+    "period_read_data": 30,
+    "period_process_loop": 1,
     "energyDemand_topic": "smartstrip/energydemand",
     "energyDemand_topic_ds": "ds/energydemand",
     "pricePoint_topic_us": "us/pricepoint",
@@ -13,6 +14,5 @@
     "pca_mode": "ONLINE",
     "_comment": "valid options - PASS_ON_PP, DEFAULT_OPT, EXTERN_OPT",
     "pp_optimize_option": "PASS_ON_PP",
-    "extrn_optimize_pp_topic": "pca/pricepoint",
-    "period_process_pp": 10
+    "extrn_optimize_pp_topic": "pca/pricepoint"
 }

@@ -133,7 +133,7 @@ class BuildingController(Agent):
         #TODO: publish initial data to volttron bus
         
         #perodically publish total active power to volttron bus
-        #active power is comupted at regular interval (_period_process_pp default(30s))
+        #active power is comupted at regular interval (_period_read_data default(30s))
         #this power corresponds to current opt pp
         #tap --> total active power (Wh)
         self.core.periodic(self._period_read_data, self.publish_opt_tap, wait=None)

@@ -57,7 +57,6 @@ class PriceController(Agent):
     '''Price Controller
     '''
     _period_read_data = None
-    _period_process_pp = None
     _period_process_loop = None
     
     _vb_vip_identity = None
@@ -87,8 +86,7 @@ class PriceController(Agent):
         self._agent_id = self.config['agentid']
         
         self._period_read_data = self.config.get('period_read_data', 30)
-        self._period_process_pp = self.config.get('period_process_pp', 10)
-        self._period_process_loop = self.config.get('period_process_loop', 2)
+        self._period_process_loop = self.config.get('period_process_loop', 1)
         
         #local device_ids
         self._local_device_ids = []
@@ -146,15 +144,14 @@ class PriceController(Agent):
         
         #subscribing to ds energy demand, vb publishes ed from registered ds to this topic
         self.vip.pubsub.subscribe("pubsub", self._topic_energy_demand_ds, self.on_ds_ed)
-
-        #at regular interval publish total active power. does not wait to receive from all ds
+        
+        #at regular interval publish total active power. need not wait to receive from all ds devices
         self.core.periodic(self._period_read_data, self.publish_opt_tap, wait=None)
-        #at regular interval check if all ds ted received, if so publish and stop
-        self.core.periodic(self._period_process_loop, self.publish_bid_ted, wait=None)
         
         #subscribing to topic_price_point_extr
         self.vip.pubsub.subscribe("pubsub", self._topic_extrn_pp, self.on_new_extrn_pp)
         
+        #at regular interval check if all ds ted received, if so publish and stop
         self.core.periodic(self._period_process_loop, self.process_loop, wait=None)
         
         retrive_details_from_vb(self)
@@ -510,7 +507,10 @@ class PriceController(Agent):
         
         rcvd_all_local_bid_ed = self._rcvd_all_local_bid_ed(vb_local_devices)
         rcvd_all_ds_bid_ed = self._rcvd_all_ds_bid_ed(vb_ds_devices)
-        us_bid_pp_timeout = self._us_bid_pp_timeout()
+        
+        #TODO: timeout check -- visit later
+        #us_bid_pp_timeout = self._us_bid_pp_timeout()
+        us_bid_pp_timeout = False               #never timeout
         
         if ( (not (rcvd_all_ds_bid_ed and rcvd_all_local_bid_ed) ) 
                 and not us_bid_pp_timeout()
