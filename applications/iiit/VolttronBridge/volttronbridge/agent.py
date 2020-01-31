@@ -110,7 +110,7 @@ class VolttronBridge(Agent):
         
         #register to keep track of local agents posting active_power/energy_demand
         self._local_devices_register = []               #vip_identities
-        self._local_ed_device_ids = []                  #device_ids
+        self._local_device_ids = []                     #device_ids
 
         if self._bridge_host != 'LEVEL_TAILEND':
             _log.debug(self._bridge_host)
@@ -219,7 +219,7 @@ class VolttronBridge(Agent):
         self._us_retrycount = 0
         
         del self._local_devices_register[:]
-        del self._local_ed_device_ids[:]
+        del self._local_device_ids[:]
         
         if self._bridge_host != 'LEVEL_TAILEND':
             del self._ds_register[:]
@@ -335,9 +335,14 @@ class VolttronBridge(Agent):
         return self._ds_device_ids
         
     @RPC.export
-    def get_local_ed_device_ids(self):
-        _log.debug('rpc get_local_ed_device_ids(): {}'.format(self._local_ed_device_ids))
-        return self._local_ed_device_ids
+    def local_ed_agents(self):
+        #return local ed agents vip_identities
+        return self._local_devices_register
+        
+    @RPC.export
+    def get_local_device_ids(self):
+        _log.debug('rpc get_local_device_ids(): {}'.format(self._local_device_ids))
+        return self._local_device_ids
         
     @RPC.export
     def count_ds_devices(self):
@@ -346,8 +351,8 @@ class VolttronBridge(Agent):
         
     @RPC.export
     def count_local_devices(self):
-        _log.debug('rpc count_ds_devices(): {}'.format(len(self._local_ed_device_ids)))
-        return len(self._local_ed_device_ids)
+        _log.debug('rpc count_ds_devices(): {}'.format(len(self._local_device_ids)))
+        return len(self._local_device_ids)
         
     @RPC.export
     def device_id(self):
@@ -372,7 +377,7 @@ class VolttronBridge(Agent):
             
         self._local_devices_register.append(sender)
         index = self._ds_register.index(sender)
-        self._local_ed_device_ids.insert(index, deviceId)
+        self._local_device_ids.insert(index, deviceId)
         _log.debug('registered!!!')
         return True
         
@@ -385,15 +390,10 @@ class VolttronBridge(Agent):
             
         index = self._local_devices_register.index(sender)
         self._local_devices_register.remove(sender)
-        del self._local_ed_device_ids[index]
+        del self._local_device_ids[index]
         _log.debug('unregistered!!!')
         return True
         
-    @RPC.export
-    def local_ed_agents(self):
-        #return local ed agents vip_identities
-        return self._local_devices_register
-    
     #price point on local bus published, post it to all downstream bridges
     def on_new_pp(self, peer, sender, bus,  topic, headers, message):
         if self._bridge_host == 'LEVEL_TAILEND':
