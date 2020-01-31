@@ -1,5 +1,5 @@
 {
-    "exec":"pricepoint-0.4-py2.7.egg --config \"%c\"--sub\"%s\"--pub \"%p\"",  
+    "exec":"pricepoint-0.4-py2.7.egg --config \"%c\"--sub\"%s\"--pub \"%p\"",
     "agentid": "PricePoint",
     "message": "iSPACE - Price Point Agent",
     "default_base_price": 0.4,
@@ -7,5 +7,5 @@
     "max_price": 1.0,
     "period_read_price_point": 5,
     "topic_price_point": "us/pricepoint",
-	"vb_vip_identity": "iiit.volttronbridge"
+    "vb_vip_identity": "iiit.volttronbridge"
 }
