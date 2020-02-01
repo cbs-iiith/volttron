@@ -399,6 +399,8 @@ class VolttronBridge(Agent):
         if self._bridge_host == 'LEVEL_TAILEND':
             return
             
+        self.tmp_bustopic_msg = None
+
         if sender != 'iiit.pricecontroller':
             return
             

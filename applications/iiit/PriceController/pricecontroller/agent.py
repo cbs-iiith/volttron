@@ -352,7 +352,7 @@ class PriceController(Agent):
                 self.us_opt_pp_msg = pp_msg
             else:
                 self.us_bid_pp_msg = pp_msg
-                self._published_us_bid_ted = False
+                self._published_us_bid_ted = False              #re-initialize aggregator_us_bid_ted, 
         #keep a track of local pp_msg
         elif sender == 'iiit.pricepoint':
             if pp_msg.get_isoptimal():
@@ -503,8 +503,17 @@ class PriceController(Agent):
         
         self._target_acheived = False
         new_pricepoint = self._some_cost_fn(old_pricepoint, old_ted, target)
-        isoptimal = True if self._target_acheived else False
-
+        
+        if self._target_acheived and self._pca_mode == 'ONLINE':
+            #publish bid total energy demand to local/energydemand
+            #
+            #compute total bid energy demand and publish to local/energydemand
+            #(vb RPCs this value to the next level)
+            self.aggregator_local_bid_ted()
+            return
+        
+        isoptimal = (True if (self._target_acheived and self._pca_mode == 'STANDALONE') else False)
+        
         pp_messages = []
         for device_idx in device_list:
             pp_msg = ISPACE_Msg(msg_type, one_to_one
@@ -520,52 +529,20 @@ class PriceController(Agent):
         
     #perodically run this function to check if ted from all ds received or ted_timed_out
     def process_loop(self):
-        #may be some devices may have disconnected
-        #      i.e., devices_count >= len(vb_devices_count)
-        #       reconcile the device ids and match ds_ted[] with device_ids[]
-        rcvd_all_local_bid_ed = self._rcvd_all_local_bid_ed(self._get_vb_local_device_ids())
-        rcvd_all_ds_bid_ed = self._rcvd_all_ds_bid_ed(self._get_vb_ds_device_ids())
-        
-        #TODO: timeout check -- visit later
-        #us_bid_pp_timeout = self._us_bid_pp_timeout()
-        us_bid_pp_timeout = False               #never timeout
-        
-        if (not rcvd_all_ds_bid_ed
-                or not rcvd_all_local_bid_ed
-                or us_bid_pp_timeout
-                ):
-            _log.debug('not all bids received and not yet timeout!!!.' 
-                        + ' rcvd_all_ds_bid_ed: {}'.format(rcvd_all_ds_bid_ed)
-                        + ' and rcvd_all_local_bid_ed: {}'.format(rcvd_all_local_bid_ed)
-                        + ' or us_bid_pp_timeout: {}'.format(us_bid_pp_timeout)
-                        + ', will try again in ' + str(self._period_process_loop))
+        if not self._pp_optimize_option == 'DEFAULT_OPT':
             return
-                
-        #if self._pca_mode == 'ONLINE' and self._pp_optimize_option == 'DEFAULT_OPT':
-            self._publish_bid_ted()
-            return
-            '''
-            elif self._pca_mode == 'ONLINE' and self._pp_optimize_option == 'DEFAULT_OPT':
-                pp_messages = self._compute_new_price()
-                self._ds_bid_ed[:] = []
-                #publish these pp_messages
-                return
-            elif self._pca_mode == 'ONLINE' and self._pp_optimize_option == 'EXTERN_OPT':
-                return
-            elif self._pca_mode == 'STANDALONE' and self._pp_optimize_option == 'PASS_ON_PP':
-                return
-            elif self._pca_mode == 'STANDALONE' and self._pp_optimize_option == 'DEFAULT_OPT':
-                return
-            elif self._pca_mode == 'STANDALONE' and self._pp_optimize_option == 'EXTERN_OPT':
-                return
-            '''
-        else:
-            #not implemented
-            _log.warning('publish_bid_ted() not implemented'
-                            + 'pca_mode: {}'.format(self._pca_mode)
-                            + 'optimize option: {}'.format(self._pp_optimize_option)
-                            )
-            pass
+         
+        #       if new_pp_isopt
+        #           #local optimal reached
+        #           publish_ed(local/ed, _ed, us_bid_pp_id)
+        #           #if next level accepts this bid, the new target is this ed
+        #       based on opt conditon _computeNewPrice can publish new bid_pp or 
+        # and save data to self._ds_bid_ed
+
+        pp_messages = self._compute_new_price()
+        #publish these pp_messages
+        self._local_bid_ed[:] = []
+        self._ds_bid_ed[:] = []
         return
         
     def _us_bid_pp_timeout(self):
@@ -700,6 +677,9 @@ class PriceController(Agent):
         if (self._pca_mode != 'ONLINE'
                 or self._pp_optimize_option not in ['PASS_ON_PP', 'DEFAULT_OPT', 'EXTERN_OPT']
                 ):
+             if self._pca_mode in ['STANDALONE', 'STANDBY']:
+                #do nothing
+                return
             #not implemented
             _log.warning('aggregator_us_tap() not implemented'
                             + 'pca_mode: {}'.format(self._pca_mode)
@@ -713,17 +693,26 @@ class PriceController(Agent):
         #publish to local/energyDemand (vb pushes(RPC) this value to the next level)
         self._publish_opt_tap(opt_tap)
         
-        #maybe we need to reset the corresponding buckets to zero
-        #self._us_local_opt_ap[:] = []
-        #self._us_ds_opt_ap[:] = []
+        #reset the corresponding buckets to zero
+        self._us_local_opt_ap[:] = []
+        self._us_ds_opt_ap[:] = []
         return
         
     def aggregator_us_bid_ted(self):
         if self._published_us_bid_ted:
             #nothing do, wait for new bid pp from us
             return
+        if self._pca_mode in ['STANDALONE'
+                                , 'STANDBY'
+                                ]:
+            #nothing do, wait for new bid pp from us
+            return
+            
         if (self._pca_mode != 'ONLINE'
-                or self._pp_optimize_option not in ['PASS_ON_PP', 'DEFAULT_OPT', 'EXTERN_OPT']
+                or self._pp_optimize_option not in ['PASS_ON_PP'
+                                                    , 'DEFAULT_OPT'
+                                                    , 'EXTERN_OPT'
+                                                    ]
                 ):
             #not implemented
             _log.warning('aggregator_us_tap() not implemented'
@@ -732,6 +721,7 @@ class PriceController(Agent):
                             )
             return
             
+        #check if all the bids are received from both local & ds devices
         rcvd_all_local_bid_ed = self._rcvd_all_local_bid_ed(self._get_vb_local_device_ids())
         rcvd_all_ds_bid_ed = self._rcvd_all_ds_bid_ed(self._get_vb_ds_device_ids())
         
@@ -761,6 +751,10 @@ class PriceController(Agent):
         self._us_local_bid_ed[:] = []
         self._us_ds_bid_ed[:] = []
         self._published_us_bid_ted = True
+        return
+        
+    def aggregator_local_bid_ted(self):
+        
         return
         
     def _get_vb_local_device_ids(self):
