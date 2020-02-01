@@ -34,6 +34,16 @@ ROUNDOFF_ACTIVE_POWER = 0.0001
 ROUNDOFF_ENERGY = 0.0001
 
 
+#a default pricepoint message
+def get_default_pp_msg(discovery_address, device_id):
+    return ISPACE_Msg(MessageType.price_point, False, True
+                        , 0, 'float', 'cents'
+                        , None
+                        , discovery_address, device_id
+                        , None, None
+                        , 3600, 3600, 10, 'UTC'
+                        )
+                        
 #create a MessageType.energy ISPACE_Msg
 def ted_helper(pp_msg, device_id, discovery_address, ted, new_ttl=10):
     print(MessageType.energy_demand)
@@ -80,7 +90,7 @@ def tap_helper(pp_msg, device_id, discovery_address, tap, new_ttl=10):
                         , src_ip, src_device_id, dst_ip, dst_device_id
                         , duration, ttl, ts, tz)
                         
-def check_for_msg_type(message, msg_type):
+def check_msg_type(message, msg_type):
     data = jsonrpc.JsonRpcData.parse(message).params
     try:
         if data['msg_type'] == msg_type:

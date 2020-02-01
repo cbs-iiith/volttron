@@ -37,7 +37,7 @@ import settings
 import time
 
 from ispace_utils import publish_to_bus, retrive_details_from_vb
-from ispace_msg_utils import parse_jsonrpc_msg
+from ispace_msg_utils import parse_jsonrpc_msg, check_msg_type
 
 utils.setup_logging()
 _log = logging.getLogger(__name__)
@@ -147,7 +147,7 @@ class PricePoint(Agent):
         pp_msg = None
         #Note: this is a rpc message do the check here ONLY
         #check message for MessageType.price_point
-        success = check_for_msg_type(message, MessageType.price_point)
+        success = check_msg_type(message, MessageType.price_point)
         if not success:
             return jsonrpc.json_error('NA', INVALID_PARAMS,
                     'Invalid params {}'.format(rpcdata.params))

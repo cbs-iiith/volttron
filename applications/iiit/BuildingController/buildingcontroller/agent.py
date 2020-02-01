@@ -40,7 +40,8 @@ import gevent.event
 from ispace_utils import isclose, get_task_schdl, cancel_task_schdl, publish_to_bus
 from ispace_utils import retrive_details_from_vb
 from ispace_msg import ISPACE_Msg, MessageType
-from ispace_msg_utils import parse_bustopic_msg, check_for_msg_type, tap_helper, ted_helper
+from ispace_msg_utils import parse_bustopic_msg, check_msg_type, tap_helper, ted_helper
+from ispace_msg_utils import get_default_pp_msg
 
 utils.setup_logging()
 _log = logging.getLogger(__name__)
@@ -104,25 +105,46 @@ class BuildingController(Agent):
     @Core.receiver('onstart')
     def startup(self, sender, **kwargs):
         _log.debug('startup()')
-        
-        self._valid_senders_list_pp = ['iiit.pricecontroller']
-        
-        #any process that failed to apply pp sets this flag False
-        self._process_opt_pp_success = False
-        
-        #on successful process of apply_pricing_policy with the latest opt pp, current = latest
-        self._opt_pp_msg_current = None
-        #latest opt pp msg received on the message bus
-        self._opt_pp_msg_latest = None
-        
-        self._bid_pp_msg_current = None
-        self._bid_pp_msg_latest = None
-        
         _log.info("yeild 10s for volttron platform to initiate properly...")
         time.sleep(10) #yeild for a movement
         _log.info("Starting BuildingController...")
         
-        self._run_bms_test()
+        self._valid_senders_list_pp = ['iiit.pricecontroller']
+        #retrive self._device_id and self._discovery_address from vb
+        retrive_details_from_vb(self)
+        
+        #register this agent with vb as local device for posting active power & bid energy demand
+        #pca picks up the active power & energy demand bids only if registered with vb as local device
+        while True:
+            try:
+                _log.info('registering with the Volttron Bridge')
+                success = self.vip.rpc.call(self._vb_vip_identity
+                                    , 'register_local_ed_agent'
+                                    , self.core.identity
+                                    , self._device_id
+                                    ).get(timeout=10)
+                if success:
+                    break
+            except Exception as e:
+                print(e)
+                _log.exception('Maybe the Volttron Bridge Agent is not started!!!')
+                pass
+            _log.debug('wait 5 sec')
+            sleep(5)
+            
+        #any process that failed to apply pp sets this flag False
+        self._process_opt_pp_success = False
+        
+        #on successful process of apply_pricing_policy with the latest opt pp, current = latest
+        self._opt_pp_msg_current = get_default_pp_msg(self._discovery_address, self._device_id)
+        
+        #latest opt pp msg received on the message bus
+        self._opt_pp_msg_latest = get_default_pp_msg(self._discovery_address, self._device_id)
+        
+        self._bid_pp_msg_current = get_default_pp_msg(self._discovery_address, self._device_id)
+        self._bid_pp_msg_latest = get_default_pp_msg(self._discovery_address, self._device_id)
+        
+        #self._run_bms_test()
         
         #TODO: get the latest values (states/levels) from h/w
         #self.getInitialHwState()
@@ -144,21 +166,11 @@ class BuildingController(Agent):
         #subscribing to topic_price_point
         self.vip.pubsub.subscribe("pubsub", self._topic_price_point, self.on_new_price)
         
-        #retrive self._device_id and self._discovery_address from vb
-        retrive_details_from_vb(self)
-        
-        #register this agent with vb as local device for posting active power & bid energy demand
-        #pca picks up the active power & energy demand bids only if registered with vb as local device
-        self.vip.rpc.call(self._vb_vip_identity
-                            , 'register_local_ed_agent'
-                            , self.core.identity
-                            , self._device_id
-                            ).get(timeout=10)
-                            
         self.vip.rpc.call(MASTER_WEB, 'register_agent_route'
                             , r'^/BuildingController'
                             , "rpc_from_net"
                             ).get(timeout=10)
+        _log.debug('startup() - Done.')
         return
         
     @Core.receiver('onstop')
@@ -203,15 +215,6 @@ class BuildingController(Agent):
         
     def _run_bms_test(self):
         _log.debug("Running: _runBMS Commu Test()...")
-        retrive_details_from_vb(self)
-        pp_msg = ISPACE_Msg(MessageType.price_point, False, True
-                            , 0, 'float', 'cents'
-                            , None
-                            , self._discovery_address, self._device_id
-                            , None, None
-                            , 3600, 3600, 10, 'UTC'
-                            )
-                            
         self._test_new_pp(pp_msg, 0.10)
         time.sleep(10)
         
@@ -228,7 +231,7 @@ class BuildingController(Agent):
         self.tmp_pp_msg = None
         
         #check message type before parsing
-        success = check_for_msg_type(message, MessageType.price_point)
+        success = check_msg_type(message, MessageType.price_point)
         if not success:
             return False
             

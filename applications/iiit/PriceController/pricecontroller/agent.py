@@ -36,7 +36,7 @@ import gevent.event
 
 from ispace_utils import publish_to_bus, retrive_details_from_vb
 from ispace_msg import ISPACE_Msg, MessageType
-from ispace_msg_utils import parse_bustopic_msg, check_for_msg_type
+from ispace_msg_utils import parse_bustopic_msg, check_msg_type
 
 utils.setup_logging()
 _log = logging.getLogger(__name__)
@@ -297,7 +297,7 @@ class PriceController(Agent):
         self.tmp_bustopic_msg = None
         
         #check message type before parsing
-        success = check_for_msg_type(message, MessageType.price_point)
+        success = check_msg_type(message, MessageType.price_point)
         if not success:
             return False
             
@@ -407,9 +407,9 @@ class PriceController(Agent):
             _log.exception(jsonrpc.json_error('NA', UNHANDLED_EXCEPTION, e))
             return False
             
-        hint = ('New Price Point' if check_for_msg_type(message, MessageType.price_point)
-               else 'New Active Power' if check_for_msg_type(message, MessageType.active_power)
-               else 'New Energy Demand' if check_for_msg_type(message, MessageType.energy_demand)
+        hint = ('New Price Point' if check_msg_type(message, MessageType.price_point)
+               else 'New Active Power' if check_msg_type(message, MessageType.active_power)
+               else 'New Energy Demand' if check_msg_type(message, MessageType.energy_demand)
                else 'Unknown Msg Type')
 
         validate_fields = ['value', 'value_data_type', 'units', 'price_id', 'isoptimal', 'duration', 'ttl']
@@ -584,9 +584,9 @@ class PriceController(Agent):
         self.tmp_bustopic_msg = None
         
         #handle only ap or ed type messages
-        success_ap = check_for_msg_type(message, MessageType.active_power)
+        success_ap = check_msg_type(message, MessageType.active_power)
         if not success_ap:
-            success_ed = check_for_msg_type(message, MessageType.energy_demand)
+            success_ed = check_msg_type(message, MessageType.energy_demand)
             if not success_ed:
                 return
                 

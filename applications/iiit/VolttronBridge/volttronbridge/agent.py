@@ -38,7 +38,7 @@ import json
 
 import ispace_utils
 from ispace_msg import ISPACE_Msg, MessageType
-from ispace_msg_utils import parse_bustopic_msg, check_for_msg_type
+from ispace_msg_utils import parse_bustopic_msg, check_msg_type
 
 utils.setup_logging()
 _log = logging.getLogger(__name__)
@@ -101,7 +101,7 @@ class VolttronBridge(Agent):
         
         self._usConnected = False
         self._bridge_host = self.config.get('bridge_host', 'LEVEL_HEAD')
-        self._deviceId = self.config.get('deviceId', 'Building-1')
+        self._device_id = self.config.get('device_id', 'Building-1')
         
         self._this_ip_addr = self.config.get('ip_addr', "192.168.1.51")
         self._this_port = int(self.config.get('port', 8082))
@@ -144,7 +144,7 @@ class VolttronBridge(Agent):
         self._pp_datatype = {'units': 'cents', 'tz': 'UTC', 'type': 'float'}
         self._pp_isoptimal = False
         #self._pp_discovery_addrs = None    #using self._discovery_address, values from config
-        #self._pp_device_id = None          #using self._deviceId, values from config
+        #self._pp_device_id = None          #using self._device_id, values from config
         self._pp_duration = 3600
         self._pp_ttl = -1
         self._pp_ts = ''
@@ -195,7 +195,7 @@ class VolttronBridge(Agent):
             _log.debug("registering with upstream VolttronBridge: " + url_root)
             self._usConnected = ispace_utils.do_rpc(url_root, 'rpc_register_ds_bridge'
                                                     , {'discovery_address': discovery_address
-                                                        , 'deviceId': deviceId
+                                                        , 'device_id': device_id
                                                         })
                                                         
         #keep track of us opt_pp_id & bid_pp_id
@@ -233,7 +233,7 @@ class VolttronBridge(Agent):
                 url_root = 'http://' + self._us_ip_addr + ':' + str(self._us_port) + '/VolttronBridge'
                 result = ispace_utils.do_rpc(url_root, 'rpc_unregister_ds_bridge'
                                                 , {'discovery_address': self._discovery_address
-                                                , 'deviceId': self._deviceId
+                                                , 'device_id': self._device_id
                                                 })
                 self._usConnected = False
             
@@ -263,19 +263,19 @@ class VolttronBridge(Agent):
             '''
             if rpcdata.method == "rpc_register_ds_bridge":
                 args = {'discovery_address': rpcdata.params['discovery_address']
-                        , 'deviceId':rpcdata.params['deviceId']
+                        , 'device_id':rpcdata.params['device_id']
                         }
                 result = self._register_ds_bridge(**args)
                 
             elif rpcdata.method == "rpc_unregister_ds_bridge":
                 args = {'discovery_address': rpcdata.params['discovery_address']
-                        , 'deviceId':rpcdata.params['deviceId']
+                        , 'device_id':rpcdata.params['device_id']
                         }
                 result = self._unregister_ds_bridge(**args)
                 
             elif rpcdata.method == "rpc_post_ed":
                 args = {'discovery_address': rpcdata.params['discovery_address']
-                        , 'deviceId': rpcdata.params['deviceId']
+                        , 'device_id': rpcdata.params['device_id']
                         , 'new_ed': rpcdata.params['new_ed']
                         , 'ed_datatype': rpcdata.params['ed_datatype']
                         , 'ed_pp_id': rpcdata.params['ed_pp_id']
@@ -289,7 +289,7 @@ class VolttronBridge(Agent):
                 
             elif rpcdata.method == "rpc_post_pp":
                 args = {'discovery_address': rpcdata.params['discovery_address']
-                        , 'deviceId':rpcdata.params['deviceId']
+                        , 'device_id':rpcdata.params['device_id']
                         , 'new_pp': rpcdata.params['new_pp']
                         , 'new_pp_id': rpcdata.params['new_pp_id']
                                     if rpcdata.params['new_pp_id'] is not None
@@ -356,7 +356,7 @@ class VolttronBridge(Agent):
         
     @RPC.export
     def device_id(self):
-        return self._deviceId
+        return self._device_id
         
     @RPC.export
     def ip_addr(self):
@@ -368,7 +368,7 @@ class VolttronBridge(Agent):
         
     @RPC.export
     def register_local_ed_agent(self, sender, device_id):
-        _log.debug('register_local_ed_agent(), discovery_address: ' + sender 
+        _log.debug('register_local_ed_agent(), sender: ' + sender 
                     + ' device_id: ' + device_id
                     )
         if sender in self._local_devices_register:
@@ -376,14 +376,14 @@ class VolttronBridge(Agent):
             return True
             
         self._local_devices_register.append(sender)
-        index = self._ds_register.index(sender)
-        self._local_device_ids.insert(index, deviceId)
+        index = self._local_devices_register.index(sender)
+        self._local_device_ids.insert(index, device_id)
         _log.debug('registered!!!')
         return True
         
     @RPC.export
     def unregister_local_ed_agent(self, sender):
-        _log.debug('_unregister_ds_bridge(), sender: '.format(sender))
+        _log.debug('unregister_local_ed_agent(), sender: '.format(sender))
         if sender not in self._local_devices_register:
             _log.debug('already unregistered')
             return True
@@ -499,7 +499,7 @@ class VolttronBridge(Agent):
             _log.debug('not connected, Trying to register once...')
             self._usConnected = self._register_to_us_bridge(url_root
                                                             , self._discovery_address
-                                                            , self._deviceId
+                                                            , self._device_id
                                                             )
             if not self._usConnected:
                 _log.debug('_usConnected: ' + str(self._usConnected))
@@ -511,7 +511,7 @@ class VolttronBridge(Agent):
         _log.debug("posting energy demand to upstream VolttronBridge")
         success = ispace_utils.do_rpc(url_root, 'rpc_post_ed'
                                         , {'discovery_address': self._discovery_address
-                                        , 'deviceId': self._deviceId
+                                        , 'device_id': self._device_id
                                         , 'new_ed': self._ed_current
                                         , 'ed_datatype': self._ed_datatype
                                         , 'ed_pp_id': self._ed_pp_id
@@ -591,7 +591,7 @@ class VolttronBridge(Agent):
             url_root = 'http://' + discovery_address + '/VolttronBridge'
             result = ispace_utils.do_rpc(url_root, 'rpc_post_pp'
                                         , {'discovery_address': self._discovery_address
-                                        , 'deviceId': self._deviceId
+                                        , 'device_id': self._device_id
                                         , 'new_pp': self._pp_current
                                         , 'new_pp_id': self._pp_id
                                         , 'new_pp_isoptimal': self._pp_isoptimal
@@ -613,9 +613,9 @@ class VolttronBridge(Agent):
                     
         return
         
-    def _register_ds_bridge(self, discovery_address, deviceId):
+    def _register_ds_bridge(self, discovery_address, device_id):
         _log.debug('_register_ds_bridge(), discovery_address: ' + discovery_address 
-                    + ' deviceId: ' + deviceId
+                    + ' device_id: ' + device_id
                     )
         if discovery_address in self._ds_register:
             _log.debug('already registered!!!')
@@ -626,15 +626,15 @@ class VolttronBridge(Agent):
         #TODO: potential bug in this method, not atomic
         self._ds_register.append(discovery_address)
         index = self._ds_register.index(discovery_address)
-        self._ds_device_ids.insert(index, deviceId)
+        self._ds_device_ids.insert(index, device_id)
         self._ds_retrycount.insert(index, 0)
         
         _log.debug('registered!!!')
         return True
         
-    def _unregister_ds_bridge(self, discovery_address, deviceId):
+    def _unregister_ds_bridge(self, discovery_address, device_id):
         _log.debug('_unregister_ds_bridge(), discovery_address: '+ discovery_address 
-                    + ' deviceId: ' + deviceId
+                    + ' device_id: ' + device_id
                     )
         if discovery_address not in self._ds_register:
             _log.debug('already unregistered')
@@ -656,7 +656,7 @@ class VolttronBridge(Agent):
         
     #post the new price point from us to the local-us-bus
     def _post_pp(self, discovery_address
-                        , deviceId
+                        , device_id
                         , new_pp
                         , new_pp_datatype
                         , new_pp_id
@@ -670,7 +670,7 @@ class VolttronBridge(Agent):
                                     , new_pp_id
                                     , new_pp_isoptimal
                                     , discovery_address
-                                    , deviceId
+                                    , device_id
                                     , new_pp_ttl
                                     , new_pp_ts
                                     )
@@ -689,7 +689,7 @@ class VolttronBridge(Agent):
                     , new_pp_id
                     , new_pp_isoptimal
                     , discovery_address
-                    , deviceId
+                    , device_id
                     , new_pp_ttl
                     , new_pp_ts
                     ]
@@ -699,7 +699,7 @@ class VolttronBridge(Agent):
         
     #post the new energy demand from ds to the local-ds-bus
     def _post_ed(self, discovery_address
-                        , deviceId
+                        , device_id
                         , new_ed
                         , ed_datatype
                         , ed_pp_id
@@ -714,13 +714,13 @@ class VolttronBridge(Agent):
                                     , ed_pp_id
                                     , ed_isoptimal
                                     , discovery_address
-                                    , deviceId
+                                    , device_id
                                     , ed_duration
                                     , ed_ttl
                                     , ed_ts
                                     )
                                     
-        if not self._msg_from_registered_ds(discovery_address, deviceId):
+        if not self._msg_from_registered_ds(discovery_address, device_id):
             #either the post to ds failed in previous iteration and de-registered from the _ds_register
             # or the msg is corrupted
             _log.warning('msg not from registered ds, do nothing!!!')
@@ -740,13 +740,13 @@ class VolttronBridge(Agent):
             
         #post to bus
         _log.debug('post the local-ds-bus')
-        pubTopic = self.energyDemand_topic_ds + "/" + deviceId
+        pubTopic = self.energyDemand_topic_ds + "/" + device_id
         pubMsg = [new_ed
                     , ed_datatype
                     , ed_pp_id
                     , ed_isoptimal
                     , discovery_address
-                    , deviceId
+                    , device_id
                     , ed_duration
                     , ed_ttl
                     , ed_ts
