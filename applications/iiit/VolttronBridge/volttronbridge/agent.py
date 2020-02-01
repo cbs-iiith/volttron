@@ -431,13 +431,22 @@ class VolttronBridge(Agent):
         self._pp_ttl = message[ParamPP.idx_pp_ttl]
         self._pp_ts = message[ParamPP.idx_pp_ts]
         
-        #keep a track of local pp_ids
-        if self._pp_id not in [self.us_opt_pp_id, self.us_bid_pp_id]:
-            if self._pp_isoptimal: 
-                self.local_opt_pp_id = self._pp_id 
+        #keep a track of pp_ids
+        if pp_msg.get_src_device_id() == self._device_id:
+            if pp_msg.get_isoptimal(): 
+                self.local_opt_pp_id = pp_msg.get_price_id()
             else : 
-                self.local_bid_pp_id = self._pp_id
-                
+                self.local_bid_pp_id = pp_msg.get_price_id()
+        else:
+            if pp_msg.get_isoptimal(): 
+                self.us_opt_pp_id = pp_msg.get_price_id()
+            else : 
+                self.us_bid_pp_id = pp_msg.get_price_id()
+        
+        
+        self._pp_id not in [self.us_opt_pp_id, self.us_bid_pp_id]:
+        
+        
         #reset counters & flags
         self._reset_ds_retrycount()
         self._all_ds_posts_success  = False
