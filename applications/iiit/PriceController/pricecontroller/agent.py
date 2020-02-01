@@ -145,13 +145,24 @@ class PriceController(Agent):
         #subscribing to ds energy demand, vb publishes ed from registered ds to this topic
         self.vip.pubsub.subscribe("pubsub", self._topic_energy_demand_ds, self.on_ds_ed)
         
-        #at regular interval publish total active power. need not wait to receive from all ds devices
-        self.core.periodic(self._period_read_data, self.publish_opt_tap, wait=None)
-        
+        #perodically publish total active power (tap) to local/energydemand
+        #(vb RPCs this value to the next level)
+        #since time period is much larger (default 30s, i.e, 2 reading per min), need not wait
+        #to receive from all devices
+        #any ways this is used for monitoring purpose and the readings are averaged over a period
+        self.core.periodic(self._period_read_data, self.aggregator_us_tap, wait=None)
+
         #subscribing to topic_price_point_extr
         self.vip.pubsub.subscribe("pubsub", self._topic_extrn_pp, self.on_new_extrn_pp)
         
-        #at regular interval check if all ds ted received, if so publish and stop
+        #at regular interval check if all bid ds ed received, 
+        # if so compute ted and publish to local/energydemand
+        #(vb RPCs this value to the next level)
+        self.core.periodic(self._period_process_loop, self.aggregator_us_bid_ted, wait=None)
+        
+        #default_opt process loop, i.e, each iteration's periodicity
+        #if the cycle time (time consumed for each iteration) is more than periodicity,
+        #the next iterations gets delayed.
         self.core.periodic(self._period_process_loop, self.process_loop, wait=None)
         
         #self._device_id and self._discovery_address from vb
@@ -329,6 +340,7 @@ class PriceController(Agent):
                 self.us_opt_pp_msg = pp_msg
             else:
                 self.us_bid_pp_msg = pp_msg
+                self._published_us_bid_ted = False
         #keep a track of local pp_msg
         elif sender == 'iiit.pricepoint':
             if pp_msg.get_isoptimal():
@@ -506,8 +518,9 @@ class PriceController(Agent):
         #us_bid_pp_timeout = self._us_bid_pp_timeout()
         us_bid_pp_timeout = False               #never timeout
         
-        if ( (not (rcvd_all_ds_bid_ed and rcvd_all_local_bid_ed) ) 
-                and not us_bid_pp_timeout()
+        if ( (not rcvd_all_ds_bid_ed
+                    or not rcvd_all_local_bid_ed
+                    or us_bid_pp_timeout()
                 ):
             _log.debug('not all bids received and not yet timeout!!!.' 
                         + ' rcvd_all_ds_bid_ed: {}'.format(rcvd_all_ds_bid_ed)
@@ -517,7 +530,7 @@ class PriceController(Agent):
             return
                 
         if self._pca_mode == 'ONLINE' and self._pp_optimize_option == 'PASS_ON_PP':
-            publish_bid_ted()
+            self.publish_bid_ted()
             return
             '''
             elif self._pca_mode == 'ONLINE' and self._pp_optimize_option == 'DEFAULT_OPT':
@@ -611,35 +624,35 @@ class PriceController(Agent):
         '''
         sort energy packet to respective buckets 
             
-                           |--> us_local_opt_ap         |
-        us_opt_tap---------|                            |--> aggregrator publishs tap to us/energydemand
-                           |--> us_ds_opt_ap            |       at regular interval 
+                           |--> _us_local_opt_ap         |
+        us_opt_tap---------|                            |--> aggregator publishs tap to us/energydemand
+                           |--> _us_ds_opt_ap            |       at regular interval 
 
 
-                           |--> us_local_bid_ed         |
-        us_bid_ted---------|                            |--> aggregrator publishs ted to us/energydemand 
-                           |--> us_ds_bid_ed            |       if received from all or timeout
+                           |--> _us_local_bid_ed         |
+        us_bid_ted---------|                            |--> aggregator publishs ted to us/energydemand 
+                           |--> _us_ds_bid_ed            |       if received from all or timeout
 
 
-                           |--> local_bid_ed            |
+                           |--> _local_bid_ed            |
         local_bid_ted------|                            |--> process_loop() initiates
-                           |--> ds_bid_ed               |       _compute_new_price()
+                           |--> _ds_bid_ed               |       _compute_new_price()
 
 
         '''
-        #MessageType.active_power, aggregrator publishes this data to local/energydemand
+        #MessageType.active_power, aggregator publishes this data to local/energydemand
         if (success_ap and  price_id == self.us_opt_pp_msg.get_price_id()):
             #put data to local_tap bucket
             if device_id in self._get_vb_local_device_ids():
                 idx = self._get_local_device_idx(device_id)
-                self._local_opt_ap[idx] = pp_msg.get_value()
+                self._us_local_opt_ap[idx] = pp_msg.get_value()
                 return
             #put data to ds_tap bucket
             elif device_id in self._get_vb_ds_device_ids():
                 idx = self._get_ds_device_idx(device_id)
-                self._ds_opt_ap[idx] = pp_msg.get_value()
+                self._us_ds_opt_ap[idx] = pp_msg.get_value()
                 return
-        #MessageType.energy_demand, aggregrator publishes this data to local/energydemand
+        #MessageType.energy_demand, aggregator publishes this data to local/energydemand
         elif (success_ed and price_id == self.us_bid_pp_msg.get_price_id()):
             #put data to ds_tap bucket
             if device_id in self._get_vb_local_device_ids():
@@ -665,20 +678,75 @@ class PriceController(Agent):
                 return
         return
         
-    #perodically check if energy data received from all devices
-    def aggregrator_us_tap(self):
-        #check if received from all 
-        #publish to local/energyDemand (vb RPCs this value to the next level)
+    #perodically publish total active power (tap) to local/energydemand
+    def aggregator_us_tap(self):
+        #since time period much larger (default 30s, i.e, 2 reading per min)
+        #need not wait to receive active power from all devices
+        #any ways this is used for monitoring purpose and the readings are averaged over a period
+        if self._pca_mode != 'ONLINE'
+                    or self._pp_optimize_option not in ['PASS_ON_PP', 'DEFAULT_OPT', 'EXTERN_OPT']
+                    ):
+            #not implemented
+            _log.warning('aggregator_us_tap() not implemented'
+                            + 'pca_mode: {}'.format(self._pca_mode)
+                            + 'optimize option: {}'.format(self._pp_optimize_option)
+                            )
+            return
+            
+        #compute total active power (tap)
+        opt_tap = self._calc_total(self, self._us_local_opt_ap, self._us_ds_opt_ap)
+                
+        #publish to local/energyDemand (vb pushes(RPC) this value to the next level)
+        self._publish_opt_tap(opt_tap)
+        
+        #maybe we need to reset the corresponding buckets to zero
+        #self._us_local_opt_ap[:] = []
+        #self._us_ds_opt_ap[:] = []
         return
         
-    def aggregrator_us_bid_ted(self):
-        #check if received from all 
-        #publish to local/energyDemand (vb RPCs this value to the next level)
-        return
+    def aggregator_us_bid_ted(self):
+        if self._published_us_bid_ted:
+            #nothing do, wait for new bid pp from us
+            return
+        if self._pca_mode != 'ONLINE'
+                    or self._pp_optimize_option not in ['PASS_ON_PP', 'DEFAULT_OPT', 'EXTERN_OPT']
+                    ):
+            #not implemented
+            _log.warning('aggregator_us_tap() not implemented'
+                            + 'pca_mode: {}'.format(self._pca_mode)
+                            + 'optimize option: {}'.format(self._pp_optimize_option)
+                            )
+            return
+            
+        rcvd_all_local_bid_ed = self._rcvd_all_local_bid_ed(self._get_vb_local_device_ids())
+        rcvd_all_ds_bid_ed = self._rcvd_all_ds_bid_ed(self._get_vb_ds_device_ids())
         
-    def aggregrator_local_bid_ted(self):
-        #check if received from all 
-        #initiate process_loop() initiates _compute_new_price()
+        #TODO: timeout check -- visit later
+        #us_bid_pp_timeout = self._us_bid_pp_timeout()
+        us_bid_pp_timeout = False               #never timeout
+        
+        if ( (not rcvd_all_ds_bid_ed
+                    or not rcvd_all_local_bid_ed
+                    or not us_bid_pp_timeout()
+                ):
+            _log.debug('not all bids received and not yet timeout!!!.' 
+                        + ' rcvd_all_ds_bid_ed: {}'.format(rcvd_all_ds_bid_ed)
+                        + ' rcvd_all_local_bid_ed: {}'.format(rcvd_all_local_bid_ed)
+                        + ' us_bid_pp_timeout: {}'.format(us_bid_pp_timeout)
+                        + ', will try again in ' + str(self._period_process_loop))
+            self._published_us_bid_ted = False
+            return
+            
+        #compute total energy demand (ted)
+        bid_ted = self._calc_total(self, self._us_local_bid_ed, self._us_ds_bid_ed)
+        
+        #publish to local/energyDemand (vb pushes(RPC) this value to the next level)
+        self._publish_bid_ted(bid_ted)
+        
+        #need to reset the corresponding buckets to zero
+        self._us_local_bid_ed[:] = []
+        self._us_ds_bid_ed[:] = []
+        self._published_us_bid_ted = True
         return
         
     def _get_vb_local_device_ids(self):
@@ -715,66 +783,39 @@ class PriceController(Agent):
                             ]
         return price_ids
         
-    def publish_opt_tap(self):
+    def _publish_opt_tap(self, opt_tap):
         #_log.debug('publish_opt_tap()')
-        #since time period much larger (default 30s, i.e, 2 reading per min)
-        #need not wait to receive active power from all devices
-        #any ways this is used for monitoring purpose and the readings are averaged over a period
-        if self._pca_mode == 'ONLINE' and self._pp_optimize_option == 'PASS_ON_PP':
-            pp_msg = self.us_opt_pp_msg
-        else:
-            #not implemented
-            _log.warning('publish_opt_tap() not implemented'
-                            + 'pca_mode: {}'.format(self._pca_mode)
-                            + 'optimize option: {}'.format(self._pp_optimize_option)
-                            )
-            return
             
-        #create a MessageType.active_power ISPACE_Msg
-        tap_msg = tap_helper(pp_msg
+        #create a MessageType.active_power ISPACE_Msg in response to us_opt_pp_msg
+        tap_msg = tap_helper(self.us_opt_pp_msg
                             , self._device_id
                             , self._discovery_address
-                            , self._calc_total_act_pwr()
+                            , opt_tap
                             , self._period_read_data
                             )
                             
-        #publish the new price point to the local message bus
-        pub_topic = self._topic_energy_demand + "/" + self._device_id
+        #publish the total active power to the local message bus
+        #volttron bridge pushes(RPC) this value to the next level
+        pub_topic = self._topic_energy_demand
         pub_msg = tap_msg.get_json_params(self._agent_id)
         _log.debug('publishing to local bus topic: {}'.format(pub_topic))
         _log.debug('Msg: {}'.format(pub_msg))
         publish_to_bus(self, pub_topic, pub_msg)
         return
         
-    def _calc_total_act_pwr(self):
-        #compute total active power (tap)
-        tap = 0
-        for ap in self._local_opt_ap: tap += ap
-        for ap in self._ds_opt_ap: tap += ap
-        return tap
-        
-    def publish_bid_ted(self):
+    def _publish_bid_ted(self, bid_ted):
         #_log.debug('publish_bid_ted()')
         #already checked if all bids are received or timeout
         #create a MessageType.energy ISPACE_Msg
-        if self._pca_mode == 'ONLINE' and self._pp_optimize_option == 'PASS_ON_PP':
-            pp_msg = self.us_bid_pp_msg
-        else:
-            #not implemented
-            _log.warning('publish_bid_ted() not implemented'
-                            + 'pca_mode: {}'.format(self._pca_mode)
-                            + 'optimize option: {}'.format(self._pp_optimize_option)
-                            )
-            return
-        
         ted_msg = ted_helper(self.us_bid_pp_msg
                             , self._device_id
                             , self._discovery_address
-                            , self._calc_total_energy_demand()
+                            , bid_ted
                             , self._period_read_data
                             )
                             
-        #publish the new price point to the local message bus
+        #publish the total energy demand to the local message bus
+        #volttron bridge pushes(RPC) this value to the next level
         pub_topic = self._topic_energy_demand
         pub_msg = ted_msg.get_json_params(self._agent_id)
         _log.debug('publishing to local bus topic: {}'.format(pub_topic))
@@ -782,12 +823,26 @@ class PriceController(Agent):
         publish_to_bus(self, pub_topic, pub_msg)
         return
         
-    def _calc_total_energy_demand(self):
-        #compute total energy demand (ted)
-        ted = 0
-        for ed in self._local_bid_ed: ted += ed
-        for ed in self._ds_opt_ed: ted += ed
-        return ted
+    def _calc_total(self, local_bucket, ds_bucket):
+        #current vb registered devices that had published active power, (intersection)
+        #may be some devices may have disconnected
+        #      i.e., devices_count >= len(vb_devices_count)
+        #       reconcile the device ids and match _ap[] with device_id
+        new_local_device_ids = list(set(self._local_device_ids)
+                                            & set(self._get_vb_local_device_ids())
+                                            )
+        new_ds_device_ids = list(set(self._ds_device_ids)
+                                            & set(self._get_vb_ds_device_ids())
+                                            )
+        #compute total
+        total_value = 0
+        for device_id in new_local_device_ids:
+            idx = self._local_device_ids.index(device_id)
+            total_value += local_bucket[idx]
+        for device_id in new_ds_device_ids:
+            idx = self._ds_device_ids.index(device_id)
+            total_value += self.ds_bucket[idx]
+        return total_value
         
         
 def main(argv=sys.argv):
