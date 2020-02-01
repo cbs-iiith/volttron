@@ -147,8 +147,8 @@ class PriceController(Agent):
         
         #perodically publish total active power (tap) to local/energydemand
         #(vb RPCs this value to the next level)
-        #since time period is much larger (default 30s, i.e, 2 reading per min), need not wait
-        #to receive from all devices
+        #since time period is much larger (default 30s, i.e, 2 reading per min), 
+        #need not wait to receive from all devices
         #any ways this is used for monitoring purpose and the readings are averaged over a period
         self.core.periodic(self._period_read_data, self.aggregator_us_tap, wait=None)
 
