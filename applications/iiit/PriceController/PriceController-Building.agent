@@ -10,7 +10,12 @@
     "pricePoint_topic": "building/pricepoint",
     "vb_vip_identity": "iiit.volttronbridge",
 
-    "_comment": "valid pca modes - ONLINE, STANDALONE, STANDBY",
+    # valid pca modes -->  ONLINE, STANDALONE, STANDBY
+    #                        ONLINE --> actively receive pp_msg from us and submit bids
+    #                        STANDALONE --> move to this conditon if pp_msg_opt_durations elapsed 
+    #                                        and no further commuication from us
+    #                                        (valid opt_options --> DEFAULT_OPT, EXTERN_OPT)
+    #                        STANDBY --> no optimization, but report active power at regular interval
     "pca_mode": "ONLINE",
     "_comment": "valid options - PASS_ON_PP, DEFAULT_OPT, EXTERN_OPT",
     "pp_optimize_option": "PASS_ON_PP",
