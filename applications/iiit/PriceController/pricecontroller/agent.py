@@ -509,7 +509,14 @@ class PriceController(Agent):
             #
             #compute total bid energy demand and publish to local/energydemand
             #(vb RPCs this value to the next level)
-            self.aggregator_local_bid_ted()
+            bid_ted = self._calc_total(self._local_bid_ed, self._ds_bid_ed)
+            
+            #publish to local/energyDemand (vb pushes(RPC) this value to the next level)
+            self._publish_bid_ted(bid_ted)
+            
+            #need to reset the corresponding buckets to zero
+            self._local_bid_ed[:] = []
+            self._ds_bid_ed[:] = []
             return
         
         isoptimal = (True if (self._target_acheived and self._pca_mode == 'STANDALONE') else False)
@@ -677,7 +684,9 @@ class PriceController(Agent):
         if (self._pca_mode != 'ONLINE'
                 or self._pp_optimize_option not in ['PASS_ON_PP', 'DEFAULT_OPT', 'EXTERN_OPT']
                 ):
-             if self._pca_mode in ['STANDALONE', 'STANDBY']:
+             if self._pca_mode in ['STANDALONE'
+                                        #, 'STANDBY'
+                                        ]:
                 #do nothing
                 return
             #not implemented
