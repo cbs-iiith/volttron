@@ -420,7 +420,7 @@ class PriceController(Agent):
             _log.debug('message: {}'.format(message))
             minimum_fields = ['value', 'value_data_type', 'units', 'price_id']
             pp_msg = parse_bustopic_msg(message, minimum_fields)
-            #_log.info('self.pp_msg: {}'.format(self.pp_msg))
+            #_log.info('pp_msg: {}'.format(pp_msg))
         except KeyError as ke:
             _log.exception(ke)
             _log.exception(jsonrpc.json_error('NA', INVALID_PARAMS,
@@ -439,7 +439,7 @@ class PriceController(Agent):
         validate_fields = ['value', 'value_data_type', 'units', 'price_id', 'isoptimal', 'duration', 'ttl']
         valid_price_ids = []
         #validate various sanity measure like, valid fields, valid pp ids, ttl expiry, etc.,
-        if not self.pp_msg.sanity_check_ok(hint, validate_fields, valid_price_ids):
+        if not pp_msg.sanity_check_ok(hint, validate_fields, valid_price_ids):
             _log.warning('Msg sanity checks failed!!!')
             return False
         self.tmp_bustopic_msg = pp_msg
@@ -601,6 +601,8 @@ class PriceController(Agent):
         
         self.tmp_bustopic_msg = None
         
+        success_ap = False
+        success_ed = False
         #handle only ap or ed type messages
         success_ap = check_msg_type(message, MessageType.active_power)
         if not success_ap:
