@@ -46,7 +46,7 @@ def get_default_pp_msg(discovery_address, device_id):
                         
 #create a MessageType.energy ISPACE_Msg
 def ted_helper(pp_msg, device_id, discovery_address, ted, new_ttl=10):
-    print(MessageType.energy_demand)
+    #print(MessageType.energy_demand)
     msg_type = MessageType.energy_demand
     one_to_one = pp_msg.get_one_to_one()
     isoptimal = pp_msg.get_isoptimal()
@@ -69,7 +69,7 @@ def ted_helper(pp_msg, device_id, discovery_address, ted, new_ttl=10):
                         
 #create a MessageType.active_power ISPACE_Msg
 def tap_helper(pp_msg, device_id, discovery_address, tap, new_ttl=10):
-    print(MessageType.active_power)
+    #print(MessageType.active_power)
     msg_type = MessageType.active_power
     one_to_one = pp_msg.get_one_to_one()
     isoptimal = pp_msg.get_isoptimal()

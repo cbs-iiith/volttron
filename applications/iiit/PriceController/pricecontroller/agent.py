@@ -37,6 +37,7 @@ import gevent.event
 from ispace_utils import publish_to_bus, retrive_details_from_vb
 from ispace_msg import ISPACE_Msg, MessageType
 from ispace_msg_utils import parse_bustopic_msg, check_msg_type, tap_helper, ted_helper
+from ispace_msg_utils import get_default_pp_msg
 
 utils.setup_logging()
 _log = logging.getLogger(__name__)
@@ -126,20 +127,23 @@ class PriceController(Agent):
         self._ds_senders_list = ['iiit.volttronbridge']
         self._local_ed_agents = []
         
+        #retrive self._device_id and self._discovery_address from vb
+        retrive_details_from_vb(self)
+
         _log.debug('registering rpc routes')
         self.vip.rpc.call(MASTER_WEB, 'register_agent_route'
                             ,r'^/PriceController'
                             , "rpc_from_net"
                             ).get(timeout=30)
                             
-        self.tmp_pp_msg = None
+        self.tmp_pp_msg = get_default_pp_msg(self._discovery_address, self._device_id)
         
-        self.us_opt_pp_msg = None
-        self.us_bid_pp_msg = None
-        self.act_opt_pp_msg = None
-        self.act_bid_pp_msg = None
-        self.local_opt_pp_msg = None
-        self.local_bid_pp_msg = None
+        self.us_opt_pp_msg = get_default_pp_msg(self._discovery_address, self._device_id)
+        self.us_bid_pp_msg = get_default_pp_msg(self._discovery_address, self._device_id)
+        self.act_opt_pp_msg = get_default_pp_msg(self._discovery_address, self._device_id)
+        self.act_bid_pp_msg = get_default_pp_msg(self._discovery_address, self._device_id)
+        self.local_opt_pp_msg = get_default_pp_msg(self._discovery_address, self._device_id)
+        self.local_bid_pp_msg = get_default_pp_msg(self._discovery_address, self._device_id)
         
         self.external_vip_identity = None
         
@@ -159,7 +163,7 @@ class PriceController(Agent):
         #subscribing to topic_price_point_extr
         self.vip.pubsub.subscribe("pubsub", self._topic_extrn_pp, self.on_new_extrn_pp)
         
-        self._published_us_bid_ted = False
+        self._published_us_bid_ted = True
         #at regular interval check if all bid ds ed received, 
         # if so compute ted and publish to local/energydemand
         #(vb RPCs this value to the next level)
