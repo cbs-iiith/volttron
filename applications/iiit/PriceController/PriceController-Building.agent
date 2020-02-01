@@ -3,7 +3,7 @@
     "agentid": "PriceController",
     "message": "I am Price Controller Agent",
     "period_read_data": 30,
-    "period_process_loop": 1,
+    "period_process_loop": 5,
     "energyDemand_topic": "building/energydemand",
     "energyDemand_topic_ds": "ds/energydemand",
     "pricePoint_topic_us": "us/pricepoint",

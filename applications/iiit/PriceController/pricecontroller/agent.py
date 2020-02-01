@@ -36,7 +36,7 @@ import gevent.event
 
 from ispace_utils import publish_to_bus, retrive_details_from_vb
 from ispace_msg import ISPACE_Msg, MessageType
-from ispace_msg_utils import parse_bustopic_msg, check_msg_type
+from ispace_msg_utils import parse_bustopic_msg, check_msg_type, tap_helper, ted_helper
 
 utils.setup_logging()
 _log = logging.getLogger(__name__)
@@ -73,6 +73,8 @@ class PriceController(Agent):
     _device_id = None
     _discovery_address = None
     
+    _published_us_bid_ted = None
+    
     def __init__(self, config_path, **kwargs):
         super(PriceController, self).__init__(**kwargs)
         _log.debug("vip_identity: " + self.core.identity)
@@ -90,14 +92,16 @@ class PriceController(Agent):
         
         #local device_ids
         self._local_device_ids = []
-        self._local_opt_ap = []
+        self._us_local_opt_ap = []
+        self._us_local_bid_ed = []
         self._local_bid_ed = []
         
         #ds device ids, opt_ap --> act_pwr@opt_pp, bid_ed --> bid_energy_demand@bid_pp
         self._ds_device_ids = []
-        self._ds_opt_ap = []
+        self._us_ds_opt_ap = []
+        self._us_ds_bid_ed = []
         self._ds_bid_ed = []
-
+        
         self._device_id = None
         self._ip_addr = None
         self._discovery_address = None
@@ -120,7 +124,7 @@ class PriceController(Agent):
         
         self._us_senders_list = ['iiit.volttronbridge', 'iiit.pricepoint']
         self._ds_senders_list = ['iiit.volttronbridge']
-        _local_ed_agents = []
+        self._local_ed_agents = []
         
         _log.debug('registering rpc routes')
         self.vip.rpc.call(MASTER_WEB, 'register_agent_route'
@@ -155,6 +159,7 @@ class PriceController(Agent):
         #subscribing to topic_price_point_extr
         self.vip.pubsub.subscribe("pubsub", self._topic_extrn_pp, self.on_new_extrn_pp)
         
+        self._published_us_bid_ted = False
         #at regular interval check if all bid ds ed received, 
         # if so compute ted and publish to local/energydemand
         #(vb RPCs this value to the next level)
@@ -163,7 +168,7 @@ class PriceController(Agent):
         #default_opt process loop, i.e, each iteration's periodicity
         #if the cycle time (time consumed for each iteration) is more than periodicity,
         #the next iterations gets delayed.
-        self.core.periodic(self._period_process_loop, self.process_loop, wait=None)
+        #self.core.periodic(self._period_process_loop, self.process_loop, wait=None)
         
         #self._device_id and self._discovery_address from vb
         retrive_details_from_vb(self)
@@ -175,12 +180,15 @@ class PriceController(Agent):
         _log.debug('un registering rpc routes')
         
         del self._local_device_ids[:]
-        del self._local_opt_ap[:]
+        del self._us_local_opt_ap[:]
+        del self._us_local_bid_ed[:]
         del self._local_bid_ed[:]
+        
         del self._ds_device_ids[:]
-        del self._ds_opt_ap[:]
+        del self._us_ds_opt_ap[:]
+        del self._us_ds_bid_ed[:]
         del self._ds_bid_ed[:]
-
+        
         self.vip.rpc.call(MASTER_WEB, 'unregister_all_agent_routes').get(timeout=10)
         return
         
@@ -518,9 +526,9 @@ class PriceController(Agent):
         #us_bid_pp_timeout = self._us_bid_pp_timeout()
         us_bid_pp_timeout = False               #never timeout
         
-        if ( (not rcvd_all_ds_bid_ed
-                    or not rcvd_all_local_bid_ed
-                    or us_bid_pp_timeout()
+        if (not rcvd_all_ds_bid_ed
+                or not rcvd_all_local_bid_ed
+                or us_bid_pp_timeout
                 ):
             _log.debug('not all bids received and not yet timeout!!!.' 
                         + ' rcvd_all_ds_bid_ed: {}'.format(rcvd_all_ds_bid_ed)
@@ -529,8 +537,8 @@ class PriceController(Agent):
                         + ', will try again in ' + str(self._period_process_loop))
             return
                 
-        if self._pca_mode == 'ONLINE' and self._pp_optimize_option == 'PASS_ON_PP':
-            self.publish_bid_ted()
+        #if self._pca_mode == 'ONLINE' and self._pp_optimize_option == 'DEFAULT_OPT':
+            self._publish_bid_ted()
             return
             '''
             elif self._pca_mode == 'ONLINE' and self._pp_optimize_option == 'DEFAULT_OPT':
@@ -683,9 +691,9 @@ class PriceController(Agent):
         #since time period much larger (default 30s, i.e, 2 reading per min)
         #need not wait to receive active power from all devices
         #any ways this is used for monitoring purpose and the readings are averaged over a period
-        if self._pca_mode != 'ONLINE'
-                    or self._pp_optimize_option not in ['PASS_ON_PP', 'DEFAULT_OPT', 'EXTERN_OPT']
-                    ):
+        if (self._pca_mode != 'ONLINE'
+                or self._pp_optimize_option not in ['PASS_ON_PP', 'DEFAULT_OPT', 'EXTERN_OPT']
+                ):
             #not implemented
             _log.warning('aggregator_us_tap() not implemented'
                             + 'pca_mode: {}'.format(self._pca_mode)
@@ -694,7 +702,7 @@ class PriceController(Agent):
             return
             
         #compute total active power (tap)
-        opt_tap = self._calc_total(self, self._us_local_opt_ap, self._us_ds_opt_ap)
+        opt_tap = self._calc_total(self._us_local_opt_ap, self._us_ds_opt_ap)
                 
         #publish to local/energyDemand (vb pushes(RPC) this value to the next level)
         self._publish_opt_tap(opt_tap)
@@ -708,9 +716,9 @@ class PriceController(Agent):
         if self._published_us_bid_ted:
             #nothing do, wait for new bid pp from us
             return
-        if self._pca_mode != 'ONLINE'
-                    or self._pp_optimize_option not in ['PASS_ON_PP', 'DEFAULT_OPT', 'EXTERN_OPT']
-                    ):
+        if (self._pca_mode != 'ONLINE'
+                or self._pp_optimize_option not in ['PASS_ON_PP', 'DEFAULT_OPT', 'EXTERN_OPT']
+                ):
             #not implemented
             _log.warning('aggregator_us_tap() not implemented'
                             + 'pca_mode: {}'.format(self._pca_mode)
@@ -725,9 +733,9 @@ class PriceController(Agent):
         #us_bid_pp_timeout = self._us_bid_pp_timeout()
         us_bid_pp_timeout = False               #never timeout
         
-        if ( (not rcvd_all_ds_bid_ed
-                    or not rcvd_all_local_bid_ed
-                    or not us_bid_pp_timeout()
+        if (not rcvd_all_ds_bid_ed
+                or not rcvd_all_local_bid_ed
+                or not us_bid_pp_timeout
                 ):
             _log.debug('not all bids received and not yet timeout!!!.' 
                         + ' rcvd_all_ds_bid_ed: {}'.format(rcvd_all_ds_bid_ed)
@@ -738,7 +746,7 @@ class PriceController(Agent):
             return
             
         #compute total energy demand (ted)
-        bid_ted = self._calc_total(self, self._us_local_bid_ed, self._us_ds_bid_ed)
+        bid_ted = self._calc_total(self._us_local_bid_ed, self._us_ds_bid_ed)
         
         #publish to local/energyDemand (vb pushes(RPC) this value to the next level)
         self._publish_bid_ted(bid_ted)
@@ -762,8 +770,9 @@ class PriceController(Agent):
     def _get_local_device_idx(device_id):
         if device_id not in self._local_device_ids:
             self._local_device_ids.append(device_id)
-            idx = self._ds_device_ids.index(device_id)
-            self._local_opt_ap.insert(idx, 0.0)
+            idx = self._local_device_ids.index(device_id)
+            self._us_local_opt_ap.insert(idx, 0.0)
+            self._us_local_bid_ed.insert(idx, 0.0)
             self._local_bid_ed.insert(idx, 0.0)
         return self._local_device_ids.index(device_id)
         
@@ -771,7 +780,8 @@ class PriceController(Agent):
         if device_id not in self._ds_device_ids:
             self._ds_device_ids.append(device_id)
             idx = self._ds_device_ids.index(device_id)
-            self._ds_opt_ap.insert(idx, 0.0)
+            self._us_ds_opt_ap.insert(idx, 0.0)
+            self._us_ds_bid_ed.insert(idx, 0.0)
             self._ds_bid_ed.insert(idx, 0.0)
         return self._ds_device_ids.index(device_id)
         
