@@ -129,7 +129,7 @@ class BuildingController(Agent):
                 print(e)
                 _log.exception('Maybe the Volttron Bridge Agent is not started!!!')
                 pass
-            _log.debug('wait 5 sec')
+            _log.debug('will try again in 5 sec')
             sleep(5)
             
         #any process that failed to apply pp sets this flag False
