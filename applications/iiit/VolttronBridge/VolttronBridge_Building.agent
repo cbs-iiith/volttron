@@ -3,7 +3,7 @@
     "agentid": "VolttronBridge",
     "message": "I am Volttron Bridge Agent",
     "bridge_host": "LEVEL_HEAD",
-    "deviceId": "BuildingController-11",
+    "device_id": "BuildingController-11",
     "_comment": "upstream VolttronBridge ip address and port are not used at building level",
     "us_ip_addr":  "notused", 
     "us_port": 8080,

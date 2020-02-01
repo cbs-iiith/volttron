@@ -3,7 +3,7 @@
     "agentid": "VolttronBridge",
     "message": "I am Volttron Bridge Agent",
     "bridge_host": "LEVEL_HUB",
-    "deviceId": "SmartHub-63",
+    "device_id": "SmartHub-63",
     "_comment": "upstream VolttronBridge ip address and port",
     "us_ip_addr":  "192.168.1.51", 
     "us_port": 8080,

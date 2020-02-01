@@ -3,7 +3,7 @@
     "agentid": "VolttronBridge",
     "message": "I am Volttron Bridge Agent",
     "bridge_host": "LEVEL_ZONE",
-    "deviceId": "ZoneController-52",
+    "device_id": "ZoneController-52",
     "_comment": "upstream VolttronBridge ip address and port",
     "us_ip_addr":  "192.168.1.11", 
     "us_port": 8080,
