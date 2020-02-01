@@ -499,15 +499,8 @@ class PriceController(Agent):
         #may be some devices may have disconnected
         #      i.e., devices_count >= len(vb_devices_count)
         #       reconcile the device ids and match ds_ted[] with device_ids[]
-        vb_local_device_ids = self.vip.rpc.call(self._vb_vip_identity
-                                                , 'get_local_ed_device_ids'
-                                                ).get(timeout=10)
-        vb_ds_device_ids = self.vip.rpc.call(self._vb_vip_identity
-                                                , 'get_ds_device_ids'
-                                                ).get(timeout=10)
-        
-        rcvd_all_local_bid_ed = self._rcvd_all_local_bid_ed(vb_local_device_ids)
-        rcvd_all_ds_bid_ed = self._rcvd_all_ds_bid_ed(vb_ds_device_ids)
+        rcvd_all_local_bid_ed = self._rcvd_all_local_bid_ed(self._get_vb_local_device_ids())
+        rcvd_all_ds_bid_ed = self._rcvd_all_ds_bid_ed(self._get_vb_ds_device_ids())
         
         #TODO: timeout check -- visit later
         #us_bid_pp_timeout = self._us_bid_pp_timeout()
@@ -557,14 +550,14 @@ class PriceController(Agent):
         return (True if (now - ts).total_seconds() > self._bid_pp_ttl else False)
         
     def _rcvd_all_local_bid_ed(self, vb_local_device_ids):
-        vb_local_devices_count = len(vb_local_device_ids)
-        local_devices_count = len(list(set(vb_local_device_ids) & set(self._local_device_ids)))
-        return (True if local_devices_count == vb_local_devices_count else False)
+        #may be some devices may have disconnected
+        #      i.e., devices_count >= len(vb_devices_count)
+        return (True if len(self._local_device_ids) >= len(vb_local_device_ids) else False)
         
     def _rcvd_all_ds_bid_ed(self, vb_ds_device_ids):
-        vb_ds_devices_count = len(vb_ds_device_ids)
-        ds_devices_count = len(list(set(vb_ds_device_ids) & set(self._ds_device_ids)))
-        return (True if ds_devices_count == vb_ds_devices_count else False)
+        #may be some devices may have disconnected
+        #      i.e., devices_count >= len(vb_devices_count)
+        return (True if len(self._ds_device_ids) >= len(vb_ds_device_ids) else False)
         
     def on_ds_ed(self, peer, sender, bus,  topic, headers, message):
         # 1. validate message
@@ -618,18 +611,21 @@ class PriceController(Agent):
         '''
         sort energy packet to respective buckets 
             
-                               |--> _local_opt_ap
-            us_opt_tap---------|
-                               |--> _ds_opt_ap
-                               
-                               |--> _us_local_bid_ed
-            us_bid_ted---------|
-                               |--> _us_ds_bid_ed
-                               
-                               |--> _local_bid_ed
-            local_bid_ted------|
-                               |--> _ds_bid_ed
-                               
+                           |--> us_local_opt_ap         |
+        us_opt_tap---------|                            |--> aggregrator publishs tap to us/energydemand
+                           |--> us_ds_opt_ap            |       at regular interval 
+
+
+                           |--> us_local_bid_ed         |
+        us_bid_ted---------|                            |--> aggregrator publishs ted to us/energydemand 
+                           |--> us_ds_bid_ed            |       if received from all or timeout
+
+
+                           |--> local_bid_ed            |
+        local_bid_ted------|                            |--> process_loop() initiates
+                           |--> ds_bid_ed               |       _compute_new_price()
+
+
         '''
         #MessageType.active_power, aggregrator publishes this data to local/energydemand
         if (success_ap and  price_id == self.us_opt_pp_msg.get_price_id()):
