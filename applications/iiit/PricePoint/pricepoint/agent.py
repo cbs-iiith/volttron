@@ -127,9 +127,11 @@ class PricePoint(Agent):
         result = False
         try:
             rpcdata = jsonrpc.JsonRpcData.parse(message)
-            _log.debug('header: {}'.format(header))
-            _log.debug('rpc method: {}'.format(rpcdata.method))
-            _log.debug('rpc params: {}'.format(rpcdata.params))
+            _log.debug('rpc_from_net()...'
+                        + 'header: {}'.format(header)
+                        + ', rpc method: {}'.format(rpcdata.method) 
+                        + ', rpc params: {}'.format(rpcdata.params)
+                        )
             if rpcdata.method == "rpc_update_price_point":
                 result = self.update_price_point(message)
             elif rpcdata.method == "rpc_ping":
