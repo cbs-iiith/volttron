@@ -171,7 +171,7 @@ class BuildingController(Agent):
                             , r'^/BuildingController'
                             , "rpc_from_net"
                             ).get(timeout=10)
-        _log.debug('startup() - Done.')
+        _log.debug('startup() - Done. Agent is ready')
         return
         
     @Core.receiver('onstop')

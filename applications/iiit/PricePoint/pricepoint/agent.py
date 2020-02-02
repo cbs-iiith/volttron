@@ -95,6 +95,7 @@ class PricePoint(Agent):
                             , r'^/PricePoint'
                             , "rpc_from_net"
                             ).get(timeout=10)
+        _log.debug('startup() - Done. Agent is ready')
         return
         
     @Core.receiver('onstop')
@@ -133,7 +134,7 @@ class PricePoint(Agent):
                         + ', rpc params: {}'.format(rpcdata.params)
                         )
             if rpcdata.method == "rpc_update_price_point":
-                result = self.update_price_point(message)
+                result = self.update_price_point(rpcdata.id, message)
             elif rpcdata.method == "rpc_ping":
                 result = True
             else:
@@ -147,25 +148,25 @@ class PricePoint(Agent):
         except Exception as e:
             print(e)
             return jsonrpc.json_error(rpcdata.id, UNHANDLED_EXCEPTION, e)
-        return
+        return result
         
-    def update_price_point(self, message):
+    def update_price_point(self, rpcdata_id, message):
         pp_msg = None
         #Note: this is on a rpc message do the check here ONLY
         #check message for MessageType.price_point
         if not check_msg_type(message, MessageType.price_point): 
-            return jsonrpc.json_error('NA', INVALID_PARAMS, 'Invalid params {}'.format(rpcdata.params))
+            return jsonrpc.json_error(rpcdata_id, INVALID_PARAMS, 'Invalid params {}'.format(rpcdata.params))
         try:
             minimum_fields = ['value', 'value_data_type', 'units', 'price_id']
             pp_msg = parse_jsonrpc_msg(message, minimum_fields)
             #_log.info('pp_msg: {}'.format(pp_msg))
         except KeyError as ke:
             print(ke)
-            return jsonrpc.json_error('NA', INVALID_PARAMS,
+            return jsonrpc.json_error(rpcdata_id, INVALID_PARAMS,
                     'Invalid params {}'.format(rpcdata.params))
         except Exception as e:
             print(e)
-            return jsonrpc.json_error('NA', UNHANDLED_EXCEPTION, e)
+            return jsonrpc.json_error(rpcdata_id, UNHANDLED_EXCEPTION, e)
             
         #validate various sanity measure like, valid fields, valid pp ids, ttl expiry, etc.,
         hint = 'New Price Point'
@@ -173,7 +174,8 @@ class PricePoint(Agent):
         valid_price_ids = []
         if not pp_msg.sanity_check_ok(hint, validate_fields, valid_price_ids):
             _log.warning('Msg sanity checks failed!!!')
-            return 'Msg sanity checks failed!!!'
+            return jsonrpc.json_error(rpcdata_id, PARSE_ERROR, 'Msg sanity checks failed!!!')
+            
             
         #set source id & addr
         retrive_details_from_vb(self)

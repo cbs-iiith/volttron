@@ -214,6 +214,7 @@ class VolttronBridge(Agent):
         if self._bridge_host != 'LEVEL_TAILEND':
             self.core.periodic(self._period_process_pp, self.post_ds_new_pp, wait=None)
             
+        _log.debug('startup() - Done. Agent is ready')
         return
         
     @Core.receiver('onstop')
@@ -265,24 +266,18 @@ class VolttronBridge(Agent):
                         + ', rpc params: {}'.format(rpcdata.params)
                         )
             if rpcdata.method == "rpc_register_ds_bridge":
-                args = {'discovery_address': rpcdata.params['discovery_address']
-                        , 'device_id':rpcdata.params['device_id']
-                        }
-                result = self._register_ds_bridge(**args)
+                result = self._register_ds_bridge(rpcdata.id, message)
                 
             elif rpcdata.method == "rpc_unregister_ds_bridge":
-                args = {'discovery_address': rpcdata.params['discovery_address']
-                        , 'device_id':rpcdata.params['device_id']
-                        }
-                result = self._unregister_ds_bridge(**args)
+                result = self._unregister_ds_bridge(rpcdata.id, message)
                 
             elif rpcdata.method == "rpc_post_ed":
                 #post the new energy demand from ds to the local bus
-                result = self._post_ed(message)
+                result = self._post_ed(rpcdata.id, message)
                 
             elif rpcdata.method == "rpc_post_pp":
                 #post the new new price point from us to the local-us-bus
-                result = self._post_pp(message)
+                result = self._post_pp(rpcdata.id, message)
                 
             elif rpcdata.method == "rpc_ping":
                 result = True
@@ -299,7 +294,8 @@ class VolttronBridge(Agent):
         except Exception as e:
             print(e)
             return jsonrpc.json_error('NA', UNHANDLED_EXCEPTION, e)
-            
+        return result
+        
     @RPC.export
     def get_ds_device_ids(self):
         _log.debug('rpc get_ds_device_ids(): {}'.format(self._ds_device_ids))
@@ -548,7 +544,9 @@ class VolttronBridge(Agent):
                     
         return
         
-    def _register_ds_bridge(self, discovery_address, device_id):
+    def _register_ds_bridge(self, rpcdata_id, message):
+        discovery_address = jsonrpc.JsonRpcData.parse(message).params['discovery_address']
+        device_id = jsonrpc.JsonRpcData.parse(message).params['device_id']
         _log.debug('_register_ds_bridge(), discovery_address: ' + discovery_address 
                     + ' device_id: ' + device_id
                     )
@@ -558,7 +556,6 @@ class VolttronBridge(Agent):
             self._ds_retrycount[index] = 0
             return True
             
-        #TODO: potential bug in this method, not atomic
         self._ds_register.append(discovery_address)
         index = self._ds_register.index(discovery_address)
         self._ds_device_ids.insert(index, device_id)
@@ -567,7 +564,9 @@ class VolttronBridge(Agent):
         _log.debug('registered!!!')
         return True
         
-    def _unregister_ds_bridge(self, discovery_address, device_id):
+    def _unregister_ds_bridge(self, rpcdata_id, message):
+        discovery_address = jsonrpc.JsonRpcData.parse(message).params['discovery_address']
+        device_id = jsonrpc.JsonRpcData.parse(message).params['device_id']
         _log.debug('_unregister_ds_bridge(), discovery_address: '+ discovery_address 
                     + ' device_id: ' + device_id
                     )
@@ -590,23 +589,23 @@ class VolttronBridge(Agent):
         return
         
     #post the new price point from us to the local-us-bus
-    def _post_pp(self, message):
+    def _post_pp(self, rpcdata_id, message):
         pp_msg = None
         #Note: this is on a rpc message do the check here ONLY
         #check message for MessageType.price_point
         if not check_msg_type(message, MessageType.price_point):
-            return jsonrpc.json_error('NA', INVALID_PARAMS, 'Invalid params {}'.format(rpcdata.params))
+            return jsonrpc.json_error(rpcdata_id, INVALID_PARAMS, 'Invalid params {}'.format(rpcdata.params))
         try:
             minimum_fields = ['value', 'value_data_type', 'units', 'price_id']
             pp_msg = parse_jsonrpc_msg(message, minimum_fields)
             #_log.info('pp_msg: {}'.format(pp_msg))
         except KeyError as ke:
             print(ke)
-            return jsonrpc.json_error('NA', INVALID_PARAMS,
+            return jsonrpc.json_error(rpcdata_id, INVALID_PARAMS,
                     'Invalid params {}'.format(rpcdata.params))
         except Exception as e:
             print(e)
-            return jsonrpc.json_error('NA', UNHANDLED_EXCEPTION, e)
+            return jsonrpc.json_error(rpcdata_id, UNHANDLED_EXCEPTION, e)
             
         #validate various sanity measure like, valid fields, valid pp ids, ttl expiry, etc.,
         hint = 'New Price Point'
@@ -614,7 +613,7 @@ class VolttronBridge(Agent):
         valid_price_ids = []
         if not pp_msg.sanity_check_ok(hint, validate_fields, valid_price_ids):
             _log.warning('Msg sanity checks failed!!!')
-            return 'Msg sanity checks failed!!!'
+            return jsonrpc.json_error(rpcdata_id, PARSE_ERROR, 'Msg sanity checks failed!!!')
             
         #keep a track of us pp_ids
         if pp_msg.get_src_device_id() != self._device_id:
@@ -634,7 +633,7 @@ class VolttronBridge(Agent):
         return True
         
     #post the new energy demand from ds to the local-ds-bus
-    def _post_ed(self, message):
+    def _post_ed(self, rpcdata_id, message):
         pp_msg = None
         
         #Note: this is on a rpc message do the check here ONLY
@@ -646,18 +645,18 @@ class VolttronBridge(Agent):
         if not success_ap:
             success_ed = check_msg_type(message, MessageType.energy_demand)
             if not success_ed:
-                return jsonrpc.json_error('NA', INVALID_PARAMS, 'Invalid params {}'.format(rpcdata.params))
+                return jsonrpc.json_error(rpcdata_id, INVALID_PARAMS, 'Invalid params {}'.format(rpcdata.params))
         try:
             minimum_fields = ['value', 'value_data_type', 'units', 'price_id']
             pp_msg = parse_jsonrpc_msg(message, minimum_fields)
             #_log.info('pp_msg: {}'.format(pp_msg))
         except KeyError as ke:
             print(ke)
-            return jsonrpc.json_error('NA', INVALID_PARAMS,
+            return jsonrpc.json_error(rpcdata_id, INVALID_PARAMS,
                     'Invalid params {}'.format(rpcdata.params))
         except Exception as e:
             print(e)
-            return jsonrpc.json_error('NA', UNHANDLED_EXCEPTION, e)
+            return jsonrpc.json_error(rpcdata_id, UNHANDLED_EXCEPTION, e)
             
         #validate various sanity measure like, valid fields, valid pp ids, ttl expiry, etc.,
         hint = 'New Active Power' if success_ap else 'New Energy Demand'
@@ -665,7 +664,7 @@ class VolttronBridge(Agent):
         valid_price_ids = []
         if not pp_msg.sanity_check_ok(hint, validate_fields, valid_price_ids):
             _log.warning('Msg sanity checks failed!!!')
-            return 'Msg sanity checks failed!!!'
+            return jsonrpc.json_error(rpcdata_id, PARSE_ERROR, 'Msg sanity checks failed!!!')
                                     
         #check if from registered ds
         if not self._msg_from_registered_ds(pp_msg.get_src_ip(), pp_msg.get_src_device_id()):

@@ -177,6 +177,7 @@ class PriceController(Agent):
         
         #self._device_id and self._discovery_address from vb
         retrive_details_from_vb(self)
+        _log.debug('startup() - Done. Agent is ready')
         return
         
     @Core.receiver('onstop')
@@ -208,14 +209,17 @@ class PriceController(Agent):
         result = False
         try:
             rpcdata = jsonrpc.JsonRpcData.parse(message)
-            _log.debug('rpc method: {}'.format(rpcdata.method))
-            _log.debug('rpc params: {}'.format(rpcdata.params))
+            _log.debug('rpc_from_net()... '
+                        + 'header: {}'.format(header)
+                        + ', rpc method: {}'.format(rpcdata.method)
+                        + ', rpc params: {}'.format(rpcdata.params)
+                        )
             if rpcdata.method == "rpc_disable_agent":
-                result = self._disable_agent(message)
+                result = self._disable_agent(rpcdata.id, message)
             elif rpcdata.method == "rpc_set_pp_optimize_option":
-                result = self._set_pp_optimize_option(message)
+                result = self._set_pp_optimize_option(rpcdata.id, message)
             elif rpcdata.method == "rpc_register_opt_agent":
-                result = self._register_external_opt_agent(message)
+                result = self._register_external_opt_agent(rpcdata.id, message)
             elif rpcdata.method == "rpc_ping":
                 result = True
             else:
@@ -229,36 +233,31 @@ class PriceController(Agent):
         except Exception as e:
             print(e)
             return jsonrpc.json_error(rpcdata.id, UNHANDLED_EXCEPTION, e)
-            
-    def _disable_agent(self, message):
+        return result
+        
+    def _disable_agent(self, rpcdata_id, message):
         disable_agent = jsonrpc.JsonRpcData.parse(message).params['disable_agent']
-        if disable_agent in [True, False]:
-            self._agent_disabled = disable_agent
-            result = True
-        else:
-            result = 'Invalid option'
-        return result
+        if disable_agent not in [True, False]:
+            return jsonrpc.json_error(rpcdata_id, PARSE_ERROR, 'Invalid option!!!')
+        self._agent_disabled = disable_agent
+        return True
         
-    def _set_pp_optimize_option(self, message):
+    def _set_pp_optimize_option(self, rpcdata_id, message):
         option = jsonrpc.JsonRpcData.parse(message).params['option']
-        if option in ['PASS_ON_PP'
-                        , 'DEFAULT_OPT'
-                        , 'EXTERN_OPT'
-                        ]:
-            self._pp_optimize_option = option
-            result = True
-        else:
-            result = 'Invalid option'
-        return result
+        if option not in ['PASS_ON_PP'
+                            , 'DEFAULT_OPT'
+                            , 'EXTERN_OPT'
+                            ]:
+            return jsonrpc.json_error(rpcdata_id, PARSE_ERROR, 'Invalid option!!!') 
+        self._pp_optimize_option = option
+        return True
         
-    def _register_opt_agent(self, message):
+    def _register_opt_agent(self, rpcdata_id, message):
         external_vip_identity = jsonrpc.JsonRpcData.parse(message).params['vip_identity']
-        if external_vip_identity is not None:
-            self.external_vip_identity = external_vip_identity
-            result = True
-        else:
-            result = 'Invalid option'
-        return result
+        if external_vip_identity is None:
+            return jsonrpc.json_error(rpcdata_id, PARSE_ERROR, 'Invalid option!!!') 
+        self.external_vip_identity = external_vip_identity
+        return True
     
     #this functionality moved to Sorting(refer to aggregator_us_tap(), aggregator_us_bid_ted(), aggregator_local_bid_ted())
     #subscribe to local/ed (i.e., ted) from the controller (building/zone/smarthub controller)
