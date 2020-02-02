@@ -139,15 +139,21 @@ class VolttronBridge(Agent):
         _log.debug(self._bridge_host)
         
         #price point
-        self._pp_current = 0
-        self._pp_id = randint(0, 99999999)
-        self._pp_datatype = {'units': 'cents', 'tz': 'UTC', 'type': 'float'}
-        self._pp_isoptimal = False
-        #self._pp_discovery_addrs = None    #using self._discovery_address, values from config
-        #self._pp_device_id = None          #using self._device_id, values from config
-        self._pp_duration = 3600
-        self._pp_ttl = -1
-        self._pp_ts = ''
+        self._valid_senders_list_pp = ['iiit.pricecontroller']
+        
+        #retrive self._device_id and self._discovery_address from vb
+        retrive_details_from_vb(self)
+        
+        _log.debug('registering rpc routes')
+        self.vip.rpc.call(MASTER_WEB, 'register_agent_route'
+                            , r'^/VolttronBridge'
+                            , "rpc_from_net"
+                            ).get(timeout=30)
+                            
+        #TODO: relook -- impl queues,
+        #can expect multiple pp_msgs on the bus before previous successfully posted to ds
+        self.tmp_bustopic_pp_msg = None
+        
         self._all_ds_posts_success = False
         
         #energy demand
@@ -164,11 +170,6 @@ class VolttronBridge(Agent):
         
         self._us_retrycount = 0
         
-        _log.debug('registering rpc routes')
-        self.vip.rpc.call(MASTER_WEB, 'register_agent_route'
-                            , r'^/VolttronBridge'
-                            , "rpc_from_net"
-                            ).get(timeout=30)
                             
         #subscribe to price point so that it can be posted to downstream
         if self._bridge_host != 'LEVEL_TAILEND':
@@ -399,7 +400,9 @@ class VolttronBridge(Agent):
         if self._bridge_host == 'LEVEL_TAILEND':
             return
             
-        self.tmp_bustopic_msg = None
+        #TODO: relook -- impl queues,
+        #can expect multiple pp_msgs on the bus before previous successfully posted to ds
+        self.tmp_bustopic_pp_msg = None
 
         if sender != 'iiit.pricecontroller':
             return

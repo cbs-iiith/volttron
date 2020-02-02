@@ -228,8 +228,11 @@ class BuildingController(Agent):
         return
         
     def on_new_price(self, peer, sender, bus,  topic, headers, message):
-        self.tmp_pp_msg = None
+        self.tmp_bustopic_pp_msg = None
         
+        if sender not in self._valid_senders_list_pp:
+            return
+            
         #check message type before parsing
         success = check_msg_type(message, MessageType.price_point)
         if not success:
@@ -245,11 +248,11 @@ class BuildingController(Agent):
                                                 , valid_price_ids
                                                 , message):
             #cleanup and return
-            self.tmp_pp_msg = None
+            self.tmp_bustopic_pp_msg = None
             return
             
-        pp_msg = self.tmp_pp_msg
-        self.tmp_pp_msg = None      #release self.tmp_pp_msg
+        pp_msg = self.tmp_bustopic_pp_msg
+        self.tmp_bustopic_pp_msg = None      #release self.tmp_bustopic_pp_msg
         
         if pp_msg.get_isoptimal():
             _log.debug('optimal pp!!!')
@@ -296,7 +299,7 @@ class BuildingController(Agent):
             _log.warning('Msg sanity checks failed!!!')
             return False
             
-        self.tmp_pp_msg = pp_msg
+        self.tmp_bustopic_pp_msg = pp_msg
         return True
         
     def _process_opt_pp(self, pp_msg):

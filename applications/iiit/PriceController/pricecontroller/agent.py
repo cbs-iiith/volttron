@@ -136,7 +136,7 @@ class PriceController(Agent):
                             , "rpc_from_net"
                             ).get(timeout=30)
                             
-        self.tmp_pp_msg = get_default_pp_msg(self._discovery_address, self._device_id)
+        self.tmp_bustopic_pp_msg = get_default_pp_msg(self._discovery_address, self._device_id)
         
         self.us_opt_pp_msg = get_default_pp_msg(self._discovery_address, self._device_id)
         self.us_bid_pp_msg = get_default_pp_msg(self._discovery_address, self._device_id)
@@ -290,14 +290,14 @@ class PriceController(Agent):
         return
         
     def on_new_extrn_pp(self, peer, sender, bus,  topic, headers, message):
-        self.tmp_bustopic_msg = None
+        self.tmp_bustopic_pp_msg = None
         valid_senders_list = [self.external_vip_identity]
         if not self._validate_pp_msg(sender, valid_senders_list, message):
             #cleanup and return
-            self.tmp_bustopic_msg = None
+            self.tmp_bustopic_pp_msg = None
             return
-        pp_msg = self.tmp_bustopic_msg
-        self.tmp_bustopic_msg = None      #release self.tmp_bustopic_msg
+        pp_msg = self.tmp_bustopic_pp_msg
+        self.tmp_bustopic_pp_msg = None      #release self.tmp_bustopic_pp_msg
         
         self.act_pp_msg = pp_msg
         
@@ -317,7 +317,7 @@ class PriceController(Agent):
         return
         
     def on_new_us_pp(self, peer, sender, bus,  topic, headers, message):
-        self.tmp_bustopic_msg = None
+        self.tmp_bustopic_pp_msg = None
         
         #check message type before parsing
         success = check_msg_type(message, MessageType.price_point)
@@ -334,11 +334,11 @@ class PriceController(Agent):
                                                 , valid_price_ids
                                                 , message):
             #cleanup and return
-            self.tmp_bustopic_msg = None
+            self.tmp_bustopic_pp_msg = None
             return
             
-        pp_msg = self.tmp_bustopic_msg
-        self.tmp_bustopic_msg = None      #release self.tmp_bustopic_msg
+        pp_msg = self.tmp_bustopic_pp_msg
+        self.tmp_bustopic_pp_msg = None      #release self.tmp_bustopic_pp_msg
         
         # at times we operate on two pp_msg from us 
         # example: opt_pp --> currently in progess and bid_pp --> new bidding has been initiated)
@@ -399,7 +399,7 @@ class PriceController(Agent):
             publish_to_bus(self, pub_topic, pub_msg)
             return True
             
-    #validate incomming bus topic message and convert to self.tmp_bustopic_msg if check pass
+    #validate incomming bus topic message and convert to self.tmp_bustopic_pp_msg if check pass
     def _valid_bustopic_msg(self, sender, valid_senders_list, minimum_fields
                                     , validate_fields, valid_price_ids, message):
         _log.debug('_validate_bustopic_msg()')
@@ -442,7 +442,7 @@ class PriceController(Agent):
         if not pp_msg.sanity_check_ok(hint, validate_fields, valid_price_ids):
             _log.warning('Msg sanity checks failed!!!')
             return False
-        self.tmp_bustopic_msg = pp_msg
+        self.tmp_bustopic_pp_msg = pp_msg
         return True
     
     #compute new bid price point for every local device and ds devices
@@ -583,7 +583,7 @@ class PriceController(Agent):
         #post ed to us only if pp_id corresponds to these ids 
         #      (i.e., ed for either us opt_pp_id or bid_pp_id)
         
-        self.tmp_bustopic_msg = None
+        self.tmp_bustopic_pp_msg = None
         
         success_ap = False
         success_ed = False
@@ -610,11 +610,11 @@ class PriceController(Agent):
                                                 , valid_price_ids
                                                 , message):
             #cleanup and return
-            self.tmp_bustopic_msg = None
+            self.tmp_bustopic_pp_msg = None
             return
             
-        pp_msg = self.tmp_bustopic_msg
-        self.tmp_bustopic_msg = None      #release self.tmp_bustopic_msg
+        pp_msg = self.tmp_bustopic_pp_msg
+        self.tmp_bustopic_pp_msg = None      #release self.tmp_bustopic_pp_msg
         
         price_id = pp_msg.get_price_id()
         device_id = pp_msg.get_src_device_id()
