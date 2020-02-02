@@ -655,9 +655,10 @@ class PriceController(Agent):
         if (self._pca_mode != 'ONLINE'
                 or self._pp_optimize_option not in ['PASS_ON_PP', 'DEFAULT_OPT', 'EXTERN_OPT']
                 ):
-             if self._pca_mode in ['STANDALONE'
-                                        #, 'STANDBY'
-                                        ]:
+            
+            if self._pca_mode in ['STANDALONE'
+                                    #, 'STANDBY'
+                                    ]:
                 #do nothing
                 return
             #not implemented

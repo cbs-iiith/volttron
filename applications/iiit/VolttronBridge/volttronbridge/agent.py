@@ -154,6 +154,7 @@ class VolttronBridge(Agent):
         #TODO: relook -- impl queues,
         #can expect multiple pp_msgs on the bus before previous successfully posted to ds
         self.tmp_bustopic_pp_msg = get_default_pp_msg(self._discovery_address, self._device_id)
+        self.tmp_bustopic_ed_msg = get_default_ed_msg(self._discovery_address, self._device_id)
         
         self._all_ds_posts_success = False
         
@@ -395,7 +396,7 @@ class VolttronBridge(Agent):
         self._all_ds_posts_success = False
         
         #initiate ds post
-        self.tmp_bustopic_pp_msg = pp_msg
+        self.tmp_bustopic_pp_msg = copy(pp_msg)
         self.post_ds_new_pp()
         return
         
@@ -405,38 +406,35 @@ class VolttronBridge(Agent):
             #do nothing
             return
             
-        #post ed to us only if pp_id corresponds to these ids (i.e., ed for either us opt_pp_id or bid_pp_id)
-        valid_pp_ids = [self.us_opt_pp_id, self.us_bid_pp_id, self.local_opt_pp_id, self.local_bid_pp_id]
+        self.tmp_bustopic_pp_msg = None
         
-        #mandatory fields in the message
-        mandatory_fields = [ParamPP.idx_ed
-                            , ParamPP.idx_ed_datatype
-                            , ParamPP.idx_ed_pp_id
-                            , ParamPP.idx_ed_isoptimal
-                            , ParamPP.idx_ed_device_id
-                            , ParamPP.idx_pp_duration
-                            , ParamPP.idx_pp_ttl
-                            ,ParamPP.idx_pp_ts
-                            ]
-                            
-        #check for msg validity, pp_id, timeout, etc., also _log.info(message) if a valid msg
-        valid_msg = ispace_utils.sanity_check_ed(message, mandatory_fields, valid_pp_ids)
-        if not valid_msg:
-            return
-            
-        self._ed_current = message[ParamED.idx_ed]
-        self._ed_datatype = message[ParamED.idx_ed_datatype]
-        self._ed_pp_id = message[ParamED.idx_ed_pp_id]
-        self._ed_isoptimal = message[ParamED.idx_ed_isoptimal]
-        self._ed_duration = message[ParamED.idx_ed_duration]
-        self._ed_ttl = message[ParamED.idx_ed_ttl]
-        self._ed_ts = message[ParamED.idx_ed_ts]
+        success_ap = False
+        success_ed = False
+        #handle only ap or ed type messages
+        success_ap = check_msg_type(message, MessageType.active_power)
+        if not success_ap:
+            success_ed = check_msg_type(message, MessageType.energy_demand)
+            if not success_ed:
+                return
+                
+        valid_senders_list = ['iiit.pricecontroller']
+        minimum_fields = ['msg_type', 'value', 'value_data_type', 'units', 'price_id']
+        validate_fields = ['value', 'value_data_type', 'units', 'price_id', 'isoptimal', 'duration', 'ttl']
+        valid_price_ids = [self.us_opt_pp_id, self.us_bid_pp_id]
+        (success, ed_msg) = valid_bustopic_msg(sender, valid_senders_list
+                                                , minimum_fields
+                                                , validate_fields
+                                                , valid_price_ids
+                                                , message)
+        if not success or ed_msg is None: return
+        
         
         #reset counters & flags
         self._us_retrycount = 0
         self._all_us_posts_success = False
         
         #initiate us post
+        self.tmp_bustopic_ed_msg = copy(ed_msg)
         self.post_us_new_ed()
         return
         
@@ -464,17 +462,9 @@ class VolttronBridge(Agent):
         _log.debug('_usConnected: ' + str(self._usConnected))
         
         _log.debug("posting energy demand to upstream VolttronBridge")
-        success = ispace_utils.do_rpc(url_root, 'rpc_post_ed'
-                                        , {'discovery_address': self._discovery_address
-                                        , 'device_id': self._device_id
-                                        , 'new_ed': self._ed_current
-                                        , 'ed_datatype': self._ed_datatype
-                                        , 'ed_pp_id': self._ed_pp_id
-                                        , 'ed_isoptimal': self._ed_isoptimal
-                                        , 'ed_duration': self._ed_duration
-                                        , 'ed_ttl': self._ed_ttl
-                                        , 'ed_ts': self._ed_ts
-                                        })
+        success = do_rpc(url_root, 'rpc_post_ed'
+                                    , self.tmp_bustopic_ed_msg.get_json_params()
+                                    )
         #_log.debug('success: ' + str(success))
         if success:
             _log.debug("Success!!!")
@@ -544,7 +534,7 @@ class VolttronBridge(Agent):
             update_ts()
             '''
             url_root = 'http://' + discovery_address + '/VolttronBridge'
-            result = do_rpc(url_root, 'rpc_post_pp', self.tmp_bustopic_pp_msg})
+            result = do_rpc(url_root, 'rpc_post_pp', self.tmp_bustopic_pp_msg.get_json_params())
             if result:
                 #success, reset retry count
                 self._ds_retrycount[index] = MAX_RETRIES + 1    #no need to retry on the next run
