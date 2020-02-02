@@ -257,45 +257,6 @@ class BuildingController(Agent):
             
         return
         
-    def _valid_bustopic_msg(self, sender, valid_senders_list, minimum_fields
-                                    , validate_fields, valid_price_ids, message):
-        _log.debug('_validate_bustopic_msg()')
-        pp_msg = None
-        
-        if sender not in valid_senders_list and valid_senders_list != []:
-            _log.debug('sender: {}'.format(sender)
-                        + ' not in sender list: {}, do nothing!!!'.format(valid_senders_list))
-            return False
-            
-        try:
-            _log.debug('message: {}'.format(message))
-            pp_msg = parse_bustopic_msg(message, minimum_fields)
-            #_log.info('pp_msg: {}'.format(pp_msg))
-        except KeyError as ke:
-            _log.exception(ke)
-            _log.exception(jsonrpc.json_error('NA', INVALID_PARAMS,
-                    'Invalid params {}'.format(rpcdata.params)))
-            return False
-        except Exception as e:
-            _log.exception(e)
-            _log.exception(jsonrpc.json_error('NA', UNHANDLED_EXCEPTION, e))
-            return False
-            
-        #assuming we have both device_id and ip_addr by this time
-        success = pp_msg.check_dst_addr(self._device_id, self._discovery_address)
-        if not success:
-            _log.warning('Msg dst addr check failed!!!')
-            return False
-                
-        hint = 'New Price Point'
-        #validate various sanity measure like, valid fields, valid pp ids, ttl expiry, etc.,
-        if not pp_msg.sanity_check_ok(hint, validate_fields, valid_price_ids):
-            _log.warning('Msg sanity checks failed!!!')
-            return False
-            
-        self.tmp_bustopic_pp_msg = copy(pp_msg)
-        return True
-        
     def _process_opt_pp(self, pp_msg):
         self._opt_pp_msg_latest = copy(pp_msg)
         self._price_point_latest = pp_msg.get_value()

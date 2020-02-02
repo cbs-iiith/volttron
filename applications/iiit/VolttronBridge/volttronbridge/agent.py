@@ -39,7 +39,7 @@ import json
 from ispace_utils import do_rpc, sanity_check_ed
 from ispace_msg import ISPACE_Msg, MessageType
 from ispace_msg_utils import parse_bustopic_msg, check_msg_type
-from ispace_msg_utils import get_default_pp_msg, valid_bustopic_msg
+from ispace_msg_utils import get_default_pp_msg, get_default_ed_msg, valid_bustopic_msg
 
 utils.setup_logging()
 _log = logging.getLogger(__name__)

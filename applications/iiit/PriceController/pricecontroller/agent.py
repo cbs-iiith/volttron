@@ -580,15 +580,15 @@ class PriceController(Agent):
         minimum_fields = ['msg_type', 'value', 'value_data_type', 'units', 'price_id']
         validate_fields = ['value', 'value_data_type', 'units', 'price_id', 'isoptimal', 'duration', 'ttl']
         valid_price_ids = self._get_valid_price_ids()
-        (success, pp_msg) = valid_bustopic_msg(sender, valid_senders_list
+        (success, ed_msg) = valid_bustopic_msg(sender, valid_senders_list
                                                 , minimum_fields
                                                 , validate_fields
                                                 , valid_price_ids
                                                 , message)
-        if not success or pp_msg is None: return
+        if not success or ed_msg is None: return
         
-        price_id = pp_msg.get_price_id()
-        device_id = pp_msg.get_src_device_id()
+        price_id = ed_msg.get_price_id()
+        device_id = ed_msg.get_src_device_id()
         
         '''
         sort energy packet to respective buckets 
@@ -614,36 +614,36 @@ class PriceController(Agent):
             #put data to local_tap bucket
             if device_id in self._get_vb_local_device_ids():
                 idx = self._get_local_device_idx(device_id)
-                self._us_local_opt_ap[idx] = pp_msg.get_value()
+                self._us_local_opt_ap[idx] = ed_msg.get_value()
                 return
             #put data to ds_tap bucket
             elif device_id in self._get_vb_ds_device_ids():
                 idx = self._get_ds_device_idx(device_id)
-                self._us_ds_opt_ap[idx] = pp_msg.get_value()
+                self._us_ds_opt_ap[idx] = ed_msg.get_value()
                 return
         #MessageType.energy_demand, aggregator publishes this data to local/energydemand
         elif (success_ed and price_id == self.us_bid_pp_msg.get_price_id()):
             #put data to ds_tap bucket
             if device_id in self._get_vb_local_device_ids():
                 idx = self._get_local_device_idx(device_id)
-                self._us_local_bid_ed[idx] = pp_msg.get_value()
+                self._us_local_bid_ed[idx] = ed_msg.get_value()
                 return
             #put data to ds_tap bucket
             elif device_id in get_vb_ds_device_ids():
                 idx = self._get_ds_device_idx(device_id)
-                self._us_ds_bid_ed[idx] = pp_msg.get_value()
+                self._us_ds_bid_ed[idx] = ed_msg.get_value()
                 return
         #MessageType.energy_demand, process_loop() initiates _compute_new_price()
         elif (success_ed and price_id == self.local_bid_pp_msg.get_price_id()):
             #put data to local_tap bucket
             if device_id in self._get_vb_local_device_ids():
                 idx = self._get_local_device_idx(device_id)
-                self._local_bid_ed[idx] = pp_msg.get_value()
+                self._local_bid_ed[idx] = ed_msg.get_value()
                 return
             #put data to local_ted bucket
             elif device_id in get_vb_ds_device_ids():
                 idx = self._get_ds_device_idx(device_id)
-                self._ds_bid_ed[idx] = pp_msg.get_value()
+                self._ds_bid_ed[idx] = ed_msg.get_value()
                 return
         return
         
