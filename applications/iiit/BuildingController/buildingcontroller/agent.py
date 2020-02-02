@@ -30,6 +30,7 @@ from volttron.platform.jsonrpc import (
         UNAVAILABLE_AGENT)
 
 from random import randint
+from copy import copy
 
 import settings
 import time
@@ -292,11 +293,11 @@ class BuildingController(Agent):
             _log.warning('Msg sanity checks failed!!!')
             return False
             
-        self.tmp_bustopic_pp_msg = pp_msg
+        self.tmp_bustopic_pp_msg = copy(pp_msg)
         return True
         
     def _process_opt_pp(self, pp_msg):
-        self._opt_pp_msg_latest = pp_msg
+        self._opt_pp_msg_latest = copy(pp_msg)
         self._price_point_latest = pp_msg.get_value()
         
         self._process_opt_pp_success = False    #any process that failed to apply pp sets this flag False
@@ -304,7 +305,7 @@ class BuildingController(Agent):
         return
         
     def _process_bid_pp(self, pp_msg):
-        self._bid_pp_msg_latest = pp_msg
+        self._bid_pp_msg_latest = copy(pp_msg)
         self.process_bid_pp()
         return
         
@@ -324,8 +325,8 @@ class BuildingController(Agent):
             
         _log.info("New Price Point processed.")
         #on successful process of apply_pricing_policy with the latest opt pp, current = latest
-        self._opt_pp_msg_current = self._opt_pp_msg_latest
-        self._price_point_current = self._price_point_latest
+        self._opt_pp_msg_current = copy(self._opt_pp_msg_latest)
+        self._price_point_current = copy(self._price_point_latest)
         self._process_opt_pp_success = True
         return
         
@@ -383,7 +384,7 @@ class BuildingController(Agent):
             _log.warning('publish_building_pp() - self._opt_pp_msg_latest is None')
             return
             
-        pp_msg = self._opt_pp_msg_latest
+        pp_msg = copy(self._opt_pp_msg_latest)
         
         pub_topic =  self._root_topic + "/Building_PricePoint"
         pub_msg = pp_msg.get_json_params(self._agent_id)
@@ -434,7 +435,7 @@ class BuildingController(Agent):
         
     def process_bid_pp(self):
         self.publish_bid_ted()
-        self._bid_pp_msg_current = self._bid_pp_msg_latest
+        self._bid_pp_msg_current = copy(self._bid_pp_msg_latest)
         return
         
     def publish_bid_ted(self):

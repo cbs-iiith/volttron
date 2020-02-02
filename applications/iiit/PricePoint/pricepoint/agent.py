@@ -35,6 +35,8 @@ from volttron.platform.jsonrpc import (
 from random import randint
 import settings
 import time
+from copy import copy
+
 
 from ispace_utils import publish_to_bus, retrive_details_from_vb
 from ispace_msg import ISPACE_Msg, MessageType
@@ -125,6 +127,7 @@ class PricePoint(Agent):
         result = False
         try:
             rpcdata = jsonrpc.JsonRpcData.parse(message)
+            _log.debug('header: {}'.format(header))
             _log.debug('rpc method: {}'.format(rpcdata.method))
             _log.debug('rpc params: {}'.format(rpcdata.params))
             if rpcdata.method == "rpc_update_price_point":

@@ -17,6 +17,7 @@ from enum import IntEnum
 import logging
 from random import randint
 import json
+from copy import copy
 
 from volttron.platform.agent import utils
 from volttron.platform import jsonrpc
@@ -88,17 +89,17 @@ def get_default_pp_msg(discovery_address, device_id):
 def ted_helper(pp_msg, device_id, discovery_address, ted, new_ttl=10):
     #print(MessageType.energy_demand)
     msg_type = MessageType.energy_demand
-    one_to_one = pp_msg.get_one_to_one()
-    isoptimal = pp_msg.get_isoptimal()
+    one_to_one = copy(pp_msg.get_one_to_one())
+    isoptimal = copy(pp_msg.get_isoptimal())
     value = ted
     value_data_type = 'float'
     units = 'kWh'
-    price_id = pp_msg.get_price_id()
+    price_id = copy(pp_msg.get_price_id())
     src_ip = discovery_address
     src_device_id = device_id
-    dst_ip = pp_msg.get_src_ip()
-    dst_device_id = pp_msg.get_src_device_id()
-    duration = pp_msg.get_duration()
+    dst_ip = copy(pp_msg.get_src_ip())
+    dst_device_id = copy(pp_msg.get_src_device_id())
+    duration = copy(pp_msg.get_duration())
     ttl = new_ttl
     ts = datetime.datetime.utcnow().isoformat(' ') + 'Z'
     tz = 'UTC'
@@ -111,17 +112,17 @@ def ted_helper(pp_msg, device_id, discovery_address, ted, new_ttl=10):
 def tap_helper(pp_msg, device_id, discovery_address, tap, new_ttl=10):
     #print(MessageType.active_power)
     msg_type = MessageType.active_power
-    one_to_one = pp_msg.get_one_to_one()
-    isoptimal = pp_msg.get_isoptimal()
+    one_to_one = copy(pp_msg.get_one_to_one())
+    isoptimal = copy(pp_msg.get_isoptimal())
     value = tap
     value_data_type = 'float'
     units = 'Wh'
-    price_id = pp_msg.get_price_id()
+    price_id = copy(pp_msg.get_price_id())
     src_ip = discovery_address
     src_device_id = device_id
-    dst_ip = pp_msg.get_src_ip()
-    dst_device_id = pp_msg.get_src_device_id()
-    duration = pp_msg.get_duration()
+    dst_ip = copy(pp_msg.get_src_ip())
+    dst_device_id = copy(pp_msg.get_src_device_id())
+    duration = copy(pp_msg.get_duration())
     ttl = new_ttl
     ts = datetime.datetime.utcnow().isoformat(' ') + 'Z'
     tz = 'UTC'

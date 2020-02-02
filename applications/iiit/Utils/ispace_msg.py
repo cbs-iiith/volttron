@@ -13,6 +13,7 @@
 
 import datetime
 import dateutil
+import math
 from enum import IntEnum
 import logging
 from random import randint
@@ -40,6 +41,7 @@ ISPACE_MSG_ATTRIB_LIST = ['msg_type', 'one_to_one', 'isoptimal'
                             ]
                             
                             
+'''
 #https://www.oreilly.com/library/view/python-cookbook/0596001673/ch05s12.html
 #Making a Fast Copy of an Object. Credit: Alex Martelli
 def empty_copy(obj):
@@ -48,6 +50,7 @@ def empty_copy(obj):
     newcopy = Empty(  )
     newcopy._ _class_ _ = obj._ _class_ _
     return newcopy
+'''
     
 #avaliable in ispace_utils, copied here to remove dependecny on ispace_utils
 def mround(num, multipleOf):

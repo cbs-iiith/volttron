@@ -16,6 +16,7 @@ import logging
 import sys
 import uuid
 from random import random, randint
+from copy import copy
 
 from volttron.platform.vip.agent import Agent, Core, PubSub, compat, RPC
 from volttron.platform.agent import utils
@@ -259,8 +260,9 @@ class PriceController(Agent):
             result = 'Invalid option'
         return result
     
+    #this functionality moved to Sorting(refer to aggregator_us_tap(), aggregator_us_bid_ted(), aggregator_local_bid_ted())
     #subscribe to local/ed (i.e., ted) from the controller (building/zone/smarthub controller)
-    def on_new_ed(self, peer, sender, bus,  topic, headers, message):
+    #def on_new_ed(self, peer, sender, bus,  topic, headers, message):
         # parse message & validate
         # (_ed, _is_opt, _ed_pp_id) = get_data(message)
         
@@ -287,24 +289,36 @@ class PriceController(Agent):
         #       based on opt conditon _computeNewPrice can publish new bid_pp or 
         # and save data to self._ds_bid_ed
         
-        return
+    #    return
         
     def on_new_extrn_pp(self, peer, sender, bus,  topic, headers, message):
+        #check if this agent is not diabled
+        if self._agent_disabled:
+            _log.info("self.agent_disabled: " + str(self._agent_disabled) + ", do nothing!!!")
+            return False
+            
         self.tmp_bustopic_pp_msg = None
-        valid_senders_list = [self.external_vip_identity]
-        if not self._validate_pp_msg(sender, valid_senders_list, message):
-            #cleanup and return
-            self.tmp_bustopic_pp_msg = None
-            return
-        pp_msg = self.tmp_bustopic_pp_msg
-        self.tmp_bustopic_pp_msg = None      #release self.tmp_bustopic_pp_msg
         
-        self.act_pp_msg = pp_msg
+        #check message type before parsing
+        if not check_msg_type(message, MessageType.price_point): return False
+        
+        valid_senders_list = [self.external_vip_identity]
+        minimum_fields = ['msg_type', 'value', 'value_data_type', 'units', 'price_id']
+        validate_fields = ['value', 'value_data_type', 'units', 'price_id', 'isoptimal', 'duration', 'ttl']
+        valid_price_ids = []
+        (success, pp_msg) = valid_bustopic_msg(sender, valid_senders_list
+                                                , minimum_fields
+                                                , validate_fields
+                                                , valid_price_ids
+                                                , message)
+        if not success or pp_msg is None: return
+        
+        self.act_pp_msg = copy(pp_msg)
         
         if pp_msg.get_isoptimal():
-            self.local_opt_pp_msg = pp_msg
+            self.local_opt_pp_msg = copy(pp_msg)
         else:
-            self.local_bid_pp_msg = pp_msg
+            self.local_bid_pp_msg = copy(pp_msg)
         
         if self._pp_optimize_option == "EXTERN_OPT":
             pub_topic =  self._topic_price_point
@@ -342,21 +356,21 @@ class PriceController(Agent):
         # example: opt_pp --> currently in progess and bid_pp --> new bidding has been initiated)
         # The latest pp_msg is considered as active pp_msg
         # However, responses from to old opt_pp/bid_pp 
-        self.act_pp_msg = pp_msg
+        self.act_pp_msg = copy(pp_msg)
         
         #keep a track of us pp_msg
         if sender == self._vb_vip_identity:
             if pp_msg.get_isoptimal():
-                self.us_opt_pp_msg = pp_msg
+                self.us_opt_pp_msg = copy(pp_msg)
             else:
-                self.us_bid_pp_msg = pp_msg
+                self.us_bid_pp_msg = copy(pp_msg)
                 self._published_us_bid_ted = False              #re-initialize aggregator_us_bid_ted, 
         #keep a track of local pp_msg
         elif sender == 'iiit.pricepoint':
             if pp_msg.get_isoptimal():
-                self.local_opt_pp_msg = pp_msg
+                self.local_opt_pp_msg = copy(pp_msg)
             else:
-                self.local_bid_pp_msg = pp_msg
+                self.local_bid_pp_msg = copy(pp_msg)
                 
         if self._pp_optimize_option == "PASS_ON_PP":
             pub_topic =  self._topic_price_point
@@ -367,11 +381,13 @@ class PriceController(Agent):
             return True
             
         if self._pp_optimize_option == "EXTERN_OPT":
+            ''' do nothing, let the external agent subscribe directly to us/pricepoint
             pub_topic =  self.topic_extrn_pp
             pub_msg = pp_msg.get_json_params(self._agent_id)
             _log.debug('publishing to local bus topic: {}'.format(pub_topic))
             _log.debug('Msg: {}'.format(pub_msg))
             publish_to_bus(self, pub_topic, pub_msg)
+            '''
             return True
 
         if pp_msg.get_isoptimal() or self._pp_optimize_option == "EXTERN_OPT":
@@ -386,15 +402,18 @@ class PriceController(Agent):
             
         if self._pp_optimize_option == "DEFAULT_OPT":
             #list for pp_msg
-            new_pp_msg = self._computeNewPrice()
-            self.local_bid_pp_msg = new_pp_msg
-            _log.info('new bid pp_msg: {}'.format(new_pp_msg))
+            new_pp_msg_list = self._computeNewPrice()
+            self.local_bid_pp_msg_list = copy(new_pp_msg_list)
+            _log.info('new bid pp_msg_list: {}'.format(new_pp_msg_list))
             
-            pub_topic =  self._topic_price_point
-            pub_msg = new_pp_msg.get_json_params(self._agent_id)
-            _log.debug('publishing to local bus topic: {}'.format(pub_topic))
-            _log.debug('Msg: {}'.format(pub_msg))
-            publish_to_bus(self, pub_topic, pub_msg)
+            for msg in new_pp_msg_list:
+                _log.info('new msg: {}'.format(msg))
+                pub_topic =  self._topic_price_point
+                pub_msg = new_pp_msg.get_json_params(self._agent_id)
+                _log.debug('publishing to local bus topic: {}'.format(pub_topic))
+                _log.debug('Msg: {}'.format(pub_msg))
+                publish_to_bus(self, pub_topic, pub_msg)
+                sleep(300/1000)            #yield a moment (300ms)
             return True
         return True
         
