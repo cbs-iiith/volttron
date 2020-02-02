@@ -148,10 +148,8 @@ class PricePoint(Agent):
         pp_msg = None
         #Note: this is a rpc message do the check here ONLY
         #check message for MessageType.price_point
-        success = check_msg_type(message, MessageType.price_point)
-        if not success:
-            return jsonrpc.json_error('NA', INVALID_PARAMS,
-                    'Invalid params {}'.format(rpcdata.params))
+        if not check_msg_type(message, MessageType.price_point): 
+            return jsonrpc.json_error('NA', INVALID_PARAMS, 'Invalid params {}'.format(rpcdata.params))
         try:
             minimum_fields = ['value', 'value_data_type', 'units', 'price_id']
             pp_msg = parse_jsonrpc_msg(message, minimum_fields)

@@ -41,7 +41,7 @@ from ispace_utils import isclose, get_task_schdl, cancel_task_schdl, publish_to_
 from ispace_utils import retrive_details_from_vb
 from ispace_msg import ISPACE_Msg, MessageType
 from ispace_msg_utils import parse_bustopic_msg, check_msg_type, tap_helper, ted_helper
-from ispace_msg_utils import get_default_pp_msg
+from ispace_msg_utils import get_default_pp_msg, valid_bustopic_msg
 
 utils.setup_logging()
 _log = logging.getLogger(__name__)
@@ -234,25 +234,18 @@ class BuildingController(Agent):
             return
             
         #check message type before parsing
-        success = check_msg_type(message, MessageType.price_point)
-        if not success:
-            return False
+        if not check_msg_type(message, MessageType.price_point): return False
             
         valid_senders_list = self._valid_senders_list_pp
         minimum_fields = ['msg_type', 'value', 'value_data_type', 'units', 'price_id']
         validate_fields = ['value', 'value_data_type', 'units', 'price_id', 'isoptimal', 'duration', 'ttl']
         valid_price_ids = []
-        if not self._valid_bustopic_msg(sender, valid_senders_list
+        (success, pp_msg) = valid_bustopic_msg(sender, valid_senders_list
                                                 , minimum_fields
                                                 , validate_fields
                                                 , valid_price_ids
-                                                , message):
-            #cleanup and return
-            self.tmp_bustopic_pp_msg = None
-            return
-            
-        pp_msg = self.tmp_bustopic_pp_msg
-        self.tmp_bustopic_pp_msg = None      #release self.tmp_bustopic_pp_msg
+                                                , message)
+        if not success or pp_msg is None: return
         
         if pp_msg.get_isoptimal():
             _log.debug('optimal pp!!!')

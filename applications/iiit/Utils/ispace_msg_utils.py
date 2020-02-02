@@ -34,6 +34,46 @@ ROUNDOFF_ACTIVE_POWER = 0.0001
 ROUNDOFF_ENERGY = 0.0001
 
 
+#validate incomming bus topic message
+def valid_bustopic_msg(sender, valid_senders_list, minimum_fields
+                        , validate_fields, valid_price_ids, message):
+    _log.debug('_validate_bustopic_msg()')
+    pp_msg = None
+    
+    if sender not in valid_senders_list:
+        _log.debug('sender: {}'.format(sender)
+                    + ' not in sender list: {}, do nothing!!!'.format(valid_senders_list))
+        return (False, pp_msg)
+        
+        
+    try:
+        _log.debug('message: {}'.format(message))
+        minimum_fields = ['value', 'value_data_type', 'units', 'price_id']
+        pp_msg = parse_bustopic_msg(message, minimum_fields)
+        #_log.info('pp_msg: {}'.format(pp_msg))
+    except KeyError as ke:
+        _log.exception(ke)
+        _log.exception(jsonrpc.json_error('NA', INVALID_PARAMS,
+                'Invalid params {}'.format(rpcdata.params)))
+        return (False, pp_msg)
+    except Exception as e:
+        _log.exception(e)
+        _log.exception(jsonrpc.json_error('NA', UNHANDLED_EXCEPTION, e))
+        return (False, pp_msg)
+        
+    hint = ('New Price Point' if check_msg_type(message, MessageType.price_point)
+           else 'New Active Power' if check_msg_type(message, MessageType.active_power)
+           else 'New Energy Demand' if check_msg_type(message, MessageType.energy_demand)
+           else 'Unknown Msg Type')
+
+    validate_fields = ['value', 'value_data_type', 'units', 'price_id', 'isoptimal', 'duration', 'ttl']
+    valid_price_ids = []
+    #validate various sanity measure like, valid fields, valid pp ids, ttl expiry, etc.,
+    if not pp_msg.sanity_check_ok(hint, validate_fields, valid_price_ids):
+        _log.warning('Msg sanity checks failed!!!')
+        return (False, pp_msg)
+    return (True, pp_msg)
+
 #a default pricepoint message
 def get_default_pp_msg(discovery_address, device_id):
     return ISPACE_Msg(MessageType.price_point, False, True

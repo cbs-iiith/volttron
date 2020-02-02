@@ -37,7 +37,7 @@ import gevent.event
 from ispace_utils import publish_to_bus, retrive_details_from_vb
 from ispace_msg import ISPACE_Msg, MessageType
 from ispace_msg_utils import parse_bustopic_msg, check_msg_type, tap_helper, ted_helper
-from ispace_msg_utils import get_default_pp_msg
+from ispace_msg_utils import get_default_pp_msg, valid_bustopic_msg
 
 utils.setup_logging()
 _log = logging.getLogger(__name__)
@@ -317,28 +317,26 @@ class PriceController(Agent):
         return
         
     def on_new_us_pp(self, peer, sender, bus,  topic, headers, message):
+        #check if this agent is not diabled
+        if self._agent_disabled:
+            _log.info("self.agent_disabled: " + str(self._agent_disabled) + ", do nothing!!!")
+            return False
+            
         self.tmp_bustopic_pp_msg = None
         
         #check message type before parsing
-        success = check_msg_type(message, MessageType.price_point)
-        if not success:
-            return False
-            
+        if not check_msg_type(message, MessageType.price_point): return False
+        
         valid_senders_list = self._us_senders_list
         minimum_fields = ['msg_type', 'value', 'value_data_type', 'units', 'price_id']
         validate_fields = ['value', 'value_data_type', 'units', 'price_id', 'isoptimal', 'duration', 'ttl']
         valid_price_ids = []
-        if not self._valid_bustopic_msg(sender, valid_senders_list
+        (success, pp_msg) = valid_bustopic_msg(sender, valid_senders_list
                                                 , minimum_fields
                                                 , validate_fields
                                                 , valid_price_ids
-                                                , message):
-            #cleanup and return
-            self.tmp_bustopic_pp_msg = None
-            return
-            
-        pp_msg = self.tmp_bustopic_pp_msg
-        self.tmp_bustopic_pp_msg = None      #release self.tmp_bustopic_pp_msg
+                                                , message)
+        if not success or pp_msg is None: return
         
         # at times we operate on two pp_msg from us 
         # example: opt_pp --> currently in progess and bid_pp --> new bidding has been initiated)
@@ -398,53 +396,8 @@ class PriceController(Agent):
             _log.debug('Msg: {}'.format(pub_msg))
             publish_to_bus(self, pub_topic, pub_msg)
             return True
-            
-    #validate incomming bus topic message and convert to self.tmp_bustopic_pp_msg if check pass
-    def _valid_bustopic_msg(self, sender, valid_senders_list, minimum_fields
-                                    , validate_fields, valid_price_ids, message):
-        _log.debug('_validate_bustopic_msg()')
-        pp_msg = None
-        
-        #check if this agent is not diabled
-        if self._agent_disabled:
-            _log.info("self.agent_disabled: " + str(self._agent_disabled) + ", do nothing!!!")
-            return False
-            
-        if sender not in valid_senders_list:
-            _log.debug('sender: {}'.format(sender)
-                        + ' not in sender list: {}, do nothing!!!'.format(valid_senders_list))
-            return False
-            
-            
-        try:
-            _log.debug('message: {}'.format(message))
-            minimum_fields = ['value', 'value_data_type', 'units', 'price_id']
-            pp_msg = parse_bustopic_msg(message, minimum_fields)
-            #_log.info('pp_msg: {}'.format(pp_msg))
-        except KeyError as ke:
-            _log.exception(ke)
-            _log.exception(jsonrpc.json_error('NA', INVALID_PARAMS,
-                    'Invalid params {}'.format(rpcdata.params)))
-            return False
-        except Exception as e:
-            _log.exception(e)
-            _log.exception(jsonrpc.json_error('NA', UNHANDLED_EXCEPTION, e))
-            return False
-            
-        hint = ('New Price Point' if check_msg_type(message, MessageType.price_point)
-               else 'New Active Power' if check_msg_type(message, MessageType.active_power)
-               else 'New Energy Demand' if check_msg_type(message, MessageType.energy_demand)
-               else 'Unknown Msg Type')
-
-        validate_fields = ['value', 'value_data_type', 'units', 'price_id', 'isoptimal', 'duration', 'ttl']
-        valid_price_ids = []
-        #validate various sanity measure like, valid fields, valid pp ids, ttl expiry, etc.,
-        if not pp_msg.sanity_check_ok(hint, validate_fields, valid_price_ids):
-            _log.warning('Msg sanity checks failed!!!')
-            return False
-        self.tmp_bustopic_pp_msg = pp_msg
         return True
-    
+        
     #compute new bid price point for every local device and ds devices
     #return list for pp_msg
     def _compute_new_price(self):
@@ -569,6 +522,10 @@ class PriceController(Agent):
         return (True if len(self._ds_device_ids) >= len(vb_ds_device_ids) else False)
         
     def on_ds_ed(self, peer, sender, bus,  topic, headers, message):
+        #check if this agent is not diabled
+        if self._agent_disabled:
+            _log.info("self.agent_disabled: " + str(self._agent_disabled) + ", do nothing!!!")
+            return False
         # 1. validate message
         # 2. check againt valid pp ids
         # 3. if (src_id_add == self._ip_addr) and opt_pp:
@@ -604,17 +561,12 @@ class PriceController(Agent):
         minimum_fields = ['msg_type', 'value', 'value_data_type', 'units', 'price_id']
         validate_fields = ['value', 'value_data_type', 'units', 'price_id', 'isoptimal', 'duration', 'ttl']
         valid_price_ids = self._get_valid_price_ids()
-        if not self._valid_bustopic_msg(sender, valid_senders_list
+        (success, pp_msg) = valid_bustopic_msg(sender, valid_senders_list
                                                 , minimum_fields
                                                 , validate_fields
                                                 , valid_price_ids
-                                                , message):
-            #cleanup and return
-            self.tmp_bustopic_pp_msg = None
-            return
-            
-        pp_msg = self.tmp_bustopic_pp_msg
-        self.tmp_bustopic_pp_msg = None      #release self.tmp_bustopic_pp_msg
+                                                , message)
+        if not success or pp_msg is None: return
         
         price_id = pp_msg.get_price_id()
         device_id = pp_msg.get_src_device_id()

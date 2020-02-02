@@ -39,6 +39,7 @@ import json
 import ispace_utils
 from ispace_msg import ISPACE_Msg, MessageType
 from ispace_msg_utils import parse_bustopic_msg, check_msg_type
+from ispace_msg_utils import get_default_pp_msg, valid_bustopic_msg
 
 utils.setup_logging()
 _log = logging.getLogger(__name__)
@@ -152,7 +153,7 @@ class VolttronBridge(Agent):
                             
         #TODO: relook -- impl queues,
         #can expect multiple pp_msgs on the bus before previous successfully posted to ds
-        self.tmp_bustopic_pp_msg = None
+        self.tmp_bustopic_pp_msg = get_default_pp_msg(self._discovery_address, self._device_id)
         
         self._all_ds_posts_success = False
         
@@ -400,39 +401,19 @@ class VolttronBridge(Agent):
         if self._bridge_host == 'LEVEL_TAILEND':
             return
             
-        #TODO: relook -- impl queues,
-        #can expect multiple pp_msgs on the bus before previous successfully posted to ds
-        self.tmp_bustopic_pp_msg = None
-
-        if sender != 'iiit.pricecontroller':
-            return
-            
-        #all pp ids are valid
-        valid_pp_ids = []
+        #check message type before parsing
+        if not check_msg_type(message, MessageType.price_point): return False
         
-        #mandatory fields in the message
-        mandatory_fields = [ParamPP.idx_pp
-                            , ParamPP.idx_pp_datatype
-                            , ParamPP.idx_pp_id
-                            , ParamPP.idx_pp_isoptimal
-                            , ParamPP.idx_pp_duration
-                            , ParamPP.idx_pp_ttl
-                            , ParamPP.idx_pp_ts
-                            ]
-                            
-        #check for msg validity, pp_id, timeout, etc., also _log.info(message) if a valid msg
-        valid_msg = ispace_utils.sanity_check_pp(message, mandatory_fields, valid_pp_ids)
-        if not valid_msg:
-            return
-            
-        #store pp data to global to be retrived later
-        self._pp_current = message[ParamPP.idx_pp]
-        self._pp_datatype = message[ParamPP.idx_pp_datatype]
-        self._pp_id = message[ParamPP.idx_pp_id]
-        self._pp_isoptimal = message[ParamPP.idx_pp_isoptimal]
-        self._pp_duration = message[ParamPP.idx_pp_duration]
-        self._pp_ttl = message[ParamPP.idx_pp_ttl]
-        self._pp_ts = message[ParamPP.idx_pp_ts]
+        valid_senders_list = self._valid_senders_list_pp
+        minimum_fields = ['msg_type', 'value', 'value_data_type', 'units', 'price_id']
+        validate_fields = ['value', 'value_data_type', 'units', 'price_id', 'isoptimal', 'duration', 'ttl']
+        valid_price_ids = []
+        (success, pp_msg) = valid_bustopic_msg(sender, valid_senders_list
+                                                , minimum_fields
+                                                , validate_fields
+                                                , valid_price_ids
+                                                , message)
+        if not success or pp_msg is None: return
         
         #keep a track of pp_ids
         if pp_msg.get_src_device_id() == self._device_id:
@@ -447,14 +428,12 @@ class VolttronBridge(Agent):
                 self.us_bid_pp_id = pp_msg.get_price_id()
         
         
-        self._pp_id not in [self.us_opt_pp_id, self.us_bid_pp_id]:
-        
-        
         #reset counters & flags
         self._reset_ds_retrycount()
         self._all_ds_posts_success  = False
         
         #initiate ds post
+        self.tmp_bustopic_pp_msg = pp_msg
         self.post_ds_new_pp()
         return
         
@@ -603,17 +582,7 @@ class VolttronBridge(Agent):
             update_ts()
             '''
             url_root = 'http://' + discovery_address + '/VolttronBridge'
-            result = ispace_utils.do_rpc(url_root, 'rpc_post_pp'
-                                        , {'discovery_address': self._discovery_address
-                                        , 'device_id': self._device_id
-                                        , 'new_pp': self._pp_current
-                                        , 'new_pp_id': self._pp_id
-                                        , 'new_pp_isoptimal': self._pp_isoptimal
-                                        , 'new_pp_datatype': self._pp_datatype
-                                        , 'new_pp_duration': self._pp_duration
-                                        , 'new_pp_ttl': self._pp_ttl
-                                        , 'new_pp_ts': self._pp_ts
-                                        })
+            result = ispace_utils.do_rpc(url_root, 'rpc_post_pp', })
             if result:
                 #success, reset retry count
                 self._ds_retrycount[index] = MAX_RETRIES + 1    #no need to retry on the next run

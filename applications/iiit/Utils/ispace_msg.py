@@ -21,7 +21,6 @@ import json
 from volttron.platform.agent import utils
 from volttron.platform import jsonrpc
 
-from ispace_utils import mround, publish_to_bus
 
 utils.setup_logging()
 _log = logging.getLogger(__name__)
@@ -41,6 +40,21 @@ ISPACE_MSG_ATTRIB_LIST = ['msg_type', 'one_to_one', 'isoptimal'
                             ]
                             
                             
+#https://www.oreilly.com/library/view/python-cookbook/0596001673/ch05s12.html
+#Making a Fast Copy of an Object. Credit: Alex Martelli
+def empty_copy(obj):
+    class Empty(obj._ _class_ _):
+        def _ _init_ _(self): pass
+    newcopy = Empty(  )
+    newcopy._ _class_ _ = obj._ _class_ _
+    return newcopy
+    
+#avaliable in ispace_utils, copied here to remove dependecny on ispace_utils
+def mround(num, multipleOf):
+    #_log.debug('mround()')
+    return math.floor((num + multipleOf / 2) / multipleOf) * multipleOf
+    
+    
 class MessageType(IntEnum):
     price_point = 0
     budget = 1
@@ -104,12 +118,21 @@ class ISPACE_Msg:
         if tz is not None: self.set_tz(tz)
         return
         
-    #str overload to return class attributes as str dict
+    #str overload to return class attributes as json params
     def __str__(self):
         #_log.debug('__str__()')
         params = self._get_params_dict()
-        return str(params)
-                
+        return json.dumps(params)
+        
+    '''hold-on
+    def _ _copy_ _(self):
+        newcopy = empty_copy(self)
+        print "now copy some relevant subset of self's attributes to newcopy"
+        for attrib in ISPACE_MSG_ATTRIB_LIST:
+            
+        return newcopy
+    '''
+    
     def _get_params_dict(self):
         params = {}
         params['msg_type'] = self.msg_type
@@ -169,38 +192,41 @@ class ISPACE_Msg:
             #TODO: data validations checks based on message type and field type
         return True
     
+    def _cp_attrib(self, attrib, value):
+        if attrib == 'msg_type': self.set_msg_type(value)
+        elif attrib == 'one_to_one': self.set_(one_to_onevalue)
+        elif attrib == 'value': self.set_value(value)
+        elif attrib == 'value_data_type': self.set_value_data_type(value)
+        elif attrib == 'units': self.set_units(value)
+        elif attrib == 'price_id': self.set_price_id(value)
+        elif attrib == 'isoptimal': self.set_isoptimal(value)
+        elif attrib == 'src_ip': self.set_src_ip(value)
+        elif attrib == 'src_device_id': self.set_src_device_id(value)
+        elif attrib == 'dst_ip': self.set_dst_ip(value)
+        elif attrib == 'dst_device_id': self.set_dst_device_id(value)
+        elif attrib == 'duration': self.set_duration(value)
+        elif attrib == 'ttl': self.set_ttl(value)
+        elif attrib == 'ts': self.set_ts(value)
+        elif attrib == 'tz': self.set_tz(value)
+        return
+        
     def _is_attrib_null(self, attrib):
-        if attrib == 'msg_type' and self.msg_type is None:
-            return True
-        elif attrib == 'one_to_one' and self.one_to_one is None:
-            return True
-        elif attrib == 'value' and self.value is None:
-            return True
-        elif attrib == 'value_data_type' and self.value_data_type is None:
-            return True
-        elif attrib == 'units' and self.units is None:
-            return True
-        elif attrib == 'price_id' and self.price_id is None:
-            return True
-        elif attrib == 'isoptimal' and self.isoptimal is None:
-            return True
-        elif attrib == 'src_ip' and self.src_ip is None:
-            return True
-        elif attrib == 'src_device_id' and self.src_device_id is None:
-            return True
-        elif attrib == 'dst_ip' and self.dst_ip is None:
-            return True
-        elif attrib == 'dst_device_id' and self.dst_device_id is None:
-            return True
-        elif attrib == 'duration' and self.duration is None:
-            return True
-        elif attrib == 'ttl' and self.ttl is None:
-            return True
-        elif attrib == 'ts' and self.ts is None:
-            return True
-        elif attrib == 'tz' and self.tz is None:
-            return True
-        return False
+        if attrib == 'msg_type' and self.msg_type is None: return True
+        elif attrib == 'one_to_one' and self.one_to_one is None: return True
+        elif attrib == 'value' and self.value is None: return True
+        elif attrib == 'value_data_type' and self.value_data_type is None: return True
+        elif attrib == 'units' and self.units is None: return True
+        elif attrib == 'price_id' and self.price_id is None: return True
+        elif attrib == 'isoptimal' and self.isoptimal is None: return True
+        elif attrib == 'src_ip' and self.src_ip is None: return True
+        elif attrib == 'src_device_id' and self.src_device_id is None: return True
+        elif attrib == 'dst_ip' and self.dst_ip is None: return True
+        elif attrib == 'dst_device_id' and self.dst_device_id is None: return True
+        elif attrib == 'duration' and self.duration is None: return True
+        elif attrib == 'ttl' and self.ttl is None: return True
+        elif attrib == 'ts' and self.ts is None: return True
+        elif attrib == 'tz' and self.tz is None: return True
+        else: return False
         
     #validate various sanity measure like, valid fields, valid pp ids, ttl expire, etc.,
     def sanity_check_ok(self, hint = None, validate_fields = [], valid_price_ids = []):
