@@ -36,7 +36,7 @@ import gevent
 import gevent.event
 import json
 
-import ispace_utils
+from ispace_utils import do_rpc, sanity_check_ed
 from ispace_msg import ISPACE_Msg, MessageType
 from ispace_msg_utils import parse_bustopic_msg, check_msg_type
 from ispace_msg_utils import get_default_pp_msg, valid_bustopic_msg
@@ -258,11 +258,11 @@ class VolttronBridge(Agent):
         result = False
         try:
             rpcdata = jsonrpc.JsonRpcData.parse(message)
-            '''
-            _log.debug('rpc_from_net()...' +
-                        ', rpc method: {}'.format(rpcdata.method) +
-                        ', rpc params: {}'.format(rpcdata.params))
-            '''
+            _log.debug('rpc_from_net()...'
+                        + 'header: {}'.format(header)
+                        + ', rpc method: {}'.format(rpcdata.method)
+                        + ', rpc params: {}'.format(rpcdata.params)
+                        )
             if rpcdata.method == "rpc_register_ds_bridge":
                 args = {'discovery_address': rpcdata.params['discovery_address']
                         , 'device_id':rpcdata.params['device_id']
@@ -276,44 +276,12 @@ class VolttronBridge(Agent):
                 result = self._unregister_ds_bridge(**args)
                 
             elif rpcdata.method == "rpc_post_ed":
-                args = {'discovery_address': rpcdata.params['discovery_address']
-                        , 'device_id': rpcdata.params['device_id']
-                        , 'new_ed': rpcdata.params['new_ed']
-                        , 'ed_datatype': rpcdata.params['ed_datatype']
-                        , 'ed_pp_id': rpcdata.params['ed_pp_id']
-                        , 'ed_isoptimal': rpcdata.params['ed_isoptimal']
-                        , 'ed_duration': rpcdata.params['ed_duration']
-                        , 'ed_ttl': rpcdata.params['ed_ttl']
-                        , 'ed_ts': rpcdata.params['ed_ts']
-                        }
                 #post the new energy demand from ds to the local bus
-                result = self._post_ed(**args)
+                result = self._post_ed(message)
                 
             elif rpcdata.method == "rpc_post_pp":
-                args = {'discovery_address': rpcdata.params['discovery_address']
-                        , 'device_id':rpcdata.params['device_id']
-                        , 'new_pp': rpcdata.params['new_pp']
-                        , 'new_pp_id': rpcdata.params['new_pp_id']
-                                    if rpcdata.params['new_pp_id'] is not None
-                                    else randint(0, 99999999)
-                        , 'new_pp_datatype': rpcdata.params['new_pp_datatype']
-                                    if rpcdata.params['new_pp_datatype'] is not None
-                                    else {'units': 'cents', 'tz': 'UTC', 'type': 'float'}
-                        , 'new_pp_isoptimal': rpcdata.params['new_pp_isoptimal']
-                                    if rpcdata.params['new_pp_isoptimal'] is not None
-                                    else False
-                        , 'new_pp_duration': rpcdata.params['new_pp_duration']
-                                    if rpcdata.params['new_pp_duration'] is not None
-                                    else 3600
-                        , 'new_pp_ttl': rpcdata.params['new_pp_ttl']
-                                    if rpcdata.params['new_pp_ttl'] is not None
-                                    else -1
-                        , 'new_pp_ts': rpcdata.params['new_pp_ts']
-                                    if rpcdata.params['new_pp_ts'] is not None
-                                    else datetime.datetime.utcnow().isoformat(' ') + 'Z'
-                    }
                 #post the new new price point from us to the local-us-bus
-                result = self._post_pp(**args)
+                result = self._post_pp(message)
                 
             elif rpcdata.method == "rpc_ping":
                 result = True
@@ -415,22 +383,16 @@ class VolttronBridge(Agent):
                                                 , message)
         if not success or pp_msg is None: return
         
-        #keep a track of pp_ids
+        #keep a track of local pp_ids
         if pp_msg.get_src_device_id() == self._device_id:
-            if pp_msg.get_isoptimal(): 
+            if pp_msg.get_isoptimal():
                 self.local_opt_pp_id = pp_msg.get_price_id()
             else : 
                 self.local_bid_pp_id = pp_msg.get_price_id()
-        else:
-            if pp_msg.get_isoptimal(): 
-                self.us_opt_pp_id = pp_msg.get_price_id()
-            else : 
-                self.us_bid_pp_id = pp_msg.get_price_id()
-        
         
         #reset counters & flags
         self._reset_ds_retrycount()
-        self._all_ds_posts_success  = False
+        self._all_ds_posts_success = False
         
         #initiate ds post
         self.tmp_bustopic_pp_msg = pp_msg
@@ -582,7 +544,7 @@ class VolttronBridge(Agent):
             update_ts()
             '''
             url_root = 'http://' + discovery_address + '/VolttronBridge'
-            result = ispace_utils.do_rpc(url_root, 'rpc_post_pp', })
+            result = do_rpc(url_root, 'rpc_post_pp', self.tmp_bustopic_pp_msg})
             if result:
                 #success, reset retry count
                 self._ds_retrycount[index] = MAX_RETRIES + 1    #no need to retry on the next run
@@ -638,72 +600,85 @@ class VolttronBridge(Agent):
         return
         
     #post the new price point from us to the local-us-bus
-    def _post_pp(self, discovery_address
-                        , device_id
-                        , new_pp
-                        , new_pp_datatype
-                        , new_pp_id
-                        , new_pp_isoptimal
-                        , new_pp_ttl
-                        , new_pp_ts
-                        ):
-        ispace_utils.print_pp(self, 'pp from us'
-                                    , new_pp
-                                    , new_pp_datatype
-                                    , new_pp_id
-                                    , new_pp_isoptimal
-                                    , discovery_address
-                                    , device_id
-                                    , new_pp_ttl
-                                    , new_pp_ts
-                                    )
-                                    
-        #keep a track of us pp_ids
-        if new_pp_isoptimal:
-            self.us_opt_pp_id = new_pp_id
-        else:
-            self.us_bid_pp_id = new_pp_id
+    def _post_pp(self, message):
+        pp_msg = None
+        #Note: this is on a rpc message do the check here ONLY
+        #check message for MessageType.price_point
+        if not check_msg_type(message, MessageType.price_point):
+            return jsonrpc.json_error('NA', INVALID_PARAMS, 'Invalid params {}'.format(rpcdata.params))
+        try:
+            minimum_fields = ['value', 'value_data_type', 'units', 'price_id']
+            pp_msg = parse_jsonrpc_msg(message, minimum_fields)
+            #_log.info('pp_msg: {}'.format(pp_msg))
+        except KeyError as ke:
+            print(ke)
+            return jsonrpc.json_error('NA', INVALID_PARAMS,
+                    'Invalid params {}'.format(rpcdata.params))
+        except Exception as e:
+            print(e)
+            return jsonrpc.json_error('NA', UNHANDLED_EXCEPTION, e)
             
-        #post to bus
+        #validate various sanity measure like, valid fields, valid pp ids, ttl expiry, etc.,
+        hint = 'New Price Point'
+        validate_fields = ['value', 'value_data_type', 'units', 'price_id', 'isoptimal', 'duration', 'ttl']
+        valid_price_ids = []
+        if not pp_msg.sanity_check_ok(hint, validate_fields, valid_price_ids):
+            _log.warning('Msg sanity checks failed!!!')
+            return 'Msg sanity checks failed!!!'
+            
+        #keep a track of us pp_ids
+        if pp_msg.get_src_device_id() != self._device_id:
+            if pp_msg.get_isoptimal():
+                self.us_opt_pp_id = pp_msg.get_price_id()
+            else :
+                self.us_bid_pp_id = pp_msg.get_price_id()
+            
+        #publish the new price point to the local us message bus
         _log.debug('post to the local-us-bus')
-        pubTopic =  self.pricePoint_topic_us
-        pubMsg = [new_pp
-                    , new_pp_datatype
-                    , new_pp_id
-                    , new_pp_isoptimal
-                    , discovery_address
-                    , device_id
-                    , new_pp_ttl
-                    , new_pp_ts
-                    ]
-        ispace_utils.publish_to_bus(self, pubTopic, pubMsg)
+        pub_topic = self.pricePoint_topic_us
+        pub_msg = pp_msg.get_json_params(self._agent_id)
+        _log.debug('publishing to local bus topic: {}'.format(pub_topic))
+        _log.debug('Msg: {}'.format(pub_msg))
+        publish_to_bus(self, pub_topic, pub_msg)
         _log.debug('...Done!!!')
         return True
         
     #post the new energy demand from ds to the local-ds-bus
-    def _post_ed(self, discovery_address
-                        , device_id
-                        , new_ed
-                        , ed_datatype
-                        , ed_pp_id
-                        , ed_isoptimal
-                        , ed_duration
-                        , ed_ttl
-                        , ed_ts
-                        ):
-        ispace_utils.print_ed(self, 'ed from ds'
-                                    , new_ed
-                                    , ed_datatype
-                                    , ed_pp_id
-                                    , ed_isoptimal
-                                    , discovery_address
-                                    , device_id
-                                    , ed_duration
-                                    , ed_ttl
-                                    , ed_ts
-                                    )
+    def _post_ed(self, message):
+        pp_msg = None
+        
+        #Note: this is on a rpc message do the check here ONLY
+        #check message for MessageType.price_point
+        success_ap = False
+        success_ed = False
+        #handle only ap or ed type messages
+        success_ap = check_msg_type(message, MessageType.active_power)
+        if not success_ap:
+            success_ed = check_msg_type(message, MessageType.energy_demand)
+            if not success_ed:
+                return jsonrpc.json_error('NA', INVALID_PARAMS, 'Invalid params {}'.format(rpcdata.params))
+        try:
+            minimum_fields = ['value', 'value_data_type', 'units', 'price_id']
+            pp_msg = parse_jsonrpc_msg(message, minimum_fields)
+            #_log.info('pp_msg: {}'.format(pp_msg))
+        except KeyError as ke:
+            print(ke)
+            return jsonrpc.json_error('NA', INVALID_PARAMS,
+                    'Invalid params {}'.format(rpcdata.params))
+        except Exception as e:
+            print(e)
+            return jsonrpc.json_error('NA', UNHANDLED_EXCEPTION, e)
+            
+        #validate various sanity measure like, valid fields, valid pp ids, ttl expiry, etc.,
+        hint = 'New Active Power' if success_ap else 'New Energy Demand'
+        validate_fields = ['value', 'value_data_type', 'units', 'price_id', 'isoptimal', 'duration', 'ttl']
+        valid_price_ids = []
+        if not pp_msg.sanity_check_ok(hint, validate_fields, valid_price_ids):
+            _log.warning('Msg sanity checks failed!!!')
+            return 'Msg sanity checks failed!!!'
                                     
-        if not self._msg_from_registered_ds(discovery_address, device_id):
+        #check if from registered ds
+        if not self._msg_from_registered_ds(pp_msg.get_src_ip(), pp_msg.get_src_device_id()):
             #either the post to ds failed in previous iteration and de-registered from the _ds_register
             # or the msg is corrupted
             _log.warning('msg not from registered ds, do nothing!!!')
@@ -711,30 +686,19 @@ class VolttronBridge(Agent):
             
         #process ed only if pp_id corresponds to either us/local opt/bid pp_ids)
         valid_pp_ids = [self.us_opt_pp_id, self.us_bid_pp_id, self._pp_id]
-        if ed_pp_id not in [self.us_opt_pp_id, self.us_bid_pp_id, self._pp_id]:
-            _log.debug('pp_id: {}'.format(message[ParamPP.idx_pp_id])
+        if pp_msg.get_price_id() not in [self.us_opt_pp_id, self.us_bid_pp_id, self._pp_id]:
+            _log.debug('pp_id: {}'.format(pp_msg.get_price_id())
                     + ' not in valid_pp_ids: {}, do nothing!!!'.format(valid_pp_ids))
-            return False
-            
-        #process ed only if msg is alive (didnot timeout)
-        if ispace_utils.ttl_timeout(message[ParamPP.idx_ed_pp_ts], message[ParamPP.idx_ed_pp_ttl]):
-            _log.warning('msg timed out, do nothing')
             return False
             
         #post to bus
         _log.debug('post the local-ds-bus')
-        pubTopic = self.energyDemand_topic_ds + "/" + device_id
-        pubMsg = [new_ed
-                    , ed_datatype
-                    , ed_pp_id
-                    , ed_isoptimal
-                    , discovery_address
-                    , device_id
-                    , ed_duration
-                    , ed_ttl
-                    , ed_ts
-                    ]
-        ispace_utils.publish_to_bus(self, pubTopic, pubMsg)
+        pubTopic = self.energyDemand_topic_ds
+        pub_msg = pp_msg.get_json_params(self._agent_id)
+        _log.debug('publishing to local bus topic: {}'.format(pub_topic))
+        _log.debug('Msg: {}'.format(pub_msg))
+        publish_to_bus(self, pub_topic, pub_msg)
+        
         #at this stage, ds is alive, reset the counter
         self._ds_retrycount[self._ds_register.index(discovery_address)] = 0
         _log.debug('...Done!!!')

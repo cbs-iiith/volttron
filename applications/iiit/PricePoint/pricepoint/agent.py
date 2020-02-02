@@ -129,7 +129,7 @@ class PricePoint(Agent):
             rpcdata = jsonrpc.JsonRpcData.parse(message)
             _log.debug('rpc_from_net()...'
                         + 'header: {}'.format(header)
-                        + ', rpc method: {}'.format(rpcdata.method) 
+                        + ', rpc method: {}'.format(rpcdata.method)
                         + ', rpc params: {}'.format(rpcdata.params)
                         )
             if rpcdata.method == "rpc_update_price_point":
@@ -151,7 +151,7 @@ class PricePoint(Agent):
         
     def update_price_point(self, message):
         pp_msg = None
-        #Note: this is a rpc message do the check here ONLY
+        #Note: this is on a rpc message do the check here ONLY
         #check message for MessageType.price_point
         if not check_msg_type(message, MessageType.price_point): 
             return jsonrpc.json_error('NA', INVALID_PARAMS, 'Invalid params {}'.format(rpcdata.params))

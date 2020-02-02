@@ -420,7 +420,7 @@ class BuildingController(Agent):
                             )
                             
         #publish the new price point to the local message bus
-        pub_topic = self._topic_energy_demand + "/" + self._device_id
+        pub_topic = self._topic_energy_demand
         pub_msg = pp_msg.get_json_params(self._agent_id)
         _log.debug('publishing to local bus topic: {}'.format(pub_topic))
         _log.debug('Msg: {}'.format(pub_msg))
@@ -448,7 +448,7 @@ class BuildingController(Agent):
                             )
                             
         #publish the new price point to the local message bus
-        pub_topic = self._topic_energy_demand + "/" + self._device_id
+        pub_topic = self._topic_energy_demand
         pub_msg = pp_msg.get_json_params(self._agent_id)
         _log.debug('publishing to local bus topic: {}'.format(pub_topic))
         _log.debug('Msg: {}'.format(pub_msg))
