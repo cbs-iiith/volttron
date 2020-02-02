@@ -190,6 +190,12 @@ class PricePoint(Agent):
         #publish the new price point to the local message bus
         pub_topic = self._topic_price_point
         pub_msg = pp_msg.get_json_params(self._agent_id)
+        #keep a track of us pp_msg
+        if pp_msg.get_isoptimal():
+            _log.info('***** New optimal price point from us: {0:0.2f}'.format(pp_msg.get_value()))
+        else:
+            _log.info('***** New bid price point from us: {0:0.2f}'.format(pp_msg.get_value()))
+
         _log.debug('publishing to local bus topic: {}'.format(pub_topic))
         _log.debug('Msg: {}'.format(pub_msg))
         publish_to_bus(self, pub_topic, pub_msg)

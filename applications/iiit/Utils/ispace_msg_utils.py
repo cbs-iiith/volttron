@@ -38,7 +38,7 @@ ROUNDOFF_ENERGY = 0.0001
 #validate incomming bus topic message
 def valid_bustopic_msg(sender, valid_senders_list, minimum_fields
                         , validate_fields, valid_price_ids, message):
-    _log.debug('_validate_bustopic_msg()')
+    #_log.debug('validate_bustopic_msg()')
     pp_msg = None
     
     if sender not in valid_senders_list:

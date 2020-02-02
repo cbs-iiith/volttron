@@ -296,7 +296,7 @@ class VolttronBridge(Agent):
         
     @RPC.export
     def get_ds_device_ids(self):
-        _log.debug('rpc get_ds_device_ids(): {}'.format(self._ds_device_ids))
+        #_log.debug('rpc get_ds_device_ids(): {}'.format(self._ds_device_ids))
         return self._ds_device_ids
         
     @RPC.export
@@ -306,17 +306,17 @@ class VolttronBridge(Agent):
         
     @RPC.export
     def get_local_device_ids(self):
-        _log.debug('rpc get_local_device_ids(): {}'.format(self._local_device_ids))
+        #_log.debug('rpc get_local_device_ids(): {}'.format(self._local_device_ids))
         return self._local_device_ids
         
     @RPC.export
     def count_ds_devices(self):
-        _log.debug('rpc count_ds_devices(): {}'.format(len(self._ds_device_ids)))
+        #_log.debug('rpc count_ds_devices(): {}'.format(len(self._ds_device_ids)))
         return len(self._ds_device_ids)
         
     @RPC.export
     def count_local_devices(self):
-        _log.debug('rpc count_ds_devices(): {}'.format(len(self._local_device_ids)))
+        #_log.debug('rpc count_ds_devices(): {}'.format(len(self._local_device_ids)))
         return len(self._local_device_ids)
         
     @RPC.export
@@ -381,8 +381,10 @@ class VolttronBridge(Agent):
         #keep a track of local pp_ids
         if pp_msg.get_src_device_id() == self._device_id:
             if pp_msg.get_isoptimal():
+                _log.info('***** New optimal price point from us: {0:0.2f}'.format(pp_msg.get_value()))
                 self.local_opt_pp_id = pp_msg.get_price_id()
-            else : 
+            else :
+                _log.info('***** New bid price point from us: {0:0.2f}'.format(pp_msg.get_value()))
                 self.local_bid_pp_id = pp_msg.get_price_id()
         
         #reset counters & flags
@@ -616,8 +618,10 @@ class VolttronBridge(Agent):
         #keep a track of us pp_ids
         if pp_msg.get_src_device_id() != self._device_id:
             if pp_msg.get_isoptimal():
+                log.info('***** New optimal price point from us: {0:0.2f}'.format(pp_msg.get_value()))
                 self.us_opt_pp_id = pp_msg.get_price_id()
             else :
+                _log.info('***** New bid price point from us: {0:0.2f}'.format(pp_msg.get_value()))
                 self.us_bid_pp_id = pp_msg.get_price_id()
             
         #publish the new price point to the local us message bus
@@ -682,6 +686,8 @@ class VolttronBridge(Agent):
         _log.debug('post the local-ds-bus')
         pubTopic = self.energyDemand_topic_ds
         pub_msg = pp_msg.get_json_params(self._agent_id)
+        
+        
         _log.debug('publishing to local bus topic: {}'.format(pub_topic))
         _log.debug('Msg: {}'.format(pub_msg))
         publish_to_bus(self, pub_topic, pub_msg)

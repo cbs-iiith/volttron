@@ -29,7 +29,7 @@ from volttron.platform.jsonrpc import (
         UNABLE_TO_UNREGISTER_INSTANCE, UNAVAILABLE_PLATFORM, INVALID_PARAMS,
         UNAVAILABLE_AGENT)
 
-from random import randint
+from random import random, randint
 from copy import copy
 
 import settings
@@ -131,7 +131,7 @@ class BuildingController(Agent):
                 _log.exception('Maybe the Volttron Bridge Agent is not started!!!')
                 pass
             _log.debug('will try again in 5 sec')
-            sleep(5)
+            time.sleep(5)
             
         #any process that failed to apply pp sets this flag False
         self._process_opt_pp_success = False
@@ -249,10 +249,10 @@ class BuildingController(Agent):
         if not success or pp_msg is None: return
         
         if pp_msg.get_isoptimal():
-            _log.debug('optimal pp!!!')
+            _log.info('***** New optimal price point from us: {0:0.2f}'.format(pp_msg.get_value()))
             self._process_opt_pp(pp_msg)
         else:
-            _log.debug('not optimal pp!!!')
+            _log.info('***** New bid price point from us: {0:0.2f}'.format(pp_msg.get_value()))
             self._process_bid_pp(pp_msg)
             
         return
@@ -372,11 +372,16 @@ class BuildingController(Agent):
         
     #perodic function to publish active power
     def publish_opt_tap(self):
+        #compute total active power and publish to local/energydemand
+        #(vb RPCs this value to the next level)
+        opt_tap = self._calc_total_act_pwr()
+        _log.info('***** Total us opt active power: {0:0.4f}'.format(opt_tap))
+        
         #create a MessageType.active_power ISPACE_Msg
         pp_msg = tap_helper(self._opt_pp_msg_current
                             , self._device_id
                             , self._discovery_address
-                            , self._calc_total_act_pwr()
+                            , opt_tap
                             , self._period_read_data
                             )
                             
@@ -391,7 +396,7 @@ class BuildingController(Agent):
     #calculate total active power (tap)
     def _calc_total_act_pwr(self):
         #_log.debug('_calc_total_act_pwr()')
-        tap = randint(0, 999)
+        tap = random() * 1000
         return tap
         
     def process_bid_pp(self):
@@ -400,11 +405,16 @@ class BuildingController(Agent):
         return
         
     def publish_bid_ted(self):
+        #compute total bid energy demand and publish to local/energydemand
+        #(vb RPCs this value to the next level)
+        bid_ted = self._calc_total_energy_demand()
+        _log.info('***** Total local bid energy demand: {0:0.4f}'.format(bid_ted))
+        
         #create a MessageType.energy ISPACE_Msg
         pp_msg = ted_helper(self._bid_pp_msg_latest
                             , self._device_id
                             , self._discovery_address
-                            , self._calc_total_energy_demand()
+                            , bid_ted
                             , self._period_read_data
                             )
                             
@@ -420,7 +430,7 @@ class BuildingController(Agent):
     #the bid energy is for self._bid_pp_duration (default 1hr)
     #and this msg is valid for self._period_read_data (ttl - default 30s)
     def _calc_total_energy_demand(self):
-        bid_ted = randint(0, 999)
+        bid_ted = random() * 1000
         return bid_ted
         
         
