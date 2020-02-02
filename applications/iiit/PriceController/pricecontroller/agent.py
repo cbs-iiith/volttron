@@ -25,7 +25,7 @@ from volttron.platform.agent.known_identities import (
     MASTER_WEB, VOLTTRON_CENTRAL, VOLTTRON_CENTRAL_PLATFORM)
 from volttron.platform import jsonrpc
 from volttron.platform.jsonrpc import (
-        INVALID_REQUEST, METHOD_NOT_FOUND,
+        INVALID_REQUEST, METHOD_NOT_FOUND, PARSE_ERROR,
         UNHANDLED_EXCEPTION, UNAUTHORIZED,
         UNABLE_TO_REGISTER_INSTANCE, DISCOVERY_ERROR,
         UNABLE_TO_UNREGISTER_INSTANCE, UNAVAILABLE_PLATFORM, INVALID_PARAMS,
@@ -747,7 +747,7 @@ class PriceController(Agent):
                                     , 'get_ds_device_ids'
                                     ).get(timeout=10)
                                     
-    def _get_local_device_idx(device_id):
+    def _get_local_device_idx(self, device_id):
         if device_id not in self._local_device_ids:
             self._local_device_ids.append(device_id)
             idx = self._local_device_ids.index(device_id)
@@ -756,7 +756,7 @@ class PriceController(Agent):
             self._local_bid_ed.insert(idx, 0.0)
         return self._local_device_ids.index(device_id)
         
-    def _get_ds_device_idx(device_id):
+    def _get_ds_device_idx(self, device_id):
         if device_id not in self._ds_device_ids:
             self._ds_device_ids.append(device_id)
             idx = self._ds_device_ids.index(device_id)

@@ -23,7 +23,7 @@ from volttron.platform.agent.known_identities import (
     MASTER_WEB, VOLTTRON_CENTRAL, VOLTTRON_CENTRAL_PLATFORM)
 from volttron.platform import jsonrpc
 from volttron.platform.jsonrpc import (
-        INVALID_REQUEST, METHOD_NOT_FOUND,
+        INVALID_REQUEST, METHOD_NOT_FOUND, PARSE_ERROR,
         UNHANDLED_EXCEPTION, UNAUTHORIZED,
         UNABLE_TO_REGISTER_INSTANCE, DISCOVERY_ERROR,
         UNABLE_TO_UNREGISTER_INSTANCE, UNAVAILABLE_PLATFORM, INVALID_PARAMS,
@@ -391,7 +391,7 @@ class BuildingController(Agent):
     #calculate total active power (tap)
     def _calc_total_act_pwr(self):
         #_log.debug('_calc_total_act_pwr()')
-        tap = 0
+        tap = randint(0, 999)
         return tap
         
     def process_bid_pp(self):
@@ -420,7 +420,7 @@ class BuildingController(Agent):
     #the bid energy is for self._bid_pp_duration (default 1hr)
     #and this msg is valid for self._period_read_data (ttl - default 30s)
     def _calc_total_energy_demand(self):
-        bid_ted = 0
+        bid_ted = randint(0, 999)
         return bid_ted
         
         

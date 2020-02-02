@@ -26,7 +26,7 @@ from volttron.platform.agent.known_identities import (
     MASTER_WEB, VOLTTRON_CENTRAL, VOLTTRON_CENTRAL_PLATFORM)
 from volttron.platform import jsonrpc
 from volttron.platform.jsonrpc import (
-        INVALID_REQUEST, METHOD_NOT_FOUND,
+        INVALID_REQUEST, METHOD_NOT_FOUND, PARSE_ERROR,
         UNHANDLED_EXCEPTION, UNAUTHORIZED,
         UNABLE_TO_REGISTER_INSTANCE, DISCOVERY_ERROR,
         UNABLE_TO_UNREGISTER_INSTANCE, UNAVAILABLE_PLATFORM, INVALID_PARAMS,
@@ -179,6 +179,11 @@ class PricePoint(Agent):
             
         #set source id & addr
         retrive_details_from_vb(self)
+        if self._device_id is None or self._discovery_address is None:
+            _log.debug('Unable to retrive details from vb. check vb is running!!!')
+            return jsonrpc.json_error(rpcdata_id
+                                        , PARSE_ERROR
+                                        , 'Unable to retrive details from vb. check vb is running!!!')
         pp_msg.set_src_device_id(self._device_id)
         pp_msg.set_src_ip(self._discovery_address)
         

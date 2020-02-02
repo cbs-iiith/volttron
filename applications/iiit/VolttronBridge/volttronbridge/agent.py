@@ -23,20 +23,21 @@ from volttron.platform.agent.known_identities import (
     MASTER_WEB, VOLTTRON_CENTRAL, VOLTTRON_CENTRAL_PLATFORM)
 from volttron.platform import jsonrpc
 from volttron.platform.jsonrpc import (
-        INVALID_REQUEST, METHOD_NOT_FOUND,
+        INVALID_REQUEST, METHOD_NOT_FOUND, PARSE_ERROR,
         UNHANDLED_EXCEPTION, UNAUTHORIZED,
         UNABLE_TO_REGISTER_INSTANCE, DISCOVERY_ERROR,
         UNABLE_TO_UNREGISTER_INSTANCE, UNAVAILABLE_PLATFORM, INVALID_PARAMS,
         UNAVAILABLE_AGENT)
         
 from random import randint
+from copy import copy
 
 import time
 import gevent
 import gevent.event
 import json
 
-from ispace_utils import do_rpc, sanity_check_ed
+from ispace_utils import do_rpc
 from ispace_msg import ISPACE_Msg, MessageType
 from ispace_msg_utils import parse_bustopic_msg, check_msg_type
 from ispace_msg_utils import get_default_pp_msg, get_default_ed_msg, valid_bustopic_msg
@@ -141,9 +142,6 @@ class VolttronBridge(Agent):
         
         #price point
         self._valid_senders_list_pp = ['iiit.pricecontroller']
-        
-        #retrive self._device_id and self._discovery_address from vb
-        retrive_details_from_vb(self)
         
         _log.debug('registering rpc routes')
         self.vip.rpc.call(MASTER_WEB, 'register_agent_route'
