@@ -110,15 +110,15 @@ class BuildingController(Agent):
         #retrive self._device_id and self._discovery_address from vb
         retrive_details_from_vb(self, 5)
         
+        #register rpc routes with MASTER_WEB
+        #register_rpc_route is a blocking call
+        register_rpc_route(self, "buildingcontroller", "rpc_from_net", 5)
+        
         #register this agent with vb as local device for posting active power & bid energy demand
         #pca picks up the active power & energy demand bids only if registered with vb as local device
         #require self._vb_vip_identity, self.core.identity, self._device_id
         #register_agent_with_vb is a blocking call
         register_agent_with_vb(self, 5)
-        
-        #register rpc routes with MASTER_WEB
-        #register_rpc_route is a blocking call
-        register_rpc_route(self, "buildingcontroller", "rpc_from_net", 5)
         
         self._valid_senders_list_pp = ['iiit.pricecontroller']
         
