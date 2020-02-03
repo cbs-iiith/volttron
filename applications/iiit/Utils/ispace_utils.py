@@ -152,7 +152,7 @@ def isclose(a, b, rel_tol=1e-09, abs_tol=0.0):
 def calc_energy(self, pwr_wh, duration_sec):
     return ((pwr_wh * duration_sec)/3600000)
     
-def do_rpc(self, url_root, method, params=None ):
+def do_rpc(self, url_root, method, params=None, request_method='POST'):
     #_log.debug('do_rpc()')
     result = False
     json_package = {
@@ -164,10 +164,13 @@ def do_rpc(self, url_root, method, params=None ):
     if params:
         json_package['params'] = params
         
-    data = json.dumps(json_package)
     try:
-        response = requests.post(url_root, data=json.dumps(json_package), timeout=10)
-        
+        if request_method == 'POST':
+            response = requests.post(url_root, data=json.dumps(json_package), timeout=10)
+        elif request_method == 'DELETE':
+            response = requests.delete(url_root, data=json.dumps(json_package), timeout=10)
+        else:
+            response = requests.get(url_root, data=json.dumps(json_package), timeout=10)
         if response.ok:
             success = response.json()['result']
             if success == True:

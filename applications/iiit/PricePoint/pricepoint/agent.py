@@ -150,7 +150,7 @@ class PricePoint(Agent):
         except Exception as e:
             print(e)
             return jsonrpc.json_error(rpcdata.id, UNHANDLED_EXCEPTION, e)
-        return result
+       return jsonrpc.json_result(rpcdata.id, result)
         
     def update_price_point(self, rpcdata_id, message):
         pp_msg = None

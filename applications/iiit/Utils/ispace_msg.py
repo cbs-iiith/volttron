@@ -17,7 +17,9 @@ import math
 from enum import IntEnum
 import logging
 from random import randint
-import json
+#import json
+from volttron.platform.agent import json as jsonapi
+
 
 from volttron.platform.agent import utils
 from volttron.platform import jsonrpc
@@ -125,7 +127,7 @@ class ISPACE_Msg:
     def __str__(self):
         #_log.debug('__str__()')
         params = self._get_params_dict()
-        return json.dumps(params)
+        return jsonapi.dumps(params)
         
     '''hold-on
     def _ _copy_ _(self):
@@ -266,7 +268,7 @@ class ISPACE_Msg:
             'method':'bus_topic',
         }
         json_package['params'] = self._get_params_dict()
-        data = json.dumps(json_package)
+        data = jsonapi.dumps(json_package)
         return data
         
     #getters

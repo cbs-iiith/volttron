@@ -35,7 +35,6 @@ from copy import copy
 import time
 import gevent
 import gevent.event
-import json
 
 from ispace_utils import do_rpc, register_rpc_route
 from ispace_msg import ISPACE_Msg, MessageType
@@ -262,20 +261,19 @@ class VolttronBridge(Agent):
                         )
             if rpcdata.method == "ping":
                 result = True
-            elif rpcdata.method == "register_ds_bridge":
+            elif rpcdata.method == "ds_bridge" and header['REQUEST_METHOD'] == 'POST':
                 result = self._register_ds_bridge(rpcdata.id, message)
-            elif rpcdata.method == "unregister_ds_bridge":
+            elif rpcdata.method == "ds_bridge" and header['REQUEST_METHOD'] == 'DELETE':
                 result = self._unregister_ds_bridge(rpcdata.id, message)
-            elif rpcdata.method == "post_ed":
+            elif rpcdata.method == "energy" and header['REQUEST_METHOD'] == 'POST':
                 #post the new energy demand from ds to the local bus
                 result = self._post_ed(rpcdata.id, message)
-            elif rpcdata.method == "post_pp":
+            elif rpcdata.method == "pricepoint" and header['REQUEST_METHOD'] == 'POST':
                 #post the new new price point from us to the local-us-bus
                 result = self._post_pp(rpcdata.id, message)
             else:
                 return jsonrpc.json_error(rpcdata.id, METHOD_NOT_FOUND,
                                             'Invalid method {}'.format(rpcdata.method))
-            return jsonrpc.json_result(rpcdata.id, result)
         except KeyError as ke:
             print(ke)
             return jsonrpc.json_error('NA', INVALID_PARAMS,
@@ -283,7 +281,7 @@ class VolttronBridge(Agent):
         except Exception as e:
             print(e)
             return jsonrpc.json_error('NA', UNHANDLED_EXCEPTION, e)
-        return result
+       return jsonrpc.json_result(rpcdata.id, result)
         
     @RPC.export
     def get_ds_device_ids(self):

@@ -21,9 +21,6 @@ from volttron.platform.agent import utils
 from volttron.platform.messaging import topics, headers as headers_mod
 
 import time
-import requests
-import json
-import cPickle
 
 from smap_tools import smap_post
 import dateutil

@@ -25,6 +25,8 @@ import time
 import gevent
 import gevent.event
 
+from ispace_utils import do_rpc
+
 utils.setup_logging()
 _log = logging.getLogger(__name__)
 __version__ = '0.3'
@@ -190,41 +192,6 @@ def ss_sh_device(config_path, **kwargs):
         def _monitorShBattery(self):
             return
             
-        def do_rpc(self, url_root, method, params=None ):
-            #_log.debug('do_rpc()')
-            result = False
-            json_package = {
-                'jsonrpc': '2.0',
-                'id': self._agent_id,
-                'method':method,
-            }
-
-            if params:
-                json_package['params'] = params
-
-            data = json.dumps(json_package)
-            try:
-                response = requests.post(url_root, data=json.dumps(json_package), timeout=10)
-                
-                if response.ok:
-                    success = response.json()['result']
-                    if success:
-                        #_log.debug('response - ok, {} result:{}'.format(method, success))
-                        result = True
-                    else:
-                        _log.debug('respone - not ok, {} result:{}'.format(method, success))
-                else:
-                    _log.debug('no respone, {} result: {}'.format(method, response))
-            except KeyError:
-                error = response.json()['error']
-                #print (error)
-                _log.exception('KeyError: SHOULD NEVER REACH THIS ERROR - contact developer')
-                return False
-            except Exception as e:
-                #print (e)
-                _log.warning('Exception: do_rpc() unhandled exception, most likely dest is down')
-                return False
-            return result
             
     Agent.__name__ = 'SS_SH_Device_Agent'
     return SS_SH_Device(**kwargs)

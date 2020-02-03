@@ -1138,44 +1138,25 @@ class SmartHub(Agent):
         
     @RPC.export
     def rpc_from_net(self, header, message):
-        #print(message)
-        return self._processMessage(message)
-        
-    def _processMessage(self, message):
-        #_log.debug('processResponse()')
         result = False
         try:
             rpcdata = jsonrpc.JsonRpcData.parse(message)
-            _log.info('rpc method: {}'.format(rpcdata.method))
-            _log.info('rpc params: {}'.format(rpcdata.params))
-            
-            if rpcdata.method == "rpc_setShDeviceState":
-                args = {'deviceId': rpcdata.params['deviceId']
-                        , 'state': rpcdata.params['newState']
-                        , 'schdExist': SCHEDULE_NOT_AVLB
-                        }
-                result = self.setShDeviceState(**args)
-                
-            elif rpcdata.method == "rpc_setShDeviceLevel":
-                args = {'deviceId': rpcdata.params['deviceId']
-                        , 'level': rpcdata.params['newLevel']
-                        , 'schdExist': SCHEDULE_NOT_AVLB
-                        }
-                result = self.setShDeviceLevel(**args)
-                
-            elif rpcdata.method == "rpc_setShDeviceThPP":
-                args = {'deviceId': rpcdata.params['deviceId']
-                        , 'thPP': rpcdata.params['newThPP']
-                        }
-                result = self.setShDeviceThPP(**args)
-            elif rpcdata.method == "rpc_ping":
+            _log.debug('rpc_from_net()...'
+                        + 'header: {}'.format(header)
+                        + ', rpc method: {}'.format(rpcdata.method)
+                        + ', rpc params: {}'.format(rpcdata.params)
+                        )
+            if rpcdata.method == "ping":
                 result = True
+            elif rpcdata.method == "setShDeviceState":
+                result = self.setShDeviceState(message)
+            elif rpcdata.method == "rpc_setShDeviceLevel":
+                result = self.setShDeviceLevel(**args)
+            elif rpcdata.method == "rpc_setShDeviceThPP":
+                result = self.setShDeviceThPP(**args)
             else:
                 return jsonrpc.json_error('NA', METHOD_NOT_FOUND,
                     'Invalid method {}'.format(rpcdata.method))
-            result = True        
-            return jsonrpc.json_result(rpcdata.id, result)
-            
         except KeyError as ke:
             print(ke)
             return jsonrpc.json_error('NA', INVALID_PARAMS,
@@ -1187,10 +1168,8 @@ class SmartHub(Agent):
         except Exception as e:
             print(e)
             return jsonrpc.json_error('NA', UNHANDLED_EXCEPTION, e)
-            
-        self._total_act_pwr = -1        #reset total active pwr to zero on new opt_pp
-        self._ds_total_act_pwr[:] = []
-
+        return jsonrpc.json_result(rpcdata.id, result)
+        
     def publish_ted(self):
         self._total_act_pwr = self._calc_total_act_pwr()
         _log.info( "New Total Active Pwr: {0:.4f}, publishing to bus.".format(self._total_act_pwr))

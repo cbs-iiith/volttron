@@ -12,6 +12,9 @@
 #Sam
 
 import datetime
+import dateutil
+import time
+
 import logging
 import sys
 import uuid
@@ -20,13 +23,7 @@ from volttron.platform.vip.agent import Agent, Core, PubSub, compat, RPC
 from volttron.platform.agent import utils
 from volttron.platform.messaging import topics, headers as headers_mod
 
-import time
-import requests
-import json
-import cPickle
-
 from smap_tools import smap_post
-import dateutil
 
 utils.setup_logging()
 _log = logging.getLogger(__name__)
