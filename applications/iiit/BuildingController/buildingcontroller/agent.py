@@ -108,7 +108,7 @@ class BuildingController(Agent):
         _log.info("Starting BuildingController...")
         
         #retrive self._device_id and self._discovery_address from vb
-        retrive_details_from_vb(self)
+        retrive_details_from_vb(self, 5)
         
         #register this agent with vb as local device for posting active power & bid energy demand
         #pca picks up the active power & energy demand bids only if registered with vb as local device
