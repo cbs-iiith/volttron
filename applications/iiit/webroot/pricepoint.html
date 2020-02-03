@@ -156,6 +156,12 @@
                     </div>
                     <button id="publishPricePoint">Publish New PricePoint</button>
                 </div>
+                <div class="row" >
+                    <div class="large-2 columns">
+                        &nbsp;
+                    </div>
+                    <label>Publish Result: </label><span id='publish_status'></span>
+                </div>
             </div>
         </div>
     </div>
@@ -179,7 +185,7 @@
             
             var pdata = {
                      jsonrpc: '2.0',
-                     method:  "rpc_update_price_point",
+                     method:  "new-pp",
                      params: {
                         msg_type: new_pp_type,
                         one_to_one: one_to_one,
@@ -200,15 +206,25 @@
                      id: '72581-4'
              };
              $.ajax({
-                 type: 'POST',
-                 url: '/PricePoint',
-                 data: JSON.stringify(pdata),
-                 dataType: 'json',
-                 success: function(data){
-                     console.log('Result: '+data.result.toString());},
-                 failure: function(data){
-                     console.log('Result: '+data.result.toString());}
-
+                type: 'POST',
+                url: '/pricepoint',
+                data: JSON.stringify(pdata),
+                dataType: 'json',
+                success: function(data){
+                    if ((data.result != null) && (data.result.toString() == 'true') ){
+                        document.getElementById('publish_status').innerHTML = 'Success!!!';
+                    } else {
+                        document.getElementById('publish_status').innerHTML 
+                                            = 'Failed!!! (' + data.error.message.toString() + ')';
+                    }
+                },
+                failure: function(data){
+                    document.getElementById('publish_status').innerHTML = data.result.toString();
+                },
+                error: function(error){
+                    document.getElementById('publish_status').innerHTML
+                                        = error.responseText + '(' + error.status + ')';
+                }
              });
         });
     </script>
@@ -217,12 +233,14 @@
             var x = document.getElementById(textbox);
             var y = document.getElementById(sliderID);
             x.value = y.value;
+            document.getElementById('publish_status').innerHTML = '';
         }
         
         function printValue2(textbox, sliderID) {
             var x = document.getElementById(textbox);
             var y = document.getElementById(sliderID);
             y.value = x.value;
+            document.getElementById('publish_status').innerHTML = '';
         }
         
         function getRndInteger(min, max) {

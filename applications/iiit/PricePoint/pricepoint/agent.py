@@ -96,7 +96,7 @@ class PricePoint(Agent):
         
         #register rpc routes with MASTER_WEB
         #register_rpc_route is a blocking call
-        register_rpc_route(self, "price_point", "rpc_from_net", 5)
+        register_rpc_route(self, "pricepoint", "rpc_from_net", 5)
         
         _log.debug('startup() - Done. Agent is ready')
         return
@@ -137,12 +137,11 @@ class PricePoint(Agent):
                         )
             if rpcdata.method == "ping":
                 result = True
-            elif rpcdata.method == "update_price_point":
+            elif rpcdata.method == "new-pp":
                 result = self.update_price_point(rpcdata.id, message)
             else:
                 return jsonrpc.json_error(rpcdata.id, METHOD_NOT_FOUND,
                                             'Invalid method {}'.format(rpcdata.method))
-            return jsonrpc.json_result(rpcdata.id, result)
         except KeyError:
             print('KeyError')
             return jsonrpc.json_error(rpcdata.id, INVALID_PARAMS,

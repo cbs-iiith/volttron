@@ -153,6 +153,7 @@ def calc_energy(self, pwr_wh, duration_sec):
     return ((pwr_wh * duration_sec)/3600000)
     
 def do_rpc(self, url_root, method, params=None, request_method='POST'):
+    global authentication
     #_log.debug('do_rpc()')
     result = False
     json_package = {
@@ -161,6 +162,9 @@ def do_rpc(self, url_root, method, params=None, request_method='POST'):
         'method':method,
     }
     
+    if authentication:
+        json_package['authorization'] = authentication
+        
     if params:
         json_package['params'] = params
         
@@ -171,24 +175,23 @@ def do_rpc(self, url_root, method, params=None, request_method='POST'):
             response = requests.delete(url_root, data=json.dumps(json_package), timeout=10)
         else:
             response = requests.get(url_root, data=json.dumps(json_package), timeout=10)
+            
         if response.ok:
-            success = response.json()['result']
-            if success == True:
-                #_log.debug('response - ok, {} result:{}'.format(method, success))
-                result = True
-            else:
-                _log.debug('respone - not ok, {} result:{}'.format(method, success))
+            if 'result' in response.json().keys():
+                success = response.json()['result']
+                if success:
+                    #_log.debug('response - ok, {} result:{}'.format(method, success))
+                    result = True
+                else:
+                    _log.debug('respone - not ok, {} result:{}'.format(method, success))
+            elif 'error' in response.json().keys():
+                error = response.json()['error']
+                _log.error('{} returned error, Error: {}'.format(method, error))
         else:
-            _log.debug('no respone, {} result: {}'.format(method, response))
-    except KeyError:
-        error = response.json()['error']
-        #print (error)
-        _log.exception('KeyError: SHOULD NEVER REACH THIS ERROR - contact developer')
-        return False
+            _log.debug('no respone, url_root:{} method:{} response: {}'.format(url_root, method, response))
     except Exception as e:
-        #print (e)
-        _log.warning('Exception: do_rpc() unhandled exception, most likely dest is down')
-        return False
+        print (e)
+        _log.exception('Exception: do_rpc() unhandled exception, most likely dest is down')
     return result
     
     
