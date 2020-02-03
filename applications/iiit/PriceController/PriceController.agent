@@ -10,10 +10,11 @@
     "pricePoint_topic": "building/pricepoint",
     "vb_vip_identity": "iiit.volttronbridge",
 
-    "_comment": "valid pca modes - ONLINE, STANDALONE, STANDBY",
-    "pca_mode": "ONLINE",
+    "_comment": "valid pca states - ONLINE, STANDALONE, STANDBY",
+    "pca_state": "ONLINE",
     "_comment": "valid options - PASS_ON_PP, DEFAULT_OPT, EXTERN_OPT",
-    "pp_optimize_option": "PASS_ON_PP",
+    "pca_mode": "PASS_ON_PP",
+    "external-optimizer": "iiit.external_optimizer",
     "extrn_optimize_pp_topic": "pca/pricepoint",
     "extrn_optimize_ed_topic": "pca/energydemand"
 }
