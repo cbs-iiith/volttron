@@ -44,7 +44,7 @@ from ispace_msg_utils import get_default_pp_msg, get_default_ed_msg, valid_busto
 
 utils.setup_logging()
 _log = logging.getLogger(__name__)
-__version__ = '0.3'
+__version__ = '0.4'
 
 #checking if a floating point value is "numerically zero" by checking if it is lower than epsilon
 EPSILON = 1e-03
