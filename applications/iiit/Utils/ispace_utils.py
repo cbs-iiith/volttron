@@ -33,13 +33,15 @@ _log = logging.getLogger(__name__)
 def register_agent_with_vb(self, sleep_time=10):
     while True:
         try:
-            _log.info('registering with the Volttron Bridge')
+            _log.info('registering with the Volttron Bridge...')
             success = self.vip.rpc.call(self._vb_vip_identity
                                         , 'register_local_ed_agent'
                                         , self.core.identity
                                         , self._device_id
                                         ).get(timeout=10)
-            if success:
+            _log.debug ('self.vip.rpc.call() result: {}'.format(success))
+            if success is None:
+                _log.debug('Done.')
                 break
         except Exception as e:
             print(e)
@@ -53,13 +55,15 @@ def register_agent_with_vb(self, sleep_time=10):
 def register_rpc_route(self, name, handle, sleep_time=10):
     while True:
         try:
-            _log.info('registering agent route')
+            _log.info('registering agent route...')
             success = self.vip.rpc.call(MASTER_WEB
                                         , 'register_agent_route'
                                         , r'^/' + name
                                         , handle
                                         ).get(timeout=10)
-            if success:
+            _log.debug ('self.vip.rpc.call() result: {}'.format(success))
+            if success is None:
+                _log.debug('Done.')
                 break
         except Exception as e:
             print(e)
@@ -70,18 +74,25 @@ def register_rpc_route(self, name, handle, sleep_time=10):
     return
     
 #try to retrive self._device_id, self._ip_addr, self._discovery_address from volttron bridge
-def retrive_details_from_vb(self):
-    try:
-        if self._device_id is None:
-            self._device_id = self.vip.rpc.call(self._vb_vip_identity, 'device_id').get(timeout=10)
-            _log.debug('device id as per vb: {}'.format(self._device_id))
-        if self._discovery_address is None:
-            self._discovery_address = self.vip.rpc.call(self._vb_vip_identity
-                                                            , 'discovery_address').get(timeout=10)
-            _log.debug('discovery_address as per vb: {}'.format(self._discovery_address))
-    except Exception as e:
-        _log.exception (e)
-        pass
+def retrive_details_from_vb(self, sleep_time=10):
+    while True:
+        try:
+            _log.info('retrive details from vb...')
+            if self._device_id is None:
+                self._device_id = self.vip.rpc.call(self._vb_vip_identity, 'device_id').get(timeout=10)
+                _log.debug('device id as per vb: {}'.format(self._device_id))
+            if self._discovery_address is None:
+                self._discovery_address = self.vip.rpc.call(self._vb_vip_identity
+                                                                , 'discovery_address').get(timeout=10)
+                _log.debug('discovery_address as per vb: {}'.format(self._discovery_address))
+            if self._device_id is not None and self._discovery_address is not None:
+                _log.debug('Done.')
+                break
+        except Exception as e:
+            _log.exception (e)
+            pass
+        _log.debug('will try again in {} sec'.format(sleep_time))
+        time.sleep(sleep_time)
     return
     
 def publish_to_bus(self, topic, msg):
