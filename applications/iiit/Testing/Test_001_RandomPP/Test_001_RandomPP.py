@@ -30,7 +30,7 @@ authentication=None
 #WAIT_TIME_SECONDS = 30 * 60        # 30 min
 WAIT_TIME_SECONDS = 1 * 60 * 60    # 1 hour
 
-ROOT_URL = 'http://192.168.1.11:8080/PricePoint'
+ROOT_URL = 'http://192.168.1.11:8080/pricepoint'
 
 class ProgramKilled(Exception):
     pass
@@ -66,28 +66,37 @@ def post_random_price():
     print (get_timestamp() + ' PricePoint: ' + str(pp) + ',',)
     now = datetime.datetime.utcnow().isoformat(' ') + 'Z'
     try:
-        response = do_rpc("rpc_updatePricePoint", \
-                            {'new_pp': pp \
-                            , 'new_pp_datatype': {'units': 'cents', 'tz': 'UTC', 'type': 'float'} \
-                            , 'new_pp_id': randint(0, 99999999) \
-                            , 'new_pp_isoptimal': True \
-                            , 'new_pp_ttl': WAIT_TIME_SECONDS \
-                            , 'new_pp_ts': now \
-                            })
+        response = do_rpc('new-pp', {'msg_type' = 0
+                                    , 'one_to_one' = False
+                                    , 'value' = pp
+                                    , 'value_data_type' = 'float'
+                                    , 'units' = 'cents'
+                                    , 'price_id' = randint(0, 99999999)
+                                    , 'isoptimal' = True
+                                    , 'src_ip' = None
+                                    , 'src_device_id' = None
+                                    , 'dst_ip' = None
+                                    , 'dst_device_id' = None
+                                    , 'duration' = WAIT_TIME_SECONDS
+                                    , 'ttl' = 10
+                                    , 'ts' = now
+                                    ,'tz' = 'UTC'
+                                    })
         #print "response: " +str(response),
         if response.ok:
-            success = response.json()['result']
-            if success:
-                print ('new price updated')
-            else:
-                print ('new price NOT updated')
+            if 'result' in response.json().keys():
+                if response.json()['result']:
+                    print ('new price updated!!!')
+                else:
+                    print ('new price NOT updated!!!')
+            elif 'error' in response.json().keys():
+                print (response.json()['error'])
         else:
-            print ('do_rpc pricepoint response NOT OK')
-    except KeyError:
-        error = response.json()['error']
-        print (error)
+            print ('do_rpc pricepoint response NOT OK, response: {}'.format(response))
+    except KeyError as ke:
+        print (ke)
     except Exception as e:
-        #print (e)
+        print (e)
         print ('do_rpc() unhandled exception, most likely server is down')
     sys.stdout.flush()
     return
