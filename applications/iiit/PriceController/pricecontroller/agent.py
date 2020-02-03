@@ -125,7 +125,7 @@ class PriceController(Agent):
         _log.debug('startup()')
         
         #retrive self._device_id and self._discovery_address from vb
-        retrive_details_from_vb(self)
+        retrive_details_from_vb(self, 5)
         
         #register rpc routes with MASTER_WEB
         #register_rpc_route is a blocking call
@@ -174,8 +174,6 @@ class PriceController(Agent):
         #the next iterations gets delayed.
         #self.core.periodic(self._period_process_loop, self.process_loop, wait=None)
         
-        #self._device_id and self._discovery_address from vb
-        retrive_details_from_vb(self)
         _log.debug('startup() - Done. Agent is ready')
         return
         
