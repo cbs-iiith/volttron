@@ -69,11 +69,11 @@ class PriceController(Agent):
     _topic_energy_demand = None
     
     _topic_extrn_pp = None
-    _pca_state = None
+    _pca_state = None           #['ONLINE', 'STANDALONE', 'STANDBY']
     _pca_standby = False
     _pca_standalone = False
     _pca_standalone = True
-    _pca_mode = None
+    _pca_mode = None            #['PASS_ON_PP', 'DEFAULT_OPT', 'EXTERN_OPT']
     
     _device_id = None
     _discovery_address = None
