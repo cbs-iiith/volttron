@@ -112,7 +112,7 @@
                     <!-- Rounded switch -->
                     <div class="large-2 columns">
                         <label class="switch">
-                            <input id = "new_pp_isoptimal" type="checkbox" value="True" checked>
+                            <input id = "new_pp_isoptimal" type="checkbox" value="True" checked onchange="clearPubStatus()">
                                 <div class="slider round">
                         </label>
                     </div>
@@ -229,6 +229,9 @@
         });
     </script>
     <script>
+        function clearPubStatus() {
+            document.getElementById('publish_status').innerHTML = '';
+        }
         function printValue(sliderID, textbox) {
             var x = document.getElementById(textbox);
             var y = document.getElementById(sliderID);
