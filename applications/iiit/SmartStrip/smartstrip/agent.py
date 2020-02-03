@@ -819,7 +819,7 @@ class SmartStrip(Agent):
         except Exception as e:
             print(e)
             return jsonrpc.json_error('NA', UNHANDLED_EXCEPTION, e)
-       return jsonrpc.json_result(rpcdata.id, result)
+        return jsonrpc.json_result(rpcdata.id, result)
             
     #calculate the bid total energy demand (TED)
     def _bid_ted(self):

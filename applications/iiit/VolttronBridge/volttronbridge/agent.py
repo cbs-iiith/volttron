@@ -281,7 +281,7 @@ class VolttronBridge(Agent):
         except Exception as e:
             print(e)
             return jsonrpc.json_error('NA', UNHANDLED_EXCEPTION, e)
-       return jsonrpc.json_result(rpcdata.id, result)
+        return jsonrpc.json_result(rpcdata.id, result)
         
     @RPC.export
     def get_ds_device_ids(self):
