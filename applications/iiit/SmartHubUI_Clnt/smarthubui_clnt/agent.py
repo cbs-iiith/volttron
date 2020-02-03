@@ -12,6 +12,7 @@
 #Sam
 
 import datetime
+import dateutil
 import logging
 import sys
 import uuid
@@ -23,6 +24,8 @@ from volttron.platform.messaging import topics, headers as headers_mod
 import time
 import requests
 import json
+
+from ispace_utils import do_rpc
 
 utils.setup_logging()
 _log = logging.getLogger(__name__)
@@ -61,7 +64,7 @@ def smarthubui_clnt(config_path, **kwargs):
             self._agent_id = config['agentid']
             ble_ui_srv_address = config.get('ble_ui_server_address', '127.0.0.1')
             ble_ui_srv_port = config.get('ble_ui_server_port', 8081)
-            self.url_root = 'http://' + ble_ui_srv_address + ':' + str(ble_ui_srv_port) + '/SmartHub'
+            self.url_root = 'http://' + ble_ui_srv_address + ':' + str(ble_ui_srv_port) + '/smarthub'
 
         @Core.receiver('onstart')            
         def startup(self, sender, **kwargs):
@@ -210,33 +213,7 @@ def smarthubui_clnt(config_path, **kwargs):
                                             'thPP': thPP})
             return
             
-        def do_rpc(self, method, params=None ):
-            json_package = {
-                'jsonrpc': '2.0',
-                'id': self._agent_id,
-                'method':method,
-            }
-
-            if params:
-                json_package['params'] = params
-
-            data = json.dumps(json_package)
-            try:
-                response = requests.post(self.url_root, data=json.dumps(json_package), timeout=10)
-                
-                if response.ok:
-                    success = response.json()['result']
-                    if success:
-                        _log.debug('response - ok, {} result:{}'.format(method, success))
-                    else:
-                        _log.debug('respone - not ok, {} result:{}'.format(method, success))
-                else:
-                    _log.debug('no respone, {} result: {}'.format(method, response))
-            except Exception as e:
-                #print (e)
-                _log.warning('do_rpc() unhandled exception, most likely server is down')
-                return
-                
+            
     Agent.__name__ = 'SmartHubUI_Clnt_Agent'
     return SmartHubUI_Clnt(**kwargs)
 

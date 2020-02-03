@@ -38,7 +38,7 @@ import time
 from copy import copy
 
 
-from ispace_utils import publish_to_bus, retrive_details_from_vb
+from ispace_utils import publish_to_bus, retrive_details_from_vb, register_rpc_route
 from ispace_msg import ISPACE_Msg, MessageType
 from ispace_msg_utils import parse_jsonrpc_msg, check_msg_type
 
@@ -91,10 +91,13 @@ class PricePoint(Agent):
         
     @Core.receiver('onstart')
     def startup(self, sender, **kwargs):
-        self.vip.rpc.call(MASTER_WEB, 'register_agent_route'
-                            , r'^/PricePoint'
-                            , "rpc_from_net"
-                            ).get(timeout=10)
+        #retrive self._device_id and self._discovery_address from vb
+        retrive_details_from_vb(self)
+        
+        #register rpc routes with MASTER_WEB
+        #register_rpc_route is a blocking call
+        register_rpc_route(self, "price_point", "rpc_from_net", 5)
+        
         _log.debug('startup() - Done. Agent is ready')
         return
         
@@ -124,7 +127,6 @@ class PricePoint(Agent):
         
     @RPC.export
     def rpc_from_net(self, header, message):
-        _log.debug('rpc_from_net()')
         result = False
         try:
             rpcdata = jsonrpc.JsonRpcData.parse(message)
@@ -133,10 +135,10 @@ class PricePoint(Agent):
                         + ', rpc method: {}'.format(rpcdata.method)
                         + ', rpc params: {}'.format(rpcdata.params)
                         )
-            if rpcdata.method == "rpc_update_price_point":
-                result = self.update_price_point(rpcdata.id, message)
-            elif rpcdata.method == "rpc_ping":
+            if rpcdata.method == "ping":
                 result = True
+            elif rpcdata.method == "update_price_point":
+                result = self.update_price_point(rpcdata.id, message)
             else:
                 return jsonrpc.json_error(rpcdata.id, METHOD_NOT_FOUND,
                                             'Invalid method {}'.format(rpcdata.method))
@@ -176,14 +178,6 @@ class PricePoint(Agent):
             _log.warning('Msg sanity checks failed!!!')
             return jsonrpc.json_error(rpcdata_id, PARSE_ERROR, 'Msg sanity checks failed!!!')
             
-            
-        #set source id & addr
-        retrive_details_from_vb(self)
-        if self._device_id is None or self._discovery_address is None:
-            _log.debug('Unable to retrive details from vb. check vb is running!!!')
-            return jsonrpc.json_error(rpcdata_id
-                                        , PARSE_ERROR
-                                        , 'Unable to retrive details from vb. check vb is running!!!')
         pp_msg.set_src_device_id(self._device_id)
         pp_msg.set_src_ip(self._discovery_address)
         

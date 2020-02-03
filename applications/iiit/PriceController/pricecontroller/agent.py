@@ -36,7 +36,7 @@ import time
 import gevent
 import gevent.event
 
-from ispace_utils import publish_to_bus, retrive_details_from_vb
+from ispace_utils import publish_to_bus, retrive_details_from_vb, register_rpc_route
 from ispace_msg import ISPACE_Msg, MessageType
 from ispace_msg_utils import parse_bustopic_msg, check_msg_type, tap_helper, ted_helper
 from ispace_msg_utils import get_default_pp_msg, valid_bustopic_msg
@@ -123,19 +123,17 @@ class PriceController(Agent):
     def startup(self, sender, **kwargs):
         _log.debug('startup()')
         
+        #retrive self._device_id and self._discovery_address from vb
+        retrive_details_from_vb(self)
+        
+        #register rpc routes with MASTER_WEB
+        #register_rpc_route is a blocking call
+        register_rpc_route(self, "price_controller", "rpc_from_net", 5)
+        
         self._us_senders_list = ['iiit.volttronbridge', 'iiit.pricepoint']
         self._ds_senders_list = ['iiit.volttronbridge']
         self._local_ed_agents = []
         
-        #retrive self._device_id and self._discovery_address from vb
-        retrive_details_from_vb(self)
-
-        _log.debug('registering rpc routes')
-        self.vip.rpc.call(MASTER_WEB, 'register_agent_route'
-                            ,r'^/PriceController'
-                            , "rpc_from_net"
-                            ).get(timeout=30)
-                            
         self.tmp_bustopic_pp_msg = get_default_pp_msg(self._discovery_address, self._device_id)
         
         self.us_opt_pp_msg = get_default_pp_msg(self._discovery_address, self._device_id)
@@ -203,7 +201,6 @@ class PriceController(Agent):
         
     @RPC.export
     def rpc_from_net(self, header, message):
-        _log.debug('rpc_from_net()')
         result = False
         try:
             rpcdata = jsonrpc.JsonRpcData.parse(message)
@@ -212,14 +209,14 @@ class PriceController(Agent):
                         + ', rpc method: {}'.format(rpcdata.method)
                         + ', rpc params: {}'.format(rpcdata.params)
                         )
-            if rpcdata.method == "rpc_disable_agent":
-                result = self._disable_agent(rpcdata.id, message)
-            elif rpcdata.method == "rpc_set_pp_optimize_option":
-                result = self._set_pp_optimize_option(rpcdata.id, message)
-            elif rpcdata.method == "rpc_register_opt_agent":
-                result = self._register_external_opt_agent(rpcdata.id, message)
-            elif rpcdata.method == "rpc_ping":
+            if rpcdata.method == "ping":
                 result = True
+            elif rpcdata.method == "disable_agent":
+                result = self._disable_agent(rpcdata.id, message)
+            elif rpcdata.method == "set_pp_optimize_option":
+                result = self._set_pp_optimize_option(rpcdata.id, message)
+            elif rpcdata.method == "register_opt_agent":
+                result = self._register_external_opt_agent(rpcdata.id, message)
             else:
                 return jsonrpc.json_error(rpcdata.id, METHOD_NOT_FOUND,
                                             'Invalid method {}'.format(rpcdata.method))

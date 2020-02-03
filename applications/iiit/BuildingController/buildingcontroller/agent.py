@@ -39,7 +39,7 @@ import gevent
 import gevent.event
 
 from ispace_utils import isclose, get_task_schdl, cancel_task_schdl, publish_to_bus
-from ispace_utils import retrive_details_from_vb
+from ispace_utils import retrive_details_from_vb, register_agent_with_vb, register_rpc_route
 from ispace_msg import ISPACE_Msg, MessageType
 from ispace_msg_utils import parse_bustopic_msg, check_msg_type, tap_helper, ted_helper
 from ispace_msg_utils import get_default_pp_msg, valid_bustopic_msg
@@ -105,34 +105,23 @@ class BuildingController(Agent):
         
     @Core.receiver('onstart')
     def startup(self, sender, **kwargs):
-        _log.debug('startup()')
-        _log.info("yeild 10s for volttron platform to initiate properly...")
-        time.sleep(10) #yeild for a movement
         _log.info("Starting BuildingController...")
         
-        self._valid_senders_list_pp = ['iiit.pricecontroller']
         #retrive self._device_id and self._discovery_address from vb
         retrive_details_from_vb(self)
         
         #register this agent with vb as local device for posting active power & bid energy demand
         #pca picks up the active power & energy demand bids only if registered with vb as local device
-        while True:
-            try:
-                _log.info('registering with the Volttron Bridge')
-                success = self.vip.rpc.call(self._vb_vip_identity
-                                    , 'register_local_ed_agent'
-                                    , self.core.identity
-                                    , self._device_id
-                                    ).get(timeout=10)
-                if success:
-                    break
-            except Exception as e:
-                print(e)
-                _log.exception('Maybe the Volttron Bridge Agent is not started!!!')
-                pass
-            _log.debug('will try again in 5 sec')
-            time.sleep(5)
-            
+        #require self._vb_vip_identity, self.core.identity, self._device_id
+        #register_agent_with_vb is a blocking call
+        register_agent_with_vb(self, 5)
+        
+        #register rpc routes with MASTER_WEB
+        #register_rpc_route is a blocking call
+        register_rpc_route(self, "building_controller", "rpc_from_net", 5)
+        
+        self._valid_senders_list_pp = ['iiit.pricecontroller']
+        
         #any process that failed to apply pp sets this flag False
         self._process_opt_pp_success = False
         
@@ -167,10 +156,6 @@ class BuildingController(Agent):
         #subscribing to topic_price_point
         self.vip.pubsub.subscribe("pubsub", self._topic_price_point, self.on_new_price)
         
-        self.vip.rpc.call(MASTER_WEB, 'register_agent_route'
-                            , r'^/BuildingController'
-                            , "rpc_from_net"
-                            ).get(timeout=10)
         _log.debug('startup() - Done. Agent is ready')
         return
         
@@ -190,6 +175,31 @@ class BuildingController(Agent):
     def onfinish(self, sender, **kwargs):
         _log.debug('onfinish()')
         return
+        
+    @RPC.export
+    def rpc_from_net(self, header, message):
+        result = False
+        try:
+            rpcdata = jsonrpc.JsonRpcData.parse(message)
+            _log.debug('rpc_from_net()... '
+                        + 'header: {}'.format(header)
+                        + ', rpc method: {}'.format(rpcdata.method)
+                        + ', rpc params: {}'.format(rpcdata.params)
+                        )
+            if rpcdata.method == "ping":
+                return True
+            else:
+                return jsonrpc.json_error(rpcdata.id, METHOD_NOT_FOUND,
+                                            'Invalid method {}'.format(rpcdata.method))
+            return jsonrpc.json_result(rpcdata.id, result)
+        except KeyError as ke:
+            print(ke)
+            return jsonrpc.json_error(rpcdata.id, INVALID_PARAMS,
+                                        'Invalid params {}'.format(rpcdata.params))
+        except Exception as e:
+            print(e)
+            return jsonrpc.json_error(rpcdata.id, UNHANDLED_EXCEPTION, e)
+        return result
         
     def _config_get_init_values(self):
         self._period_read_data = self.config.get('period_read_data', 30)

@@ -14,6 +14,7 @@
 import datetime
 import logging
 import math
+import time
 import gevent
 import gevent.event
 import requests
@@ -21,10 +22,53 @@ from enum import IntEnum
 
 from volttron.platform.agent import utils
 from volttron.platform.messaging import headers as headers_mod
+from volttron.platform.agent.known_identities import MASTER_WEB
 
 utils.setup_logging()
 _log = logging.getLogger(__name__)
 
+#register agent with local vb, blocking fucntion
+#register this agent with vb as local device for posting active power & bid energy demand
+#pca picks up the active power & energy demand bids only if registered with vb as local device
+def register_agent_with_vb(self, sleep_time=10):
+    while True:
+        try:
+            _log.info('registering with the Volttron Bridge')
+            success = self.vip.rpc.call(self._vb_vip_identity
+                                        , 'register_local_ed_agent'
+                                        , self.core.identity
+                                        , self._device_id
+                                        ).get(timeout=10)
+            if success:
+                break
+        except Exception as e:
+            print(e)
+            _log.exception('Maybe the Volttron Bridge Agent is not yet started!!!')
+            pass
+        _log.debug('will try again in {} sec'.format(sleep_time))
+        time.sleep(sleep_time)
+    return
+    
+#register rpc routes with MASTER_WEB
+def register_rpc_route(self, name, handle, sleep_time=10):
+    while True:
+        try:
+            _log.info('registering agent route')
+            success = self.vip.rpc.call(MASTER_WEB
+                                        , 'register_agent_route'
+                                        , r'^/' + name
+                                        , handle
+                                        ).get(timeout=10)
+            if success:
+                break
+        except Exception as e:
+            print(e)
+            _log.exception('Maybe the Volttron instance is not yet ready!!!')
+            pass
+        _log.debug('will try again in {} sec'.format(sleep_time))
+        time.sleep(sleep_time)
+    return
+    
 #try to retrive self._device_id, self._ip_addr, self._discovery_address from volttron bridge
 def retrive_details_from_vb(self):
     try:

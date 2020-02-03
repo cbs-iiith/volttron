@@ -161,7 +161,7 @@ def ss_sh_device(config_path, **kwargs):
             
         def _pingSmartHub(self):
             _log.debug('_pingSmartHub()')
-            url_root = 'http://' + self.sh_ip_addr + ':' + str(self.sh_port) + '/SmartHub'
+            url_root = 'http://' + self.sh_ip_addr + ':' + str(self.sh_port) + '/smarthub'
             if not sh_on_btry or self.do_rpc(url_root, 'rpc_ping'):
                 #hub is not on btry or hub is alive, do nothing
                 self.hub_ping_count = 0
