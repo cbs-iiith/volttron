@@ -40,7 +40,7 @@ def register_agent_with_vb(self, sleep_time=10):
                                         , self._device_id
                                         ).get(timeout=10)
             _log.debug ('self.vip.rpc.call() result: {}'.format(success))
-            if success is None:
+            if success:
                 _log.debug('Done.')
                 break
         except Exception as e:
