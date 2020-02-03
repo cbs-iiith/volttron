@@ -261,9 +261,9 @@ class VolttronBridge(Agent):
                         )
             if rpcdata.method == "ping":
                 result = True
-            elif rpcdata.method == "ds_bridge" and header['REQUEST_METHOD'] == 'POST':
+            elif rpcdata.method == "dsbridge" and header['REQUEST_METHOD'] == 'POST':
                 result = self._register_ds_bridge(rpcdata.id, message)
-            elif rpcdata.method == "ds_bridge" and header['REQUEST_METHOD'] == 'DELETE':
+            elif rpcdata.method == "dsbridge" and header['REQUEST_METHOD'] == 'DELETE':
                 result = self._unregister_ds_bridge(rpcdata.id, message)
             elif rpcdata.method == "energy" and header['REQUEST_METHOD'] == 'POST':
                 #post the new energy demand from ds to the local bus

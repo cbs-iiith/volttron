@@ -118,7 +118,7 @@ class BuildingController(Agent):
         
         #register rpc routes with MASTER_WEB
         #register_rpc_route is a blocking call
-        register_rpc_route(self, "building_controller", "rpc_from_net", 5)
+        register_rpc_route(self, "buildingcontroller", "rpc_from_net", 5)
         
         self._valid_senders_list_pp = ['iiit.pricecontroller']
         
