@@ -191,11 +191,10 @@ class VolttronBridge(Agent):
         if self._bridge_host != 'LEVEL_HEAD':
             url_root = 'http://' + self._us_ip_addr + ':' + str(self._us_port) + '/bridge'
             _log.debug("registering with upstream VolttronBridge: " + url_root)
-            self._usConnected = do_rpc(url_root, 'register_ds_bridge'
+            self._usConnected = do_rpc(url_root, 'dsbridge'
                                             , {'discovery_address': discovery_address
                                             , 'device_id': device_id
-                                            })
-                                                        
+                                            }, 'POST')
         #keep track of us opt_pp_id & bid_pp_id
         if self._bridge_host != 'LEVEL_HEAD':
             self.us_opt_pp_id = 0
@@ -230,10 +229,10 @@ class VolttronBridge(Agent):
             if self._usConnected:
                 _log.debug("unregistering with upstream VolttronBridge")
                 url_root = 'http://' + self._us_ip_addr + ':' + str(self._us_port) + '/bridge'
-                result = do_rpc(url_root, 'unregister_ds_bridge'
+                result = do_rpc(url_root, 'dsbridge'
                                         , {'discovery_address': self._discovery_address
                                         , 'device_id': self._device_id
-                                        })
+                                        }, 'DELETE')
                 self._usConnected = False
             
         _log.debug('un registering rpc routes')
@@ -261,6 +260,8 @@ class VolttronBridge(Agent):
                         )
             if rpcdata.method == "ping":
                 result = True
+            elif rpcdata.method == "dsbridge" and header['REQUEST_METHOD'] == 'GET':
+                result = self._get_ds_bridge_status(rpcdata.id, message)
             elif rpcdata.method == "dsbridge" and header['REQUEST_METHOD'] == 'POST':
                 result = self._register_ds_bridge(rpcdata.id, message)
             elif rpcdata.method == "dsbridge" and header['REQUEST_METHOD'] == 'DELETE':
@@ -447,7 +448,7 @@ class VolttronBridge(Agent):
         _log.debug('_usConnected: ' + str(self._usConnected))
         
         _log.debug("posting energy demand to upstream VolttronBridge")
-        success = do_rpc(url_root, 'post_ed', self.tmp_bustopic_ed_msg.get_json_params())
+        success = do_rpc(url_root, 'energy', self.tmp_bustopic_ed_msg.get_json_params(), 'POST')
         #_log.debug('success: ' + str(success))
         if success:
             _log.debug("Success!!!")
@@ -517,7 +518,7 @@ class VolttronBridge(Agent):
             update_ts()
             '''
             url_root = 'http://' + discovery_address + '/bridge'
-            success = do_rpc(url_root, 'post_pp', self.tmp_bustopic_pp_msg.get_json_params())
+            success = do_rpc(url_root, 'pricepoint', self.tmp_bustopic_pp_msg.get_json_params(), 'POST')
             if success:
                 #success, reset retry count
                 self._ds_retrycount[index] = MAX_RETRIES + 1    #no need to retry on the next run
@@ -530,6 +531,16 @@ class VolttronBridge(Agent):
                 self._all_ds_posts_success  = False
                     
         return
+        
+    def _get_ds_bridge_status(self, rpcdata_id, message):
+        discovery_address = jsonrpc.JsonRpcData.parse(message).params['discovery_address']
+        device_id = jsonrpc.JsonRpcData.parse(message).params['device_id']
+        result = False
+        if discovery_address in self._ds_register:
+            index = self._ds_register.index(discovery_address)
+            if device_id == self._ds_device_ids[index]:
+                result = True
+        return result 
         
     def _register_ds_bridge(self, rpcdata_id, message):
         discovery_address = jsonrpc.JsonRpcData.parse(message).params['discovery_address']

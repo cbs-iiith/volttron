@@ -675,8 +675,8 @@ class PriceController(Agent):
                 return
             #not implemented
             _log.warning('aggregator_us_tap() not implemented'
-                            + 'pca_state: {}'.format(self._pca_state)
-                            + 'pca_mode: {}'.format(self._pca_mode)
+                            + ' pca_state: {}'.format(self._pca_state)
+                            + ' pca_mode: {}'.format(self._pca_mode)
                             )
             return
             
@@ -710,8 +710,8 @@ class PriceController(Agent):
                 ):
             #not implemented
             _log.warning('aggregator_us_tap() not implemented'
-                            + 'pca_state: {}'.format(self._pca_state)
-                            + 'pca_mode: {}'.format(self._pca_mode)
+                            + ' pca_state: {}'.format(self._pca_state)
+                            + ' pca_mode: {}'.format(self._pca_mode)
                             )
             return
             
