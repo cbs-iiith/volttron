@@ -700,7 +700,7 @@ class VolttronBridge(Agent):
         publish_to_bus(self, pub_topic, pub_msg)
         
         #at this stage, ds is alive, reset the counter
-        self._ds_retrycount[self._ds_register.index(discovery_address)] = 0
+        self._ds_retrycount[self._ds_register.index(ed_msg.get_src_ip())] = 0
         _log.debug('...Done!!!')
         return True
         
