@@ -36,9 +36,9 @@ import time
 import gevent
 import gevent.event
 
-from ispace_utils import do_rpc, register_rpc_route
+from ispace_utils import do_rpc, register_rpc_route, publish_to_bus
 from ispace_msg import ISPACE_Msg, MessageType
-from ispace_msg_utils import parse_bustopic_msg, check_msg_type
+from ispace_msg_utils import parse_bustopic_msg, check_msg_type, parse_jsonrpc_msg
 from ispace_msg_utils import get_default_pp_msg, get_default_ed_msg, valid_bustopic_msg
 
 utils.setup_logging()
@@ -502,10 +502,21 @@ class VolttronBridge(Agent):
             index = self._ds_register.index(discovery_address)
             
             
-            if self._ds_retrycount[index] > MAX_RETRIES:
-                #maybe already posted or failed more than max retries, do nothing
+            if self._ds_retrycount[index] => MAX_RETRIES:
+                #failed more than max retries, unregister the ds
+                _log.debug('posts to: {}'.format(discovery_address)
+                            + ' failed more than MAX_RETRIES: {:d}.'format(MAX_RETRIES)
+                            + ' ds unregistered!!!'
+                            )
+                self._ds_register.remove(discovery_address)
+                del self._ds_device_ids[index]
+                del self._ds_retrycount[index]
+                _log.debug('unregistered!!!')
                 continue
                 
+            if self._ds_retrycount[index] == -1:
+                #do nothing
+                continue
                 
             '''before posting to ds, dcrement ttl and update ts
             #decrement the ttl by time consumed to process till now + 1 sec
@@ -521,7 +532,7 @@ class VolttronBridge(Agent):
             success = do_rpc(self._agent_id, url_root, 'pricepoint', self.tmp_bustopic_pp_msg.get_json_params(), 'POST')
             if success:
                 #success, reset retry count
-                self._ds_retrycount[index] = MAX_RETRIES + 1    #no need to retry on the next run
+                self._ds_retrycount[index] = -1    #no need to retry on the next run
                 _log.debug("post to:" + discovery_address + " sucess!!!")
             else:
                 #failed to post, increment retry count
