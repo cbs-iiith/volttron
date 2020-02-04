@@ -153,25 +153,26 @@ def tap_helper(pp_msg, device_id, discovery_address, tap, new_ttl=10):
                         , duration, ttl, ts, tz)
                         
 def check_msg_type(message, msg_type):
-    data = jsonrpc.JsonRpcData.parse(message).params
-    try:
-        if data['msg_type'] == msg_type:
-            return True
-    except Exception:
-        _log.warning('key attrib: "msg_type", not available in the message.')
-        pass
+    rpc_data = jsonrpc.JsonRpcData.parse(message)
+    if 'params' in rpc_data.keys()
+            and 'msg_type' in rpc_data.params.keys()
+            and rpc_data.params['msg_type'] == msg_type:
+        return True
     return False
     
 #converts bus message into an ispace_msg
 def parse_bustopic_msg(message, minimum_fields = []):
-    #data = json.loads(message)
-    data = jsonrpc.JsonRpcData.parse(message).params
-    return _parse_data(data, minimum_fields)
+    rpc_data = jsonrpc.JsonRpcData.parse(message)
+    if 'params' not in rpc_data.keys():
+        return None
+    return _parse_data(rpc_data.params, minimum_fields)
     
 #converts jsonrpc_msg into an ispace_msg
 def parse_jsonrpc_msg(message, minimum_fields = []):
-    data = jsonrpc.JsonRpcData.parse(message).params
-    return _parse_data(data, minimum_fields)
+    rpc_data = jsonrpc.JsonRpcData.parse(message)
+    if 'params' not in rpc_data.keys():
+        return None
+    return _parse_data(rpc_data.params, minimum_fields)
     
 def _update_value(new_msg, attrib, new_value):
     if attrib == 'msg_type':
