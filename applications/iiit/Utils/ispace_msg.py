@@ -356,28 +356,28 @@ class ISPACE_Msg:
         
     #validate various sanity measure like, valid fields, valid pp ids, ttl expire, etc.,
     def sanity_check_ok(self, hint = None, validate_fields = [], valid_price_ids = []):
-        _log.debug('sanity_check_ok()')
+        #_log.debug('sanity_check_ok()')
         if not self.valid_msg(validate_fields):
             _log.warning('rcvd a invalid msg, message: {}, do nothing!!!'.format(message))
             return False
             
         #print only if a valid msg
-        _log.info('{} Msg: {}'.format(hint, self))
+        #_log.info('{} Msg: {}'.format(hint, self))
         
         #process msg only if price_id corresponds to these ids
-        _log.debug('check if pp_id is valid...')
+        #_log.debug('check if pp_id is valid...')
         if valid_price_ids != [] and self.price_id not in valid_price_ids:
             _log.debug('pp_id: {}'.format(self.price_id)
                         + ' not in valid_price_ids: {}, do nothing!!!'.format(valid_price_ids))
             return False
-        _log.debug('done.')
+        #_log.debug('done.')
         
-        _log.debug('check if ttl timeout...')
+        #_log.debug('check if ttl timeout...')
         #process msg only if msg is alive (didnot timeout)
         if self.ttl_timeout():
             _log.warning('msg ttl expired, do nothing!!!')
             return False
-        _log.debug('done.')
+        #_log.debug('done.')
         
         return True
         

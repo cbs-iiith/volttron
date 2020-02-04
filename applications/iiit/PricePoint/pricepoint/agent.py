@@ -143,11 +143,11 @@ class PricePoint(Agent):
                 return jsonrpc.json_error(rpcdata.id, METHOD_NOT_FOUND,
                                             'Invalid method {}'.format(rpcdata.method))
         except KeyError:
-            print('KeyError')
+            #print('KeyError')
             return jsonrpc.json_error(rpcdata.id, INVALID_PARAMS,
                                         'Invalid params {}'.format(rpcdata.params))
         except Exception as e:
-            print(e)
+            #print(e)
             return jsonrpc.json_error(rpcdata.id, UNHANDLED_EXCEPTION, e)
         return jsonrpc.json_result(rpcdata.id, result)
         
@@ -163,11 +163,11 @@ class PricePoint(Agent):
             pp_msg = parse_jsonrpc_msg(message, minimum_fields)
             #_log.info('pp_msg: {}'.format(pp_msg))
         except KeyError as ke:
-            print(ke)
+            #print(ke)
             return jsonrpc.json_error(rpcdata_id, INVALID_PARAMS,
                     'Invalid params {}'.format(rpcdata.params))
         except Exception as e:
-            print(e)
+            #print(e)
             return jsonrpc.json_error(rpcdata_id, UNHANDLED_EXCEPTION, e)
             
         #validate various sanity measure like, valid fields, valid pp ids, ttl expiry, etc.,

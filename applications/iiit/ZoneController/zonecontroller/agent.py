@@ -537,7 +537,7 @@ class ZoneController(Agent):
             return E_UNKNOWN_LSP
         except Exception as e:
             _log.exception ("Expection: Could not contact actuator. Is it running?")
-            print(e)
+            #print(e)
             return E_UNKNOWN_LSP
         return E_UNKNOWN_LSP
 

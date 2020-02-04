@@ -867,7 +867,7 @@ class SmartHub(Agent):
             _log.exception("Expection: gevent.Timeout in rpc_getShDeviceState()")
             return E_UNKNOWN_STATE
         except RemoteError as re:
-            print(re)
+            #print(re)
             return E_UNKNOWN_STATE
         except Exception as e:
             _log.exception ("Expection: Could not contact actuator. Is it running?")
@@ -1158,15 +1158,15 @@ class SmartHub(Agent):
                 return jsonrpc.json_error('NA', METHOD_NOT_FOUND,
                     'Invalid method {}'.format(rpcdata.method))
         except KeyError as ke:
-            print(ke)
+            #print(ke)
             return jsonrpc.json_error('NA', INVALID_PARAMS,
                     'Invalid params {}'.format(rpcdata.params))
         except AssertionError:
-            print('AssertionError')
+            #print('AssertionError')
             return jsonrpc.json_error('NA', INVALID_REQUEST,
                     'Invalid rpc data {}'.format(rpcdata))
         except Exception as e:
-            print(e)
+            #print(e)
             return jsonrpc.json_error('NA', UNHANDLED_EXCEPTION, e)
         return jsonrpc.json_result(rpcdata.id, result)
         
