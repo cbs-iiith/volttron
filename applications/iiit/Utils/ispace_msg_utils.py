@@ -153,8 +153,9 @@ def tap_helper(pp_msg, device_id, discovery_address, tap, new_ttl=10):
                         , duration, ttl, ts, tz)
                         
 def check_msg_type(message, msg_type):
+    data = jsonrpc.JsonRpcData.parse(message).params
     try:
-        if jsonrpc.JsonRpcData.parse(message).params['msg_type'] == msg_type:
+        if int(data['msg_type']) == int(msg_type):
             return True
     except Exception:
         _log.warning('key attrib: "msg_type", not available in the message.')
