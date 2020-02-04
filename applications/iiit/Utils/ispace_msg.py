@@ -377,10 +377,10 @@ class ISPACE_Msg:
                             else True)
                             
     #return class attributes as json params that can be passed to do_rpc()
-    def get_json_params():
+    def get_json_params(self):
         return json.dumps(self._get_params_dict())
     
-    def get_json_message(self, id='123456789', method='bus_topic'):
+    def get_json_message(self, id=randint(0, 99999999), method='bus_topic'):
         json_package = {
             'jsonrpc': '2.0',
             'id': id,
