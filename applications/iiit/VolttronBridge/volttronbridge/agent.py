@@ -191,9 +191,9 @@ class VolttronBridge(Agent):
         if self._bridge_host != 'LEVEL_HEAD':
             url_root = 'http://' + self._us_ip_addr + ':' + str(self._us_port) + '/bridge'
             _log.debug("registering with upstream VolttronBridge: " + url_root)
-            self._usConnected = do_rpc(url_root, 'dsbridge'
-                                            , {'discovery_address': discovery_address
-                                            , 'device_id': device_id
+            self._usConnected = do_rpc(self._agent_id, url_root, 'dsbridge'
+                                            , {'discovery_address': self._discovery_address
+                                            , 'device_id': self._device_id
                                             }, 'POST')
         #keep track of us opt_pp_id & bid_pp_id
         if self._bridge_host != 'LEVEL_HEAD':
@@ -229,7 +229,7 @@ class VolttronBridge(Agent):
             if self._usConnected:
                 _log.debug("unregistering with upstream VolttronBridge")
                 url_root = 'http://' + self._us_ip_addr + ':' + str(self._us_port) + '/bridge'
-                result = do_rpc(url_root, 'dsbridge'
+                result = do_rpc(self._agent_id, url_root, 'dsbridge'
                                         , {'discovery_address': self._discovery_address
                                         , 'device_id': self._device_id
                                         }, 'DELETE')
@@ -427,7 +427,7 @@ class VolttronBridge(Agent):
     #perodically keeps trying to post ed to us
     def post_us_new_ed(self):
         if self._all_us_posts_success:
-            #_log.debug('all us posts success, do nothing')
+            _log.debug('all us posts success, do nothing')
             return
         
         url_root = 'http://' + self._us_ip_addr + ':' + str(self._us_port) + '/bridge'
@@ -436,10 +436,10 @@ class VolttronBridge(Agent):
         _log.debug('check us connection...')
         if not self._usConnected:
             _log.debug('not connected, Trying to register once...')
-            self._usConnected = self._register_to_us_bridge(url_root
-                                                            , self._discovery_address
-                                                            , self._device_id
-                                                            )
+            self._usConnected = do_rpc(self._agent_id, url_root, 'dsbridge'
+                                            , {'discovery_address': self._discovery_address
+                                            , 'device_id': self._device_id
+                                            }, 'POST')
             if not self._usConnected:
                 _log.debug('_usConnected: ' + str(self._usConnected))
                 _log.debug('Failed to register, May be upstream bridge is not running!!!')
@@ -448,7 +448,7 @@ class VolttronBridge(Agent):
         _log.debug('_usConnected: ' + str(self._usConnected))
         
         _log.debug("posting energy demand to upstream VolttronBridge")
-        success = do_rpc(url_root, 'energy', self.tmp_bustopic_ed_msg.get_json_params(), 'POST')
+        success = do_rpc(self._agent_id, url_root, 'energy', self.tmp_bustopic_ed_msg.get_json_params(), 'POST')
         #_log.debug('success: ' + str(success))
         if success:
             _log.debug("Success!!!")
@@ -518,7 +518,7 @@ class VolttronBridge(Agent):
             update_ts()
             '''
             url_root = 'http://' + discovery_address + '/bridge'
-            success = do_rpc(url_root, 'pricepoint', self.tmp_bustopic_pp_msg.get_json_params(), 'POST')
+            success = do_rpc(self._agent_id, url_root, 'pricepoint', self.tmp_bustopic_pp_msg.get_json_params(), 'POST')
             if success:
                 #success, reset retry count
                 self._ds_retrycount[index] = MAX_RETRIES + 1    #no need to retry on the next run

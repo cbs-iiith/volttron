@@ -18,10 +18,10 @@ import logging
 from random import randint
 from copy import copy
 #import json
-from volttron.platform.agent import json as jsonapi
 
 from volttron.platform.agent import utils
 from volttron.platform import jsonrpc
+from volttron.platform.agent import json as jsonapi
 
 from ispace_utils import mround
 from ispace_msg import ISPACE_Msg, MessageType, ISPACE_MSG_ATTRIB_LIST

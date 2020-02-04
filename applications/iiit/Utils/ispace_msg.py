@@ -18,12 +18,11 @@ from enum import IntEnum
 import logging
 from random import randint
 #import json
-from volttron.platform.agent import json as jsonapi
 
 
 from volttron.platform.agent import utils
 from volttron.platform import jsonrpc
-
+from volttron.platform.agent import json as jsonapi
 
 utils.setup_logging()
 _log = logging.getLogger(__name__)

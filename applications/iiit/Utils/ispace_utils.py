@@ -23,6 +23,7 @@ from enum import IntEnum
 from volttron.platform.agent import utils
 from volttron.platform.messaging import headers as headers_mod
 from volttron.platform.agent.known_identities import MASTER_WEB
+from volttron.platform.agent import json as jsonapi
 
 utils.setup_logging()
 _log = logging.getLogger(__name__)
@@ -163,29 +164,29 @@ def isclose(a, b, rel_tol=1e-09, abs_tol=0.0):
 def calc_energy(self, pwr_wh, duration_sec):
     return ((pwr_wh * duration_sec)/3600000)
     
-def do_rpc(self, url_root, method, params=None, request_method='POST'):
-    global authentication
+def do_rpc(id, url_root, method, params=None, request_method='POST'):
+    #global authentication
     #_log.debug('do_rpc()')
     result = False
     json_package = {
         'jsonrpc': '2.0',
-        'id': self._agent_id,
+        'id': id,
         'method':method,
     }
     
-    if authentication:
-        json_package['authorization'] = authentication
+    #if authentication is not None:
+    #    json_package['authorization'] = authentication
         
     if params:
         json_package['params'] = params
         
     try:
         if request_method == 'POST':
-            response = requests.post(url_root, data=json.dumps(json_package), timeout=10)
+            response = requests.post(url_root, data=jsonapi.dumps(json_package), timeout=10)
         elif request_method == 'DELETE':
-            response = requests.delete(url_root, data=json.dumps(json_package), timeout=10)
+            response = requests.delete(url_root, data=jsonapi.dumps(json_package), timeout=10)
         else:
-            response = requests.get(url_root, data=json.dumps(json_package), timeout=10)
+            response = requests.get(url_root, data=jsonapi.dumps(json_package), timeout=10)
             
         if response.ok:
             if 'result' in response.json().keys():
