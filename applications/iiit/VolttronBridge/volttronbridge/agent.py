@@ -88,17 +88,17 @@ class VolttronBridge(Agent):
     '''Voltron Bridge
     '''
     #initialized  during __init__ from config
-    energyDemand_topic = None
-    energyDemand_topic_ds = None
-    pricePoint_topic_us = None
-    pricePoint_topic = None
+    _topic_energy_demand = None
+    _topic_energy_demand_ds = None
+    _topic_price_point_us = None
+    _topic_price_point = None
     
     def __init__(self, config_path, **kwargs):
         super(VolttronBridge, self).__init__(**kwargs)
         _log.debug("vip_identity: " + self.core.identity)
         
         self.config = utils.load_config(config_path)
-        self._configGetPoints()
+        self._config_get_points()
         return
         
     @Core.receiver('onsetup')
@@ -166,9 +166,9 @@ class VolttronBridge(Agent):
         
         #subscribe to price point so that it can be posted to downstream
         if self._bridge_host != 'LEVEL_TAILEND':
-            _log.debug("subscribing to pricePoint_topic: " + self.pricePoint_topic)
+            _log.debug("subscribing to _topic_price_point: " + self._topic_price_point)
             self.vip.pubsub.subscribe("pubsub"
-                                        , self.pricePoint_topic
+                                        , self._topic_price_point
                                         , self.on_new_pp
                                         )
             self._ds_register[:] = []
@@ -177,9 +177,9 @@ class VolttronBridge(Agent):
             
         #subscribe to energy demand so that it can be posted to upstream
         if self._bridge_host != 'LEVEL_HEAD':
-            _log.debug("subscribing to energyDemand_topic: " + self.energyDemand_topic)
+            _log.debug("subscribing to _topic_energy_demand: " + self._topic_energy_demand)
             self.vip.pubsub.subscribe("pubsub"
-                                        , self.energyDemand_topic
+                                        , self._topic_energy_demand
                                         , self.on_new_ed
                                         )
                                         
@@ -237,11 +237,11 @@ class VolttronBridge(Agent):
         _log.debug('done!!!')
         return
         
-    def _configGetPoints(self):
-        self.energyDemand_topic = self.config.get('energyDemand_topic', 'zone/energydemand')
-        self.energyDemand_topic_ds = self.config.get('energyDemand_topic_ds', 'smarthub/energydemand')
-        self.pricePoint_topic_us = self.config.get('pricePoint_topic_us', 'building/pricepoint')
-        self.pricePoint_topic = self.config.get('pricePoint_topic', 'zone/pricepoint')
+    def _config_get_points(self):
+        self._topic_energy_demand = self.config.get('energyDemand_topic', 'zone/energydemand')
+        self._topic_energy_demand_ds = self.config.get('energyDemand_topic_ds', 'smarthub/energydemand')
+        self._topic_price_point_us = self.config.get('pricePoint_topic_us', 'building/pricepoint')
+        self._topic_price_point = self.config.get('pricePoint_topic', 'zone/pricepoint')
         return
         
     @RPC.export
@@ -633,7 +633,7 @@ class VolttronBridge(Agent):
             
         #publish the new price point to the local us message bus
         _log.debug('post to the local-us-bus')
-        pub_topic = self.pricePoint_topic_us
+        pub_topic = self._topic_price_point_us
         pub_msg = pp_msg.get_json_message(self._agent_id, 'bus_topic')
         _log.debug('publishing to local bus topic: {}'.format(pub_topic))
         _log.debug('Msg: {}'.format(pub_msg))
@@ -693,7 +693,7 @@ class VolttronBridge(Agent):
         
         #post to bus
         _log.debug('post the local-ds-bus')
-        pubTopic = self.energyDemand_topic_ds
+        pub_topic = self._topic_energy_demand_ds
         pub_msg = ed_msg.get_json_message(self._agent_id, 'bus_topic')
         
         _log.debug('publishing to local bus topic: {}'.format(pub_topic))
