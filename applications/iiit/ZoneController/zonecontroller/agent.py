@@ -386,7 +386,7 @@ class ZoneController(Agent):
                                             , 'set_point'
                                             , self._agent_id
                                             , 'iiit/cbs/zonecontroller/RM_TSP'
-                                            tsp
+                                            , tsp
                                             ).get(timeout=10)
                 self._update_zone_tsp(tsp)
             except gevent.Timeout:
