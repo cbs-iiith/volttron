@@ -508,7 +508,7 @@ class VolttronBridge(Agent):
             if self._ds_retrycount[index] >= MAX_RETRIES:
                 #failed more than max retries, unregister the ds
                 _log.debug('posts to: {}'.format(discovery_address)
-                            + ' failed more than MAX_RETRIES: {:d}.'format(MAX_RETRIES)
+                            + ' failed more than MAX_RETRIES: {:d}'.format(MAX_RETRIES)
                             + ' ds unregistering...'
                             )
                 self._ds_register.remove(discovery_address)
