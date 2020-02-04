@@ -118,7 +118,8 @@ def bootstrap(dest, prompt='(volttron)', version=None, verbose=None):
 
         def __init__(self, version=None, prompt=None):
             '''Allow overriding version and prompt.'''
-            self.version = version
+            #self.version = version
+            self.version = '16.7.9'
             self.prompt = prompt
             self.env_exe = None
 
