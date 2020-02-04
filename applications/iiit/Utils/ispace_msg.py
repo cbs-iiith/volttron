@@ -58,6 +58,13 @@ def empty_copy(obj):
 def mround(num, multipleOf):
     #_log.debug('mround()')
     return math.floor((num + multipleOf / 2) / multipleOf) * multipleOf
+#refer to http://stackoverflow.com/questions/5595425/what-is-the-best-way-to-compare-floats-for-almost-equality-in-python
+#comparing floats is mess
+def isclose(a, b, rel_tol=1e-09, abs_tol=0.0):
+    #_log.debug('isclose()')
+    return abs(a-b) <= max(rel_tol * max(abs(a), abs(b)), abs_tol)
+#checking if a floating point value is “numerically zero” by checking if it is lower than epsilon
+EPSILON = 1e-04
     
     
 class MessageType(IntEnum):
@@ -89,6 +96,8 @@ class ISPACE_Msg:
     ttl = None
     ts = None
     tz  = None
+    
+    self._params = {}
     
     def __init__(self, msg_type
                     , one_to_one = None
@@ -123,7 +132,8 @@ class ISPACE_Msg:
         if tz is not None: self.set_tz(tz)
         return
         
-    #str overload to return class attributes as json params
+    ''' str overload to return class attributes as json params
+    '''
     def __str__(self):
         #_log.debug('__str__()')
         params = self._get_params_dict()
@@ -138,25 +148,139 @@ class ISPACE_Msg:
         return newcopy
     '''
     
+    ''' overload methods for self and other
+    '''
+    # overload + operator
+    def __add__(self, other):
+        return (self.value + other.value)
+        
+    # overload - operator
+    def __sub__(self, other):
+        return (self.value - other.value)
+        
+    # overload * operator
+    def __mul__(self, other):
+        return (self.value * other.value)
+        
+    # overload / operator
+    def __truediv__(self, other):
+        return (self.value / other.value)
+        
+    # overload % operator
+    def __mod__(self, other):
+        return (self.value % other.value)
+        
+    # overload < operator
+    def __lt__(self, other):
+        return (True if (not isclose(self.value, other.value, EPSILON)
+                        and (self.value < other.value))
+                    else False)
+                    
+    # overload <= operator
+    def __le__(self, other):
+        return (True if (self.value <= other.value)
+                    else False)
+                    
+    # overload != operator
+    def __ne__(self, other):
+        return (True if not isclose(self.value, other.value, EPSILON)
+                    else False)
+                    
+    # overload > operator
+    def __gt__(self, other):
+        return (True if (not isclose(self.value, other.value, EPSILON)
+                        and (self.value > other.value))
+                    else False)
+                    
+    # overload >= operator
+    def __ge__(self, other):
+        return (True if (self.value <= other.value)
+                    else False)
+                    
+    # overload == operator
+    def __eq__(self, other):
+        return (True if (self.price_id == other.price_id 
+                        and isclose(self.value, other.value, EPSILON))
+                   else False)
+                   
+    ''' ENDOF overload methods for self and other
+    '''
+    
+    ''' overload methods for self and value
+    '''
+    # overload + operator
+    def __add__(self, value):
+        return (self.value + value)
+        
+    # overload - operator
+    def __sub__(self, value):
+        return (self.value - value)
+        
+    # overload * operator
+    def __mul__(self, value):
+        return (self.value * value)
+        
+    # overload / operator
+    def __truediv__(self, value):
+        return (self.value / value)
+        
+    # overload % operator
+    def __mod__(self, value):
+        return (self.value % value)
+        
+    # overload < operator
+    def __lt__(self, value):
+        return (True if (not isclose(self.value, value, EPSILON)
+                        and (self.value < value))
+                    else False)
+                    
+    # overload <= operator
+    def __le__(self, value):
+        return (True if (self.value <= value)
+                    else False)
+                    
+    # overload != operator
+    def __ne__(self, value):
+        return (True if not isclose(self.value, value, EPSILON)
+                    else False)
+                    
+    # overload > operator
+    def __gt__(self, value):
+        return (True if (not isclose(self.value, value, EPSILON)
+                        and (self.value > value))
+                    else False)
+                    
+    # overload >= operator
+    def __ge__(self, value):
+        return (True if (self.value <= value)
+                    else False)
+                    
+    # overload == operator
+    def __eq__(self, value):
+        return (True if (self.price_id == price_id 
+                        and isclose(self.value, value, EPSILON))
+                   else False)
+    ''' ENDOF overload methods for self and value
+    '''
+    
     def _get_params_dict(self):
-        params = {}
-        params['msg_type'] = self.msg_type
-        params['one_to_one'] = self.one_to_one
-        params['value'] = self.value
-        params['value_data_type'] = self.value_data_type
-        params['units'] = self.units
-        params['price_id'] = self.price_id
-        params['isoptimal'] = self.isoptimal
-        params['src_ip'] = self.src_ip
-        params['src_device_id'] = self.src_device_id
-        params['dst_ip'] = self.dst_ip
-        params['dst_device_id'] = self.dst_device_id
-        params['duration'] = self.duration
-        params['ttl'] = self.ttl
-        params['ts'] = self.ts
-        params['tz'] = self.tz
+        self._params['msg_type'] = self.msg_type
+        self._params['one_to_one'] = self.one_to_one
+        self._params['value'] = self.value
+        self._params['value_data_type'] = self.value_data_type
+        self._params['units'] = self.units
+        self._params['price_id'] = self.price_id
+        self._params['isoptimal'] = self.isoptimal
+        self._params['src_ip'] = self.src_ip
+        self._params['src_device_id'] = self.src_device_id
+        self._params['dst_ip'] = self.dst_ip
+        self._params['dst_device_id'] = self.dst_device_id
+        self._params['duration'] = self.duration
+        self._params['ttl'] = self.ttl
+        self._params['ts'] = self.ts
+        self._params['tz'] = self.tz
         #_log.debug('params: {}'.format(params))
-        return params
+        return self._params
 
     def ttl_timeout(self):
         #live for ever
@@ -380,35 +504,108 @@ class ISPACE_Msg:
     pass
     
     
-class ISPACE_Msg_OptPricePoint(ISPACE_Msg):
+class ISPACE_Msg_PricePoint(ISPACE_Msg):
     def __init__(self):
-        super().__init__(self, MessageType.price_point, True)
+        super().__init__(self, MessageType.price_point, False, True)
         return
     pass
     
     
-class ISPACE_Msg_BidPricePoint(ISPACE_Msg):
-    def __init__(self):
-        super().__init__(self, MessageType.price_point, False)
+class ISPACE_Msg_OptPricePoint(ISPACE_Msg_PricePoint):
+    def __init__(self, msg_type, one_to_one = None, isoptimal = True
+                    , value = None, value_data_type = None, units = None
+                    , price_id = None
+                    , src_ip = None, src_device_id = None
+                    , dst_ip = None, dst_device_id = None
+                    , duration = None, ttl = None, ts = None, tz = None
+                    ):
+        super().__init__(self, MessageType.active_power, one_to_one, isoptimal
+                        , value, value_data_type, units
+                        , price_id
+                        , src_ip, src_device_id
+                        , dst_ip, dst_device_id
+                        , duration, ttl, ts, tz
+                        ):
+        if category is not None: self.set_category(category)
+        return
+    pass
+    
+    
+class ISPACE_Msg_BidPricePoint(ISPACE_Msg_PricePoint):
+    def __init__(self, msg_type, one_to_one = None, isoptimal = False
+                    , value = None, value_data_type = None, units = None
+                    , price_id = None
+                    , src_ip = None, src_device_id = None
+                    , dst_ip = None, dst_device_id = None
+                    , duration = None, ttl = None, ts = None, tz = None
+                    ):
+        super().__init__(self, MessageType.active_power, one_to_one, isoptimal
+                        , value, value_data_type, units
+                        , price_id
+                        , src_ip, src_device_id
+                        , dst_ip, dst_device_id
+                        , duration, ttl, ts, tz
+                        ):
         return
     pass
     
     
 class ISPACE_Msg_ActivePower(ISPACE_Msg):
+    category = None
+    def __init__(self, msg_type, one_to_one = None, isoptimal = True
+                    , value = None, value_data_type = None, units = None
+                    , price_id = None
+                    , src_ip = None, src_device_id = None
+                    , dst_ip = None, dst_device_id = None
+                    , duration = None, ttl = None, ts = None, tz = None
+                    , category = None
+                    ):
+        super().__init__(self, MessageType.active_power, one_to_one, isoptimal
+                        , value, value_data_type, units
+                        , price_id
+                        , src_ip, src_device_id
+                        , dst_ip, dst_device_id
+                        , duration, ttl, ts, tz
+                        ):
+        if category is not None: self.set_category(category)
+        return
+        
+    def _get_params_dict(self):
+        self._params['category'] = self.category
+        return super()._get_params_dict(self)
+    
+    def _cp_attrib(self, attrib, value):
+        if attrib == 'category': self.set_category(value)
+        else: super()._cp_attrib(self, attrib, value)
+        return
+        
+    def _is_attrib_null(self, attrib):
+        is_null = False
+        if attrib == 'category' and self.category is None: 
+            is_null = True
+        else:
+            is_null = super()._is_attrib_null(self, attrib)
+        return is_null
+        
+    def get_category(self):
+        return self.category
+        
+    #setters
+    def set_category(self, category):
+        self.category = category
+        
+        
+    pass
+    
+    
+class ISPACE_Msg_Energy(ISPACE_Msg_ActivePower):
     def __init__(self):
-        super().__init__(self, MessageType.active_power, True)
+        super().__init__(self, MessageType.energy_demand, False, False)
         return
     pass
     
     
-class ISPACE_Msg_Energy(ISPACE_Msg):
-    def __init__(self):
-        super().__init__(self, MessageType.energy_demand, False)
-        return
-    pass
-    
-    
-class ISPACE_Msg_Budget(ISPACE_Msg):
+class ISPACE_Msg_Budget(ISPACE_Msg_Energy):
     def __init__(self):
         super().__init__(self, MessageType.budget)
         return
