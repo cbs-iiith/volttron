@@ -17,7 +17,7 @@ from enum import IntEnum
 import logging
 from random import randint
 from copy import copy
-#import json
+import json
 
 from volttron.platform.agent import utils
 from volttron.platform import jsonrpc
@@ -164,7 +164,7 @@ def check_msg_type(message, msg_type):
     
 #converts bus message into an ispace_msg
 def parse_bustopic_msg(message, minimum_fields = []):
-    #data = jsonapi.loads(message)
+    #data = json.loads(message)
     data = jsonrpc.JsonRpcData.parse(message).params
     return _parse_data(data, minimum_fields)
     

@@ -19,6 +19,7 @@ import gevent
 import gevent.event
 import requests
 from enum import IntEnum
+import json
 
 from volttron.platform.agent import utils
 from volttron.platform.messaging import headers as headers_mod
@@ -182,11 +183,11 @@ def do_rpc(id, url_root, method, params=None, request_method='POST'):
         
     try:
         if request_method == 'POST':
-            response = requests.post(url_root, data=jsonapi.dumps(json_package), timeout=10)
+            response = requests.post(url_root, data=json.dumps(json_package), timeout=10)
         elif request_method == 'DELETE':
-            response = requests.delete(url_root, data=jsonapi.dumps(json_package), timeout=10)
+            response = requests.delete(url_root, data=json.dumps(json_package), timeout=10)
         else:
-            response = requests.get(url_root, data=jsonapi.dumps(json_package), timeout=10)
+            response = requests.get(url_root, data=json.dumps(json_package), timeout=10)
             
         if response.ok:
             if 'result' in response.json().keys():
