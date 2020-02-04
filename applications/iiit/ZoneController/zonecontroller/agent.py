@@ -585,8 +585,8 @@ class ZoneController(Agent):
         #zone lighting + ac
         cooling_ap = self._rpcget_zone_cooling_power()
         lighting_ap = self._rpcget_zone_lighting_power() 
-        tap = (0 if cooling_ap == E_UNKNOWN_CCE else cooling_ap)
-                + (0 if lighting_ap == E_UNKNOWN_CLE else lighting_ap)
+        tap += (0 if cooling_ap == E_UNKNOWN_CCE else cooling_ap)
+        tap += (0 if lighting_ap == E_UNKNOWN_CLE else lighting_ap)
         return tap
         
     def process_bid_pp(self):
