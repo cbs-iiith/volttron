@@ -451,7 +451,6 @@ class VolttronBridge(Agent):
         if success:
             _log.debug("Success!!!")
             self._us_retrycount = 0
-            self._ed_previous = self._ed_current
             self._all_us_posts_success  = True
         else:
             _log.debug("Failed!!!")
