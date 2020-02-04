@@ -676,7 +676,7 @@ class VolttronBridge(Agent):
         #validate various sanity measure like, valid fields, valid pp ids, ttl expiry, etc.,
         hint = 'New Active Power' if success_ap else 'New Energy Demand'
         validate_fields = ['value', 'value_data_type', 'units', 'price_id', 'isoptimal', 'duration', 'ttl']
-        valid_price_ids = []
+        valid_price_ids = [self.us_opt_pp_id, self.us_bid_pp_id, self._pp_id]
         if not ed_msg.sanity_check_ok(hint, validate_fields, valid_price_ids):
             _log.warning('Msg sanity checks failed!!!')
             return jsonrpc.json_error(rpcdata_id, PARSE_ERROR, 'Msg sanity checks failed!!!')
@@ -688,15 +688,6 @@ class VolttronBridge(Agent):
             #either the post to ds failed in previous iteration and de-registered from the _ds_register
             # or the msg is corrupted
             _log.warning('msg not from registered ds, do nothing!!!')
-            return False
-        _log.debug('done.')
-        
-        #process ed only if pp_id corresponds to either us/local opt/bid pp_ids)
-        _log.debug('check us/local opt/bid pp_ids....')
-        valid_pp_ids = [self.us_opt_pp_id, self.us_bid_pp_id, self._pp_id]
-        if ed_msg.get_price_id() not in [self.us_opt_pp_id, self.us_bid_pp_id, self._pp_id]:
-            _log.debug('pp_id: {}'.format(ed_msg.get_price_id())
-                    + ' not in valid_pp_ids: {}, do nothing!!!'.format(valid_pp_ids))
             return False
         _log.debug('done.')
         
