@@ -152,22 +152,12 @@ class VolttronBridge(Agent):
         self.tmp_bustopic_ed_msg = get_default_ed_msg(self._discovery_address, self._device_id)
         
         self._all_ds_posts_success = False
-        
-        #energy demand
-        self._ed_current = 0
-        self._ed_datatype = {'units': 'W', 'tz': 'UTC', 'type': 'float'}
-        self._ed_pp_id = randint(0, 99999999)
-        self._ed_isoptimal = True
-        self._ed_discovery_addrs = ''
-        self._ed_device_id = ''
-        self._ed_duration = 0
-        self._ed_ttl = -1
-        self._ed_ts = ''
         self._all_us_posts_success = False
-        
         self._us_retrycount = 0
         
-                            
+        self.local_opt_pp_id = randint(0, 99999999)
+        self.local_bid_pp_id = randint(0, 99999999)
+        
         #subscribe to price point so that it can be posted to downstream
         if self._bridge_host != 'LEVEL_TAILEND':
             _log.debug("subscribing to pricePoint_topic: " + self.pricePoint_topic)
@@ -197,8 +187,8 @@ class VolttronBridge(Agent):
                                             }, 'POST')
         #keep track of us opt_pp_id & bid_pp_id
         if self._bridge_host != 'LEVEL_HEAD':
-            self.us_opt_pp_id = 0
-            self.us_bid_pp_id = 0
+            self.us_opt_pp_id = randint(0, 99999999)
+            self.us_bid_pp_id = randint(0, 99999999)
             
         #perodically keeps trying to post ed to us
         if self._bridge_host != 'LEVEL_HEAD':
@@ -406,7 +396,9 @@ class VolttronBridge(Agent):
         valid_senders_list = ['iiit.pricecontroller']
         minimum_fields = ['msg_type', 'value', 'value_data_type', 'units', 'price_id']
         validate_fields = ['value', 'value_data_type', 'units', 'price_id', 'isoptimal', 'duration', 'ttl']
-        valid_price_ids = [self.us_opt_pp_id, self.us_bid_pp_id]
+        valid_price_ids = [self.us_opt_pp_id, self.us_bid_pp_id] 
+                                if self._bridge_host != 'LEVEL_HEAD' 
+                                else []
         (success, ed_msg) = valid_bustopic_msg(sender, valid_senders_list
                                                 , minimum_fields
                                                 , validate_fields
@@ -654,10 +646,10 @@ class VolttronBridge(Agent):
         success_ed = False
         #handle only ap or ed type messages
         success_ap = check_msg_type(message, MessageType.active_power)
-        _log.debug('success_ap{}'.format(success_ap))
+        _log.debug('success_ap - {}'.format(success_ap))
         if not success_ap:
             success_ed = check_msg_type(message, MessageType.energy_demand)
-            _log.debug('success_ed{}'.format(success_ed))
+            _log.debug('success_ed - {}'.format(success_ed))
             if not success_ed:
                 return jsonrpc.json_error(rpcdata_id, INVALID_PARAMS, 'Invalid params {}'.format(rpcdata.params))
         try:
@@ -676,7 +668,9 @@ class VolttronBridge(Agent):
         #validate various sanity measure like, valid fields, valid pp ids, ttl expiry, etc.,
         hint = 'New Active Power' if success_ap else 'New Energy Demand'
         validate_fields = ['value', 'value_data_type', 'units', 'price_id', 'isoptimal', 'duration', 'ttl']
-        valid_price_ids = [self.us_opt_pp_id, self.us_bid_pp_id, self._pp_id]
+        valid_price_ids = [self.us_opt_pp_id, self.us_bid_pp_id, self.local_opt_pp_id, self.local_bid_pp_id]
+                                if self._bridge_host != 'LEVEL_HEAD' 
+                                else [self.local_opt_pp_id, self.local_bid_pp_id])
         if not ed_msg.sanity_check_ok(hint, validate_fields, valid_price_ids):
             _log.warning('Msg sanity checks failed!!!')
             return jsonrpc.json_error(rpcdata_id, PARSE_ERROR, 'Msg sanity checks failed!!!')
