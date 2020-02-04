@@ -525,7 +525,7 @@ class ISPACE_Msg_OptPricePoint(ISPACE_Msg_PricePoint):
                         , src_ip, src_device_id
                         , dst_ip, dst_device_id
                         , duration, ttl, ts, tz
-                        ):
+                        )
         if category is not None: self.set_category(category)
         return
     pass
@@ -545,7 +545,7 @@ class ISPACE_Msg_BidPricePoint(ISPACE_Msg_PricePoint):
                         , src_ip, src_device_id
                         , dst_ip, dst_device_id
                         , duration, ttl, ts, tz
-                        ):
+                        )
         return
     pass
     
@@ -566,7 +566,7 @@ class ISPACE_Msg_ActivePower(ISPACE_Msg):
                         , src_ip, src_device_id
                         , dst_ip, dst_device_id
                         , duration, ttl, ts, tz
-                        ):
+                        )
         if category is not None: self.set_category(category)
         return
         
