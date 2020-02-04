@@ -519,7 +519,7 @@ class PriceController(Agent):
         return
         
     def _us_bid_pp_timeout(self):
-        self._bid_pp_ttl = 10
+        self._bid_pp_ttl = 60
         #TODO: need to return much before actual timeout, can't wait till actual timeout
         ts  = dateutil.parser.parse(self.us_bid_pp_msg.get_ts())
         now = dateutil.parser.parse(datetime.datetime.utcnow().isoformat(' ') + 'Z')
