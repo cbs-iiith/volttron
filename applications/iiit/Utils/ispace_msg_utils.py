@@ -163,17 +163,13 @@ def check_msg_type(message, msg_type):
     
 #converts bus message into an ispace_msg
 def parse_bustopic_msg(message, minimum_fields = []):
-    rpc_data = jsonrpc.JsonRpcData.parse(message)
-    if 'params' not in rpc_data.keys():
-        return None
-    return _parse_data(rpc_data.params, minimum_fields)
+    data = jsonrpc.JsonRpcData.parse(message).params
+    return _parse_data(data, minimum_fields)
     
 #converts jsonrpc_msg into an ispace_msg
 def parse_jsonrpc_msg(message, minimum_fields = []):
-    rpc_data = jsonrpc.JsonRpcData.parse(message)
-    if 'params' not in rpc_data.keys():
-        return None
-    return _parse_data(rpc_data.params, minimum_fields)
+    data = jsonrpc.JsonRpcData.parse(message).params
+    return _parse_data(data, minimum_fields)
     
 def _update_value(new_msg, attrib, new_value):
     if attrib == 'msg_type':
