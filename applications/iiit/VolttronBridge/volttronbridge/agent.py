@@ -689,7 +689,7 @@ class VolttronBridge(Agent):
             # or the msg is corrupted
             _log.warning('msg not from registered ds, do nothing!!!')
             return False
-       _log.debug('done.')
+        _log.debug('done.')
         
         #process ed only if pp_id corresponds to either us/local opt/bid pp_ids)
         _log.debug('check us/local opt/bid pp_ids....')
