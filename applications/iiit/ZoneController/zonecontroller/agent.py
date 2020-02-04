@@ -85,14 +85,17 @@ class ZoneController(Agent):
     _device_id = None
     _discovery_address = None
     
+    _pf_zn_ac = None
+    _pf_zn_light = None
+    
     def __init__(self, config_path, **kwargs):
         super(ZoneController, self).__init__(**kwargs)
         _log.debug("vip_identity: " + self.core.identity)
 
         self.config = utils.load_config(config_path)
-        self._configGetPoints()
-        self._configGetInitValues()
-        self._configGetPriceFucntions()
+        self._config_get_points()
+        self._config_get_init_values()
+        self._config_get_pricefucntions()
         return
         
     @Core.receiver('onsetup')
@@ -130,7 +133,10 @@ class ZoneController(Agent):
         
         self._bid_pp_msg_latest = get_default_pp_msg(self._discovery_address, self._device_id)
         
-        self._runBMSTest()
+        self._run_bms_test()
+        
+        self._zone_tsp = 0
+        self._zone_lsp = 0
         
         #TODO: get the latest values (states/levels) from h/w
         #self.getInitialHwState()
@@ -198,62 +204,57 @@ class ZoneController(Agent):
             return jsonrpc.json_error(rpcdata.id, UNHANDLED_EXCEPTION, e)
         return jsonrpc.json_result(rpcdata.id, result)
         
-    def _configGetInitValues(self):
+    def _config_get_init_values(self):
         self._period_read_data = self.config.get('period_read_data', 30)
         self._period_process_pp = self.config.get('period_process_pp', 10)
         self._price_point_old = self.config.get('default_base_price', 0.1)
         self._price_point_latest = self.config.get('price_point_latest', 0.2)
         return
         
-    def _configGetPoints(self):
-        self.vb_vip_identity = self.config.get('vb_vip_identity',
-                                                'volttronbridgeagent-0.3_1')
+    def _config_get_points(self):
+        self._vb_vip_identity = self.config.get('vb_vip_identity', 'iiit.volttronbridge')
         self.root_topic= self.config.get('topic_root', 'zone')
-        self.energyDemand_topic= self.config.get('topic_energy_demand',
-                                                    'zone/energydemand')
-        self.topic_price_point= self.config.get('topic_price_point',
-                                                    'zone/pricepoint')
-        self.energyDemand_topic_ds= self.config.get('topic_energy_demand_ds',
-                                                        'ds/energydemand')
+        self.energyDemand_topic= self.config.get('topic_energy_demand', 'zone/energydemand')
+        self.topic_price_point= self.config.get('topic_price_point', 'zone/pricepoint')
         return
         
-    def _configGetPriceFucntions(self):
-        _log.debug("_configGetPriceFucntions()")
+    def _config_get_pricefucntions(self):
+        _log.debug("_config_get_pricefucntions()")
         
-        self.pf_zn_ac = self.config.get('pf_zn_ac')
-        self.pf_zn_light = self.config.get('pf_zn_light')
+        self._pf_zn_ac = self.config.get('pf_zn_ac')
+        self._pf_zn_light = self.config.get('pf_zn_light')
         
         return
         
-    def _runBMSTest(self):
+    def _run_bms_test(self):
         _log.debug("Running: _runBMS Commu Test()...")
         
         _log.debug('change tsp 26')
-        self.setRmTsp(26.0)
+        self._rpcset_zone_tsp(26.0)
         time.sleep(10)
         
         _log.debug('change tsp 27')
-        self.setRmTsp(27.0)
+        self._rpcset_zone_tsp(27.0)
         time.sleep(10)
         
         _log.debug('change tsp 28')
-        self.setRmTsp(28.0)
+        self._rpcset_zone_tsp(28.0)
         time.sleep(10)
         
         _log.debug('change tsp 29')
-        self.setRmTsp(29.0)
+        self._rpcset_zone_tsp(29.0)
         time.sleep(10)
         
         _log.debug('change lsp 25')
-        self.setRmLsp(25.0)
+        self._rpcset_zone_tsp(25.0)
         time.sleep(10)
         
         _log.debug('change lsp 75')
-        self.setRmLsp(75.0)
+        self._rpcset_zone_tsp(75.0)
         time.sleep(10)
         
         _log.debug('change lsp 100')
-        self.setRmLsp(100.0)
+        self._rpcset_zone_tsp(100.0)
         time.sleep(10)
 
         _log.debug("EOF Testing")
@@ -324,27 +325,27 @@ class ZoneController(Agent):
         _log.debug("_apply_pricing_policy()")
         
         #apply for ambient ac
-        tsp = self.getNewTsp(self._price_point_latest)
+        tsp = self._compute_new_tsp(self._price_point_latest)
         _log.debug('New Ambient AC Setpoint: {0:0.1f}'.format( tsp))
         self.setRmTsp(tsp)
-        if not isclose(tsp, self._rmTsp, EPSILON):
-            self._process_opt_pp_success = True
+        if not isclose(tsp, self._zone_tsp, EPSILON):
+            self._process_opt_pp_success = False
             
         #apply for ambient lightinh
-        lsp = self.getNewLsp(self._price_point_latest)
+        lsp = self._compute_new_lsp(self._price_point_latest)
         _log.debug('New Ambient Lighting Setpoint: {0:0.1f}'.format( lsp))
-        self.setRmLsp(lsp)
-        if not isclose(lsp, self._rmLsp, EPSILON):
-            self._process_opt_pp_success = True
+        self._rpcset_zone_lsp(lsp)
+        if not isclose(lsp, self._zone_lsp, EPSILON):
+            self._process_opt_pp_success = False
         return
         
     #compute new zone temperature setpoint from price functions
-    def getNewTsp(self, pp):
+    def _compute_new_tsp(self, pp):
         pp = 0 if pp < 0 else 1 if pp > 1 else pp
         
-        pf_idx = self.pf_zn_ac['pf_idx']
-        pf_roundup = self.pf_zn_ac['pf_roundup']
-        pf_coefficients = self.pf_zn_ac['pf_coefficients']
+        pf_idx = self._pf_zn_ac['pf_idx']
+        pf_roundup = self._pf_zn_ac['pf_roundup']
+        pf_coefficients = self._pf_zn_ac['pf_coefficients']
         
         a = pf_coefficients[pf_idx]['a']
         b = pf_coefficients[pf_idx]['b']
@@ -354,12 +355,12 @@ class ZoneController(Agent):
         return mround(tsp, pf_roundup)
         
     #compute new zone lighting setpoint from price functions
-    def getNewLsp(self, pp):
+    def _compute_new_lsp(self, pp):
         pp = 0 if pp < 0 else 1 if pp > 1 else pp
         
-        pf_idx = self.pf_zn_light['pf_idx']
-        pf_roundup = self.pf_zn_light['pf_roundup']
-        pf_coefficients = self.pf_zn_light['pf_coefficients']
+        pf_idx = self._pf_zn_light['pf_idx']
+        pf_roundup = self._pf_zn_light['pf_roundup']
+        pf_coefficients = self._pf_zn_light['pf_coefficients']
         
         a = pf_coefficients[pf_idx]['a']
         b = pf_coefficients[pf_idx]['b']
@@ -369,10 +370,10 @@ class ZoneController(Agent):
         return mround(lsp, pf_roundup)
         
     # change ambient temperature set point
-    def setRmTsp(self, tsp):
-        #_log.debug('setRmTsp()')
+    def _rpcset_zone_tsp(self, tsp):
+        #_log.debug('_rpcset_zone_tsp()')
         
-        if isclose(tsp, self._rmTsp, EPSILON):
+        if isclose(tsp, self._zone_tsp, EPSILON):
             _log.debug('same tsp, do nothing')
             return
             
@@ -387,9 +388,9 @@ class ZoneController(Agent):
                                             , 'iiit/cbs/zonecontroller/RM_TSP'
                                             tsp
                                             ).get(timeout=10)
-                self.updateRmTsp(tsp)
+                self._update_zone_tsp(tsp)
             except gevent.Timeout:
-                _log.exception("Expection: gevent.Timeout in setRmTsp()")
+                _log.exception("Expection: gevent.Timeout in _rpcset_zone_tsp()")
             except Exception as e:
                 _log.exception ("Expection: changing ambient tsp")
                 print(e)
@@ -401,10 +402,10 @@ class ZoneController(Agent):
         return
         
     # change ambient light set point
-    def setRmLsp(self, lsp):
-        #_log.debug('setRmLsp()')
+    def _rpcset_zone_lsp(self, lsp):
+        #_log.debug('_rpcset_zone_lsp()')
         
-        if isclose(lsp, self._rmLsp, EPSILON):
+        if isclose(lsp, self._zone_lsp, EPSILON):
             _log.debug('same lsp, do nothing')
             return
             
@@ -419,9 +420,9 @@ class ZoneController(Agent):
                                             , 'iiit/cbs/zonecontroller/RM_LSP'
                                             , lsp
                                             ).get(timeout=10)
-                self.updateRmLsp(lsp)
+                self._update_zone_lsp(lsp)
             except gevent.Timeout:
-                _log.exception("Expection: gevent.Timeout in setRmLsp()")
+                _log.exception("Expection: gevent.Timeout in _rpcset_zone_lsp()")
             except Exception as e:
                 _log.exception ("Expection: changing ambient lsp")
                 print(e)
@@ -432,35 +433,35 @@ class ZoneController(Agent):
             _log.debug('schedule NOT available')
         return
 
-    def updateRmTsp(self, tsp):
-        #_log.debug('updateRmTsp()')
+    def _update_zone_tsp(self, tsp):
+        #_log.debug('_update_zone_tsp()')
         _log.debug('tsp {0:0.1f}'.format( tsp))
         
-        rm_tsp = self.rpc_getRmTsp()
+        rm_tsp = self._rpcget_zone_tsp()
         
         #check if the tsp really updated at the bms, only then proceed with new tsp
         if isclose(tsp, rm_tsp, EPSILON):
-            self._rmTsp = tsp
-            self.publishRmTsp(tsp)
+            self._zone_tsp = tsp
+            self._publish_zone_tsp(tsp)
             
         _log.debug('Current TSP: ' + "{0:0.1f}".format( rm_tsp))
         return
         
-    def updateRmLsp(self, lsp):
-        #_log.debug('updateRmLsp()')
+    def _update_zone_lsp(self, lsp):
+        #_log.debug('_update_zone_lsp()')
         _log.debug('lsp {0:0.1f}'.format( lsp))
         
-        rm_lsp = self.rpc_getRmLsp()
+        rm_lsp = self._rpcget_zone_lsp()
         
         #check if the lsp really updated at the bms, only then proceed with new lsp
         if isclose(lsp, rm_lsp, EPSILON):
-            self._rmLsp = lsp
-            self.publishRmLsp(lsp)
+            self._zone_lsp = lsp
+            self._publish_zone_lsp(lsp)
             
         _log.debug('Current LSP: ' + "{0:0.1f}".format( rm_lsp))
         return
         
-    def rpc_getRmCalcLightEnergy(self):
+    def _rpcget_zone_lighting_power(self):
         task_id = str(randint(0, 99999999))
         result = get_task_schdl(self, task_id,'iiit/cbs/zonecontroller')
         if result['result'] == 'SUCCESS':
@@ -484,7 +485,7 @@ class ZoneController(Agent):
             _log.debug('schedule NOT available')
         return E_UNKNOWN_CLE
         
-    def rpc_getRmCalcCoolingEnergy(self):
+    def _rpcget_zone_cooling_power(self):
         task_id = str(randint(0, 99999999))
         result = get_task_schdl(self, task_id,'iiit/cbs/zonecontroller')
         if result['result'] == 'SUCCESS':
@@ -495,7 +496,7 @@ class ZoneController(Agent):
                                                     ).get(timeout=10)
                 return coolingEnergy
             except gevent.Timeout:
-                _log.exception("Expection: gevent.Timeout in rpc_getRmCalcCoolingEnergy()")
+                _log.exception("Expection: gevent.Timeout in _rpcget_zone_cooling_power()")
                 return E_UNKNOWN_CCE
             except Exception as e:
                 _log.exception ("Expection: Could not contact actuator. Is it running?")
@@ -508,7 +509,7 @@ class ZoneController(Agent):
             _log.debug('schedule NOT available')
         return E_UNKNOWN_CCE
         
-    def rpc_getRmTsp(self):
+    def _rpcget_zone_tsp(self):
         try:
             rm_tsp = self.vip.rpc.call('platform.actuator'
                                         , 'get_point'
@@ -516,7 +517,7 @@ class ZoneController(Agent):
                                         ).get(timeout=10)
             return rm_tsp
         except gevent.Timeout:
-            _log.exception("Expection: gevent.Timeout in rpc_getRmTsp()")
+            _log.exception("Expection: gevent.Timeout in _rpcget_zone_tsp()")
             return E_UNKNOWN_TSP
         except Exception as e:
             _log.exception ("Expection: Could not contact actuator. Is it running?")
@@ -524,7 +525,7 @@ class ZoneController(Agent):
             return E_UNKNOWN_TSP
         return E_UNKNOWN_TSP
         
-    def rpc_getRmLsp(self):
+    def _rpcget_zone_lsp(self):
         try:
             rm_lsp = self.vip.rpc.call('platform.actuator'
                                         , 'get_point'
@@ -532,7 +533,7 @@ class ZoneController(Agent):
                                         ).get(timeout=10)
             return rm_lsp
         except gevent.Timeout:
-            _log.exception("Expection: gevent.Timeout in rpc_getRmLsp()")
+            _log.exception("Expection: gevent.Timeout in _rpcget_zone_lsp()")
             return E_UNKNOWN_LSP
         except Exception as e:
             _log.exception ("Expection: Could not contact actuator. Is it running?")
@@ -540,15 +541,15 @@ class ZoneController(Agent):
             return E_UNKNOWN_LSP
         return E_UNKNOWN_LSP
 
-    def publishRmTsp(self, tsp):
-        #_log.debug('publishRmTsp()')
+    def _publish_zone_tsp(self, tsp):
+        #_log.debug('_publish_zone_tsp()')
         pubTopic = self.root_topic+"/rm_tsp"
         pubMsg = [tsp, {'units': 'celcius', 'tz': 'UTC', 'type': 'float'}]
         publish_to_bus(self, pubTopic, pubMsg)
         return
         
-    def publishRmLsp(self, lsp):
-        #_log.debug('publishRmLsp()')
+    def _publish_zone_lsp(self, lsp):
+        #_log.debug('_publish_zone_lsp()')
         pubTopic = self.root_topic+"/rm_lsp"
         pubMsg = [lsp, {'units': '%', 'tz': 'UTC', 'type': 'float'}]
         publish_to_bus(self, pubTopic, pubMsg)
@@ -582,9 +583,10 @@ class ZoneController(Agent):
         #_log.debug('_calc_total_act_pwr()')
         
         #zone lighting + ac
-        cce = self.rpc_getRmCalcCoolingEnergy()
-        cle = self.rpc_getRmCalcLightEnergy() 
-        tap = (0 if cce==E_UNKNOWN_CCE else cce) + (0 if cle==E_UNKNOWN_CLE else cle)
+        cooling_ap = self._rpcget_zone_cooling_power()
+        lighting_ap = self._rpcget_zone_lighting_power() 
+        tap = (0 if cooling_ap == E_UNKNOWN_CCE else cooling_ap)
+                + (0 if lighting_ap == E_UNKNOWN_CLE else lighting_ap)
         return tap
         
     def process_bid_pp(self):
@@ -618,7 +620,7 @@ class ZoneController(Agent):
         #_log.debug('_calc_total_energy_demand()')
         #TODO: Sam
         #get actual tsp from device
-        tsp = self._rmTsp
+        tsp = self._zone_tsp
         if isclose(tsp, 22.0, EPSILON):
             ted = 6500
         elif isclose(tsp, 23.0, EPSILON):
