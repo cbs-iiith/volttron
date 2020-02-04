@@ -526,7 +526,7 @@ class ISPACE_Msg_OptPricePoint(ISPACE_Msg_PricePoint):
                         , dst_ip, dst_device_id
                         , duration, ttl, ts, tz
                         )
-        if category is not None: self.set_category(category)
+        if energy_category is not None: self.set_energy_category(energy_category)
         return
     pass
     
@@ -551,14 +551,14 @@ class ISPACE_Msg_BidPricePoint(ISPACE_Msg_PricePoint):
     
     
 class ISPACE_Msg_ActivePower(ISPACE_Msg):
-    category = None
+    energy_category = None
     def __init__(self, msg_type, one_to_one = None, isoptimal = True
                     , value = None, value_data_type = None, units = None
                     , price_id = None
                     , src_ip = None, src_device_id = None
                     , dst_ip = None, dst_device_id = None
                     , duration = None, ttl = None, ts = None, tz = None
-                    , category = None
+                    , energy_category = None
                     ):
         super().__init__(self, MessageType.active_power, one_to_one, isoptimal
                         , value, value_data_type, units
@@ -567,32 +567,32 @@ class ISPACE_Msg_ActivePower(ISPACE_Msg):
                         , dst_ip, dst_device_id
                         , duration, ttl, ts, tz
                         )
-        if category is not None: self.set_category(category)
+        if energy_category is not None: self.set_energy_category(energy_category)
         return
         
     def _get_params_dict(self):
-        self._params['category'] = self.category
+        self._params['energy_category'] = self.energy_category
         return super()._get_params_dict(self)
     
     def _cp_attrib(self, attrib, value):
-        if attrib == 'category': self.set_category(value)
+        if attrib == 'energy_category': self.set_energy_category(value)
         else: super()._cp_attrib(self, attrib, value)
         return
         
     def _is_attrib_null(self, attrib):
         is_null = False
-        if attrib == 'category' and self.category is None: 
+        if attrib == 'energy_category' and self.energy_category is None: 
             is_null = True
         else:
             is_null = super()._is_attrib_null(self, attrib)
         return is_null
         
-    def get_category(self):
-        return self.category
+    def get_energy_category(self):
+        return self.energy_category
         
     #setters
-    def set_category(self, category):
-        self.category = category
+    def set_energy_category(self, energy_category):
+        self.energy_category = energy_category
         
         
     pass
