@@ -272,11 +272,11 @@ class VolttronBridge(Agent):
                 return jsonrpc.json_error(rpcdata.id, METHOD_NOT_FOUND,
                                             'Invalid method {}'.format(rpcdata.method))
         except KeyError as ke:
-            print(ke)
+            #print(ke)
             return jsonrpc.json_error('NA', INVALID_PARAMS,
                     'Invalid params {}'.format(rpcdata.params))
         except Exception as e:
-            print(e)
+            #print(e)
             return jsonrpc.json_error('NA', UNHANDLED_EXCEPTION, e)
         return jsonrpc.json_result(rpcdata.id, result)
         
@@ -606,11 +606,11 @@ class VolttronBridge(Agent):
             pp_msg = parse_jsonrpc_msg(message, minimum_fields)
             #_log.info('pp_msg: {}'.format(pp_msg))
         except KeyError as ke:
-            print(ke)
+            #print(ke)
             return jsonrpc.json_error(rpcdata_id, INVALID_PARAMS,
                     'Invalid params {}'.format(rpcdata.params))
         except Exception as e:
-            print(e)
+            #print(e)
             return jsonrpc.json_error(rpcdata_id, UNHANDLED_EXCEPTION, e)
             
         #validate various sanity measure like, valid fields, valid pp ids, ttl expiry, etc.,
@@ -662,11 +662,11 @@ class VolttronBridge(Agent):
             ed_msg = parse_jsonrpc_msg(message, minimum_fields)
             #_log.info('ed_msg: {}'.format(ed_msg))
         except KeyError as ke:
-            print(ke)
+            #print(ke)
             return jsonrpc.json_error(rpcdata_id, INVALID_PARAMS,
                     'Invalid params {}'.format(rpcdata.params))
         except Exception as e:
-            print(e)
+            #print(e)
             return jsonrpc.json_error(rpcdata_id, UNHANDLED_EXCEPTION, e)
             
         _log.debug('start sanity checks....')

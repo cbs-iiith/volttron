@@ -188,11 +188,11 @@ class BuildingController(Agent):
                 return jsonrpc.json_error(rpcdata.id, METHOD_NOT_FOUND,
                                             'Invalid method {}'.format(rpcdata.method))
         except KeyError as ke:
-            print(ke)
+            #print(ke)
             return jsonrpc.json_error(rpcdata.id, INVALID_PARAMS,
                                         'Invalid params {}'.format(rpcdata.params))
         except Exception as e:
-            print(e)
+            #print(e)
             return jsonrpc.json_error(rpcdata.id, UNHANDLED_EXCEPTION, e)
         return jsonrpc.json_result(rpcdata.id, result)
         
@@ -317,10 +317,10 @@ class BuildingController(Agent):
                                             ).get(timeout=10)
                 self.update_building_pp()
             except gevent.Timeout:
-                _log.exception("Expection: gevent.Timeout in publish_price_to_bms()")
+                _log.exception("Expection: gevent.Timeout in publish_price_to_bms()!!!")
             except Exception as e:
-                _log.exception ("Expection: changing device level")
-                print(e)
+                _log.exception ("Expection: publish_price_to_bms() changing price in the bms!!!")
+                #print(e)
             finally:
                 #cancel the schedule
                 cancel_task_schdl(self, task_id)

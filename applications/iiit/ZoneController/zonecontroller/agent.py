@@ -196,11 +196,11 @@ class ZoneController(Agent):
                 return jsonrpc.json_error(rpcdata.id, METHOD_NOT_FOUND,
                                             'Invalid method {}'.format(rpcdata.method))
         except KeyError as ke:
-            print(ke)
+            #print(ke)
             return jsonrpc.json_error(rpcdata.id, INVALID_PARAMS,
                                         'Invalid params {}'.format(rpcdata.params))
         except Exception as e:
-            print(e)
+            #print(e)
             return jsonrpc.json_error(rpcdata.id, UNHANDLED_EXCEPTION, e)
         return jsonrpc.json_result(rpcdata.id, result)
         
@@ -393,7 +393,7 @@ class ZoneController(Agent):
                 _log.exception("Expection: gevent.Timeout in _rpcset_zone_tsp()")
             except Exception as e:
                 _log.exception ("Expection: changing ambient tsp")
-                print(e)
+                #print(e)
             finally:
                 #cancel the schedule
                 cancel_task_schdl(self, task_id)
@@ -425,7 +425,7 @@ class ZoneController(Agent):
                 _log.exception("Expection: gevent.Timeout in _rpcset_zone_lsp()")
             except Exception as e:
                 _log.exception ("Expection: changing ambient lsp")
-                print(e)
+                #print(e)
             finally:
                 #cancel the schedule
                 cancel_task_schdl(self, task_id)
@@ -476,7 +476,7 @@ class ZoneController(Agent):
                 return E_UNKNOWN_CLE
             except Exception as e:
                 _log.exception ("Expection: Could not contact actuator. Is it running?")
-                print(e)
+                #print(e)
                 return E_UNKNOWN_CLE
             finally:
                 #cancel the schedule
@@ -500,7 +500,7 @@ class ZoneController(Agent):
                 return E_UNKNOWN_CCE
             except Exception as e:
                 _log.exception ("Expection: Could not contact actuator. Is it running?")
-                print(e)
+                #print(e)
                 return E_UNKNOWN_CCE
             finally:
                 #cancel the schedule
@@ -521,7 +521,7 @@ class ZoneController(Agent):
             return E_UNKNOWN_TSP
         except Exception as e:
             _log.exception ("Expection: Could not contact actuator. Is it running?")
-            print(e)
+            #print(e)
             return E_UNKNOWN_TSP
         return E_UNKNOWN_TSP
         

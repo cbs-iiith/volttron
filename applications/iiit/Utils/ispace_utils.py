@@ -46,7 +46,7 @@ def register_agent_with_vb(self, sleep_time=10):
                 _log.debug('Done.')
                 break
         except Exception as e:
-            print(e)
+            #print(e)
             _log.exception('Maybe the Volttron Bridge Agent is not yet started!!!')
             pass
         _log.debug('will try again in {} sec'.format(sleep_time))
@@ -68,7 +68,7 @@ def register_rpc_route(self, name, handle, sleep_time=10):
                 _log.debug('Done.')
                 break
         except Exception as e:
-            print(e)
+            #print(e)
             _log.exception('Maybe the Volttron instance is not yet ready!!!')
             pass
         _log.debug('will try again in {} sec'.format(sleep_time))
@@ -137,7 +137,7 @@ def get_task_schdl(self, task_id, device, time_ms=None):
         _log.exception('Expection: gevent.Timeout in get_task_schdl()')
     except Exception as e:
         _log.exception ('Expection: Could not contact actuator. Is it running?')
-        print(e)
+        #print(e)
     finally:
         return result
         
@@ -203,7 +203,7 @@ def do_rpc(id, url_root, method, params=None, request_method='POST'):
         else:
             _log.debug('no respone, url_root:{} method:{} response: {}'.format(url_root, method, response))
     except Exception as e:
-        print (e)
+        #print(e)
         _log.exception('Exception: do_rpc() unhandled exception, most likely dest is down')
     return result
     

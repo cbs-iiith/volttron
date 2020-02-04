@@ -306,15 +306,15 @@ class ISPACE_Msg:
             
     #check for mandatory fields in the message
     def valid_msg(self, validate_fields = []):
-        _log.debug('valid_msg(): {}'.format(validate_fields))
+        #_log.debug('valid_msg(): {}'.format(validate_fields))
         for attrib in validate_fields:
-            _log.debug('checking attrib: {}'.format(attrib))
+            #_log.debug('checking attrib: {}'.format(attrib))
             #null value check
             if self._is_attrib_null(attrib):
-                _log.debug('....is null...')
+                #_log.debug('....is null...')
                 return False
             #TODO: data validations checks based on message type and field type
-        _log.debug('...........valid_msg()')
+        #_log.debug('...........valid_msg()')
         return True
     
     def _cp_attrib(self, attrib, value):
@@ -336,7 +336,7 @@ class ISPACE_Msg:
         return
         
     def _is_attrib_null(self, attrib):
-        _log.debug('_is_attrib_null()')
+        #_log.debug('_is_attrib_null()')
         if attrib == 'msg_type' and self.msg_type is None: return True
         elif attrib == 'one_to_one' and self.one_to_one is None: return True
         elif attrib == 'value' and self.value is None: return True

@@ -221,11 +221,11 @@ class PriceController(Agent):
                 return jsonrpc.json_error(rpcdata.id, METHOD_NOT_FOUND,
                                             'Invalid method {}'.format(rpcdata.method))
         except KeyError as ke:
-            print(ke)
+            #print(ke)
             return jsonrpc.json_error(rpcdata.id, INVALID_PARAMS,
                                         'Invalid params {}'.format(rpcdata.params))
         except Exception as e:
-            print(e)
+            #print(e)
             return jsonrpc.json_error(rpcdata.id, UNHANDLED_EXCEPTION, e)
         return jsonrpc.json_result(rpcdata.id, result)
         
