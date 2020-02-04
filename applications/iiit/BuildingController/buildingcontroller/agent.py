@@ -82,7 +82,6 @@ class BuildingController(Agent):
     _root_topic = None
     _topic_energy_demand = None
     _topic_price_point = None
-    _topic_energy_demand_ds = None
     
     _device_id = None
     _discovery_address = None
@@ -100,7 +99,6 @@ class BuildingController(Agent):
     def setup(self, sender, **kwargs):
         _log.info(self.config['message'])
         self._agent_id = self.config['agentid']
-        
         return
         
     @Core.receiver('onstart')
@@ -127,11 +125,9 @@ class BuildingController(Agent):
         
         #on successful process of apply_pricing_policy with the latest opt pp, current = latest
         self._opt_pp_msg_current = get_default_pp_msg(self._discovery_address, self._device_id)
-        
         #latest opt pp msg received on the message bus
         self._opt_pp_msg_latest = get_default_pp_msg(self._discovery_address, self._device_id)
         
-        self._bid_pp_msg_current = get_default_pp_msg(self._discovery_address, self._device_id)
         self._bid_pp_msg_latest = get_default_pp_msg(self._discovery_address, self._device_id)
         
         #self._run_bms_test()
@@ -212,7 +208,6 @@ class BuildingController(Agent):
         self._root_topic = self.config.get('topic_root', 'building')
         self._topic_energy_demand = self.config.get('topic_energy_demand', 'building/energydemand')
         self._topic_price_point = self.config.get('topic_price_point', 'building/pricepoint')
-        self._topic_energy_demand_ds = self.config.get('topic_energy_demand_ds', 'ds/energydemand')
         return
         
     def _test_new_pp(self, pp_msg, new_pp):
@@ -410,7 +405,6 @@ class BuildingController(Agent):
         
     def process_bid_pp(self):
         self.publish_bid_ted()
-        self._bid_pp_msg_current = copy(self._bid_pp_msg_latest)
         return
         
     def publish_bid_ted(self):
