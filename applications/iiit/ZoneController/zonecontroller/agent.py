@@ -416,7 +416,7 @@ class ZoneController(Agent):
             try:
                 result = self.vip.rpc.call('platform.actuator'
                                             , 'set_point'
-                                            , self._agent_id,
+                                            , self._agent_id
                                             , 'iiit/cbs/zonecontroller/RM_LSP'
                                             , lsp
                                             ).get(timeout=10)
