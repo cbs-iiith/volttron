@@ -502,11 +502,14 @@ class VolttronBridge(Agent):
             index = self._ds_register.index(discovery_address)
             
             
-            if self._ds_retrycount[index] => MAX_RETRIES:
+            if self._ds_retrycount[index] == -1:
+                #do nothing
+                continue
+            if self._ds_retrycount[index] >= MAX_RETRIES:
                 #failed more than max retries, unregister the ds
                 _log.debug('posts to: {}'.format(discovery_address)
                             + ' failed more than MAX_RETRIES: {:d}.'format(MAX_RETRIES)
-                            + ' ds unregistered!!!'
+                            + ' ds unregistering...'
                             )
                 self._ds_register.remove(discovery_address)
                 del self._ds_device_ids[index]
@@ -514,9 +517,6 @@ class VolttronBridge(Agent):
                 _log.debug('unregistered!!!')
                 continue
                 
-            if self._ds_retrycount[index] == -1:
-                #do nothing
-                continue
                 
             '''before posting to ds, dcrement ttl and update ts
             #decrement the ttl by time consumed to process till now + 1 sec
