@@ -36,7 +36,11 @@ import struct
 import gevent
 import gevent.event
 
-import ispace_utils
+from ispace_utils import isclose, get_task_schdl, cancel_task_schdl, publish_to_bus
+from ispace_utils import retrive_details_from_vb, register_agent_with_vb, register_rpc_route
+from ispace_msg import ISPACE_Msg, MessageType
+from ispace_msg_utils import parse_bustopic_msg, check_msg_type, tap_helper, ted_helper
+from ispace_msg_utils import get_default_pp_msg, valid_bustopic_msg
 
 utils.setup_logging()
 _log = logging.getLogger(__name__)
@@ -53,6 +57,7 @@ E_UNKNOWN_TSP = -5
 E_UNKNOWN_LSP = -6
 E_UNKNOWN_CLE = -9
 
+
 def zonecontroller(config_path, **kwargs):
     config = utils.load_config(config_path)
     vip_identity = config.get('vip_identity', 'iiit.zonecontroller')
@@ -62,26 +67,24 @@ def zonecontroller(config_path, **kwargs):
     Agent.__name__ = 'ZoneController_Agent'
     return ZoneController(config_path, identity=vip_identity, **kwargs)
     
+    
 class ZoneController(Agent):
     '''Zone Controller
     '''
-    _pp_failed = False
+    #initialized  during __init__ from config
+    _period_read_data = None
+    _period_process_pp = None
+    _price_point_current = None
+    _price_point_latest = None
     
-    _price_point_current = 0.4 
-    _price_point_latest = 0.45
-    _pp_id = randint(0, 99999999)
-    _pp_id_latest = randint(0, 99999999)
-
-    _rmTsp = 25
-    _rmLsp = 100
+    _vb_vip_identity = None
+    _root_topic = None
+    _topic_energy_demand = None
+    _topic_price_point = None
     
-    #downstream energy demand and deviceId
-    _ds_ed = []
-    _ds_deviceId = []
+    _device_id = None
+    _discovery_address = None
     
-    #zone total energy demand (including downstream PECS)
-    _ted = 0
-
     def __init__(self, config_path, **kwargs):
         super(ZoneController, self).__init__(**kwargs)
         _log.debug("vip_identity: " + self.core.identity)
@@ -91,22 +94,43 @@ class ZoneController(Agent):
         self._configGetInitValues()
         self._configGetPriceFucntions()
         return
-
+        
     @Core.receiver('onsetup')
     def setup(self, sender, **kwargs):
         _log.info(self.config['message'])
         self._agent_id = self.config['agentid']
         return
-
+        
     @Core.receiver('onstart')
     def startup(self, sender, **kwargs):
-        _log.info("yeild 30s for volttron platform to initiate properly...")
-        time.sleep(30) #yeild for a movement
         _log.info("Starting ZoneController...")
         
+        #retrive self._device_id and self._discovery_address from vb
+        retrive_details_from_vb(self, 5)
+        
+        #register rpc routes with MASTER_WEB
+        #register_rpc_route is a blocking call
+        register_rpc_route(self, "zonecontroller", "rpc_from_net", 5)
+        
+        #register this agent with vb as local device for posting active power & bid energy demand
+        #pca picks up the active power & energy demand bids only if registered with vb as local device
+        #require self._vb_vip_identity, self.core.identity, self._device_id
+        #register_agent_with_vb is a blocking call
+        register_agent_with_vb(self, 5)
+        
+        self._valid_senders_list_pp = ['iiit.pricecontroller']
+        
+        #any process that failed to apply pp sets this flag False
+        self._process_opt_pp_success = False
+        
+        #on successful process of apply_pricing_policy with the latest opt pp, current = latest
+        self._opt_pp_msg_current = get_default_pp_msg(self._discovery_address, self._device_id)
+        #latest opt pp msg received on the message bus
+        self._opt_pp_msg_latest = get_default_pp_msg(self._discovery_address, self._device_id)
+        
+        self._bid_pp_msg_latest = get_default_pp_msg(self._discovery_address, self._device_id)
+        
         self._runBMSTest()
-        
-        
         
         #TODO: get the latest values (states/levels) from h/w
         #self.getInitialHwState()
@@ -122,31 +146,58 @@ class ZoneController(Agent):
         #perodically process new pricing point that keeps trying to apply the new pp till success
         self.core.periodic(self._period_process_pp, self.process_opt_pp, wait=None)
         
+        #perodically publish total active power to volttron bus
+        #active power is comupted at regular interval (_period_read_data default(30s))
+        #this power corresponds to current opt pp
+        #tap --> total active power (Wh)
+        self.core.periodic(self._period_read_data, self.publish_opt_tap, wait=None)
+        
+        #perodically process new pricing point that keeps trying to apply the new pp till success
+        self.core.periodic(self._period_process_pp, self.process_opt_pp, wait=None)
+        
         #subscribing to topic_price_point
-        self.vip.pubsub.subscribe("pubsub", self.topic_price_point, self.on_new_price)
+        self.vip.pubsub.subscribe("pubsub", self._topic_price_point, self.on_new_price)
         
-        #subscribing to ds energy demand, vb publishes ed from registered ds to this topic
-        self.vip.pubsub.subscribe("pubsub", self.energyDemand_topic_ds, self.on_ds_ed)
-        
-        self.vip.rpc.call(MASTER_WEB, 'register_agent_route'
-                            , r'^/ZoneController'
-                            , "rpc_from_net"
-                            ).get(timeout=10)
+        _log.debug('startup() - Done. Agent is ready')
         return
-
+        
     @Core.receiver('onstop')
     def onstop(self, sender, **kwargs):
         _log.debug('onstop()')
-
+        
         _log.debug('un registering rpc routes')
         self.vip.rpc.call(MASTER_WEB, 'unregister_all_agent_routes').get(timeout=10)
         return
-
+        
     @Core.receiver('onfinish')
     def onfinish(self, sender, **kwargs):
         _log.debug('onfinish()')
         return
-
+        
+    @RPC.export
+    def rpc_from_net(self, header, message):
+        result = False
+        try:
+            rpcdata = jsonrpc.JsonRpcData.parse(message)
+            _log.debug('rpc_from_net()... '
+                        + 'header: {}'.format(header)
+                        + ', rpc method: {}'.format(rpcdata.method)
+                        + ', rpc params: {}'.format(rpcdata.params)
+                        )
+            if rpcdata.method == "ping":
+                return True
+            else:
+                return jsonrpc.json_error(rpcdata.id, METHOD_NOT_FOUND,
+                                            'Invalid method {}'.format(rpcdata.method))
+        except KeyError as ke:
+            print(ke)
+            return jsonrpc.json_error(rpcdata.id, INVALID_PARAMS,
+                                        'Invalid params {}'.format(rpcdata.params))
+        except Exception as e:
+            print(e)
+            return jsonrpc.json_error(rpcdata.id, UNHANDLED_EXCEPTION, e)
+        return jsonrpc.json_result(rpcdata.id, result)
+        
     def _configGetInitValues(self):
         self._period_read_data = self.config.get('period_read_data', 30)
         self._period_process_pp = self.config.get('period_process_pp', 10)
@@ -209,51 +260,64 @@ class ZoneController(Agent):
         return
         
     def on_new_price(self, peer, sender, bus,  topic, headers, message):
-        if sender == 'pubsub.compat':
-            message = compat.unpack_legacy_message(headers, message)
-            
-        new_pp = message[ParamPP.idx_pp]
-        new_pp_datatype = message[ParamPP.idx_pp_datatype]
-        new_pp_id = message[ParamPP.idx_pp_id]
-        new_pp_isoptimal = message[ParamPP.idx_pp_isoptimal]
-        discovery_address = message[ParamPP.idx_pp_discovery_addrs]
-        deviceId = message[ParamPP.idx_pp_device_id]
-        new_pp_ttl = message[ParamPP.idx_pp_ttl]
-        new_pp_ts = message[ParamPP.idx_pp_ts]
-        ispace_utils.print_pp(self, new_pp
-                , new_pp_datatype
-                , new_pp_id
-                , new_pp_isoptimal
-                , discovery_address
-                , deviceId
-                , new_pp_ttl
-                , new_pp_ts
-                )
-                
-        if not new_pp_isoptimal:
-            _log.debug('not optimal pp!!!, do nothing')
+        self.tmp_bustopic_pp_msg = None
+        
+        if sender not in self._valid_senders_list_pp:
             return
             
-        self._price_point_latest = new_pp
-        self._pp_id_latest = new_pp_id
-        self.process_opt_pp()
+        #check message type before parsing
+        if not check_msg_type(message, MessageType.price_point): return False
+            
+        valid_senders_list = self._valid_senders_list_pp
+        minimum_fields = ['msg_type', 'value', 'value_data_type', 'units', 'price_id']
+        validate_fields = ['value', 'value_data_type', 'units', 'price_id', 'isoptimal', 'duration', 'ttl']
+        valid_price_ids = []
+        (success, pp_msg) = valid_bustopic_msg(sender, valid_senders_list
+                                                , minimum_fields
+                                                , validate_fields
+                                                , valid_price_ids
+                                                , message)
+        if not success or pp_msg is None: return
+        
+        if pp_msg.get_isoptimal():
+            _log.info('***** New optimal price point from us: {0:0.2f}'.format(pp_msg.get_value()))
+            self._process_opt_pp(pp_msg)
+        else:
+            _log.info('***** New bid price point from us: {0:0.2f}'.format(pp_msg.get_value()))
+            self._process_bid_pp(pp_msg)
+            
+        return
+        
+    def _process_opt_pp(self, pp_msg):
+        self._opt_pp_msg_latest = copy(pp_msg)
+        self._price_point_latest = pp_msg.get_value()
+        
+        self._process_opt_pp_success = False    #any process that failed to apply pp sets this flag False
+        self.process_opt_pp()                   #initiate the periodic process
+        return
+        
+    def _process_bid_pp(self, pp_msg):
+        self._bid_pp_msg_latest = copy(pp_msg)
+        self.process_bid_pp()
         return
         
     #this is a perodic function that keeps trying to apply the new pp till success
     def process_opt_pp(self):
-        if ispace_utils.isclose(self._price_point_old, self._price_point_latest, EPSILON) and self._pp_id == self._pp_id_new:
+        if self._process_opt_pp_success:
+            #_log.debug('all apply opt pp processess success, do nothing')
             return
             
-        self._pp_failed = False     #any process that failed to apply pp sets this flag True
         self._apply_pricing_policy()
         
-        if self._pp_failed:
+        if self._process_opt_pp_success:
             _log.debug("unable to process_opt_pp(), will try again in " + str(self._period_process_pp))
             return
             
         _log.info("New Price Point processed.")
-        self._price_point_old = self._price_point_latest
-        self._pp_id = self._pp_id_new
+        #on successful process of apply_pricing_policy with the latest opt pp, current = latest
+        self._opt_pp_msg_current = copy(self._opt_pp_msg_latest)
+        self._price_point_current = copy(self._price_point_latest)
+        self._process_opt_pp_success = True
         return
         
     def _apply_pricing_policy(self):
@@ -263,15 +327,15 @@ class ZoneController(Agent):
         tsp = self.getNewTsp(self._price_point_latest)
         _log.debug('New Ambient AC Setpoint: {0:0.1f}'.format( tsp))
         self.setRmTsp(tsp)
-        if not ispace_utils.isclose(tsp, self._rmTsp, EPSILON):
-            self._pp_failed = True
+        if not isclose(tsp, self._rmTsp, EPSILON):
+            self._process_opt_pp_success = True
             
         #apply for ambient lightinh
         lsp = self.getNewLsp(self._price_point_latest)
         _log.debug('New Ambient Lighting Setpoint: {0:0.1f}'.format( lsp))
         self.setRmLsp(lsp)
-        if not ispace_utils.isclose(lsp, self._rmLsp, EPSILON):
-            self._pp_failed = True
+        if not isclose(lsp, self._rmLsp, EPSILON):
+            self._process_opt_pp_success = True
         return
         
     #compute new zone temperature setpoint from price functions
@@ -287,7 +351,7 @@ class ZoneController(Agent):
         c = pf_coefficients[pf_idx]['c']
         
         tsp = a*pp**2 + b*pp + c
-        return ispace_utils.mround(tsp, pf_roundup)
+        return mround(tsp, pf_roundup)
         
     #compute new zone lighting setpoint from price functions
     def getNewLsp(self, pp):
@@ -302,18 +366,18 @@ class ZoneController(Agent):
         c = pf_coefficients[pf_idx]['c']
         
         lsp = a*pp**2 + b*pp + c
-        return ispace_utils.mround(lsp, pf_roundup)
+        return mround(lsp, pf_roundup)
         
     # change ambient temperature set point
     def setRmTsp(self, tsp):
         #_log.debug('setRmTsp()')
         
-        if ispace_utils.isclose(tsp, self._rmTsp, EPSILON):
+        if isclose(tsp, self._rmTsp, EPSILON):
             _log.debug('same tsp, do nothing')
             return
             
         task_id = str(randint(0, 99999999))
-        result = ispace_utils.get_task_schdl(self, task_id,'iiit/cbs/zonecontroller')
+        result = get_task_schdl(self, task_id,'iiit/cbs/zonecontroller')
         if result['result'] == 'SUCCESS':
             result = {}
             try:
@@ -331,7 +395,7 @@ class ZoneController(Agent):
                 print(e)
             finally:
                 #cancel the schedule
-                ispace_utils.cancel_task_schdl(self, task_id)
+                cancel_task_schdl(self, task_id)
         else:
             _log.debug('schedule NOT available')
         return
@@ -340,12 +404,12 @@ class ZoneController(Agent):
     def setRmLsp(self, lsp):
         #_log.debug('setRmLsp()')
         
-        if ispace_utils.isclose(lsp, self._rmLsp, EPSILON):
+        if isclose(lsp, self._rmLsp, EPSILON):
             _log.debug('same lsp, do nothing')
             return
             
         task_id = str(randint(0, 99999999))
-        result = ispace_utils.get_task_schdl(self, task_id,'iiit/cbs/zonecontroller')
+        result = get_task_schdl(self, task_id,'iiit/cbs/zonecontroller')
         if result['result'] == 'SUCCESS':
             result = {}
             try:
@@ -363,7 +427,7 @@ class ZoneController(Agent):
                 print(e)
             finally:
                 #cancel the schedule
-                ispace_utils.cancel_task_schdl(self, task_id)
+                cancel_task_schdl(self, task_id)
         else:
             _log.debug('schedule NOT available')
         return
@@ -375,7 +439,7 @@ class ZoneController(Agent):
         rm_tsp = self.rpc_getRmTsp()
         
         #check if the tsp really updated at the bms, only then proceed with new tsp
-        if ispace_utils.isclose(tsp, rm_tsp, EPSILON):
+        if isclose(tsp, rm_tsp, EPSILON):
             self._rmTsp = tsp
             self.publishRmTsp(tsp)
             
@@ -389,7 +453,7 @@ class ZoneController(Agent):
         rm_lsp = self.rpc_getRmLsp()
         
         #check if the lsp really updated at the bms, only then proceed with new lsp
-        if ispace_utils.isclose(lsp, rm_lsp, EPSILON):
+        if isclose(lsp, rm_lsp, EPSILON):
             self._rmLsp = lsp
             self.publishRmLsp(lsp)
             
@@ -398,7 +462,7 @@ class ZoneController(Agent):
         
     def rpc_getRmCalcLightEnergy(self):
         task_id = str(randint(0, 99999999))
-        result = ispace_utils.get_task_schdl(self, task_id,'iiit/cbs/zonecontroller')
+        result = get_task_schdl(self, task_id,'iiit/cbs/zonecontroller')
         if result['result'] == 'SUCCESS':
             try:
                 lightEnergy = self.vip.rpc.call('platform.actuator'
@@ -415,14 +479,14 @@ class ZoneController(Agent):
                 return E_UNKNOWN_CLE
             finally:
                 #cancel the schedule
-                ispace_utils.cancel_task_schdl(self, task_id)
+                cancel_task_schdl(self, task_id)
         else:
             _log.debug('schedule NOT available')
         return E_UNKNOWN_CLE
         
     def rpc_getRmCalcCoolingEnergy(self):
         task_id = str(randint(0, 99999999))
-        result = ispace_utils.get_task_schdl(self, task_id,'iiit/cbs/zonecontroller')
+        result = get_task_schdl(self, task_id,'iiit/cbs/zonecontroller')
         if result['result'] == 'SUCCESS':
             try:
                 coolingEnergy = self.vip.rpc.call('platform.actuator'
@@ -439,7 +503,7 @@ class ZoneController(Agent):
                 return E_UNKNOWN_CCE
             finally:
                 #cancel the schedule
-                ispace_utils.cancel_task_schdl(self, task_id)
+                cancel_task_schdl(self, task_id)
         else:
             _log.debug('schedule NOT available')
         return E_UNKNOWN_CCE
@@ -480,98 +544,102 @@ class ZoneController(Agent):
         #_log.debug('publishRmTsp()')
         pubTopic = self.root_topic+"/rm_tsp"
         pubMsg = [tsp, {'units': 'celcius', 'tz': 'UTC', 'type': 'float'}]
-        ispace_utils.publish_to_bus(self, pubTopic, pubMsg)
+        publish_to_bus(self, pubTopic, pubMsg)
         return
         
     def publishRmLsp(self, lsp):
         #_log.debug('publishRmLsp()')
         pubTopic = self.root_topic+"/rm_lsp"
         pubMsg = [lsp, {'units': '%', 'tz': 'UTC', 'type': 'float'}]
-        ispace_utils.publish_to_bus(self, pubTopic, pubMsg)
+        publish_to_bus(self, pubTopic, pubMsg)
         return
-
-    def _calculate_ted(self):
-        #_log.debug('_calculate_ted()')
+        
+    #perodic function to publish active power
+    def publish_opt_tap(self):
+        #compute total active power and publish to local/energydemand
+        #(vb RPCs this value to the next level)
+        opt_tap = self._calc_total_act_pwr()
+        _log.info('***** Total us opt active power: {0:0.4f}'.format(opt_tap))
+        
+        #create a MessageType.active_power ISPACE_Msg
+        pp_msg = tap_helper(self._opt_pp_msg_current
+                            , self._device_id
+                            , self._discovery_address
+                            , opt_tap
+                            , self._period_read_data
+                            )
+                            
+        #publish the new price point to the local message bus
+        pub_topic = self._topic_energy_demand
+        pub_msg = pp_msg.get_json_params(self._agent_id)
+        _log.debug('publishing to local bus topic: {}'.format(pub_topic))
+        _log.debug('Msg: {}'.format(pub_msg))
+        publish_to_bus(self, pub_topic, pub_msg)
+        return
+        
+    #calculate total active power (tap)
+    def _calc_total_act_pwr(self):
+        #_log.debug('_calc_total_act_pwr()')
         
         #zone lighting + ac
         cce = self.rpc_getRmCalcCoolingEnergy()
         cle = self.rpc_getRmCalcLightEnergy() 
-        ted = (0 if cce==E_UNKNOWN_CCE else cce) + (0 if cle==E_UNKNOWN_CLE else cle)
+        tap = (0 if cce==E_UNKNOWN_CCE else cce) + (0 if cle==E_UNKNOWN_CLE else cle)
+        return tap
         
-        #ted from ds devices associated with the zone
-        for ed in self._ds_ed:
-            ted = ted + ed
-        
-        return ted
-
-    def publish_ted(self):
-        self._ted = self._calculate_ted()
-        _log.info( "New TED: {0:.4f}, publishing to bus.".format(self._ted))
-        pubTopic = self.energyDemand_topic
-        #_log.debug("TED pubTopic: " + pubTopic)
-        pubMsg = [self._ted
-                    , {'units': 'W', 'tz': 'UTC', 'type': 'float'}
-                    , self._pp_id
-                    , True
-                    , None
-                    , None
-                    , None
-                    , self._period_read_data
-                    , datetime.datetime.utcnow().isoformat(' ') + 'Z'
-                    ]
-        ispace_utils.publish_to_bus(self, pubTopic, pubMsg)
+    def process_bid_pp(self):
+        self.publish_bid_ted()
         return
         
-    def _calculatePredictedTed(self):
-        #_log.debug('_calculatePredictedTed()')
+    def publish_bid_ted(self):
+        bid_ted = self._calc_total_energy_demand()
+        _log.info('***** Total local bid energy demand: {0:0.4f}'.format(bid_ted))
+        
+        #create a MessageType.energy ISPACE_Msg
+        pp_msg = ted_helper(self._bid_pp_msg_latest
+                            , self._device_id
+                            , self._discovery_address
+                            , bid_ted
+                            , self._period_read_data
+                            )
+                            
+        #publish the new price point to the local message bus
+        pub_topic = self._topic_energy_demand
+        pub_msg = pp_msg.get_json_params(self._agent_id)
+        _log.debug('publishing to local bus topic: {}'.format(pub_topic))
+        _log.debug('Msg: {}'.format(pub_msg))
+        publish_to_bus(self, pub_topic, pub_msg)
+        return
+        
+    #calculate the local total energy demand for bid_pp
+    #the bid energy is for self._bid_pp_duration (default 1hr)
+    #and this msg is valid for self._period_read_data (ttl - default 30s)
+    def _calc_total_energy_demand(self):
+        #_log.debug('_calc_total_energy_demand()')
         #TODO: Sam
         #get actual tsp from device
         tsp = self._rmTsp
-        if ispace_utils.isclose(tsp, 22.0, EPSILON):
+        if isclose(tsp, 22.0, EPSILON):
             ted = 6500
-        elif ispace_utils.isclose(tsp, 23.0, EPSILON):
+        elif isclose(tsp, 23.0, EPSILON):
             ted = 6000
-        elif ispace_utils.isclose(tsp, 24.0, EPSILON):
+        elif isclose(tsp, 24.0, EPSILON):
             ted = 5500
-        elif ispace_utils.isclose(tsp, 25.0, EPSILON):
+        elif isclose(tsp, 25.0, EPSILON):
             ted = 5000
-        elif ispace_utils.isclose(tsp, 26.0, EPSILON):
+        elif isclose(tsp, 26.0, EPSILON):
             ted = 4500
-        elif ispace_utils.isclose(tsp, 27.0, EPSILON):
+        elif isclose(tsp, 27.0, EPSILON):
             ted = 4000
-        elif ispace_utils.isclose(tsp, 28.0, EPSILON):
+        elif isclose(tsp, 28.0, EPSILON):
             ted = 2000
-        elif ispace_utils.isclose(tsp, 29.0, EPSILON):
+        elif isclose(tsp, 29.0, EPSILON):
             ted = 1000
         else :
             ted = 500
         return ted
         
-    def on_ds_ed(self, peer, sender, bus,  topic, headers, message):
-        if sender == 'pubsub.compat':
-            message = compat.unpack_legacy_message(headers, message)
-        _log.debug('New ed from ds, topic: ' + topic +
-                    ' & ed: {0:.4f}'.format(message[ParamED.idx_ed]))
-                    
-        ed_pp_id = message[ParamED.idx_ed_pp_id]
-        ed_isoptimal = message[ParamED.idx_ed_isoptimal]
-        if not ed_isoptimal:         #only accumulate the ed of an optimal pp
-            _log.debug(" - Not optimal ed!!!, do nothing")
-            return
-            
-        #deviceID = (topic.split('/', 3))[2]
-        deviceID = message[ParamED.idx_ed_device_id]
-        idx = self._get_ds_device_idx(deviceID)
-        self._ds_ed[idx] = message[ParamED.idx_ed]
-        return
         
-    def _get_ds_device_idx(self, deviceID):
-        if deviceID not in self._ds_deviceId:
-            self._ds_deviceId.append(deviceID)
-            idx = self._ds_deviceId.index(deviceID)
-            self._ds_ed.insert(idx, 0.0)
-        return self._ds_deviceId.index(deviceID)
-
 def main(argv=sys.argv):
     '''Main method called by the eggsecutable.'''
     try:
@@ -580,10 +648,12 @@ def main(argv=sys.argv):
         print (e)
         _log.exception('unhandled exception')
         
+        
 if __name__ == '__main__':
     # Entry point for script
     try:
         sys.exit(main())
     except KeyboardInterrupt:
         pass
+        
         
