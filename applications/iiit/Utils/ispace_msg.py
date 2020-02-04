@@ -99,21 +99,12 @@ class ISPACE_Msg:
     
     _params = {}
     
-    def __init__(self, msg_type
-                    , one_to_one = None
-                    , isoptimal = None
-                    , value = None
-                    , value_data_type = None
-                    , units = None
+    def __init__(self, msg_type, one_to_one = None, isoptimal = None
+                    , value = None, value_data_type = None, units = None
                     , price_id = None
-                    , src_ip = None
-                    , src_device_id = None
-                    , dst_ip = None
-                    , dst_device_id = None
-                    , duration = None
-                    , ttl = None
-                    , ts = None
-                    , tz = None
+                    , src_ip = None, src_device_id = None
+                    , dst_ip = None, dst_device_id = None
+                    , duration = None, ttl = None, ts = None, tz = None
                     ):
         if msg_type is not None: self.set_msg_type(msg_type)
         if one_to_one is not None: self.set_one_to_one(one_to_one)
