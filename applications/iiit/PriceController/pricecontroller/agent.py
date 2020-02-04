@@ -318,7 +318,7 @@ class PriceController(Agent):
             self.local_bid_pp_msg = copy(pp_msg)
         
             pub_topic =  self._topic_price_point
-            pub_msg = pp_msg.get_json_params(self._agent_id)
+            pub_msg = pp_msg.get_json_message(self._agent_id, 'bus_topic')
             _log.debug('publishing to local bus topic: {}'.format(pub_topic))
             _log.debug('Msg: {}'.format(pub_msg))
             publish_to_bus(self, pub_topic, pub_msg)
@@ -364,7 +364,7 @@ class PriceController(Agent):
             
         if self._pca_mode == "PASS_ON_PP":
             pub_topic =  self._topic_price_point
-            pub_msg = pp_msg.get_json_params(self._agent_id)
+            pub_msg = pp_msg.get_json_message(self._agent_id, 'bus_topic')
             
             _log.debug('publishing to local bus topic: {}'.format(pub_topic))
             _log.debug('Msg: {}'.format(pub_msg))
@@ -380,7 +380,7 @@ class PriceController(Agent):
             for msg in new_pp_msg_list:
                 _log.info('new msg: {}'.format(msg))
                 pub_topic =  self._topic_price_point
-                pub_msg = new_pp_msg.get_json_params(self._agent_id)
+                pub_msg = new_pp_msg.get_json_message(self._agent_id, 'bus_topic')
                 _log.debug('publishing to local bus topic: {}'.format(pub_topic))
                 _log.debug('Msg: {}'.format(pub_msg))
                 publish_to_bus(self, pub_topic, pub_msg)
@@ -789,7 +789,7 @@ class PriceController(Agent):
         #publish the total active power to the local message bus
         #volttron bridge pushes(RPC) this value to the next level
         pub_topic = self._topic_energy_demand
-        pub_msg = tap_msg.get_json_params(self._agent_id)
+        pub_msg = tap_msg.get_json_message(self._agent_id, 'bus_topic')
         _log.debug('publishing to local bus topic: {}'.format(pub_topic))
         _log.debug('Msg: {}'.format(pub_msg))
         publish_to_bus(self, pub_topic, pub_msg)
@@ -809,7 +809,7 @@ class PriceController(Agent):
         #publish the total energy demand to the local message bus
         #volttron bridge pushes(RPC) this value to the next level
         pub_topic = self._topic_energy_demand
-        pub_msg = ted_msg.get_json_params(self._agent_id)
+        pub_msg = ted_msg.get_json_message(self._agent_id, 'bus_topic')
         _log.debug('publishing to local bus topic: {}'.format(pub_topic))
         _log.debug('Msg: {}'.format(pub_msg))
         publish_to_bus(self, pub_topic, pub_msg)

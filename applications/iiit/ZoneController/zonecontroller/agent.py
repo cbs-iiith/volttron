@@ -572,7 +572,7 @@ class ZoneController(Agent):
                             
         #publish the new price point to the local message bus
         pub_topic = self._topic_energy_demand
-        pub_msg = pp_msg.get_json_params(self._agent_id)
+        pub_msg = pp_msg.get_json_message(self._agent_id, 'bus_topic')
         _log.debug('publishing to local bus topic: {}'.format(pub_topic))
         _log.debug('Msg: {}'.format(pub_msg))
         publish_to_bus(self, pub_topic, pub_msg)
@@ -607,7 +607,7 @@ class ZoneController(Agent):
                             
         #publish the new price point to the local message bus
         pub_topic = self._topic_energy_demand
-        pub_msg = pp_msg.get_json_params(self._agent_id)
+        pub_msg = pp_msg.get_json_message(self._agent_id, 'bus_topic')
         _log.debug('publishing to local bus topic: {}'.format(pub_topic))
         _log.debug('Msg: {}'.format(pub_msg))
         publish_to_bus(self, pub_topic, pub_msg)

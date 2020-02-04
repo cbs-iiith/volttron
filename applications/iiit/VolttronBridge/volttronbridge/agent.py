@@ -624,7 +624,7 @@ class VolttronBridge(Agent):
         #publish the new price point to the local us message bus
         _log.debug('post to the local-us-bus')
         pub_topic = self.pricePoint_topic_us
-        pub_msg = pp_msg.get_json_params(self._agent_id)
+        pub_msg = pp_msg.get_json_message(self._agent_id, 'bus_topic')
         _log.debug('publishing to local bus topic: {}'.format(pub_topic))
         _log.debug('Msg: {}'.format(pub_msg))
         publish_to_bus(self, pub_topic, pub_msg)
@@ -682,7 +682,7 @@ class VolttronBridge(Agent):
         #post to bus
         _log.debug('post the local-ds-bus')
         pubTopic = self.energyDemand_topic_ds
-        pub_msg = ed_msg.get_json_params(self._agent_id)
+        pub_msg = ed_msg.get_json_message(self._agent_id, 'bus_topic')
         
         
         _log.debug('publishing to local bus topic: {}'.format(pub_topic))
