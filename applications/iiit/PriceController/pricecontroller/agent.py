@@ -637,7 +637,7 @@ class PriceController(Agent):
                 self._us_local_bid_ed[device_id] = bid_ted
                 return
             #put data to ds_tap bucket
-            elif device_id in get_vb_ds_device_ids():
+            elif device_id in self._get_vb_ds_device_ids():
                 bid_ted = ed_msg.get_value()
                 _log.info('***** New us bid TED from ds device {}: {:0.4f}'.format(device_id, bid_ted))
                 self._us_ds_bid_ed[device_id] = ed_msg.get_value()
@@ -651,7 +651,7 @@ class PriceController(Agent):
                 self._local_bid_ed[device_id] = ed_msg.get_value()
                 return
             #put data to local_ted bucket
-            elif device_id in get_vb_ds_device_ids():
+            elif device_id in self._get_vb_ds_device_ids():
                 bid_ted = ed_msg.get_value()
                 _log.info('***** New local bid TED from ds device {}: {:0.4f}'.format(device_id, bid_ted))
                 self._ds_bid_ed[device_id] = ed_msg.get_value()
