@@ -151,8 +151,8 @@ class VolttronBridge(Agent):
         self.tmp_bustopic_pp_msg = get_default_pp_msg(self._discovery_address, self._device_id)
         self.tmp_bustopic_ed_msg = get_default_ed_msg(self._discovery_address, self._device_id)
         
-        self._all_ds_posts_success = False
-        self._all_us_posts_success = False
+        self._all_ds_posts_success = True
+        self._all_us_posts_success = True
         self._us_retrycount = 0
         
         self.local_opt_pp_id = randint(0, 99999999)
