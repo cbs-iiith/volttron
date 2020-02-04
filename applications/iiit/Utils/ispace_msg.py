@@ -306,6 +306,7 @@ class ISPACE_Msg:
             
     #check for mandatory fields in the message
     def valid_msg(self, validate_fields = []):
+        _log.debug('valid_msg()')
         for attrib in validate_fields:
             #null value check
             if self._is_attrib_null(attrib):
@@ -332,6 +333,7 @@ class ISPACE_Msg:
         return
         
     def _is_attrib_null(self, attrib):
+        _log.debug('_is_attrib_null()')
         if attrib == 'msg_type' and self.msg_type is None: return True
         elif attrib == 'one_to_one' and self.one_to_one is None: return True
         elif attrib == 'value' and self.value is None: return True
@@ -351,6 +353,7 @@ class ISPACE_Msg:
         
     #validate various sanity measure like, valid fields, valid pp ids, ttl expire, etc.,
     def sanity_check_ok(self, hint = None, validate_fields = [], valid_price_ids = []):
+        _log.debug('sanity_check_ok()')
         if not self.valid_msg(validate_fields):
             _log.warning('rcvd a invalid msg, message: {}, do nothing!!!'.format(message))
             return False
