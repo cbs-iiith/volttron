@@ -588,6 +588,7 @@ class VolttronBridge(Agent):
     #post the new price point from us to the local-us-bus
     def _post_pp(self, rpcdata_id, message):
         pp_msg = None
+        rpcdata = jsonrpc.JsonRpcData.parse(message)
         #Note: this is on a rpc message do the check here ONLY
         #check message for MessageType.price_point
         if not check_msg_type(message, MessageType.price_point):
@@ -635,6 +636,7 @@ class VolttronBridge(Agent):
     def _post_ed(self, rpcdata_id, message):
         ed_msg = None
         
+        rpcdata = jsonrpc.JsonRpcData.parse(message)
         #Note: this is on a rpc message do the check here ONLY
         #check message for MessageType.price_point
         success_ap = False

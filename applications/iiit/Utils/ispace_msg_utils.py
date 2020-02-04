@@ -153,11 +153,12 @@ def tap_helper(pp_msg, device_id, discovery_address, tap, new_ttl=10):
                         , duration, ttl, ts, tz)
                         
 def check_msg_type(message, msg_type):
-    rpc_data = jsonrpc.JsonRpcData.parse(message)
-    if 'params' in rpc_data.keys()
-            and 'msg_type' in rpc_data.params.keys()
-            and rpc_data.params['msg_type'] == msg_type:
-        return True
+    try:
+        if jsonrpc.JsonRpcData.parse(message).params['msg_type'] == msg_type:
+            return True
+    except Exception:
+        _log.warning('key attrib: "msg_type", not available in the message.')
+        pass
     return False
     
 #converts bus message into an ispace_msg

@@ -153,6 +153,7 @@ class PricePoint(Agent):
         
     def update_price_point(self, rpcdata_id, message):
         pp_msg = None
+        rpcdata = jsonrpc.JsonRpcData.parse(message)
         #Note: this is on a rpc message do the check here ONLY
         #check message for MessageType.price_point
         if not check_msg_type(message, MessageType.price_point): 
