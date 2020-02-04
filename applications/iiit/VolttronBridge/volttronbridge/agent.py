@@ -619,7 +619,7 @@ class VolttronBridge(Agent):
         #keep a track of us pp_ids
         if pp_msg.get_src_device_id() != self._device_id:
             if pp_msg.get_isoptimal():
-                log.info('***** New optimal price point from us: {0:0.2f}'.format(pp_msg.get_value()))
+                _log.info('***** New optimal price point from us: {0:0.2f}'.format(pp_msg.get_value()))
                 self.us_opt_pp_id = pp_msg.get_price_id()
             else :
                 _log.info('***** New bid price point from us: {0:0.2f}'.format(pp_msg.get_value()))
