@@ -201,11 +201,13 @@ class ISPACE_Msg:
     '''
     # overload + operator
     def __add__(self, value):
-        return (self.value + value)
+        self.set_value(self.get_value() + value)
+        return self
         
     # overload - operator
     def __sub__(self, value):
-        return (self.value - value)
+        self.value -= value
+        return self
         
     # overload * operator
     def __mul__(self, value):
