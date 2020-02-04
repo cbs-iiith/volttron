@@ -47,7 +47,7 @@ _log = logging.getLogger(__name__)
 __version__ = '0.3'
 
 #checking if a floating point value is “numerically zero” by checking if it is lower than epsilon
-EPSILON = 1e-03
+EPSILON = 1e-04
 
 SCHEDULE_AVLB = 1
 SCHEDULE_NOT_AVLB = 0
