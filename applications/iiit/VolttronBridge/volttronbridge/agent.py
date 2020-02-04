@@ -396,9 +396,9 @@ class VolttronBridge(Agent):
         valid_senders_list = ['iiit.pricecontroller']
         minimum_fields = ['msg_type', 'value', 'value_data_type', 'units', 'price_id']
         validate_fields = ['value', 'value_data_type', 'units', 'price_id', 'isoptimal', 'duration', 'ttl']
-        valid_price_ids = [self.us_opt_pp_id, self.us_bid_pp_id] 
+        valid_price_ids = ([self.us_opt_pp_id, self.us_bid_pp_id] 
                                 if self._bridge_host != 'LEVEL_HEAD' 
-                                else []
+                                else [])
         (success, ed_msg) = valid_bustopic_msg(sender, valid_senders_list
                                                 , minimum_fields
                                                 , validate_fields
@@ -668,7 +668,7 @@ class VolttronBridge(Agent):
         #validate various sanity measure like, valid fields, valid pp ids, ttl expiry, etc.,
         hint = 'New Active Power' if success_ap else 'New Energy Demand'
         validate_fields = ['value', 'value_data_type', 'units', 'price_id', 'isoptimal', 'duration', 'ttl']
-        valid_price_ids = [self.us_opt_pp_id, self.us_bid_pp_id, self.local_opt_pp_id, self.local_bid_pp_id]
+        valid_price_ids = ([self.us_opt_pp_id, self.us_bid_pp_id, self.local_opt_pp_id, self.local_bid_pp_id]
                                 if self._bridge_host != 'LEVEL_HEAD' 
                                 else [self.local_opt_pp_id, self.local_bid_pp_id])
         if not ed_msg.sanity_check_ok(hint, validate_fields, valid_price_ids):
