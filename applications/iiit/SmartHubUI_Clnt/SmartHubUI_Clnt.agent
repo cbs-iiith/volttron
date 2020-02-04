@@ -1,7 +1,7 @@
 {
-    "exec":"smarthubui_clnt-0.3-py2.7.egg --config \"%c\"--sub\"%s\"--pub \"%p\"",  
+    "exec":"smarthubui_clnt-0.3-py2.7.egg --config \"%c\"--sub\"%s\"--pub \"%p\"",
     "agentid": "SmartHubUI_Clnt",
-    "message": "I am Smart Hub UI Clnt Agent",
-    "ble_ui_server_address":  "192.168.1.62", 
+    "message": "iSPACE - Smart Hub UI Clnt Agent",
+    "ble_ui_server_address": "192.168.1.62",
     "ble_ui_server_port": 8082
 }

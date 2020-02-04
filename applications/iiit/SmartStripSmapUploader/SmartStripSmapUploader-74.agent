@@ -1,10 +1,10 @@
 {
-    "exec":"smartstripsmapuploader-0.3-py2.7.egg --config \"%c\"--sub\"%s\"--pub \"%p\"",  
+    "exec":"smartstripsmapuploader-0.3-py2.7.egg --config \"%c\"--sub\"%s\"--pub \"%p\"",
     "agentid": "SmartStripSmapUploader",
-    "message": "I am Smart Strip Smap Uploader Agent",
+    "message": "iSPACE - Smart Strip Smap Uploader Agent",
     "ss_id": "SmartStrip-74",
     "ss_main_topic": "smartstrip",
-    "vb_main_topic": "us", 
+    "vb_main_topic": "us",
     "smap_root": "http://192.168.1.4:8000/",
     "api_key": "HkZAJQNor9DM5LPFDhAwbrgL8Vg0jSut02Ka",
     "source_data": "ispace",

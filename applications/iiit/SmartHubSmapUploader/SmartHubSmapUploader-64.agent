@@ -1,7 +1,7 @@
 {
-    "exec":"smarthubsmapuploader-0.3-py2.7.egg --config \"%c\"--sub\"%s\"--pub \"%p\"",  
+    "exec":"smarthubsmapuploader-0.3-py2.7.egg --config \"%c\"--sub\"%s\"--pub \"%p\"",
     "agentid": "SmartHubSmapUploader",
-    "message": "I am Smart Hub Smap Uploader Agent",
+    "message": "iSPACE - Smart Hub Smap Uploader Agent",
     "sh_id": "SmartHub-64",
     "sh_main_topic": "smarthub",
     "vb_main_topic": "us", 
