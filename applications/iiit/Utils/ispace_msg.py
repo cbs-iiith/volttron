@@ -97,7 +97,7 @@ class ISPACE_Msg:
     ts = None
     tz  = None
     
-    self._params = {}
+    _params = {}
     
     def __init__(self, msg_type
                     , one_to_one = None
@@ -323,7 +323,7 @@ class ISPACE_Msg:
     
     def _cp_attrib(self, attrib, value):
         if attrib == 'msg_type': self.set_msg_type(value)
-        elif attrib == 'one_to_one': self.set_(one_to_onevalue)
+        elif attrib == 'one_to_one': self.set_(value)
         elif attrib == 'value': self.set_value(value)
         elif attrib == 'value_data_type': self.set_value_data_type(value)
         elif attrib == 'units': self.set_units(value)
