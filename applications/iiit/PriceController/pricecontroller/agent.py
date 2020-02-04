@@ -59,6 +59,7 @@ def pricecontroller(config_path, **kwargs):
 class PriceController(Agent):
     '''Price Controller
     '''
+    #initialized  during __init__ from config
     _period_read_data = None
     _period_process_loop = None
     

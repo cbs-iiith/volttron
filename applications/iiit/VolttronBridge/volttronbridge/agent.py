@@ -87,6 +87,12 @@ As and when the downstram bridges register to the bridge, the bridge starts post
 class VolttronBridge(Agent):
     '''Voltron Bridge
     '''
+    #initialized  during __init__ from config
+    energyDemand_topic = None
+    energyDemand_topic_ds = None
+    pricePoint_topic_us = None
+    pricePoint_topic = None
+    
     def __init__(self, config_path, **kwargs):
         super(VolttronBridge, self).__init__(**kwargs)
         _log.debug("vip_identity: " + self.core.identity)
