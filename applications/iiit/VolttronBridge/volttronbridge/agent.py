@@ -633,7 +633,7 @@ class VolttronBridge(Agent):
         
     #post the new energy demand from ds to the local-ds-bus
     def _post_ed(self, rpcdata_id, message):
-        pp_msg = None
+        ed_msg = None
         
         #Note: this is on a rpc message do the check here ONLY
         #check message for MessageType.price_point
@@ -647,8 +647,8 @@ class VolttronBridge(Agent):
                 return jsonrpc.json_error(rpcdata_id, INVALID_PARAMS, 'Invalid params {}'.format(rpcdata.params))
         try:
             minimum_fields = ['value', 'value_data_type', 'units', 'price_id']
-            pp_msg = parse_jsonrpc_msg(message, minimum_fields)
-            #_log.info('pp_msg: {}'.format(pp_msg))
+            ed_msg = parse_jsonrpc_msg(message, minimum_fields)
+            #_log.info('ed_msg: {}'.format(ed_msg))
         except KeyError as ke:
             print(ke)
             return jsonrpc.json_error(rpcdata_id, INVALID_PARAMS,
@@ -661,12 +661,12 @@ class VolttronBridge(Agent):
         hint = 'New Active Power' if success_ap else 'New Energy Demand'
         validate_fields = ['value', 'value_data_type', 'units', 'price_id', 'isoptimal', 'duration', 'ttl']
         valid_price_ids = []
-        if not pp_msg.sanity_check_ok(hint, validate_fields, valid_price_ids):
+        if not ed_msg.sanity_check_ok(hint, validate_fields, valid_price_ids):
             _log.warning('Msg sanity checks failed!!!')
             return jsonrpc.json_error(rpcdata_id, PARSE_ERROR, 'Msg sanity checks failed!!!')
                                     
         #check if from registered ds
-        if not self._msg_from_registered_ds(pp_msg.get_src_ip(), pp_msg.get_src_device_id()):
+        if not self._msg_from_registered_ds(ed_msg.get_src_ip(), ed_msg.get_src_device_id()):
             #either the post to ds failed in previous iteration and de-registered from the _ds_register
             # or the msg is corrupted
             _log.warning('msg not from registered ds, do nothing!!!')
@@ -674,15 +674,15 @@ class VolttronBridge(Agent):
             
         #process ed only if pp_id corresponds to either us/local opt/bid pp_ids)
         valid_pp_ids = [self.us_opt_pp_id, self.us_bid_pp_id, self._pp_id]
-        if pp_msg.get_price_id() not in [self.us_opt_pp_id, self.us_bid_pp_id, self._pp_id]:
-            _log.debug('pp_id: {}'.format(pp_msg.get_price_id())
+        if ed_msg.get_price_id() not in [self.us_opt_pp_id, self.us_bid_pp_id, self._pp_id]:
+            _log.debug('pp_id: {}'.format(ed_msg.get_price_id())
                     + ' not in valid_pp_ids: {}, do nothing!!!'.format(valid_pp_ids))
             return False
             
         #post to bus
         _log.debug('post the local-ds-bus')
         pubTopic = self.energyDemand_topic_ds
-        pub_msg = pp_msg.get_json_params(self._agent_id)
+        pub_msg = ed_msg.get_json_params(self._agent_id)
         
         
         _log.debug('publishing to local bus topic: {}'.format(pub_topic))
