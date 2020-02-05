@@ -383,7 +383,7 @@ class VolttronBridge(Agent):
             self.local_bid_pp_id = pp_msg.get_price_id()
                 
         #log this msg
-        _log.info('[LOG] New pp msg: {}'.format(pp_msg))
+        _log.info('[LOG] pp msg: {}'.format(pp_msg))
         
         #reset counters & flags
         self._reset_ds_retrycount()
@@ -506,7 +506,7 @@ class VolttronBridge(Agent):
                 #   remove msg from msg_que
         
         pp_msg = self.tmp_bustopic_pp_msg
-        _log.info('[LOG] New pp msg to ds: {}'.format(pp_msg))
+        _log.info('[LOG] pp msg to ds: {}'.format(pp_msg))
         #case pp_msg one-to-many(i.e., one_to_one is not True)
         for discovery_address in self._ds_register:
             index = self._ds_register.index(discovery_address)
@@ -660,7 +660,7 @@ class VolttronBridge(Agent):
         pub_msg = pp_msg.get_json_message(self._agent_id, 'bus_topic')
         _log.debug('publishing to local bus topic: {}'.format(pub_topic))
         #log this msg
-        _log.info('[LOG] New pp from us, Msg: {}'.format(pub_msg))
+        _log.info('[LOG] pp from us, Msg: {}'.format(pub_msg))
         publish_to_bus(self, pub_topic, pub_msg)
         _log.debug('...Done!!!')
         return True
@@ -726,9 +726,9 @@ class VolttronBridge(Agent):
         _log.debug('local bus topic: {}'.format(pub_topic))
         #log this msg
         if success_ap:
-            _log. info('[LOG] New ap from ds, Msg: {}'.format(pub_msg))
+            _log. info('[LOG] ap from ds, Msg: {}'.format(pub_msg))
         else:
-            _log. info('[LOG] New ed from ds, Msg: {}'.format(pub_msg))
+            _log. info('[LOG] ed from ds, Msg: {}'.format(pub_msg))
         publish_to_bus(self, pub_topic, pub_msg)
         
         #at this stage, ds is alive, reset the counter

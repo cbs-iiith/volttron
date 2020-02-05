@@ -394,7 +394,7 @@ class BuildingController(Agent):
                             , opt_tap
                             , self._period_read_data
                             )
-        _log. info('[LOG] New Total Active Power(TAP) opt'
+        _log. info('[LOG] Total Active Power(TAP) opt'
                                     + ' for us opt pp_msg({})'.format(pp_msg.get_price_id())
                                     + ': {:0.4f}'.format(opt_tap))
         #publish the new price point to the local message bus
@@ -402,7 +402,7 @@ class BuildingController(Agent):
         pub_topic = self._topic_energy_demand
         pub_msg = pp_msg.get_json_message(self._agent_id, 'bus_topic')
         _log.debug('local bus topic: {}'.format(pub_topic))
-        _log. info('[LOG] New Total Active Power(TAP) opt, Msg: {}'.format(pub_msg))
+        _log. info('[LOG] Total Active Power(TAP) opt, Msg: {}'.format(pub_msg))
         publish_to_bus(self, pub_topic, pub_msg)
         return
         
@@ -427,7 +427,7 @@ class BuildingController(Agent):
                             , bid_ted
                             , self._period_read_data
                             )
-        _log. info('[LOG] New Total Energy Demand(TED) bid'
+        _log. info('[LOG] Total Energy Demand(TED) bid'
                                     + ' for us bid pp_msg({})'.format(pp_msg.get_price_id())
                                     + ': {:0.4f}'.format(bid_ted))
         #publish the new price point to the local message bus
@@ -435,7 +435,7 @@ class BuildingController(Agent):
         pub_topic = self._topic_energy_demand
         pub_msg = pp_msg.get_json_message(self._agent_id, 'bus_topic')
         _log.debug('local bus topic: {}'.format(pub_topic))
-        _log. info('[LOG] New Total Energy Demand(TED) bid, Msg: {}'.format(pub_msg))
+        _log. info('[LOG] Total Energy Demand(TED) bid, Msg: {}'.format(pub_msg))
         publish_to_bus(self, pub_topic, pub_msg)
         _log.debug('...Done!!!')
         return

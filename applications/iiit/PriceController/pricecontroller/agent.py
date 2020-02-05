@@ -368,7 +368,7 @@ class PriceController(Agent):
             _log.debug('***** New bid price point from us:'
                                                 + ' {0:0.2f}'.format(pp_msg.get_value()))
         #log this msg
-        _log.info('[LOG] New pp msg from us: {}'.format(pp_msg))
+        _log.info('[LOG] pp msg from us: {}'.format(pp_msg))
         
         #re-initialize aggregator_us_bid_ted
         if not pp_msg.get_isoptimal():
@@ -633,7 +633,7 @@ class PriceController(Agent):
             #put data to local_tap bucket
             if device_id in self._get_vb_local_device_ids():
                 opt_tap = ed_msg.get_value()
-                _log. info('[LOG] New TAP opt from local_device ({})'.format(device_id)
+                _log. info('[LOG] TAP opt from local_device ({})'.format(device_id)
                                             + ' for us opt pp_msg({})):'.format(price_id)
                                             + ' {:0.4f}'.format(opt_tap))
                 self._us_local_opt_ap[device_id] = opt_tap
@@ -641,7 +641,7 @@ class PriceController(Agent):
             #put data to ds_tap bucket
             elif device_id in self._get_vb_ds_device_ids():
                 opt_tap = ed_msg.get_value()
-                _log. info('[LOG] New TAP opt from ds_device ({})'.format(device_id)
+                _log. info('[LOG] TAP opt from ds_device ({})'.format(device_id)
                                             + ' for us opt pp_msg({})):'.format(price_id)
                                             + ' {:0.4f}'.format(opt_tap))
                 self._us_ds_opt_ap[device_id] = opt_tap
@@ -651,7 +651,7 @@ class PriceController(Agent):
             #put data to ds_tap bucket
             if device_id in self._get_vb_local_device_ids():
                 bid_ted = ed_msg.get_value()
-                _log. info('[LOG] New TED bid from local_device ({})'.format(device_id)
+                _log. info('[LOG] TED bid from local_device ({})'.format(device_id)
                                             + ' for us bid pp_msg({})):'.format(price_id)
                                             + ' {:0.4f}'.format(bid_ted))
                 self._us_local_bid_ed[device_id] = bid_ted
@@ -659,7 +659,7 @@ class PriceController(Agent):
             #put data to ds_tap bucket
             elif device_id in self._get_vb_ds_device_ids():
                 bid_ted = ed_msg.get_value()
-                _log. info('[LOG] New TED bid from ds_device ({})'.format(device_id)
+                _log. info('[LOG] TED bid from ds_device ({})'.format(device_id)
                                             + ' for us bid pp_msg({})):'.format(price_id)
                                             + ' {:0.4f}'.format(bid_ted))
                 self._us_ds_bid_ed[device_id] = ed_msg.get_value()
@@ -669,7 +669,7 @@ class PriceController(Agent):
             #put data to local_tap bucket
             if device_id in self._get_vb_local_device_ids():
                 bid_ted = ed_msg.get_value()
-                _log. info('[LOG] New TED bid from local_device ({})'.format(device_id)
+                _log. info('[LOG] TED bid from local_device ({})'.format(device_id)
                                             + ' for local bid pp_msg({})):'.format(price_id)
                                             + ' {:0.4f}'.format(bid_ted))
                 self._local_bid_ed[device_id] = ed_msg.get_value()
@@ -677,7 +677,7 @@ class PriceController(Agent):
             #put data to local_ted bucket
             elif device_id in self._get_vb_ds_device_ids():
                 bid_ted = ed_msg.get_value()
-                _log. info('[LOG] New TED bid from ds_device ({})'.format(device_id)
+                _log. info('[LOG] TED bid from ds_device ({})'.format(device_id)
                                             + ' for local bid pp_msg({})):'.format(price_id)
                                             + ' {:0.4f}'.format(bid_ted))
                 self._ds_bid_ed[device_id] = ed_msg.get_value()
@@ -703,7 +703,7 @@ class PriceController(Agent):
             
         #compute total active power (tap)
         opt_tap = self._calc_total(self._us_local_opt_ap, self._us_ds_opt_ap)
-        _log. info('[LOG] New Total Active Power(TAP) bid (for us pp_msg):'
+        _log. info('[LOG] Total Active Power(TAP) bid (for us pp_msg):'
                                                                 + ' {:0.4f}'.format(opt_tap))
         
         #publish to local/energyDemand (vb pushes(RPC) this value to the next level)
@@ -754,7 +754,7 @@ class PriceController(Agent):
                 
         #compute total energy demand (ted)
         bid_ted = self._calc_total(self._us_local_bid_ed, self._us_ds_bid_ed)
-        _log. info('[LOG] New Total Energy Demand(TED) bid (for us pp_msg):'
+        _log. info('[LOG] Total Energy Demand(TED) bid (for us pp_msg):'
                                                                 + ' {:0.4f}'.format(pub_msg))
         
         #publish to local/energyDemand (vb pushes(RPC) this value to the next level)
@@ -809,7 +809,7 @@ class PriceController(Agent):
         pub_topic = self._topic_energy_demand
         pub_msg = tap_msg.get_json_message(self._agent_id, 'bus_topic')
         _log.debug('local bus topic: {}'.format(pub_topic))
-        _log. info('[LOG] New Total Active Power(TAP) opt, Msg: {}'.format(pub_msg))
+        _log. info('[LOG] Total Active Power(TAP) opt, Msg: {}'.format(pub_msg))
         publish_to_bus(self, pub_topic, pub_msg)
         _log.debug('...Done!!!')
         return
@@ -830,7 +830,7 @@ class PriceController(Agent):
         pub_topic = self._topic_energy_demand
         pub_msg = ted_msg.get_json_message(self._agent_id, 'bus_topic')
         _log.debug('local bus topic: {}'.format(pub_topic))
-        _log. info('[LOG] New Total Energy Demand(TED) bid, Msg: {}'.format(pub_msg))
+        _log. info('[LOG] Total Energy Demand(TED) bid, Msg: {}'.format(pub_msg))
         publish_to_bus(self, pub_topic, pub_msg)
         _log.debug('...Done!!!')
         return
