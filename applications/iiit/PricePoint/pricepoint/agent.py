@@ -130,24 +130,28 @@ class PricePoint(Agent):
         result = False
         try:
             rpcdata = jsonrpc.JsonRpcData.parse(message)
+            
             _log.debug('rpc_from_net()...'
-                        + 'header: {}'.format(header)
+                        #+ 'header: {}'.format(header)
                         + ', rpc method: {}'.format(rpcdata.method)
-                        + ', rpc params: {}'.format(rpcdata.params)
+                        #+ ', rpc params: {}'.format(rpcdata.params)
                         )
             if rpcdata.method == "ping":
                 result = True
             elif rpcdata.method == "new-pp":
                 result = self.update_price_point(rpcdata.id, message)
             else:
+                _log.error('method not found!!!')
                 return jsonrpc.json_error(rpcdata.id, METHOD_NOT_FOUND,
                                             'Invalid method {}'.format(rpcdata.method))
         except KeyError:
             #print('KeyError')
+            _log.error('id: {}, message: invalid params {}!!!'.format(rpcdata.id, 'rpcdata.params'))
             return jsonrpc.json_error(rpcdata.id, INVALID_PARAMS,
                                         'Invalid params {}'.format(rpcdata.params))
         except Exception as e:
             #print(e)
+            _log.exception('id: {}, message: unhandled exception {}!!!'.format(rpcdata.id, e.message))
             return jsonrpc.json_error(rpcdata.id, UNHANDLED_EXCEPTION, e)
         return jsonrpc.json_result(rpcdata.id, result)
         
@@ -157,6 +161,7 @@ class PricePoint(Agent):
         #Note: this is on a rpc message do the check here ONLY
         #check message for MessageType.price_point
         if not check_msg_type(message, MessageType.price_point): 
+            _log.error('id: {}, message: invalid params {}!!!'.format(rpcdata.id, 'rpcdata.params'))
             return jsonrpc.json_error(rpcdata_id, INVALID_PARAMS, 'Invalid params {}'.format(rpcdata.params))
         try:
             minimum_fields = ['value', 'value_data_type', 'units', 'price_id']
@@ -164,10 +169,12 @@ class PricePoint(Agent):
             #_log.info('pp_msg: {}'.format(pp_msg))
         except KeyError as ke:
             #print(ke)
+            _log.error('id: {}, message: invalid params {}!!!'.format(rpcdata_id, 'rpcdata.params'))
             return jsonrpc.json_error(rpcdata_id, INVALID_PARAMS,
                     'Invalid params {}'.format(rpcdata.params))
         except Exception as e:
             #print(e)
+            _log.exception('id: {}, message: unhandled exception {}!!!'.format(rpcdata_id, e.message))
             return jsonrpc.json_error(rpcdata_id, UNHANDLED_EXCEPTION, e)
             
         #validate various sanity measure like, valid fields, valid pp ids, ttl expiry, etc.,
@@ -175,7 +182,7 @@ class PricePoint(Agent):
         validate_fields = ['value', 'value_data_type', 'units', 'price_id', 'isoptimal', 'duration', 'ttl']
         valid_price_ids = []
         if not pp_msg.sanity_check_ok(hint, validate_fields, valid_price_ids):
-            _log.warning('Msg sanity checks failed!!!')
+            _log.warning('id: {}, Msg sanity checks failed, parse error!!!'.format(rpcdata_id))
             return jsonrpc.json_error(rpcdata_id, PARSE_ERROR, 'Msg sanity checks failed!!!')
             
         pp_msg.set_src_device_id(self._device_id)
