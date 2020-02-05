@@ -508,6 +508,9 @@ class ISPACE_Msg:
     def set_tz(self, tz):
         self.tz = tz
         
+    def update_ts(self):
+        self.ts = dateutil.parser.parse(datetime.datetime.utcnow().isoformat(' ') + 'Z')
+        
     pass
     
     
