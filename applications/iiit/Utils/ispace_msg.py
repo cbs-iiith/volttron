@@ -18,6 +18,7 @@ from enum import IntEnum
 import logging
 from random import randint
 import json
+import decimal
 
 
 from volttron.platform.agent import utils
@@ -32,6 +33,12 @@ ROUNDOFF_PRICE_POINT = 0.01
 ROUNDOFF_BUDGET = 0.0001
 ROUNDOFF_ACTIVE_POWER = 0.0001
 ROUNDOFF_ENERGY = 0.0001
+
+PP_DECIMAL_DIGITS = decimal.Decimal(str(ROUNDOFF_PRICE_POINT)).as_tuple().exponent * -1
+BD_DECIMAL_DIGITS = decimal.Decimal(str(ROUNDOFF_BUDGET)).as_tuple().exponent * -1
+AP_DECIMAL_DIGITS = decimal.Decimal(str(ROUNDOFF_ACTIVE_POWER)).as_tuple().exponent * -1
+ED_DECIMAL_DIGITS = decimal.Decimal(str(ROUNDOFF_ENERGY)).as_tuple().exponent * -1
+
 
 ISPACE_MSG_ATTRIB_LIST = ['msg_type', 'one_to_one', 'isoptimal'
                             , 'value', 'value_data_type', 'units'
@@ -461,16 +468,16 @@ class ISPACE_Msg:
         #_log.debug('set_value()')
         #_log.debug('self.msg_type: {}, MessageType.price_point: {}'.format(self.msg_type, MessageType.price_point))
         if self.msg_type == MessageType.price_point:
-            tmp_value = mround(value, ROUNDOFF_PRICE_POINT)
+            tmp_value = round(mround(value, ROUNDOFF_PRICE_POINT), PP_DECIMAL_DIGITS)
             self.value = 0 if tmp_value <= 0 else 1 if tmp_value >= 1 else tmp_value
         elif self.msg_type == MessageType.budget:
-            self.value = mround(value, ROUNDOFF_BUDGET)
+            self.value = round(mround(value, ROUNDOFF_BUDGET), BD_DECIMAL_DIGITS)
         elif self.msg_type == MessageType.active_power:
-            self.value = mround(value, ROUNDOFF_ACTIVE_POWER)
+            self.value = round(mround(value, ROUNDOFF_ACTIVE_POWER), AP_DECIMAL_DIGITS)
         elif self.msg_type == MessageType.energy_demand:
-            self.value = mround(value, ROUNDOFF_ENERGY)
+            self.value = round(mround(value, ROUNDOFF_ENERGY), PD_DECIMAL_DIGITS)
         else:
-            _log.debug('else')
+            _log.error('set_value(), unhandled message type')
             self.value = value
         
     def set_value_data_type(self, value_data_type):
