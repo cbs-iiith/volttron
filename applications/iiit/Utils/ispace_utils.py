@@ -166,6 +166,9 @@ def isclose(a, b, rel_tol=1e-09, abs_tol=0.0):
 def calc_energy(self, pwr_wh, duration_sec):
     return ((pwr_wh * duration_sec)/3600000)
     
+#TODO: do_rpc is synchrous, using requests which is a blocking operation
+#need to convert to async operations, maybe can use gevent 
+#(volttron inherently supports gevents)
 def do_rpc(id, url_root, method, params=None, request_method='POST'):
     #global authentication
     #_log.debug('do_rpc()')
