@@ -448,6 +448,9 @@ class PriceController(Agent):
         #             However, use the SAME price id for all pp_msg
         #
         #common param meters for the new bid pp_msgs
+        pp_msg = self.us_bid_pp_msg
+        
+        #new msg
         msg_type = MessageType.price_point
         one_to_one = True
         value_data_type = 'float'
@@ -455,7 +458,7 @@ class PriceController(Agent):
         price_id = randint(0, 99999999) #explore if need to use same price_id or different ones
         src_ip = None
         src_device_id = None
-        duration = self.act_pp_msg.get_duration()
+        duration = pp_msg.get_duration()
         ttl = 10
         ts = datetime.datetime.utcnow().isoformat(' ') + 'Z'
         tz = 'UTC'
@@ -472,16 +475,15 @@ class PriceController(Agent):
         new_pricepoint = self._some_cost_fn(old_pricepoint, old_ted, target)
         
         if self._target_acheived and self._pca_state == 'ONLINE':
+            #local optimal reached, publish this as bid to the us pp_msg
             #publish bid total energy demand to local/energydemand
             #
             #compute total bid energy demand and publish to local/energydemand
             #(vb RPCs this value to the next level)
             bid_ted = self._calc_total(self._local_bid_ed, self._ds_bid_ed)
-            _log.info('***** Total local bid energy demand: {0:0.4f}'.format(bid_ted))
-
             
             #publish to local/energyDemand (vb pushes(RPC) this value to the next level)
-            self._publish_bid_ted(bid_ted)
+            self._publish_bid_ted(pp_msg, bid_ted)
             
             #need to reset the corresponding buckets to zero
             self._local_bid_ed.clear()
@@ -755,8 +757,11 @@ class PriceController(Agent):
                 self._published_us_bid_ted = False
                 return
                 
+        #compute total energy demand (ted)
+        bid_ted = self._calc_total(self._us_local_bid_ed, self._us_ds_bid_ed)
+        
         #publish to local/energyDemand (vb pushes(RPC) this value to the next level)
-        self._publish_bid_ted(bid_ted)
+        self._publish_bid_ted(self.us_bid_pp_msg, bid_ted)
         
         #need to reset the corresponding buckets to zero
         self._us_local_bid_ed.clear()
@@ -815,10 +820,10 @@ class PriceController(Agent):
         _log.debug('...Done!!!')
         return
         
-    def _publish_bid_ted(self, bid_ted):
+    def _publish_bid_ted(self, bid_ted, pp_msg):
         #already checked if all bids are received or timeout
         #create a MessageType.energy ISPACE_Msg
-        ted_msg = ted_helper(self.us_bid_pp_msg
+        ted_msg = ted_helper(pp_msg
                             , self._device_id
                             , self._discovery_address
                             , bid_ted
