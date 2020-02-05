@@ -480,7 +480,7 @@ class VolttronBridge(Agent):
     def post_ds_new_pp(self):
         if self._all_ds_posts_success: return
         #assume all ds post success, if any failed set to False
-        #self._all_ds_posts_success  = True
+        self._all_ds_posts_success  = True
         
         #for msg in msg_queue:
             #if one_to_one:
