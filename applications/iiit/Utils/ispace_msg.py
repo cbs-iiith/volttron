@@ -58,7 +58,8 @@ def mround(num, multipleOf):
     #_log.debug('mround()')
     return (math.floor((num + multipleOf / 2) / multipleOf) * multipleOf)
     
-#refer to http://stackoverflow.com/questions/5595425/what-is-the-best-way-to-compare-floats-for-almost-equality-in-python
+#refer to https://bit.ly/3beuacI 
+#(stackoverflow What is the best way to compare floats for almost-equality in Python?)
 #comparing floats is mess
 def isclose(a, b, rel_tol=1e-09, abs_tol=0.0):
     #_log.debug('isclose()')
