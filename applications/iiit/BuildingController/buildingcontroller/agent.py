@@ -254,11 +254,11 @@ class BuildingController(Agent):
         else: _log.debug('New pp msg on the local-bus, topic: {} ...'.format(topic))
         
         if pp_msg.get_isoptimal():
-            _log.debuf('***** New optimal price point from pca: {0:0.2f}'.format(pp_msg.get_value())
+            _log.debug('***** New optimal price point from pca: {0:0.2f}'.format(pp_msg.get_value())
                                         + ' , price_id: {}'.format(pp_msg.get_price_id()))
             self._process_opt_pp(pp_msg)
         else:
-            _log.debuf('***** New bid price point from pca: {0:0.2f}'.format(pp_msg.get_value())
+            _log.debug('***** New bid price point from pca: {0:0.2f}'.format(pp_msg.get_value())
                                         + ' , price_id: {}'.format(pp_msg.get_price_id()))
             self._process_bid_pp(pp_msg)
             
