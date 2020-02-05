@@ -207,7 +207,7 @@ class PricePoint(Agent):
         #log this msg
         _log.info('[LOG] pp from us, Msg: {}'.format(pub_msg))
         publish_to_bus(self, pub_topic, pub_msg)
-        _log.debug('...Done!!!')
+        _log.debug('Done!!!')
         return True
         
         

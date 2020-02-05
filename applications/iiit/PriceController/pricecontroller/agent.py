@@ -316,7 +316,7 @@ class PriceController(Agent):
                                                 , valid_price_ids
                                                 , message)
         if not success or pp_msg is None: return
-        else: _log.debug('New pp msg on the local-bus, topic: {} ...'.format(topic))
+        else: _log.debug('New pp msg on the local-bus, topic: {}'.format(topic))
         
         self.act_pp_msg = copy(pp_msg)
         
@@ -357,7 +357,7 @@ class PriceController(Agent):
                                                 , valid_price_ids
                                                 , message)
         if not success or pp_msg is None: return
-        else: _log.debug('New pp msg on the us-bus, topic: {} ...'.format(topic))
+        else: _log.debug('New pp msg on the us-bus, topic: {}'.format(topic))
         
         #keep a track of us pp_msg
         if pp_msg.get_isoptimal():
@@ -382,7 +382,7 @@ class PriceController(Agent):
             pub_msg = pp_msg.get_json_message(self._agent_id, 'bus_topic')
             _log.debug('local bus topic: {}'.format(pub_topic))
             publish_to_bus(self, pub_topic, pub_msg)
-            _log.debug('...Done!!!')
+            _log.debug('Done!!!')
             return
             
         if self._pca_mode == "DEFAULT_OPT":
@@ -612,7 +612,7 @@ class PriceController(Agent):
                                                 , message)
         if not success or ed_msg is None: return
         else: _log.debug('New' 
-                        + (' energy demand bid (ed)' if success_ap else ' active power (ap)')
+                        + (' energy demand bid (ed)' if success_ed else ' active power (ap)')
                         + ' msg on the local-bus, topic: {}'.format(topic))
         
         price_id = ed_msg.get_price_id()
@@ -817,7 +817,7 @@ class PriceController(Agent):
         _log.debug('local bus topic: {}'.format(pub_topic))
         _log. info('[LOG] Total Active Power(TAP) opt, Msg: {}'.format(pub_msg))
         publish_to_bus(self, pub_topic, pub_msg)
-        _log.debug('...Done!!!')
+        _log.debug('Done!!!')
         return
         
     def _publish_bid_ted(self, pp_msg, bid_ted):
@@ -843,7 +843,7 @@ class PriceController(Agent):
         _log.debug('local bus topic: {}'.format(pub_topic))
         _log. info('[LOG] Total Energy Demand(TED) bid, Msg: {}'.format(pub_msg))
         publish_to_bus(self, pub_topic, pub_msg)
-        _log.debug('...Done!!!')
+        _log.debug('Done!!!')
         return
         
     def _calc_total(self, local_bucket, ds_bucket):

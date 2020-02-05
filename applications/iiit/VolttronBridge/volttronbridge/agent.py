@@ -380,7 +380,7 @@ class VolttronBridge(Agent):
                                                 , valid_price_ids
                                                 , message)
         if not success or pp_msg is None: return
-        else: _log.debug('New pp msg on the local-bus, topic: {} ...'.format(topic))
+        else: _log.debug('New pp msg on the local-bus, topic: {}'.format(topic))
         
         if pp_msg.get_isoptimal():
             _log.debug('***** New optimal price point from local:'
@@ -671,7 +671,7 @@ class VolttronBridge(Agent):
         #log this msg
         _log.info('[LOG] pp from us, Msg: {}'.format(pub_msg))
         publish_to_bus(self, pub_topic, pub_msg)
-        _log.debug('...Done!!!')
+        _log.debug('Done!!!')
         return True
         
     #post the new energy demand from ds to the local-ds-bus
@@ -726,7 +726,7 @@ class VolttronBridge(Agent):
             # indicates ds that it needs to retry after registering once again
             _log.warning('msg not from registered ds, do nothing!!!')
             return False
-        _log.debug('...yes.')
+        _log.debug('yes.')
         
         #post to bus
         _log.debug('post to the local-ds-bus...')
@@ -742,7 +742,7 @@ class VolttronBridge(Agent):
         
         #at this stage, ds is alive, reset the counter
         self._ds_retrycount[self._ds_register.index(ed_msg.get_src_ip())] = 0
-        _log.debug('...Done!!!')
+        _log.debug('Done!!!')
         return True
         
     def _msg_from_registered_ds(self, discovery_addr, device_id):

@@ -279,7 +279,7 @@ class ZoneController(Agent):
                                                 , valid_price_ids
                                                 , message)
         if not success or pp_msg is None: return
-        else: _log.debug('New pp msg on the local-bus, topic: {} ...'.format(topic))
+        else: _log.debug('New pp msg on the local-bus, topic: {}'.format(topic))
         
         if pp_msg.get_isoptimal():
             _log.debug('***** New optimal price point from pca: {0:0.2f}'.format(pp_msg.get_value())
@@ -622,7 +622,7 @@ class ZoneController(Agent):
         _log.debug('local bus topic: {}'.format(pub_topic))
         _log. info('[LOG] Total Energy Demand(TED) bid, Msg: {}'.format(pub_msg))
         publish_to_bus(self, pub_topic, pub_msg)
-        _log.debug('...Done!!!')
+        _log.debug('Done!!!')
         return
         
     #calculate the local total energy demand for bid_pp
