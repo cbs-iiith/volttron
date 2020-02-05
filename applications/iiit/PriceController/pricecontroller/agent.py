@@ -37,6 +37,7 @@ import gevent
 import gevent.event
 
 from ispace_utils import publish_to_bus, retrive_details_from_vb, register_rpc_route
+from ispace_utils import ping_vb_failed
 from ispace_msg import ISPACE_Msg, MessageType
 from ispace_msg_utils import parse_bustopic_msg, check_msg_type, tap_helper, ted_helper
 from ispace_msg_utils import get_default_pp_msg, valid_bustopic_msg
@@ -588,6 +589,10 @@ class PriceController(Agent):
             if not success_ed:
                 return
                 
+        if ping_vb_failed():
+            _log.error('!!! unable to contact bridge !!!')
+            return
+            
         #local ed agents vip_identities
         self._local_ed_agents = self.vip.rpc.call(self._vb_vip_identity
                                                     , 'local_ed_agents'

@@ -290,6 +290,10 @@ class VolttronBridge(Agent):
         return jsonrpc.json_result(rpcdata.id, result)
         
     @RPC.export
+    def ping(self):
+        return True
+        
+    @RPC.export
     def get_ds_device_ids(self):
         #_log.debug('rpc get_ds_device_ids(): {}'.format(self._ds_device_ids))
         return self._ds_device_ids

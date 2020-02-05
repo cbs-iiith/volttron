@@ -29,6 +29,25 @@ from volttron.platform.agent import json as jsonapi
 utils.setup_logging()
 _log = logging.getLogger(__name__)
 
+#some agent needs to communicate with the local bridge
+#for example: pca --> to get the list of local/ds devices
+#             building/zone/sh/rc/ss register with bridge to post tap/ted
+#attimes bridge agent may not respond, it would be busy or crashed
+#the agents can check bridge is active before making active calls to better handle rpc exceptions
+#a perodic process can be scheduled that checks the bridge is active and reregisters if necessary
+def ping_vb_failed(self):
+    try:
+        success = self.vip.rpc.call(self._vb_vip_identity
+                                    , 'ping'
+                                    ).get(timeout=10)
+        if success:
+            return False
+    except Exception as e:
+        #print(e)
+        _log.exception('Bridge Agent is not responding!!! Message: {}'.format(e.message))
+        pass
+    return True
+    
 #register agent with local vb, blocking fucntion
 #register this agent with vb as local device for posting active power & bid energy demand
 #pca picks up the active power & energy demand bids only if registered with vb as local device
