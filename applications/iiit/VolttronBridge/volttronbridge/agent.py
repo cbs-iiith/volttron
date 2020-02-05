@@ -226,12 +226,17 @@ class VolttronBridge(Agent):
         if self._bridge_host != 'LEVEL_HEAD':
             _log.debug(self._bridge_host)
             if self._usConnected:
-                _log.debug("unregistering with upstream VolttronBridge")
-                url_root = 'http://' + self._us_ip_addr + ':' + str(self._us_port) + '/bridge'
-                result = do_rpc(self._agent_id, url_root, 'dsbridge'
-                                        , {'discovery_address': self._discovery_address
-                                        , 'device_id': self._device_id
-                                        }, 'DELETE')
+                try:
+                    _log.debug("unregistering with upstream VolttronBridge")
+                    url_root = 'http://' + self._us_ip_addr + ':' + str(self._us_port) + '/bridge'
+                    result = do_rpc(self._agent_id, url_root, 'dsbridge'
+                                            , {'discovery_address': self._discovery_address
+                                            , 'device_id': self._device_id
+                                            }, 'DELETE')
+                except Exception as e:
+                    _log.exception('Failed to unregister with'
+                                                    + ' us bridge agent!!!'.format(e.message))
+                    pass
                 self._usConnected = False
             
         _log.debug('un registering rpc routes')

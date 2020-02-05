@@ -158,11 +158,14 @@ class BuildingController(Agent):
     @Core.receiver('onstop')
     def onstop(self, sender, **kwargs):
         _log.debug('onstop()')
-        self.vip.rpc.call(self._vb_vip_identity
-                            , 'unregister_local_ed_agent'
-                            , self.core.identity
-                            ).get(timeout=10)
-        
+        try:
+            self.vip.rpc.call(self._vb_vip_identity
+                                , 'unregister_local_ed_agent'
+                                , self.core.identity
+                                ).get(timeout=10)
+        except Exception as e:
+            _log.exception('Failed to unregister with bridge agent!!!'.format(e.message))
+            pass
         _log.debug('un registering rpc routes')
         self.vip.rpc.call(MASTER_WEB, 'unregister_all_agent_routes').get(timeout=10)
         return
