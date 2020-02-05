@@ -243,7 +243,7 @@ class BuildingController(Agent):
             
         valid_senders_list = self._valid_senders_list_pp
         minimum_fields = ['msg_type', 'value', 'value_data_type', 'units', 'price_id']
-        validate_fields = ['value', 'value_data_type', 'units', 'price_id', 'isoptimal', 'duration', 'ttl']
+        validate_fields = ['value', 'units', 'price_id', 'isoptimal', 'duration', 'ttl']
         valid_price_ids = []
         (success, pp_msg) = valid_bustopic_msg(sender, valid_senders_list
                                                 , minimum_fields
@@ -251,12 +251,15 @@ class BuildingController(Agent):
                                                 , valid_price_ids
                                                 , message)
         if not success or pp_msg is None: return
+        else: _log.debug('New pp msg on the local-bus, topic: {} ...'.format(topic))
         
         if pp_msg.get_isoptimal():
-            _log.info('***** New optimal price point from us: {0:0.2f}'.format(pp_msg.get_value()))
+            _log.debuf('***** New optimal price point from pca: {0:0.2f}'.format(pp_msg.get_value())
+                                        + ' , price_id: {}'.format(pp_msg.get_price_id()))
             self._process_opt_pp(pp_msg)
         else:
-            _log.info('***** New bid price point from us: {0:0.2f}'.format(pp_msg.get_value()))
+            _log.debuf('***** New bid price point from pca: {0:0.2f}'.format(pp_msg.get_value())
+                                        + ' , price_id: {}'.format(pp_msg.get_price_id()))
             self._process_bid_pp(pp_msg)
             
         return
@@ -265,8 +268,10 @@ class BuildingController(Agent):
         self._opt_pp_msg_latest = copy(pp_msg)
         self._price_point_latest = pp_msg.get_value()
         
-        self._process_opt_pp_success = False    #any process that failed to apply pp sets this flag False
-        self.process_opt_pp()                   #initiate the periodic process
+        #any process that failed to apply pp sets this flag False
+        self._process_opt_pp_success = False
+        #initiate the periodic process
+        self.process_opt_pp()
         return
         
     def _process_bid_pp(self, pp_msg):
@@ -285,7 +290,8 @@ class BuildingController(Agent):
             self._apply_pricing_policy()
             
         if self._process_opt_pp_success:
-            _log.debug("unable to process_opt_pp(), will try again in " + str(self._period_process_pp))
+            _log.debug('unable to process_opt_pp()'
+                            + ' , will try again in {} sec!!!'.format(self._period_process_pp))
             return
             
         _log.info("New Price Point processed.")
@@ -332,7 +338,8 @@ class BuildingController(Agent):
         #_log.debug('updateRmTsp()')
         
         building_pp = self.rpc_get_building_pp()
-        _log.debug('latest_pp: {0:0.2f}, building_pp {1:0.2f}'.format(self._price_point_latest, building_pp))
+        _log.debug('latest_pp: {0:0.2f}'.format(self._price_point_latest)
+                        + ' , building_pp {1:0.2f}'.format(building_pp))
         
         #check if the pp really updated at the bms, only then proceed with new pp
         if isclose(self._price_point_latest, building_pp, EPSILON):
@@ -379,7 +386,6 @@ class BuildingController(Agent):
         #compute total active power and publish to local/energydemand
         #(vb RPCs this value to the next level)
         opt_tap = self._calc_total_act_pwr()
-        _log.info('***** Total us opt active power: {0:0.4f}'.format(opt_tap))
         
         #create a MessageType.active_power ISPACE_Msg
         pp_msg = tap_helper(self._opt_pp_msg_current
@@ -388,12 +394,15 @@ class BuildingController(Agent):
                             , opt_tap
                             , self._period_read_data
                             )
-                            
+        _log. info('[LOG] New Total Active Power(TAP) opt'
+                                    + ' for us opt pp_msg({})'.format(pp_msg.get_price_id())
+                                    + ': {:0.4f}'.format(opt_tap))
         #publish the new price point to the local message bus
+        _log.debug('post to the local-bus...')
         pub_topic = self._topic_energy_demand
         pub_msg = pp_msg.get_json_message(self._agent_id, 'bus_topic')
-        _log.debug('publishing to local bus topic: {}'.format(pub_topic))
-        _log.debug('Msg: {}'.format(pub_msg))
+        _log.debug('local bus topic: {}'.format(pub_topic))
+        _log. info('[LOG] New Total Active Power(TAP) opt, Msg: {}'.format(pub_msg))
         publish_to_bus(self, pub_topic, pub_msg)
         return
         
@@ -411,8 +420,6 @@ class BuildingController(Agent):
         #compute total bid energy demand and publish to local/energydemand
         #(vb RPCs this value to the next level)
         bid_ted = self._calc_total_energy_demand()
-        _log.info('***** Total local bid energy demand: {0:0.4f}'.format(bid_ted))
-        
         #create a MessageType.energy ISPACE_Msg
         pp_msg = ted_helper(self._bid_pp_msg_latest
                             , self._device_id
@@ -420,19 +427,24 @@ class BuildingController(Agent):
                             , bid_ted
                             , self._period_read_data
                             )
-                            
+        _log. info('[LOG] New Total Energy Demand(TED) bid'
+                                    + ' for us bid pp_msg({})'.format(pp_msg.get_price_id())
+                                    + ': {:0.4f}'.format(bid_ted))
         #publish the new price point to the local message bus
+        _log.debug('post to the local-bus...')
         pub_topic = self._topic_energy_demand
         pub_msg = pp_msg.get_json_message(self._agent_id, 'bus_topic')
-        _log.debug('publishing to local bus topic: {}'.format(pub_topic))
-        _log.debug('Msg: {}'.format(pub_msg))
+        _log.debug('local bus topic: {}'.format(pub_topic))
+        _log. info('[LOG] New Total Energy Demand(TED) bid, Msg: {}'.format(pub_msg))
         publish_to_bus(self, pub_topic, pub_msg)
+        _log.debug('...Done!!!')
         return
         
     #calculate the local total energy demand for bid_pp
     #the bid energy is for self._bid_pp_duration (default 1hr)
     #and this msg is valid for self._period_read_data (ttl - default 30s)
     def _calc_total_energy_demand(self):
+        #for testing
         bid_ted = random() * 1000
         return bid_ted
         
