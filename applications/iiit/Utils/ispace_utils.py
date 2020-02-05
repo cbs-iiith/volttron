@@ -81,11 +81,12 @@ def retrive_details_from_vb(self, sleep_time=10):
         try:
             _log.info('retrive details from vb...')
             if self._device_id is None:
-                self._device_id = self.vip.rpc.call(self._vb_vip_identity, 'device_id').get(timeout=10)
+                self._device_id = self.vip.rpc.call(self._vb_vip_identity
+                                                        , 'device_id').get(timeout=10)
                 _log.debug('device id as per vb: {}'.format(self._device_id))
             if self._discovery_address is None:
                 self._discovery_address = self.vip.rpc.call(self._vb_vip_identity
-                                                                , 'discovery_address').get(timeout=10)
+                                                        , 'discovery_address').get(timeout=10)
                 _log.debug('discovery_address as per vb: {}'.format(self._discovery_address))
             if self._device_id is not None and self._discovery_address is not None:
                 _log.debug('Done.')
@@ -112,7 +113,7 @@ def publish_to_bus(self, topic, msg):
         _log.warning('Expection: gevent.Timeout in publish_to_bus()')
         return
     except Exception as e:
-        _log.warning('Expection: publish_to_bus?')
+        _log.warning('Expection in publish_to_bus(), {}'.format(e.message))
         return
     return
     
@@ -136,7 +137,7 @@ def get_task_schdl(self, task_id, device, time_ms=None):
     except gevent.Timeout:
         _log.exception('Expection: gevent.Timeout in get_task_schdl()')
     except Exception as e:
-        _log.exception ('Expection: Could not contact actuator. Is it running?')
+        _log.exception ('Expection: Could not contact actuator. Is it running? {}'.format(e.message))
         #print(e)
     finally:
         return result
@@ -201,7 +202,8 @@ def do_rpc(id, url_root, method, params=None, request_method='POST'):
                 error = response.json()['error']
                 _log.error('{} returned error, Error: {}'.format(method, error))
         else:
-            _log.debug('no respone, url_root:{} method:{} response: {}'.format(url_root, method, response))
+            _log.error('no respone, url_root:{} method:{} response: {}'.format(url_root
+                                                                        , method, response))
     except Exception as e:
         #print(e)
         _log.exception('Exception: do_rpc() unhandled exception, most likely dest is down')

@@ -54,12 +54,12 @@ def valid_bustopic_msg(sender, valid_senders_list, minimum_fields
         pp_msg = parse_bustopic_msg(message, minimum_fields)
         #_log.info('pp_msg: {}'.format(pp_msg))
     except KeyError as ke:
-        _log.exception(ke)
+        _log.exception(ke.message)
         _log.exception(jsonrpc.json_error('NA', INVALID_PARAMS,
-                'Invalid params {}'.format(rpcdata.params)))
+                                        'Invalid params {}'.format(rpcdata.params)))
         return (False, pp_msg)
     except Exception as e:
-        _log.exception(e)
+        _log.exception(e.message)
         _log.exception(jsonrpc.json_error('NA', UNHANDLED_EXCEPTION, e))
         return (False, pp_msg)
         
@@ -68,7 +68,7 @@ def valid_bustopic_msg(sender, valid_senders_list, minimum_fields
            else 'New Energy Demand' if check_msg_type(message, MessageType.energy_demand)
            else 'Unknown Msg Type')
 
-    validate_fields = ['value', 'value_data_type', 'units', 'price_id', 'isoptimal', 'duration', 'ttl']
+    validate_fields = ['value', 'units', 'price_id', 'isoptimal', 'duration', 'ttl']
     valid_price_ids = []
     #validate various sanity measure like, valid fields, valid pp ids, ttl expiry, etc.,
     if not pp_msg.sanity_check_ok(hint, validate_fields, valid_price_ids):
@@ -83,7 +83,7 @@ def get_default_pp_msg(discovery_address, device_id):
                         , None
                         , discovery_address, device_id
                         , None, None
-                        , 3600, 3600, 10, 'UTC'
+                        , 3600, 3600, 60, 'UTC'
                         )
                         
 #a default active power message
@@ -93,7 +93,7 @@ def get_default_ap_msg(discovery_address, device_id):
                         , None
                         , discovery_address, device_id
                         , None, None
-                        , 3600, 3600, 10, 'UTC'
+                        , 3600, 3600, 60, 'UTC'
                         )
                         
 #a default energy demand message
@@ -103,11 +103,11 @@ def get_default_ed_msg(discovery_address, device_id):
                         , None
                         , discovery_address, device_id
                         , None, None
-                        , 3600, 3600, 10, 'UTC'
+                        , 3600, 3600, 60, 'UTC'
                         )
                         
 #create a MessageType.energy ISPACE_Msg
-def ted_helper(pp_msg, device_id, discovery_address, ted, new_ttl=10):
+def ted_helper(pp_msg, device_id, discovery_address, ted, new_ttl=60):
     #print(MessageType.energy_demand)
     msg_type = MessageType.energy_demand
     one_to_one = copy(pp_msg.get_one_to_one())
@@ -130,7 +130,7 @@ def ted_helper(pp_msg, device_id, discovery_address, ted, new_ttl=10):
                         , duration, ttl, ts, tz)
                         
 #create a MessageType.active_power ISPACE_Msg
-def tap_helper(pp_msg, device_id, discovery_address, tap, new_ttl=10):
+def tap_helper(pp_msg, device_id, discovery_address, tap, new_ttl=60):
     #print(MessageType.active_power)
     msg_type = MessageType.active_power
     one_to_one = copy(pp_msg.get_one_to_one())

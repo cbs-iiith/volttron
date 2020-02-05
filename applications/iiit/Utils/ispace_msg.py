@@ -56,12 +56,13 @@ def empty_copy(obj):
 #avaliable in ispace_utils, copied here to remove dependecny on ispace_utils
 def mround(num, multipleOf):
     #_log.debug('mround()')
-    return math.floor((num + multipleOf / 2) / multipleOf) * multipleOf
+    return (math.floor((num + multipleOf / 2) / multipleOf) * multipleOf)
+    
 #refer to http://stackoverflow.com/questions/5595425/what-is-the-best-way-to-compare-floats-for-almost-equality-in-python
 #comparing floats is mess
 def isclose(a, b, rel_tol=1e-09, abs_tol=0.0):
     #_log.debug('isclose()')
-    return abs(a-b) <= max(rel_tol * max(abs(a), abs(b)), abs_tol)
+    return (abs(a-b) <= max(rel_tol * max(abs(a), abs(b)), abs_tol))
 #checking if a floating point value is “numerically zero” by checking if it is lower than epsilon
 EPSILON = 1e-04
     
@@ -361,7 +362,7 @@ class ISPACE_Msg:
             _log.warning('rcvd a invalid msg, message: {}, do nothing!!!'.format(message))
             return False
             
-        #print only if a valid msg
+        #log the received msg
         #_log.info('{} Msg: {}'.format(hint, self))
         
         #process msg only if price_id corresponds to these ids
