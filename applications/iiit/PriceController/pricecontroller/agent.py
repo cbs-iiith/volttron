@@ -708,8 +708,6 @@ class PriceController(Agent):
             
         #compute total active power (tap)
         opt_tap = self._calc_total(self._us_local_opt_ap, self._us_ds_opt_ap)
-        _log. info('[LOG] Total Active Power(TAP) bid (for us pp_msg):'
-                                                                + ' {:0.4f}'.format(opt_tap))
         
         #publish to local/energyDemand (vb pushes(RPC) this value to the next level)
         self._publish_opt_tap(opt_tap)
@@ -757,11 +755,6 @@ class PriceController(Agent):
                 self._published_us_bid_ted = False
                 return
                 
-        #compute total energy demand (ted)
-        bid_ted = self._calc_total(self._us_local_bid_ed, self._us_ds_bid_ed)
-        _log. info('[LOG] Total Energy Demand(TED) bid (for us pp_msg):'
-                                                                + ' {:0.4f}'.format(bid_ted))
-        
         #publish to local/energyDemand (vb pushes(RPC) this value to the next level)
         self._publish_bid_ted(bid_ted)
         
@@ -808,6 +801,9 @@ class PriceController(Agent):
                             , self._period_read_data
                             )
                             
+        _log. info('[LOG] Total Active Power(TAP) opt'
+                                    + ' (for us pp_msg ({})):'.format(tap_msg.get_price_id())
+                                    + ' {:0.4f}'.format(opt_tap))
         #publish the total active power to the local message bus
         #volttron bridge pushes(RPC) this value to the next level
         _log.debug('post to the local-bus...')
@@ -829,6 +825,11 @@ class PriceController(Agent):
                             , self._period_read_data
                             )
                             
+        #compute total energy demand (ted)
+        bid_ted = self._calc_total(self._us_local_bid_ed, self._us_ds_bid_ed)
+        _log. info('[LOG] Total Energy Demand(TED) bid'
+                                    + ' (for us pp_msg ({})):'.format(ted_msg.get_price_id())
+                                    + ' {:0.4f}'.format(bid_ted))
         #publish the total energy demand to the local message bus
         #volttron bridge pushes(RPC) this value to the next level
         _log.debug('post to the local-bus...')
