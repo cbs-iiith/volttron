@@ -820,7 +820,7 @@ class PriceController(Agent):
         _log.debug('...Done!!!')
         return
         
-    def _publish_bid_ted(self, bid_ted, pp_msg):
+    def _publish_bid_ted(self, pp_msg, bid_ted):
         #already checked if all bids are received or timeout
         #create a MessageType.energy ISPACE_Msg
         ted_msg = ted_helper(pp_msg
