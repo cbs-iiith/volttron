@@ -85,6 +85,12 @@ class ZoneController(Agent):
     _device_id = None
     _discovery_address = None
     
+    #any process that failed to apply pp sets this flag False
+    _process_opt_pp_success = False
+    
+    _zone_tsp = 0
+    _zone_lsp = 0
+    
     _pf_zn_ac = None
     _pf_zn_light = None
     
@@ -261,11 +267,8 @@ class ZoneController(Agent):
         return
         
     def on_new_price(self, peer, sender, bus,  topic, headers, message):
-        self.tmp_bustopic_pp_msg = None
+        if sender not in self._valid_senders_list_pp: return
         
-        if sender not in self._valid_senders_list_pp:
-            return
-            
         #check message type before parsing
         if not check_msg_type(message, MessageType.price_point): return False
             

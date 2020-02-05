@@ -236,11 +236,8 @@ class BuildingController(Agent):
         return
         
     def on_new_price(self, peer, sender, bus,  topic, headers, message):
-        self.tmp_bustopic_pp_msg = None
+        if sender not in self._valid_senders_list_pp: return
         
-        if sender not in self._valid_senders_list_pp:
-            return
-            
         #check message type before parsing
         if not check_msg_type(message, MessageType.price_point): return False
             
