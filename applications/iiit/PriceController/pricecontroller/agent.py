@@ -589,7 +589,7 @@ class PriceController(Agent):
             if not success_ed:
                 return
                 
-        if ping_vb_failed():
+        if ping_vb_failed(self):
             _log.error('!!! unable to contact bridge !!!')
             return
             
