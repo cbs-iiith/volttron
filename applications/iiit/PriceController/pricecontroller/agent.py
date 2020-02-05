@@ -760,7 +760,7 @@ class PriceController(Agent):
         #compute total energy demand (ted)
         bid_ted = self._calc_total(self._us_local_bid_ed, self._us_ds_bid_ed)
         _log. info('[LOG] Total Energy Demand(TED) bid (for us pp_msg):'
-                                                                + ' {:0.4f}'.format(pub_msg))
+                                                                + ' {:0.4f}'.format(bid_ted))
         
         #publish to local/energyDemand (vb pushes(RPC) this value to the next level)
         self._publish_bid_ted(bid_ted)
