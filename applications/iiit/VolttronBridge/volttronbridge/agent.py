@@ -422,6 +422,9 @@ class VolttronBridge(Agent):
                                                 , valid_price_ids
                                                 , message)
         if not success or ed_msg is None: return
+        else: _log.debug('New' 
+                        + (' energy demand bid (ed)' if success_ap else ' active power (ap)')
+                        + ' msg on the local-bus, topic: {} ...'.format(topic))
         
         #reset counters & flags
         self._us_retrycount = 0
