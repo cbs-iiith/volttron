@@ -146,12 +146,13 @@ class PricePoint(Agent):
                                             'Invalid method {}'.format(rpcdata.method))
         except KeyError:
             #print('KeyError')
-            _log.error('id: {}, message: invalid params {}!!!'.format(rpcdata.id, 'rpcdata.params'))
+            _log.error('id: {}, message: invalid params {}!!!'.format(rpcdata.id, rpcdata.params))
             return jsonrpc.json_error(rpcdata.id, INVALID_PARAMS,
                                         'Invalid params {}'.format(rpcdata.params))
         except Exception as e:
             #print(e)
-            _log.exception('id: {}, message: unhandled exception {}!!!'.format(rpcdata.id, e.message))
+            _log.exception('id: {}'.format(rpcdata.id)
+                            + ', message: unhandled exception {}!!!'.format(e.message))
             return jsonrpc.json_error(rpcdata.id, UNHANDLED_EXCEPTION, e)
         return jsonrpc.json_result(rpcdata.id, result)
         
@@ -161,25 +162,27 @@ class PricePoint(Agent):
         #Note: this is on a rpc message do the check here ONLY
         #check message for MessageType.price_point
         if not check_msg_type(message, MessageType.price_point): 
-            _log.error('id: {}, message: invalid params {}!!!'.format(rpcdata.id, 'rpcdata.params'))
-            return jsonrpc.json_error(rpcdata_id, INVALID_PARAMS, 'Invalid params {}'.format(rpcdata.params))
+            _log.error('id: {}, message: invalid params {}!!!'.format(rpcdata_id, rpcdata.params))
+            return jsonrpc.json_error(rpcdata_id, INVALID_PARAMS
+                                                , 'Invalid params {}'.format(rpcdata.params))
         try:
             minimum_fields = ['value', 'value_data_type', 'units', 'price_id']
             pp_msg = parse_jsonrpc_msg(message, minimum_fields)
             #_log.info('pp_msg: {}'.format(pp_msg))
         except KeyError as ke:
             #print(ke)
-            _log.error('id: {}, message: invalid params {}!!!'.format(rpcdata_id, 'rpcdata.params'))
+            _log.error('id: {}, message: invalid params {}!!!'.format(rpcdata_id, rpcdata.params))
             return jsonrpc.json_error(rpcdata_id, INVALID_PARAMS,
                     'Invalid params {}'.format(rpcdata.params))
         except Exception as e:
             #print(e)
-            _log.exception('id: {}, message: unhandled exception {}!!!'.format(rpcdata_id, e.message))
+            _log.exception('id: {}'.format(rpcdata_id)
+                            + ', message: unhandled exception {}!!!'.format(e.message))
             return jsonrpc.json_error(rpcdata_id, UNHANDLED_EXCEPTION, e)
             
         #validate various sanity measure like, valid fields, valid pp ids, ttl expiry, etc.,
         hint = 'New Price Point'
-        validate_fields = ['value', 'value_data_type', 'units', 'price_id', 'isoptimal', 'duration', 'ttl']
+        validate_fields = ['value', 'units', 'price_id', 'isoptimal', 'duration', 'ttl']
         valid_price_ids = []
         if not pp_msg.sanity_check_ok(hint, validate_fields, valid_price_ids):
             _log.warning('id: {}, Msg sanity checks failed, parse error!!!'.format(rpcdata_id))
@@ -189,17 +192,22 @@ class PricePoint(Agent):
         pp_msg.set_src_ip(self._discovery_address)
         
         #publish the new price point to the local message bus
+        _log.debug('post to the local-us-bus')
         pub_topic = self._topic_price_point
         pub_msg = pp_msg.get_json_message(self._agent_id, 'bus_topic')
         #keep a track of us pp_msg
         if pp_msg.get_isoptimal():
-            _log.info('***** New optimal price point from us: {0:0.2f}'.format(pp_msg.get_value()))
+            _log.info('***** New optimal price point from rpc: {0:0.2f}'.format(pp_msg.get_value())
+                                + ' price_id: {}'.format(pp_msg.get_price_id()))
         else:
-            _log.info('***** New bid price point from us: {0:0.2f}'.format(pp_msg.get_value()))
-
+            _log.info('***** New bid price point from rpc: {0:0.2f}'.format(pp_msg.get_value())
+                                + ' price_id: {}'.format(pp_msg.get_price_id()))
+                                
         _log.debug('publishing to local bus topic: {}'.format(pub_topic))
-        _log.debug('Msg: {}'.format(pub_msg))
+        #log this msg
+        _log.info('[LOG] pp from us, Msg: {}'.format(pub_msg))
         publish_to_bus(self, pub_topic, pub_msg)
+        _log.debug('...Done!!!')
         return True
         
         

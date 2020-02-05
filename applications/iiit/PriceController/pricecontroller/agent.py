@@ -611,7 +611,7 @@ class PriceController(Agent):
         if not success or ed_msg is None: return
         else: _log.debug('New' 
                         + (' energy demand bid (ed)' if success_ap else ' active power (ap)')
-                        + 'msg on the local-bus, topic: {} ...'.format(topic))
+                        + ' msg on the local-bus, topic: {}'.format(topic))
         
         price_id = ed_msg.get_price_id()
         device_id = ed_msg.get_src_device_id()
@@ -753,7 +753,7 @@ class PriceController(Agent):
                             + ' rcvd_all_us_bid_ed_lc: {}'.format(rcvd_all_us_bid_ed_lc)
                             + ' rcvd_all_us_bid_ed_ds: {}'.format(rcvd_all_us_bid_ed_ds)
                             + ' us_bids_timeout: {}'.format(us_bids_timeout)
-                            + ', will try again in ' + str(self._period_process_loop))
+                            + ', will try again in {} sec'.format(self._period_process_loop))
                 self._published_us_bid_ted = False
                 return
                 
