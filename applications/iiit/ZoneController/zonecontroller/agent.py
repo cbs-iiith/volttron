@@ -152,12 +152,6 @@ class ZoneController(Agent):
         
         #TODO: publish initial data to volttron bus
         
-        #perodically publish total energy demand to volttron bus
-        self.core.periodic(self._period_read_data, self.publish_ted, wait=None)
-        
-        #perodically process new pricing point that keeps trying to apply the new pp till success
-        self.core.periodic(self._period_process_pp, self.process_opt_pp, wait=None)
-        
         #perodically publish total active power to volttron bus
         #active power is comupted at regular interval (_period_read_data default(30s))
         #this power corresponds to current opt pp
