@@ -32,12 +32,12 @@ _log = logging.getLogger(__name__)
 ROUNDOFF_PRICE_POINT = 0.01
 ROUNDOFF_BUDGET = 0.0001
 ROUNDOFF_ACTIVE_POWER = 0.0001
-ROUNDOFF_ENERGY = 0.0001
+ROUNDOFF_ENERGY_DEMAND = 0.0001
 
 PP_DECIMAL_DIGITS = decimal.Decimal(str(ROUNDOFF_PRICE_POINT)).as_tuple().exponent * -1
 BD_DECIMAL_DIGITS = decimal.Decimal(str(ROUNDOFF_BUDGET)).as_tuple().exponent * -1
 AP_DECIMAL_DIGITS = decimal.Decimal(str(ROUNDOFF_ACTIVE_POWER)).as_tuple().exponent * -1
-ED_DECIMAL_DIGITS = decimal.Decimal(str(ROUNDOFF_ENERGY)).as_tuple().exponent * -1
+ED_DECIMAL_DIGITS = decimal.Decimal(str(ROUNDOFF_ENERGY_DEMAND)).as_tuple().exponent * -1
 
 
 ISPACE_MSG_ATTRIB_LIST = ['msg_type', 'one_to_one', 'isoptimal'
@@ -475,7 +475,7 @@ class ISPACE_Msg:
         elif self.msg_type == MessageType.active_power:
             self.value = round(mround(value, ROUNDOFF_ACTIVE_POWER), AP_DECIMAL_DIGITS)
         elif self.msg_type == MessageType.energy_demand:
-            self.value = round(mround(value, ROUNDOFF_ENERGY), PD_DECIMAL_DIGITS)
+            self.value = round(mround(value, ROUNDOFF_ENERGY_DEMAND), ED_DECIMAL_DIGITS)
         else:
             _log.error('set_value(), unhandled message type')
             self.value = value
