@@ -261,116 +261,6 @@ class ZoneController(Agent):
         _log.debug("EOF Testing")
         return
         
-    def on_new_price(self, peer, sender, bus,  topic, headers, message):
-        if sender not in self._valid_senders_list_pp: return
-        
-        #check message type before parsing
-        if not check_msg_type(message, MessageType.price_point): return False
-            
-        valid_senders_list = self._valid_senders_list_pp
-        minimum_fields = ['msg_type', 'value', 'value_data_type', 'units', 'price_id']
-        validate_fields = ['value', 'units', 'price_id', 'isoptimal', 'duration', 'ttl']
-        valid_price_ids = []
-        (success, pp_msg) = valid_bustopic_msg(sender, valid_senders_list
-                                                , minimum_fields
-                                                , validate_fields
-                                                , valid_price_ids
-                                                , message)
-        if not success or pp_msg is None: return
-        else: _log.debug('New pp msg on the local-bus, topic: {}'.format(topic))
-        
-        if pp_msg.get_isoptimal():
-            _log.debug('***** New optimal price point from pca: {:0.2f}'.format(pp_msg.get_value())
-                                        + ' , price_id: {}'.format(pp_msg.get_price_id()))
-            self._process_opt_pp(pp_msg)
-        else:
-            _log.debug('***** New bid price point from pca: {:0.2f}'.format(pp_msg.get_value())
-                                        + ' , price_id: {}'.format(pp_msg.get_price_id()))
-            self._process_bid_pp(pp_msg)
-            
-        return
-        
-    def _process_opt_pp(self, pp_msg):
-        self._opt_pp_msg_latest = copy(pp_msg)
-        self._price_point_latest = pp_msg.get_value()
-        
-        #any process that failed to apply pp sets this flag False
-        self._process_opt_pp_success = False
-        #initiate the periodic process
-        self.process_opt_pp()
-        return
-        
-    def _process_bid_pp(self, pp_msg):
-        self._bid_pp_msg_latest = copy(pp_msg)
-        self.process_bid_pp()
-        return
-        
-    #this is a perodic function that keeps trying to apply the new pp till success
-    def process_opt_pp(self):
-        if self._process_opt_pp_success: return
-            
-        self._apply_pricing_policy()
-        
-        if self._process_opt_pp_success:
-            _log.debug('unable to process_opt_pp()'
-                                + ', will try again in {} sec'.format(self._period_process_pp))
-            return
-            
-        _log.info("New Price Point processed.")
-        #on successful process of apply_pricing_policy with the latest opt pp, current = latest
-        self._opt_pp_msg_current = copy(self._opt_pp_msg_latest)
-        self._price_point_current = copy(self._price_point_latest)
-        self._process_opt_pp_success = True
-        return
-        
-    def _apply_pricing_policy(self):
-        _log.debug("_apply_pricing_policy()")
-        
-        #apply for ambient ac
-        tsp = self._compute_new_tsp(self._price_point_latest)
-        _log.debug('New Ambient AC Setpoint: {:0.1f}'.format( tsp))
-        self._rpcset_zone_tsp(tsp)
-        if not isclose(tsp, self._zone_tsp, EPSILON):
-            self._process_opt_pp_success = False
-            
-        #apply for ambient lightinh
-        lsp = self._compute_new_lsp(self._price_point_latest)
-        _log.debug('New Ambient Lighting Setpoint: {:0.1f}'.format( lsp))
-        self._rpcset_zone_lsp(lsp)
-        if not isclose(lsp, self._zone_lsp, EPSILON):
-            self._process_opt_pp_success = False
-        return
-        
-    #compute new zone temperature setpoint from price functions
-    def _compute_new_tsp(self, pp):
-        pp = 0 if pp < 0 else 1 if pp > 1 else pp
-        
-        pf_idx = self._pf_zn_ac['pf_idx']
-        pf_roundup = self._pf_zn_ac['pf_roundup']
-        pf_coefficients = self._pf_zn_ac['pf_coefficients']
-        
-        a = pf_coefficients[pf_idx]['a']
-        b = pf_coefficients[pf_idx]['b']
-        c = pf_coefficients[pf_idx]['c']
-        
-        tsp = a*pp**2 + b*pp + c
-        return mround(tsp, pf_roundup)
-        
-    #compute new zone lighting setpoint from price functions
-    def _compute_new_lsp(self, pp):
-        pp = 0 if pp < 0 else 1 if pp > 1 else pp
-        
-        pf_idx = self._pf_zn_light['pf_idx']
-        pf_roundup = self._pf_zn_light['pf_roundup']
-        pf_coefficients = self._pf_zn_light['pf_coefficients']
-        
-        a = pf_coefficients[pf_idx]['a']
-        b = pf_coefficients[pf_idx]['b']
-        c = pf_coefficients[pf_idx]['c']
-        
-        lsp = a*pp**2 + b*pp + c
-        return mround(lsp, pf_roundup)
-        
     # change ambient temperature set point
     def _rpcset_zone_tsp(self, tsp):
         #_log.debug('_rpcset_zone_tsp()')
@@ -545,6 +435,111 @@ class ZoneController(Agent):
         publish_to_bus(self, pubTopic, pubMsg)
         return
         
+    def on_new_price(self, peer, sender, bus,  topic, headers, message):
+        if sender not in self._valid_senders_list_pp: return
+        
+        #check message type before parsing
+        if not check_msg_type(message, MessageType.price_point): return False
+            
+        valid_senders_list = self._valid_senders_list_pp
+        minimum_fields = ['msg_type', 'value', 'value_data_type', 'units', 'price_id']
+        validate_fields = ['value', 'units', 'price_id', 'isoptimal', 'duration', 'ttl']
+        valid_price_ids = []
+        (success, pp_msg) = valid_bustopic_msg(sender, valid_senders_list
+                                                , minimum_fields
+                                                , validate_fields
+                                                , valid_price_ids
+                                                , message)
+        if not success or pp_msg is None: return
+        else: _log.debug('New pp msg on the local-bus, topic: {}'.format(topic))
+        
+        if pp_msg.get_isoptimal():
+            _log.debug('***** New optimal price point from pca: {:0.2f}'.format(pp_msg.get_value())
+                                        + ' , price_id: {}'.format(pp_msg.get_price_id()))
+            self._process_opt_pp(pp_msg)
+        else:
+            _log.debug('***** New bid price point from pca: {:0.2f}'.format(pp_msg.get_value())
+                                        + ' , price_id: {}'.format(pp_msg.get_price_id()))
+            self._process_bid_pp(pp_msg)
+            
+        return
+        
+    def _process_opt_pp(self, pp_msg):
+        self._opt_pp_msg_latest = copy(pp_msg)
+        self._price_point_latest = pp_msg.get_value()
+        
+        #any process that failed to apply pp sets this flag False
+        self._process_opt_pp_success = False
+        #initiate the periodic process
+        self.process_opt_pp()
+        return
+        
+    #this is a perodic function that keeps trying to apply the new pp till success
+    def process_opt_pp(self):
+        if self._process_opt_pp_success: return
+            
+        self._apply_pricing_policy()
+        
+        if self._process_opt_pp_success:
+            _log.debug('unable to process_opt_pp()'
+                                + ', will try again in {} sec'.format(self._period_process_pp))
+            return
+            
+        _log.info("New Price Point processed.")
+        #on successful process of apply_pricing_policy with the latest opt pp, current = latest
+        self._opt_pp_msg_current = copy(self._opt_pp_msg_latest)
+        self._price_point_current = copy(self._price_point_latest)
+        self._process_opt_pp_success = True
+        return
+        
+    def _apply_pricing_policy(self):
+        _log.debug("_apply_pricing_policy()")
+        
+        #apply for ambient ac
+        tsp = self._compute_new_tsp(self._price_point_latest)
+        _log.debug('New Ambient AC Setpoint: {:0.1f}'.format( tsp))
+        self._rpcset_zone_tsp(tsp)
+        if not isclose(tsp, self._zone_tsp, EPSILON):
+            self._process_opt_pp_success = False
+            
+        #apply for ambient lightinh
+        lsp = self._compute_new_lsp(self._price_point_latest)
+        _log.debug('New Ambient Lighting Setpoint: {:0.1f}'.format( lsp))
+        self._rpcset_zone_lsp(lsp)
+        if not isclose(lsp, self._zone_lsp, EPSILON):
+            self._process_opt_pp_success = False
+        return
+        
+    #compute new zone temperature setpoint from price functions
+    def _compute_new_tsp(self, pp):
+        pp = 0 if pp < 0 else 1 if pp > 1 else pp
+        
+        pf_idx = self._pf_zn_ac['pf_idx']
+        pf_roundup = self._pf_zn_ac['pf_roundup']
+        pf_coefficients = self._pf_zn_ac['pf_coefficients']
+        
+        a = pf_coefficients[pf_idx]['a']
+        b = pf_coefficients[pf_idx]['b']
+        c = pf_coefficients[pf_idx]['c']
+        
+        tsp = a*pp**2 + b*pp + c
+        return mround(tsp, pf_roundup)
+        
+    #compute new zone lighting setpoint from price functions
+    def _compute_new_lsp(self, pp):
+        pp = 0 if pp < 0 else 1 if pp > 1 else pp
+        
+        pf_idx = self._pf_zn_light['pf_idx']
+        pf_roundup = self._pf_zn_light['pf_roundup']
+        pf_coefficients = self._pf_zn_light['pf_coefficients']
+        
+        a = pf_coefficients[pf_idx]['a']
+        b = pf_coefficients[pf_idx]['b']
+        c = pf_coefficients[pf_idx]['c']
+        
+        lsp = a*pp**2 + b*pp + c
+        return mround(lsp, pf_roundup)
+        
     #perodic function to publish active power
     def publish_opt_tap(self):
         #compute total active power and publish to local/energydemand
@@ -580,6 +575,11 @@ class ZoneController(Agent):
         tap += (0 if cooling_ap == E_UNKNOWN_CCE else cooling_ap)
         tap += (0 if lighting_ap == E_UNKNOWN_CLE else lighting_ap)
         return tap
+        
+    def _process_bid_pp(self, pp_msg):
+        self._bid_pp_msg_latest = copy(pp_msg)
+        self.process_bid_pp()
+        return
         
     def process_bid_pp(self):
         self.publish_bid_ted()
