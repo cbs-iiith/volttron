@@ -75,7 +75,6 @@ class BuildingController(Agent):
     #initialized  during __init__ from config
     _period_read_data = None
     _period_process_pp = None
-    _price_point_current = None
     _price_point_latest = None
     
     _vb_vip_identity = None
@@ -205,7 +204,6 @@ class BuildingController(Agent):
     def _config_get_init_values(self):
         self._period_read_data = self.config.get('period_read_data', 30)
         self._period_process_pp = self.config.get('period_process_pp', 10)
-        self._price_point_current = self.config.get('default_base_price', 0.1)
         self._price_point_latest = self.config.get('price_point_latest', 0.2)
         return
         
@@ -300,7 +298,6 @@ class BuildingController(Agent):
         _log.info("New Price Point processed.")
         #on successful process of apply_pricing_policy with the latest opt pp, current = latest
         self._opt_pp_msg_current = copy(self._opt_pp_msg_latest)
-        self._price_point_current = copy(self._price_point_latest)
         self._process_opt_pp_success = True
         return
         
