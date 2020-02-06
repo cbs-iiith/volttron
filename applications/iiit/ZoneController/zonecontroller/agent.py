@@ -330,7 +330,7 @@ class ZoneController(Agent):
         #apply for ambient ac
         tsp = self._compute_new_tsp(self._price_point_latest)
         _log.debug('New Ambient AC Setpoint: {:0.1f}'.format( tsp))
-        self.setRmTsp(tsp)
+        self._rpcset_zone_tsp(tsp)
         if not isclose(tsp, self._zone_tsp, EPSILON):
             self._process_opt_pp_success = False
             
@@ -586,7 +586,7 @@ class ZoneController(Agent):
     #calculate total active power (tap)
     def _calc_total_act_pwr(self):
         #_log.debug('_calc_total_act_pwr()')
-        
+        tap = 0
         #zone lighting + ac
         cooling_ap = self._rpcget_zone_cooling_power()
         lighting_ap = self._rpcget_zone_lighting_power() 
@@ -629,6 +629,7 @@ class ZoneController(Agent):
         #_log.debug('_calc_total_energy_demand()')
         #TODO: Sam
         #get actual tsp from energy functions
+        ted = 0
         tsp = self._zone_tsp
         if isclose(tsp, 22.0, EPSILON):
             ted = 6500
