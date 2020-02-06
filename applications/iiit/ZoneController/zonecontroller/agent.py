@@ -261,6 +261,16 @@ class ZoneController(Agent):
         _log.debug("EOF Testing")
         return
         
+    '''
+        Functionality related to the controller
+        
+        1. control the local actuators
+                get/set various set point / levels / speeds
+        2. local sensors
+                report the sensors data at regular interval
+        3. run necessary traditional control algorithm (PID, on/off, etc.,)
+        
+    '''
     # change ambient temperature set point
     def _rpcset_zone_tsp(self, tsp):
         #_log.debug('_rpcset_zone_tsp()')
@@ -423,18 +433,26 @@ class ZoneController(Agent):
         
     def _publish_zone_tsp(self, tsp):
         #_log.debug('_publish_zone_tsp()')
-        pubTopic = self._root_topic+"/rm_tsp"
+        pubTopic = self._root_topic + '/rm_tsp'
         pubMsg = [tsp, {'units': 'celcius', 'tz': 'UTC', 'type': 'float'}]
         publish_to_bus(self, pubTopic, pubMsg)
         return
         
     def _publish_zone_lsp(self, lsp):
         #_log.debug('_publish_zone_lsp()')
-        pubTopic = self._root_topic+"/rm_lsp"
+        pubTopic = self._root_topic + '/rm_lsp'
         pubMsg = [lsp, {'units': '%', 'tz': 'UTC', 'type': 'float'}]
         publish_to_bus(self, pubTopic, pubMsg)
         return
         
+    '''
+        Functionality related to the market mechanisms
+        
+        1. receive new prices (optimal pp or bid pp) from the pca
+        2. if opt pp, apply pricing policy by computing the new setpoint based on price functions
+        3. if bid pp, compute the new bid energy demand
+        
+    '''
     def on_new_price(self, peer, sender, bus,  topic, headers, message):
         if sender not in self._valid_senders_list_pp: return
         
