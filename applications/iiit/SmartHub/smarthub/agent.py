@@ -209,7 +209,7 @@ class SmartHub(Agent):
         self._voltState = 1
         
         _log.debug('switch on debug led')
-        self.setShDeviceState(SH_DEVICE_LED_DEBUG, SH_DEVICE_STATE_ON, SCHEDULE_NOT_AVLB)
+        self._set_sh_device_state(SH_DEVICE_LED_DEBUG, SH_DEVICE_STATE_ON, SCHEDULE_NOT_AVLB)
         
         return
         
@@ -242,12 +242,23 @@ class SmartHub(Agent):
                         )
             if rpcdata.method == "ping":
                 result = True
-            elif rpcdata.method == "setShDeviceState" and header['REQUEST_METHOD'] == 'POST':
-                result = self.setShDeviceState(message)
+            elif rpcdata.method == "rpc_setShDeviceState" and header['REQUEST_METHOD'] == 'POST':
+                args = {'deviceId': rpcdata.params['deviceId'], 
+                        'state': rpcdata.params['newState'],
+                        'schdExist': SCHEDULE_NOT_AVLB
+                        }
+                result = self._set_sh_device_state(**args)
             elif rpcdata.method == "rpc_setShDeviceLevel" and header['REQUEST_METHOD'] == 'POST':
-                result = self.setShDeviceLevel(**args)
+                args = {'deviceId': rpcdata.params['deviceId'], 
+                        'level': rpcdata.params['newLevel'],
+                        'schdExist': SCHEDULE_NOT_AVLB
+                        }
+                result = self._set_sh_device_level(**args)
             elif rpcdata.method == "rpc_setShDeviceThPP" and header['REQUEST_METHOD'] == 'POST':
-                result = self.setShDeviceThPP(**args)
+                args = {'deviceId': rpcdata.params['deviceId'], 
+                        'thPP': rpcdata.params['newThPP']
+                        }
+                result = self._set_sh_device_th_pp(**args)
             else:
                 return jsonrpc.json_error(rpcdata.id, METHOD_NOT_FOUND,
                                             'Invalid method {}'.format(rpcdata.method))
@@ -260,15 +271,19 @@ class SmartHub(Agent):
             return jsonrpc.json_error(rpcdata.id, UNHANDLED_EXCEPTION, e)
         return jsonrpc.json_result(rpcdata.id, result)
         
+    @RPC.export
+    def ping(self):
+        return True
+        
     def _stopVolt(self):
         _log.debug('_stopVolt()')
         task_id = str(randint(0, 99999999))
         result = get_task_schdl(self, task_id,'iiit/cbs/zonecontroller')
         if result['result'] == 'SUCCESS':
             try:
-                self.setShDeviceState(SH_DEVICE_LED_DEBUG, SH_DEVICE_STATE_OFF, SCHEDULE_AVLB)
-                self.setShDeviceState(SH_DEVICE_LED, SH_DEVICE_STATE_OFF, SCHEDULE_AVLB)
-                self.setShDeviceState(SH_DEVICE_FAN, SH_DEVICE_STATE_OFF, SCHEDULE_AVLB)
+                self._set_sh_device_state(SH_DEVICE_LED_DEBUG, SH_DEVICE_STATE_OFF, SCHEDULE_AVLB)
+                self._set_sh_device_state(SH_DEVICE_LED, SH_DEVICE_STATE_OFF, SCHEDULE_AVLB)
+                self._set_sh_device_state(SH_DEVICE_FAN, SH_DEVICE_STATE_OFF, SCHEDULE_AVLB)
             except Exception as e:
                 _log.exception ("Expection: Could not contact actuator. Is it running?")
                 pass
@@ -313,80 +328,80 @@ class SmartHub(Agent):
     def _test_led_debug(self):
         _log.debug('switch on debug led')
         
-        self.setShDeviceState(SH_DEVICE_LED_DEBUG, SH_DEVICE_STATE_ON, SCHEDULE_NOT_AVLB)
+        self._set_sh_device_state(SH_DEVICE_LED_DEBUG, SH_DEVICE_STATE_ON, SCHEDULE_NOT_AVLB)
         time.sleep(1)
 
         _log.debug('switch off debug led')
-        self.setShDeviceState(SH_DEVICE_LED_DEBUG, SH_DEVICE_STATE_OFF, SCHEDULE_NOT_AVLB)
+        self._set_sh_device_state(SH_DEVICE_LED_DEBUG, SH_DEVICE_STATE_OFF, SCHEDULE_NOT_AVLB)
         time.sleep(1)
 
         _log.debug('switch on debug led')
-        self.setShDeviceState(SH_DEVICE_LED_DEBUG, SH_DEVICE_STATE_ON, SCHEDULE_NOT_AVLB)
+        self._set_sh_device_state(SH_DEVICE_LED_DEBUG, SH_DEVICE_STATE_ON, SCHEDULE_NOT_AVLB)
         time.sleep(1)
 
         _log.debug('switch off debug led')
-        self.setShDeviceState(SH_DEVICE_LED_DEBUG, SH_DEVICE_STATE_OFF, SCHEDULE_NOT_AVLB)
+        self._set_sh_device_state(SH_DEVICE_LED_DEBUG, SH_DEVICE_STATE_OFF, SCHEDULE_NOT_AVLB)
         time.sleep(1)
         
         _log.debug('switch on debug led')
-        self.setShDeviceState(SH_DEVICE_LED_DEBUG, SH_DEVICE_STATE_ON, SCHEDULE_NOT_AVLB)
+        self._set_sh_device_state(SH_DEVICE_LED_DEBUG, SH_DEVICE_STATE_ON, SCHEDULE_NOT_AVLB)
         time.sleep(1)
 
         _log.debug('switch off debug led')
-        self.setShDeviceState(SH_DEVICE_LED_DEBUG, SH_DEVICE_STATE_OFF, SCHEDULE_NOT_AVLB)
+        self._set_sh_device_state(SH_DEVICE_LED_DEBUG, SH_DEVICE_STATE_OFF, SCHEDULE_NOT_AVLB)
         time.sleep(1)
         
         return
         
     def _test_led(self):
         _log.debug('switch on led')
-        self.setShDeviceState(SH_DEVICE_LED, SH_DEVICE_STATE_ON, SCHEDULE_NOT_AVLB)
+        self._set_sh_device_state(SH_DEVICE_LED, SH_DEVICE_STATE_ON, SCHEDULE_NOT_AVLB)
         time.sleep(1)
 
         _log.debug('change led level 0.3')
-        self.setShDeviceLevel(SH_DEVICE_LED, 0.3, SCHEDULE_NOT_AVLB)
+        self._set_sh_device_level(SH_DEVICE_LED, 0.3, SCHEDULE_NOT_AVLB)
         time.sleep(1)
 
         _log.debug('change led level 0.6')
-        self.setShDeviceLevel(SH_DEVICE_LED, 0.6, SCHEDULE_NOT_AVLB)
+        self._set_sh_device_level(SH_DEVICE_LED, 0.6, SCHEDULE_NOT_AVLB)
         time.sleep(1)
 
         _log.debug('change led level 0.9')
-        self.setShDeviceLevel(SH_DEVICE_LED, 0.9, SCHEDULE_NOT_AVLB)
+        self._set_sh_device_level(SH_DEVICE_LED, 0.9, SCHEDULE_NOT_AVLB)
         time.sleep(1)
         
         _log.debug('change led level 0.4')
-        self.setShDeviceLevel(SH_DEVICE_LED, 0.4, SCHEDULE_NOT_AVLB)
+        self._set_sh_device_level(SH_DEVICE_LED, 0.4, SCHEDULE_NOT_AVLB)
         time.sleep(1)
         
         _log.debug('switch off led')
-        self.setShDeviceState(SH_DEVICE_LED, SH_DEVICE_STATE_OFF, SCHEDULE_NOT_AVLB)
+        self._set_sh_device_state(SH_DEVICE_LED, SH_DEVICE_STATE_OFF, SCHEDULE_NOT_AVLB)
         time.sleep(1)
         
         return
     def _test_fan(self):
         _log.debug('switch on fan')
-        self.setShDeviceState(SH_DEVICE_FAN, SH_DEVICE_STATE_ON, SCHEDULE_NOT_AVLB)
+        self._set_sh_device_state(SH_DEVICE_FAN, SH_DEVICE_STATE_ON, SCHEDULE_NOT_AVLB)
         time.sleep(1)
         
         _log.debug('change fan level 0.3')
-        self.setShDeviceLevel(SH_DEVICE_FAN, 0.3, SCHEDULE_NOT_AVLB)
+        self._set_sh_device_level(SH_DEVICE_FAN, 0.3, SCHEDULE_NOT_AVLB)
         time.sleep(1)
 
         _log.debug('change fan level 0.6')
-        self.setShDeviceLevel(SH_DEVICE_FAN, 0.6, SCHEDULE_NOT_AVLB)
+        self._set_sh_device_level(SH_DEVICE_FAN, 0.6, SCHEDULE_NOT_AVLB)
         time.sleep(1)
 
         _log.debug('change fan level 0.9')
-        self.setShDeviceLevel(SH_DEVICE_FAN, 0.9, SCHEDULE_NOT_AVLB)
+        self._set_sh_device_level(SH_DEVICE_FAN, 0.9, SCHEDULE_NOT_AVLB)
         time.sleep(1)
         
         _log.debug('change fan level 0.4')
-        self.setShDeviceLevel(SH_DEVICE_FAN, 0.4, SCHEDULE_NOT_AVLB)
+        self._set_sh_device_level(SH_DEVICE_FAN, 0.4, SCHEDULE_NOT_AVLB)
         time.sleep(1)
         
         _log.debug('switch off fan')
-        self.setShDeviceState(SH_DEVICE_FAN, SH_DEVICE_STATE_OFF, SCHEDULE_NOT_AVLB)
+        self._set_sh_device_state(SH_DEVICE_FAN, SH_DEVICE_STATE_OFF, SCHEDULE_NOT_AVLB)
         time.sleep(1)
         
         return
@@ -508,13 +523,13 @@ class SmartHub(Agent):
             return level
             
         if schdExist == SCHEDULE_AVLB: 
-            level = self.rpc_getShDeviceLevel(deviceId);
+            level = self._rpcget_sh_device_level(deviceId);
         elif schdExist == SCHEDULE_NOT_AVLB:
             task_id = str(randint(0, 99999999))
             result = ispace_utils.get_task_schdl(self, task_id, 'iiit/cbs/smarthub')
             try:
                 if result['result'] == 'SUCCESS':
-                    level = self.rpc_getShDeviceLevel(deviceId);
+                    level = self._rpcget_sh_device_level(deviceId);
             except Exception as e:
                 _log.exception ("Expection: no task schdl for getting device level")
                 #print(e)
@@ -529,8 +544,8 @@ class SmartHub(Agent):
             
         return level
                 
-    def setShDeviceState(self, deviceId, state, schdExist):
-        #_log.debug('setShDeviceState()')
+    def _set_sh_device_state(self, deviceId, state, schdExist):
+        #_log.debug('_set_sh_device_state()')
         if not self._validDeviceAction(deviceId, AT_SET_STATE):
             _log.exception ("Expection: not a valid device to change state, deviceId: " + str(deviceId))
             return
@@ -540,13 +555,13 @@ class SmartHub(Agent):
             return
 
         if schdExist == SCHEDULE_AVLB: 
-            self.rpc_setShDeviceState(deviceId, state);
+            self._rpcset_sh_device_state(deviceId, state);
         elif schdExist == SCHEDULE_NOT_AVLB:
             task_id = str(randint(0, 99999999))
             result = ispace_utils.get_task_schdl(self, task_id, 'iiit/cbs/smarthub')
             try:
                 if result['result'] == 'SUCCESS':
-                    self.rpc_setShDeviceState(deviceId, state);
+                    self._rpcset_sh_device_state(deviceId, state);
             except Exception as e:
                 _log.exception ("Expection: no task schdl for changing device state")
                 #print(e)
@@ -560,8 +575,8 @@ class SmartHub(Agent):
             return
         return
         
-    def setShDeviceLevel(self, deviceId, level, schdExist):
-        #_log.debug('setShDeviceLevel()')
+    def _set_sh_device_level(self, deviceId, level, schdExist):
+        #_log.debug('_set_sh_device_level()')
         if not self._validDeviceAction( deviceId, AT_SET_LEVEL):
             _log.exception ("Expection: not a valid device to change level, deviceId: " + str(deviceId))
             return
@@ -571,13 +586,13 @@ class SmartHub(Agent):
             return
 
         if schdExist == SCHEDULE_AVLB: 
-            self.rpc_setShDeviceLevel(deviceId, level);
+            self._rpcset_sh_device_level(deviceId, level);
         elif schdExist == SCHEDULE_NOT_AVLB:
             task_id = str(randint(0, 99999999))
             result = ispace_utils.get_task_schdl(self, task_id, 'iiit/cbs/smarthub')
             try:
                 if result['result'] == 'SUCCESS':
-                    self.rpc_setShDeviceLevel(deviceId, level);
+                    self._rpcset_sh_device_level(deviceId, level);
             except Exception as e:
                 _log.exception ("Expection: no task schdl for changing device level")
                 #print(e)
@@ -591,7 +606,7 @@ class SmartHub(Agent):
             return
         return
         
-    def setShDeviceThPP(self, deviceId, thPP):
+    def _set_sh_device_th_pp(self, deviceId, thPP):
         if not self._validDeviceAction(deviceId, AT_SET_THPP):
             _log.exception ("Expection: not a valid device to change thPP, deviceId: " + str(deviceId))
             return
@@ -863,7 +878,7 @@ class SmartHub(Agent):
                             + '({0:.2f}), '.format(shDevicesPP_th)
                             + 'Switching-Off Power'
                             )
-                self.setShDeviceState(deviceId, SH_DEVICE_STATE_OFF, schdExist)
+                self._set_sh_device_state(deviceId, SH_DEVICE_STATE_OFF, schdExist)
                 if not self._shDevicesState[deviceId] == SH_DEVICE_STATE_OFF:
                     self._process_opt_pp_success = True
             #else:
@@ -874,14 +889,14 @@ class SmartHub(Agent):
                         + '({0:.2f}), '.format(shDevicesPP_th)
                         + 'Switching-On Power'
                         )
-            self.setShDeviceState(deviceId, SH_DEVICE_STATE_ON, schdExist)
+            self._set_sh_device_state(deviceId, SH_DEVICE_STATE_ON, schdExist)
             if not self._shDevicesState[deviceId] == SH_DEVICE_STATE_ON:
                 self._process_opt_pp_success = True
                 
             if deviceId == SH_DEVICE_FAN:
                 fan_speed = self._get_new_fan_speed(self._price_point_latest)/100
                 _log.info ( "New Fan Speed: {0:.4f}".format(fan_speed))
-                self.setShDeviceLevel(SH_DEVICE_FAN, fan_speed, schdExist)
+                self._set_sh_device_level(SH_DEVICE_FAN, fan_speed, schdExist)
                 if not ispace_utils.isclose(fan_speed, self._shDevicesLevel[deviceId], EPSILON):
                     self._process_opt_pp_success = True
 
@@ -923,7 +938,7 @@ class SmartHub(Agent):
             return E_UNKNOWN_STATE
         return int(device_level)
         
-    def rpc_setShDeviceState(self, deviceId, state):
+    def _rpcset_sh_device_state(self, deviceId, state):
         if not self._validDeviceAction(deviceId, AT_SET_STATE):
             _log.exception ("Expection: not a valid device to change state, deviceId: " + str(deviceId))
             return
@@ -936,7 +951,7 @@ class SmartHub(Agent):
                     'iiit/cbs/smarthub/' + endPoint,
                     state).get(timeout=10)
         except gevent.Timeout:
-            _log.exception("Expection: gevent.Timeout in rpc_setShDeviceState()")
+            _log.exception("Expection: gevent.Timeout in _rpcset_sh_device_state()")
             return
         except Exception as e:
             _log.exception ("Expection: Could not contact actuator. Is it running?")
@@ -945,8 +960,8 @@ class SmartHub(Agent):
         self._updateShDeviceState(deviceId, endPoint,state)
         return
         
-    def rpc_getShDeviceLevel(self, deviceId):
-        #_log.debug("rpc_getShDeviceLevel()")
+    def _rpcget_sh_device_level(self, deviceId):
+        #_log.debug("_rpcget_sh_device_level()")
         if not self._validDeviceAction(deviceId, AT_GET_LEVEL):
             _log.exception ("Expection: not a valid device to get level, deviceId: " + str(deviceId))
             return E_UNKNOWN_LEVEL
@@ -958,7 +973,7 @@ class SmartHub(Agent):
                     'iiit/cbs/smarthub/' + endPoint).get(timeout=10)
             return device_level
         except gevent.Timeout:
-            _log.exception("Expection: gevent.Timeout in rpc_getShDeviceLevel()")
+            _log.exception("Expection: gevent.Timeout in _rpcget_sh_device_level()")
             return E_UNKNOWN_LEVEL
         except Exception as e:
             _log.exception ("Expection: Could not contact actuator. Is it running?")
@@ -966,7 +981,7 @@ class SmartHub(Agent):
             return E_UNKNOWN_LEVEL
         return E_UNKNOWN_LEVEL
         
-    def rpc_setShDeviceLevel(self, deviceId, level):
+    def _rpcset_sh_device_level(self, deviceId, level):
         if not self._validDeviceAction(deviceId, AT_SET_LEVEL):
             _log.exception ("Expection: not a valid device to change level, deviceId: " + str(deviceId))
             return
@@ -982,7 +997,7 @@ class SmartHub(Agent):
             self._updateShDeviceLevel(deviceId, endPoint,level)
             return
         except gevent.Timeout:
-            _log.exception("Expection: gevent.Timeout in rpc_setShDeviceLevel()")
+            _log.exception("Expection: gevent.Timeout in _rpcset_sh_device_level()")
             return
         except Exception as e:
             _log.exception ("Expection: Could not contact actuator. Is it running?")
@@ -1010,7 +1025,7 @@ class SmartHub(Agent):
         #_log.debug('_updateShDeviceLevel()')
         
         _log.debug('level {0:0.4f}'.format( level))
-        device_level = self.rpc_getShDeviceLevel(deviceId)
+        device_level = self._rpcget_sh_device_level(deviceId)
         #check if the level really updated at the h/w, only then proceed with new level
         if ispace_utils.isclose(level, device_level, EPSILON):
             _log.debug('same value!!!')
