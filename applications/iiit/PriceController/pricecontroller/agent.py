@@ -87,7 +87,7 @@ class PriceController(Agent):
     
     def __init__(self, config_path, **kwargs):
         super(PriceController, self).__init__(**kwargs)
-        _log.debug("vip_identity: " + self.core.identity)
+        _log.debug('vip_identity: ' + self.core.identity)
         
         self.config = utils.load_config(config_path)
         return
@@ -136,7 +136,7 @@ class PriceController(Agent):
         
         #register rpc routes with MASTER_WEB
         #register_rpc_route is a blocking call
-        register_rpc_route(self, "pca", "rpc_from_net", 5)
+        register_rpc_route(self, 'pca', 'rpc_from_net', 5)
         
         self._us_senders_list = ['iiit.volttronbridge', 'iiit.pricepoint']
         self._ds_senders_list = ['iiit.volttronbridge']
@@ -154,10 +154,10 @@ class PriceController(Agent):
         self.external_vip_identity = None
         
         #subscribing to _topic_price_point_us
-        self.vip.pubsub.subscribe("pubsub", self._topic_price_point_us, self.on_new_us_pp)
+        self.vip.pubsub.subscribe('pubsub', self._topic_price_point_us, self.on_new_us_pp)
         
         #subscribing to ds energy demand, vb publishes ed from registered ds to this topic
-        self.vip.pubsub.subscribe("pubsub", self._topic_energy_demand_ds, self.on_ds_ed)
+        self.vip.pubsub.subscribe('pubsub', self._topic_energy_demand_ds, self.on_ds_ed)
         
         #perodically publish total active power (tap) to local/energydemand
         #(vb RPCs this value to the next level)
@@ -167,7 +167,7 @@ class PriceController(Agent):
         self.core.periodic(self._period_read_data, self.aggregator_us_tap, wait=None)
 
         #subscribing to topic_price_point_extr
-        self.vip.pubsub.subscribe("pubsub", self._topic_extrn_pp, self.on_new_extrn_pp)
+        self.vip.pubsub.subscribe('pubsub', self._topic_extrn_pp, self.on_new_extrn_pp)
         
         self._published_us_bid_ted = True
         #at regular interval check if all bid ds ed received, 
@@ -214,13 +214,13 @@ class PriceController(Agent):
                         + ', rpc method: {}'.format(rpcdata.method)
                         + ', rpc params: {}'.format(rpcdata.params)
                         )
-            if rpcdata.method == "ping":
+            if rpcdata.method == 'ping':
                 result = True
-            elif rpcdata.method == "state" and header['REQUEST_METHOD'] == 'POST':
+            elif rpcdata.method == 'state' and header['REQUEST_METHOD'] == 'POST':
                 result = self._pca_mode(rpcdata.id, message)
-            elif rpcdata.method == "mode" and header['REQUEST_METHOD'] == 'POST':
+            elif rpcdata.method == 'mode' and header['REQUEST_METHOD'] == 'POST':
                 result = self._pca_mode(rpcdata.id, message)
-            elif rpcdata.method == "external-optimizer" and header['REQUEST_METHOD'] == 'POST':
+            elif rpcdata.method == 'external-optimizer' and header['REQUEST_METHOD'] == 'POST':
                 result = self._register_external_opt_agent(rpcdata.id, message)
             else:
                 return jsonrpc.json_error(rpcdata.id, METHOD_NOT_FOUND,
@@ -294,11 +294,11 @@ class PriceController(Agent):
     #    return
         
     def on_new_extrn_pp(self, peer, sender, bus,  topic, headers, message):
-        if self._pp_optimize_option != "EXTERN_OPT":
+        if self._pp_optimize_option != 'EXTERN_OPT':
             return
         #check if this agent is not diabled
         if self._pca_standby:
-            _log.info("self.pca_standby: " + str(self._pca_standby) + ", do nothing!!!")
+            _log.info('self.pca_standby: ' + str(self._pca_standby) + ', do nothing!!!')
             return
             
         self.tmp_bustopic_pp_msg = None
@@ -335,11 +335,11 @@ class PriceController(Agent):
         return
         
     def on_new_us_pp(self, peer, sender, bus,  topic, headers, message):
-        if self._pca_mode not in ["PASS_ON_PP", 'DEFAULT_OPT']:
+        if self._pca_mode not in ['PASS_ON_PP', 'DEFAULT_OPT']:
             return
         #check if this agent is not diabled
         if self._pca_standby:
-            _log.info("self.pca_standby: " + str(self._pca_standby) + ", do nothing!!!")
+            _log.info('self.pca_standby: ' + str(self._pca_standby) + ', do nothing!!!')
             return False
             
         self.tmp_bustopic_pp_msg = None
@@ -375,7 +375,7 @@ class PriceController(Agent):
         if not pp_msg.get_isoptimal():
             self._published_us_bid_ted = False
             
-        if self._pca_mode == "PASS_ON_PP":
+        if self._pca_mode == 'PASS_ON_PP':
             _log.info('[LOG] PCA mode: PASS_ON_PP')
             _log.debug('post to the local-bus...')
             pub_topic =  self._topic_price_point
@@ -385,7 +385,7 @@ class PriceController(Agent):
             _log.debug('Done!!!')
             return
             
-        if self._pca_mode == "DEFAULT_OPT":
+        if self._pca_mode == 'DEFAULT_OPT':
             #list for pp_msg
             new_pp_msg_list = self._computeNewPrice()
             self.local_bid_pp_msg_list = copy(new_pp_msg_list)
@@ -564,7 +564,7 @@ class PriceController(Agent):
     def on_ds_ed(self, peer, sender, bus,  topic, headers, message):
         #check if this agent is not diabled
         if self._pca_standby:
-            _log.info("self.pca_standby: " + str(self._pca_standby) + ", do nothing!!!")
+            _log.info('self.pca_standby: ' + str(self._pca_standby) + ', do nothing!!!')
             return False
         # 1. validate message
         # 2. check againt valid pp ids
@@ -788,7 +788,7 @@ class PriceController(Agent):
                                     
     def _get_valid_price_ids(self):
         price_ids = []
-        if self._pca_mode == "PASS_ON_PP":
+        if self._pca_mode == 'PASS_ON_PP':
             price_ids = [self.us_opt_pp_msg.get_price_id()
                             , self.us_bid_pp_msg.get_price_id()
                             ]
