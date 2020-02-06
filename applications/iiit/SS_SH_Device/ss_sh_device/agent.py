@@ -1,15 +1,15 @@
 # -*- coding: utf-8 -*- {{{
 # vim: set fenc=utf-8 ft=python sw=4 ts=4 sts=4 et:
-#
+# 
 # Copyright (c) 2020, Sam Babu, Godithi.
 # All rights reserved.
-#
-#
+# 
+# 
 # IIIT Hyderabad
 
-#}}}
+# }}}
 
-#Sam
+# Sam
 
 import datetime
 import logging
@@ -129,7 +129,7 @@ def ss_sh_device(config_path, **kwargs):
                 return
                 
             if not sh_on_btry and new_price_point > self.sh_th_pp and sh_btry_th == 1:
-                #change th_pp to max for the plug to which hub is connected (ss will switch-off the plug)
+                # change th_pp to max for the plug to which hub is connected (ss will switch-off the plug)
                 plugOff = self.vip.rpc.call('iiit.smartstrip'
                                             , 'setThresholdPP'
                                             , self.sh_plug_id
@@ -140,11 +140,11 @@ def ss_sh_device(config_path, **kwargs):
                     sh_on_btry = True
                     sh_on_btry_start_time = datetime.datetime.utcnow()
                 else:
-                    #dont know what to do
+                    # dont know what to do
                     pass
                     
             if sh_on_btry and new_price_point <= self.sh_th_pp:
-                #change th_pp to min for the plug to which hub is connected (ss will switch-on the plug)
+                # change th_pp to min for the plug to which hub is connected (ss will switch-on the plug)
                 plugOn = self.vip.rpc.call('iiit.smartstrip'
                                             , 'setThresholdPP'
                                             , self.sh_plug_id
@@ -155,7 +155,7 @@ def ss_sh_device(config_path, **kwargs):
                     sh_on_btry = False
                     sh_on_grid_start_time = datetime.datetime.utcnow()
                 else:
-                    #dont know what to do
+                    # dont know what to do
                     pass
                     
             self._price_point = new_price_point
@@ -165,7 +165,7 @@ def ss_sh_device(config_path, **kwargs):
             _log.debug('_pingSmartHub()')
             url_root = 'http://' + self.sh_ip_addr + ':' + str(self.sh_port) + '/smarthub'
             if not sh_on_btry or self.do_rpc(url_root, 'rpc_ping'):
-                #hub is not on btry or hub is alive, do nothing
+                # hub is not on btry or hub is alive, do nothing
                 self.hub_ping_count = 0
                 return
                 

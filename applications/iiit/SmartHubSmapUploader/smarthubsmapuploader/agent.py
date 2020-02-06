@@ -1,15 +1,15 @@
 # -*- coding: utf-8 -*- {{{
 # vim: set fenc=utf-8 ft=python sw=4 ts=4 sts=4 et:
-#
+# 
 # Copyright (c) 2020, Sam Babu, Godithi.
 # All rights reserved.
-#
-#
+# 
+# 
 # IIIT Hyderabad
 
-#}}}
+# }}}
 
-#Sam
+# Sam
 
 import datetime
 import logging
@@ -44,7 +44,7 @@ API_KEY = 'u606HlEFHTeVLfpBQZkNF232wChljnLHCKBY'
 SOURCE_NAME = 'CBERD Flexlab Data V2'
 TIME_ZONE = 'Etc/UTC'
 
-#agents whose published data to volttron bus we are interested in uploading to smap
+# agents whose published data to volttron bus we are interested in uploading to smap
 SENDER_SH = 'iiit.smarthub'
 SENDER_VB = 'iiit.volttronbridge'
 SENDER_GC = 'iiit.smarthubgc'
@@ -87,9 +87,9 @@ def smarthubsmapuploader(config_path, **kwargs):
         def startup(self, sender, **kwargs):
             _log.debug('startup()')
             
-            #subscribing to sh_main_topic
+            # subscribing to sh_main_topic
             self.vip.pubsub.subscribe('pubsub', self.sh_main_topic, self.on_match_shData)
-            #subscribing to vb_main_topic
+            # subscribing to vb_main_topic
             self.vip.pubsub.subscribe('pubsub', self.vb_main_topic, self.on_match_shCurrentPP)
         
             return
@@ -113,13 +113,13 @@ def smarthubsmapuploader(config_path, **kwargs):
             _log.debug('shSmapPostData()')
             
             '''
-            #we don't want to post messages other than those
-            #published by 'iiit.smarthub' or by 'iiit.volttronbridge' or by  'iiit.smarthubgc'
+            # we don't want to post messages other than those
+            # published by 'iiit.smarthub' or by 'iiit.volttronbridge' or by  'iiit.smarthubgc'
             if sender != self.sender_sh and sender != self.sender_vb and sender != self.sender_gc:
                 _log.debug('not valid sender: ' + sender)
                 return
                 
-            #vb & gc agent id is not static 
+            # vb & gc agent id is not static 
             '''
             # Just check for it or any other messages you don't want to log here
             # and return without doing anything.            
@@ -136,9 +136,9 @@ def smarthubsmapuploader(config_path, **kwargs):
             
             if 'sensors' in topic:
                 _log.debug('shSmapPostData() - sensors')
-                #strip 'all' from the topic, don't know how to post all (lux, rh, temp, co2 & pir) to the smap
-                #so posting individually
-                #topic = (topic.split('all', 1))[0]
+                # strip 'all' from the topic, don't know how to post all (lux, rh, temp, co2 & pir) to the smap
+                # so posting individually
+                # topic = (topic.split('all', 1))[0]
                 
                 topic = '/SmartHub/' + self.sh_id + '/Sensors/lux'
                 self.smapPostSensorsData('luxlevel', topic, headers, message, msg_time)
@@ -216,7 +216,7 @@ def smarthubsmapuploader(config_path, **kwargs):
                 smap_post(self.smap_root, self.api_key, topic, units, reading_type, readings, self.source_data, self.time_zone)
                 return
             elif 'ds/energydemand' in topic:
-                #downstream smart strips energy demand
+                # downstream smart strips energy demand
                 _log.debug('smapPostSSData() - Energy Demand - SmartStrip - (DownStream) - YET TO IMPLEMENT!!!!!')
                 return
             elif 'smarthub/energydemand' in topic:

@@ -1,15 +1,15 @@
 # -*- coding: utf-8 -*- {{{
 # vim: set fenc=utf-8 ft=python sw=4 ts=4 sts=4 et:
-#
+# 
 # Copyright (c) 2020, Sam Babu, Godithi.
 # All rights reserved.
-#
-#
+# 
+# 
 # IIIT Hyderabad
 
-#}}}
+# }}}
 
-#Sam
+# Sam
 
 import datetime
 import dateutil
@@ -44,7 +44,7 @@ API_KEY = 'u606HlEFHTeVLfpBQZkNF232wChljnLHCKBY'
 SOURCE_NAME = 'CBERD Flexlab Data V2'
 TIME_ZONE = 'Etc/UTC'
 
-#agents whose published data to volttron bus we are interested in uploading to smap
+# agents whose published data to volttron bus we are interested in uploading to smap
 SENDER_SS = 'iiit.smartstrip'
 SENDER_VB = 'iiit.volttronbridge'
     
@@ -107,8 +107,8 @@ def smartstripsmapuploader(config_path, **kwargs):
         def ssSmapPostData(self, peer, sender, bus, topic, headers, message):
             _log.debug('ssSmapPostData()')
             
-            #we don't want to post messages other than those
-            #published by 'iiit.smartstrip' or by 'iiit.volttronbridge' or by 'iiit.smartstripgc'
+            # we don't want to post messages other than those
+            # published by 'iiit.smartstrip' or by 'iiit.volttronbridge' or by 'iiit.smartstripgc'
             '''
             if sender != self.sender_ss and sender != self.sender_vb and sender != 'iiit.smartstripgc':
                 _log.debug('not valid sender: ' + sender)
@@ -132,8 +132,8 @@ def smartstripsmapuploader(config_path, **kwargs):
                 
             if 'meterdata' in topic:
                 _log.debug('smapPostSSData() - meterdata')
-                #strip 'all' from the topic, don't know how to post all (volt, current & apwr) to the smap
-                #so posting individually
+                # strip 'all' from the topic, don't know how to post all (volt, current & apwr) to the smap
+                # so posting individually
                 
                 topic = '/SmartStrip/' + self.ss_id + '/meterdata/voltage/' + plug_id
                 self.smapPostMeterData('voltage', topic, headers, message, msg_time)

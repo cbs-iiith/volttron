@@ -1,15 +1,15 @@
 # -*- coding: utf-8 -*- {{{
 # vim: set fenc=utf-8 ft=python sw=4 ts=4 sts=4 et:
-#
+# 
 # Copyright (c) 2020, Sam Babu, Godithi.
 # All rights reserved.
-#
-#
+# 
+# 
 # IIIT Hyderabad
 
-#}}}
+# }}}
 
-#Sam
+# Sam
 
 import datetime
 import logging
@@ -47,7 +47,7 @@ utils.setup_logging()
 _log = logging.getLogger(__name__)
 __version__ = '0.4'
 
-#checking if a floating point value is “numerically zero” by checking if it is lower than epsilon
+# checking if a floating point value is “numerically zero” by checking if it is lower than epsilon
 EPSILON = 1e-04
 
 SH_DEVICE_STATE_ON = 1
@@ -70,7 +70,7 @@ E_UNKNOWN_DEVICE = -1
 E_UNKNOWN_STATE = -2
 E_UNKNOWN_LEVEL = -3
 
-#action types
+# action types
 AT_GET_STATE = 321
 AT_GET_LEVEL = 322
 AT_SET_STATE = 323
@@ -81,10 +81,10 @@ AT_GET_THPP = 327
 AT_SET_THPP = 328
 AT_PUB_THPP = 329
 
-#these provide the average active power (Wh) of the devices, observed based on experiments data
-#for bid - calculate total energy (kWh)
-#for opt - calculate total active power (W)
-#TODO: currently using _ted for variable names for both the cases, 
+# these provide the average active power (Wh) of the devices, observed based on experiments data
+# for bid - calculate total energy (kWh)
+# for opt - calculate total active power (W)
+# TODO: currently using _ted for variable names for both the cases, 
 #       rename the variable names accordingly
 SH_BASE_ENERGY = 10
 SH_FAN_ENERGY = 8
@@ -104,7 +104,7 @@ def smarthub(config_path, **kwargs):
 class SmartHub(Agent):
     '''Smart Hub
     '''
-    #initialized  during __init__ from config
+    # initialized  during __init__ from config
     _period_read_data = None
     _period_process_pp = None
     _price_point_latest = None
@@ -117,7 +117,7 @@ class SmartHub(Agent):
     _device_id = None
     _discovery_address = None
     
-    #any process that failed to apply pp sets this flag False
+    # any process that failed to apply pp sets this flag False
     _process_opt_pp_success = False
     
     _volt_state = 0
@@ -148,58 +148,58 @@ class SmartHub(Agent):
     def startup(self, sender, **kwargs):
         _log.info('Starting SmartHub...')
         
-        #retrive self._device_id and self._discovery_address from vb
+        # retrive self._device_id and self._discovery_address from vb
         retrive_details_from_vb(self, 5)
         
-        #register rpc routes with MASTER_WEB
-        #register_rpc_route is a blocking call
+        # register rpc routes with MASTER_WEB
+        # register_rpc_route is a blocking call
         register_rpc_route(self, 'smarthub', 'rpc_from_net', 5)
         
-        #register this agent with vb as local device for posting active power & bid energy demand
-        #pca picks up the active power & energy demand bids only if registered with vb
-        #require self._vb_vip_identity, self.core.identity, self._device_id
-        #register_agent_with_vb is a blocking call
+        # register this agent with vb as local device for posting active power & bid energy demand
+        # pca picks up the active power & energy demand bids only if registered with vb
+        # require self._vb_vip_identity, self.core.identity, self._device_id
+        # register_agent_with_vb is a blocking call
         register_agent_with_vb(self, 5)
         
         self._valid_senders_list_pp = ['iiit.pricecontroller']
         
-        #any process that failed to apply pp sets this flag False
-        #setting False here to initiate applying default pp on agent start
+        # any process that failed to apply pp sets this flag False
+        # setting False here to initiate applying default pp on agent start
         self._process_opt_pp_success = False
         
-        #on successful process of apply_pricing_policy with the latest opt pp, current = latest
+        # on successful process of apply_pricing_policy with the latest opt pp, current = latest
         self._opt_pp_msg_current = get_default_pp_msg(self._discovery_address, self._device_id)
-        #latest opt pp msg received on the message bus
+        # latest opt pp msg received on the message bus
         self._opt_pp_msg_latest = get_default_pp_msg(self._discovery_address, self._device_id)
         
         self._bid_pp_msg_latest = get_default_pp_msg(self._discovery_address, self._device_id)
         
         self._run_smart_hub_test()
         
-        #get the latest values (states/levels) from h/w
+        # get the latest values (states/levels) from h/w
         self._get_initial_hw_state()
         
-        #apply pricing policy for default values
+        # apply pricing policy for default values
         self._apply_pricing_policy(SH_DEVICE_LED, SCHEDULE_NOT_AVLB)
         self._apply_pricing_policy(SH_DEVICE_FAN, SCHEDULE_NOT_AVLB)
         
-        #publish initial data from hw to volttron bus
+        # publish initial data from hw to volttron bus
         self.publish_hw_data()
         
-        #perodically publish hw data to volttron bus. 
-        #The data includes fan, light & various sensors(state/level/readings) 
+        # perodically publish hw data to volttron bus. 
+        # The data includes fan, light & various sensors(state/level/readings) 
         self.core.periodic(self._period_read_data, self.publish_hw_data, wait=None)
         
-        #perodically publish total active power to volttron bus
-        #active power is comupted at regular interval (_period_read_data default(30s))
-        #this power corresponds to current opt pp
-        #tap --> total active power (Wh)
+        # perodically publish total active power to volttron bus
+        # active power is comupted at regular interval (_period_read_data default(30s))
+        # this power corresponds to current opt pp
+        # tap --> total active power (Wh)
         self.core.periodic(self._period_read_data, self.publish_opt_tap, wait=None)
         
-        #perodically process new pricing point that keeps trying to apply the new pp till success
+        # perodically process new pricing point that keeps trying to apply the new pp till success
         self.core.periodic(self._period_process_pp, self.process_opt_pp, wait=None)
         
-        #subscribing to topic_price_point
+        # subscribing to topic_price_point
         self.vip.pubsub.subscribe('pubsub', self._topic_price_point, self.on_new_price)
         
         self._volt_state = 1
@@ -237,7 +237,7 @@ class SmartHub(Agent):
                         )
             if rpcdata.method == 'ping':
                 result = True
-            #TODO: rename methods and params in sync with BLESmartHubSrv/main.js
+            # TODO: rename methods and params in sync with BLESmartHubSrv/main.js
             elif rpcdata.method == 'rpc_setShDeviceState' and header['REQUEST_METHOD'] == 'POST':
                 args = {'lhw_device_id': rpcdata.params['deviceId'],
                         'state': rpcdata.params['newState'],
@@ -259,11 +259,11 @@ class SmartHub(Agent):
                 return jsonrpc.json_error(rpcdata.id, METHOD_NOT_FOUND,
                                             'Invalid method {}'.format(rpcdata.method))
         except KeyError as ke:
-            #print(ke)
+            # print(ke)
             return jsonrpc.json_error(rpcdata.id, INVALID_PARAMS,
                                         'Invalid params {}'.format(rpcdata.params))
         except Exception as e:
-            #print(e)
+            # print(e)
             return jsonrpc.json_error(rpcdata.id, UNHANDLED_EXCEPTION, e)
         return jsonrpc.json_result(rpcdata.id, result)
         
@@ -285,7 +285,7 @@ class SmartHub(Agent):
         except Exception as e:
             _log.exception('Could not contact actuator. Is it running?')
         finally:
-            #cancel the schedule
+            # cancel the schedule
             cancel_task_schdl(self, task_id)
         self._volt_state = 0
         return
@@ -316,7 +316,7 @@ class SmartHub(Agent):
         self._test_led_debug()
         self._test_led()
         self._test_fan()
-        #self._test_sensors()
+        # self._test_sensors()
         self._test_sensors_2()
         _log.debug('EOF Testing')
         return
@@ -397,7 +397,7 @@ class SmartHub(Agent):
         self._set_sh_device_state(SH_DEVICE_FAN, SH_DEVICE_STATE_OFF, SCHEDULE_NOT_AVLB)
         return
         
-    #with schedule not available
+    # with schedule not available
     def _test_sensors(self):
         _log.debug('test lux sensor')
         lux_level = self._get_sh_device_level(SH_DEVICE_S_LUX, SCHEDULE_NOT_AVLB)
@@ -424,7 +424,7 @@ class SmartHub(Agent):
         _log.debug('PIR Level: {0:d}'.format(int(pir_level)))
         return
         
-    #with schedule available
+    # with schedule available
     def _test_sensors_2(self):
         task_id = str(randint(0, 99999999))
         success = get_task_schdl(self, task_id, 'iiit/cbs/smarthub', 300)
@@ -464,7 +464,7 @@ class SmartHub(Agent):
         
     '''
     def _get_initial_hw_state(self):
-        #_log.debug('_get_initial_hw_state()')
+        # _log.debug('_get_initial_hw_state()')
         task_id = str(randint(0, 99999999))
         success = get_task_schdl(self, task_id, 'iiit/cbs/smarthub', 300)
         if not success: return
@@ -498,9 +498,9 @@ class SmartHub(Agent):
                 state = self._rpcget_sh_device_state(lhw_device_id);
             except Exception as e:
                 _log.exception('no task schdl for getting device state')
-                #print(e)
+                # print(e)
             finally:
-                #cancel the schedule
+                # cancel the schedule
                 cancel_task_schdl(self, task_id)
         else:
             _log.error('Error: not a valid param - schd_exist: {}'.format(schd_exist))
@@ -508,7 +508,7 @@ class SmartHub(Agent):
         return state
         
     def _get_sh_device_level(self, lhw_device_id, schd_exist):
-        #_log.debug('_get_sh_device_level()')
+        # _log.debug('_get_sh_device_level()')
         if not self._valid_device_action( lhw_device_id, AT_GET_LEVEL):
             _log.error('Error: not a valid device to get level, lhw_device_id:'
                                                             + ' {}.'.format(lhw_device_id))
@@ -525,9 +525,9 @@ class SmartHub(Agent):
                 level = self._rpcget_sh_device_level(lhw_device_id);
             except Exception as e:
                 _log.exception('no task schdl for getting device level')
-                #print(e)
+                # print(e)
             finally:
-                #cancel the schedule
+                # cancel the schedule
                 cancel_task_schdl(self, task_id)
         else:
             _log.error('Error: not a valid param - schd_exist: {}'.format(schd_exist))
@@ -535,7 +535,7 @@ class SmartHub(Agent):
         return level
                 
     def _set_sh_device_state(self, lhw_device_id, state, schd_exist):
-        #_log.debug('_set_sh_device_state()')
+        # _log.debug('_set_sh_device_state()')
         if not self._valid_device_action(lhw_device_id, AT_SET_STATE):
             _log.error('Error: not a valid device to change state, lhw_device_id:'
                                                             + ' {}.'.format(lhw_device_id))
@@ -555,16 +555,16 @@ class SmartHub(Agent):
                 self._rpcset_sh_device_state(lhw_device_id, state);
             except Exception as e:
                 _log.exception('no task schdl for changing device state')
-                #print(e)
+                # print(e)
             finally:
-                #cancel the schedule
+                # cancel the schedule
                 cancel_task_schdl(self, task_id)
         else:
             _log.exception('not a valid param - schd_exist: {}'.format(schd_exist))
         return
         
     def _set_sh_device_level(self, lhw_device_id, level, schd_exist):
-        #_log.debug('_set_sh_device_level()')
+        # _log.debug('_set_sh_device_level()')
         if not self._valid_device_action( lhw_device_id, AT_SET_LEVEL):
             _log.exception('not a valid device to change level, lhw_device_id:'
                                                     + ' {}.'.format(lhw_device_id))
@@ -584,12 +584,12 @@ class SmartHub(Agent):
                 self._rpcset_sh_device_level(lhw_device_id, level);
             except Exception as e:
                 _log.exception('no task schdl for changing device level')
-                #print(e)
+                # print(e)
             finally:
-                #cancel the schedule
+                # cancel the schedule
                 cancel_task_schdl(self, task_id)
         else:
-            #do notthing
+            # do notthing
             _log.exception('not a valid param - schd_exist: ' + schd_exist)
         return
         
@@ -615,7 +615,7 @@ class SmartHub(Agent):
         return
         
     def _publish_sensor_data(self):
-        #_log.debug('publish_sensor_data()')
+        # _log.debug('publish_sensor_data()')
         task_id = str(randint(0, 99999999))
         success = get_task_schdl(self, task_id, 'iiit/cbs/smarthub', 300)
         if not success: return
@@ -651,7 +651,7 @@ class SmartHub(Agent):
         return
         
     def _publish_device_state(self):
-        #_log.debug('publish_device_state()')
+        # _log.debug('publish_device_state()')
         state_led = self._sh_devices_state[SH_DEVICE_LED]
         state_fan = self._sh_devices_state[SH_DEVICE_FAN]
         self._publish_sh_device_state(SH_DEVICE_LED, state_led)
@@ -661,7 +661,7 @@ class SmartHub(Agent):
         return
         
     def _publish_device_level(self):
-        #_log.debug('publish_device_level()')
+        # _log.debug('publish_device_level()')
         level_led = self._sh_devices_level[SH_DEVICE_LED]
         level_fan = self._sh_devices_level[SH_DEVICE_FAN]
         self._publish_sh_device_level(SH_DEVICE_LED, level_led)
@@ -671,7 +671,7 @@ class SmartHub(Agent):
         return
         
     def _publish_device_th_pp(self):
-        #_log.debug('publish_device_th_pp()')
+        # _log.debug('publish_device_th_pp()')
         thpp_led = self._sh_devices_th_pp[SH_DEVICE_LED]
         thpp_fan = self._sh_devices_th_pp[SH_DEVICE_FAN]
         self._publish_sh_device_th_pp(SH_DEVICE_LED, thpp_led)
@@ -693,11 +693,11 @@ class SmartHub(Agent):
             _log.exception('gevent.Timeout in _rpcget_sh_device_state()')
             return E_UNKNOWN_STATE
         except RemoteError as re:
-            #print(re)
+            # print(re)
             return E_UNKNOWN_STATE
         except Exception as e:
             _log.exception('Could not contact actuator. Is it running?')
-            #print(e)
+            # print(e)
             return E_UNKNOWN_STATE
         return int(device_level)
         
@@ -718,18 +718,18 @@ class SmartHub(Agent):
             return
         except Exception as e:
             _log.exception('Could not contact actuator. Is it running?')
-            #print(e)
+            # print(e)
             return
         self._update_sh_device_state(lhw_device_id, endPoint,state)
         return
         
     def _rpcget_sh_device_level(self, lhw_device_id):
-        #_log.debug('_rpcget_sh_device_level()')
+        # _log.debug('_rpcget_sh_device_level()')
         if not self._valid_device_action(lhw_device_id, AT_GET_LEVEL):
             _log.exception('not a valid device to get level, lhw_device_id: ' + str(lhw_device_id))
             return E_UNKNOWN_LEVEL
         endPoint = self._get_lhw_end_point(lhw_device_id, AT_GET_LEVEL)
-        #_log.debug('endPoint: ' + endPoint)
+        # _log.debug('endPoint: ' + endPoint)
         try:
             device_level = self.vip.rpc.call(
                     'platform.actuator','get_point',
@@ -740,7 +740,7 @@ class SmartHub(Agent):
             return E_UNKNOWN_LEVEL
         except Exception as e:
             _log.exception('Could not contact actuator. Is it running?')
-            #print(e)
+            # print(e)
             return E_UNKNOWN_LEVEL
         return E_UNKNOWN_LEVEL
         
@@ -764,15 +764,15 @@ class SmartHub(Agent):
             return
         except Exception as e:
             _log.exception('Could not contact actuator. Is it running?')
-            #print(e)
+            # print(e)
             return
             
     def _update_sh_device_state(self, lhw_device_id, endPoint, state):
-        #_log.debug('_update_sh_device_state()')
+        # _log.debug('_update_sh_device_state()')
         headers = { 'requesterID': self._agent_id, }
         
         device_state = self._rpcget_sh_device_state(lhw_device_id)
-        #check if the state really updated at the h/w, only then proceed with new state
+        # check if the state really updated at the h/w, only then proceed with new state
         if state == device_state:
             self._sh_devices_state[lhw_device_id] = state
             self._publish_sh_device_state(lhw_device_id, state)
@@ -785,11 +785,11 @@ class SmartHub(Agent):
         return
         
     def _updateShDeviceLevel(self, lhw_device_id, endPoint, level):
-        #_log.debug('_updateShDeviceLevel()')
+        # _log.debug('_updateShDeviceLevel()')
         
         _log.debug('level {0:0.4f}'.format( level))
         device_level = self._rpcget_sh_device_level(lhw_device_id)
-        #check if the level really updated at the h/w, only then proceed with new level
+        # check if the level really updated at the h/w, only then proceed with new level
         if isclose(level, device_level, EPSILON):
             _log.debug('same value!!!')
             self._sh_devices_level[lhw_device_id] = level
@@ -810,7 +810,7 @@ class SmartHub(Agent):
         return
         
     def _publish_sh_device_level(self, lhw_device_id, level):
-        #_log.debug('_publish_sh_device_level()')
+        # _log.debug('_publish_sh_device_level()')
         if not self._valid_device_action(lhw_device_id, AT_PUB_LEVEL):
             _log.exception('not a valid device to pub level, lhw_device_id: ' + str(lhw_device_id))
             return
@@ -862,7 +862,7 @@ class SmartHub(Agent):
         return ''
         
     def _get_lhw_end_point(self, lhw_device_id, actionType):
-        #_log.debug('_get_lhw_end_point()')
+        # _log.debug('_get_lhw_end_point()')
         if  actionType == AT_SET_LEVEL:
             if lhw_device_id == SH_DEVICE_LED:
                 return 'LEDPwmDuty'
@@ -895,7 +895,7 @@ class SmartHub(Agent):
         return ''
         
     def _valid_device_action(self, lhw_device_id, actionType):
-        #_log.debug('_valid_device_action()')
+        # _log.debug('_valid_device_action()')
         if actionType not in [AT_GET_STATE
                                 , AT_GET_LEVEL
                                 , AT_SET_STATE
@@ -973,7 +973,7 @@ class SmartHub(Agent):
     def on_new_price(self, peer, sender, bus,  topic, headers, message):
         if sender not in self._valid_senders_list_pp: return
         
-        #check message type before parsing
+        # check message type before parsing
         if not check_msg_type(message, MessageType.price_point): return False
             
         valid_senders_list = self._valid_senders_list_pp
@@ -1003,9 +1003,9 @@ class SmartHub(Agent):
         self._opt_pp_msg_latest = copy(pp_msg)
         self._price_point_latest = pp_msg.get_value()
         
-        #any process that failed to apply pp sets this flag False
+        # any process that failed to apply pp sets this flag False
         self._process_opt_pp_success = False
-        #initiate the periodic process
+        # initiate the periodic process
         self.process_opt_pp()
         return
         
@@ -1014,16 +1014,16 @@ class SmartHub(Agent):
         self.process_bid_pp()
         return
     
-    #this is a perodic function that keeps trying to apply the new pp till success
+    # this is a perodic function that keeps trying to apply the new pp till success
     def process_bid_pp(self):
         self.publish_bid_ted()
         return
         
     def publish_bid_ted(self):
-        #compute total bid energy demand and publish to local/energydemand
-        #(vb RPCs this value to the next level)
+        # compute total bid energy demand and publish to local/energydemand
+        # (vb RPCs this value to the next level)
         bid_ted = self._calc_total_energy_demand()
-        #create a MessageType.energy ISPACE_Msg
+        # create a MessageType.energy ISPACE_Msg
         pp_msg = ted_helper(self._bid_pp_msg_latest
                             , self._device_id
                             , self._discovery_address
@@ -1033,7 +1033,7 @@ class SmartHub(Agent):
         _log. info('[LOG] Total Energy Demand(TED) bid'
                                     + ' for us bid pp_msg({})'.format(pp_msg.get_price_id())
                                     + ': {:0.4f}'.format(bid_ted))
-        #publish the new price point to the local message bus
+        # publish the new price point to the local message bus
         _log.debug('post to the local-bus...')
         pub_topic = self._topic_energy_demand
         pub_msg = pp_msg.get_json_message(self._agent_id, 'bus_topic')
@@ -1043,9 +1043,9 @@ class SmartHub(Agent):
         _log.debug('Done!!!')
         return
         
-    #calculate the local energy demand for bid_pp
-    #the bid energy is for self._bid_pp_duration (default 1hr)
-    #and this msg is valid for self._period_read_data (ttl - default 30s)
+    # calculate the local energy demand for bid_pp
+    # the bid energy is for self._bid_pp_duration (default 1hr)
+    # and this msg is valid for self._period_read_data (ttl - default 30s)
     def _calc_total_energy_demand(self):
         # bid_ed should be measured in realtime from the connected plug
         # however, since we don't have model for the battery charge controller
@@ -1065,11 +1065,11 @@ class SmartHub(Agent):
                                     else (fan_energy * fan_speed))
         return bid_ed
         
-    #this is a perodic function that keeps trying to apply the new pp till success
+    # this is a perodic function that keeps trying to apply the new pp till success
     def process_opt_pp(self):
         if self._process_opt_pp_success: return
             
-        #any process that failed to apply pp sets this flag False
+        # any process that failed to apply pp sets this flag False
         self._process_opt_pp_success = True
         task_id = str(randint(0, 99999999))
         success = get_task_schdl(self, task_id, 'iiit/cbs/smarthub')
@@ -1095,7 +1095,7 @@ class SmartHub(Agent):
         cancel_task_schdl(self, task_id)
         
         _log.info('New Price Point processed.')
-        #on successful process of apply_pricing_policy with the latest opt pp, current = latest
+        # on successful process of apply_pricing_policy with the latest opt pp, current = latest
         self._opt_pp_msg_current = copy(self._opt_pp_msg_latest)
         self._price_point_current = copy(self._price_point_latest)
         self._process_opt_pp_success = True
@@ -1114,8 +1114,8 @@ class SmartHub(Agent):
                 self._set_sh_device_state(lhw_device_id, SH_DEVICE_STATE_OFF, schd_exist)
                 if not self._sh_devices_state[lhw_device_id] == SH_DEVICE_STATE_OFF:
                     self._process_opt_pp_success = True
-            #else:
-                #do nothing
+            # else:
+                # do nothing
         else:
             _log.info(self._get_lhw_end_point(lhw_device_id, AT_GET_STATE)
                         + 'Current price point <= threshold'
@@ -1135,7 +1135,7 @@ class SmartHub(Agent):
                     
         return
         
-    #compute new Fan Speed from price functions
+    # compute new Fan Speed from price functions
     def _compute_new_fan_speed(self, pp):
         pp = 0 if pp < 0 else 1 if pp > 1 else pp
         
@@ -1150,13 +1150,13 @@ class SmartHub(Agent):
         speed = a*pp**2 + b*pp + c
         return mround(speed, pf_roundup)/100
         
-    #perodic function to publish active power
+    # perodic function to publish active power
     def publish_opt_tap(self):
-        #compute total active power and publish to local/energydemand
-        #(vb RPCs this value to the next level)
+        # compute total active power and publish to local/energydemand
+        # (vb RPCs this value to the next level)
         opt_tap = self._calc_total_act_pwr()
         
-        #create a MessageType.active_power ISPACE_Msg
+        # create a MessageType.active_power ISPACE_Msg
         pp_msg = tap_helper(self._opt_pp_msg_current
                             , self._device_id
                             , self._discovery_address
@@ -1166,7 +1166,7 @@ class SmartHub(Agent):
         _log. info('[LOG] Total Active Power(TAP) opt'
                                     + ' for us opt pp_msg({})'.format(pp_msg.get_price_id())
                                     + ': {:0.4f}'.format(opt_tap))
-        #publish the new price point to the local message bus
+        # publish the new price point to the local message bus
         _log.debug('post to the local-bus...')
         pub_topic = self._topic_energy_demand
         pub_msg = pp_msg.get_json_message(self._agent_id, 'bus_topic')
@@ -1175,7 +1175,7 @@ class SmartHub(Agent):
         publish_to_bus(self, pub_topic, pub_msg)
         return
         
-    #calculate total active power (tap)
+    # calculate total active power (tap)
     def _calc_total_act_pwr(self):
         # active pwr should be measured in realtime from the connected plug
         # however, since we don't have model for the battery charge controller

@@ -1,15 +1,15 @@
 # -*- coding: utf-8 -*- {{{
 # vim: set fenc=utf-8 ft=python sw=4 ts=4 sts=4 et:
-#
+# 
 # Copyright (c) 2020, Sam Babu, Godithi.
 # All rights reserved.
-#
-#
+# 
+# 
 # IIIT Hyderabad
 
-#}}}
+# }}}
 
-#Sam
+# Sam
 
 import datetime
 import logging
@@ -61,7 +61,7 @@ class PricePoint(Agent):
     '''Agent for posting a price point to msg bus
     '''
     
-    #initialized  during __init__ from config
+    # initialized  during __init__ from config
     _default_base_price = None
     _min_price = None
     _max_price = None
@@ -91,11 +91,11 @@ class PricePoint(Agent):
         
     @Core.receiver('onstart')
     def startup(self, sender, **kwargs):
-        #retrive self._device_id and self._discovery_address from vb
+        # retrive self._device_id and self._discovery_address from vb
         retrive_details_from_vb(self, 5)
         
-        #register rpc routes with MASTER_WEB
-        #register_rpc_route is a blocking call
+        # register rpc routes with MASTER_WEB
+        # register_rpc_route is a blocking call
         register_rpc_route(self, 'pricepoint', 'rpc_from_net', 5)
         
         _log.debug('startup() - Done. Agent is ready')
@@ -132,9 +132,9 @@ class PricePoint(Agent):
             rpcdata = jsonrpc.JsonRpcData.parse(message)
             
             _log.debug('rpc_from_net()...'
-                        #+ 'header: {}'.format(header)
+                        # + 'header: {}'.format(header)
                         + ', rpc method: {}'.format(rpcdata.method)
-                        #+ ', rpc params: {}'.format(rpcdata.params)
+                        # + ', rpc params: {}'.format(rpcdata.params)
                         )
             if rpcdata.method == 'ping':
                 result = True
@@ -145,12 +145,12 @@ class PricePoint(Agent):
                 return jsonrpc.json_error(rpcdata.id, METHOD_NOT_FOUND,
                                             'Invalid method {}'.format(rpcdata.method))
         except KeyError:
-            #print('KeyError')
+            # print('KeyError')
             _log.error('id: {}, message: invalid params {}!!!'.format(rpcdata.id, rpcdata.params))
             return jsonrpc.json_error(rpcdata.id, INVALID_PARAMS,
                                         'Invalid params {}'.format(rpcdata.params))
         except Exception as e:
-            #print(e)
+            # print(e)
             _log.exception('id: {}'.format(rpcdata.id)
                             + ', message: unhandled exception {}!!!'.format(e.message))
             return jsonrpc.json_error(rpcdata.id, UNHANDLED_EXCEPTION, e)
@@ -159,8 +159,8 @@ class PricePoint(Agent):
     def update_price_point(self, rpcdata_id, message):
         pp_msg = None
         rpcdata = jsonrpc.JsonRpcData.parse(message)
-        #Note: this is on a rpc message do the check here ONLY
-        #check message for MessageType.price_point
+        # Note: this is on a rpc message do the check here ONLY
+        # check message for MessageType.price_point
         if not check_msg_type(message, MessageType.price_point): 
             _log.error('id: {}, message: invalid params {}!!!'.format(rpcdata_id, rpcdata.params))
             return jsonrpc.json_error(rpcdata_id, INVALID_PARAMS
@@ -168,19 +168,19 @@ class PricePoint(Agent):
         try:
             minimum_fields = ['value', 'value_data_type', 'units', 'price_id']
             pp_msg = parse_jsonrpc_msg(message, minimum_fields)
-            #_log.info('pp_msg: {}'.format(pp_msg))
+            # _log.info('pp_msg: {}'.format(pp_msg))
         except KeyError as ke:
-            #print(ke)
+            # print(ke)
             _log.error('id: {}, message: invalid params {}!!!'.format(rpcdata_id, rpcdata.params))
             return jsonrpc.json_error(rpcdata_id, INVALID_PARAMS,
                     'Invalid params {}'.format(rpcdata.params))
         except Exception as e:
-            #print(e)
+            # print(e)
             _log.exception('id: {}'.format(rpcdata_id)
                             + ', message: unhandled exception {}!!!'.format(e.message))
             return jsonrpc.json_error(rpcdata_id, UNHANDLED_EXCEPTION, e)
             
-        #validate various sanity measure like, valid fields, valid pp ids, ttl expiry, etc.,
+        # validate various sanity measure like, valid fields, valid pp ids, ttl expiry, etc.,
         hint = 'New Price Point'
         validate_fields = ['value', 'units', 'price_id', 'isoptimal', 'duration', 'ttl']
         valid_price_ids = []
@@ -191,11 +191,11 @@ class PricePoint(Agent):
         pp_msg.set_src_device_id(self._device_id)
         pp_msg.set_src_ip(self._discovery_address)
         
-        #publish the new price point to the local message bus
+        # publish the new price point to the local message bus
         _log.debug('post to the local-us-bus')
         pub_topic = self._topic_price_point
         pub_msg = pp_msg.get_json_message(self._agent_id, 'bus_topic')
-        #keep a track of us pp_msg
+        # keep a track of us pp_msg
         if pp_msg.get_isoptimal():
             _log.info('***** New optimal price point from rpc: {:0.2f}'.format(pp_msg.get_value())
                                 + ' price_id: {}'.format(pp_msg.get_price_id()))
@@ -204,7 +204,7 @@ class PricePoint(Agent):
                                 + ' price_id: {}'.format(pp_msg.get_price_id()))
                                 
         _log.debug('publishing to local bus topic: {}'.format(pub_topic))
-        #log this msg
+        # log this msg
         _log.info('[LOG] pp from us, Msg: {}'.format(pub_msg))
         publish_to_bus(self, pub_topic, pub_msg)
         _log.debug('Done!!!')
