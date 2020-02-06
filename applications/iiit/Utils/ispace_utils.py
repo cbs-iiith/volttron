@@ -139,7 +139,6 @@ def publish_to_bus(self, topic, msg):
 def get_task_schdl(self, task_id, device, time_ms=None):
     #_log.debug('get_task_schdl()')
     self.time_ms = 600 if time_ms is None else time_ms
-    result = {'result':'FAILED'}
     try:
         start = str(datetime.datetime.now())
         end = str(datetime.datetime.now() 
@@ -153,14 +152,18 @@ def get_task_schdl(self, task_id, device, time_ms=None):
                                     , 'HIGH'
                                     , msg
                                     ).get(timeout=10)
+        if result['result'] != 'SUCCESS':
+            return False
     except gevent.Timeout:
         _log.exception('Expection: gevent.Timeout in get_task_schdl()')
+        return False
     except Exception as e:
-        _log.exception ('Expection: Could not contact actuator. Is it running? {}'.format(e.message))
+        _log.exception ('Expection: Could not contact actuator. Is it running?'
+                                                                + ' {}'.format(e.message))
+        return False
         #print(e)
-    finally:
-        return result
-        
+    return True
+    
 def cancel_task_schdl(self, task_id):
     #_log.debug('cancel_task_schdl()')
     result = self.vip.rpc.call('platform.actuator'

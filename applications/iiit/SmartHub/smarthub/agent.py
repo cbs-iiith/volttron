@@ -122,8 +122,8 @@ class SmartHub(Agent):
     
     _volt_state = 0
     
-    _shDevicesState = [0, 0, 0, 0, 0, 0, 0, 0, 0]
-    _shDevicesLevel = [0.3, 0.3, 0.3, 0.3, 0.3, 0.3, 0.3, 0.3, 0.3]
+    _sh_devices_state = [0, 0, 0, 0, 0, 0, 0, 0, 0]
+    _sh_devices_level = [0.3, 0.3, 0.3, 0.3, 0.3, 0.3, 0.3, 0.3, 0.3]
     _shDevicesPP_th = [ 0.95, 0.95, 0.95, 0.95, 0.95, 0.95, 0.95, 0.95, 0.95]
     
     _pf_sh_fan = None
@@ -276,18 +276,19 @@ class SmartHub(Agent):
     def _stopVolt(self):
         _log.debug('_stopVolt()')
         task_id = str(randint(0, 99999999))
-        result = get_task_schdl(self, task_id,'iiit/cbs/zonecontroller')
-        if result['result'] == 'SUCCESS':
-            try:
-                self._set_sh_device_state(SH_DEVICE_LED_DEBUG, SH_DEVICE_STATE_OFF, SCHEDULE_AVLB)
-                self._set_sh_device_state(SH_DEVICE_LED, SH_DEVICE_STATE_OFF, SCHEDULE_AVLB)
-                self._set_sh_device_state(SH_DEVICE_FAN, SH_DEVICE_STATE_OFF, SCHEDULE_AVLB)
-            except Exception as e:
-                _log.exception ("Expection: Could not contact actuator. Is it running?")
-                pass
-            finally:
-                #cancel the schedule
-                cancel_task_schdl(self, task_id)
+        success = get_task_schdl(self, task_id,'iiit/cbs/zonecontroller')
+        if not success:
+            self._volt_state = 0
+            return
+        try:
+            self._set_sh_device_state(SH_DEVICE_LED_DEBUG, SH_DEVICE_STATE_OFF, SCHEDULE_AVLB)
+            self._set_sh_device_state(SH_DEVICE_LED, SH_DEVICE_STATE_OFF, SCHEDULE_AVLB)
+            self._set_sh_device_state(SH_DEVICE_FAN, SH_DEVICE_STATE_OFF, SCHEDULE_AVLB)
+        except Exception as e:
+            _log.exception ("Expection: Could not contact actuator. Is it running?")
+        finally:
+            #cancel the schedule
+            cancel_task_schdl(self, task_id)
         self._volt_state = 0
         return
         
@@ -327,15 +328,7 @@ class SmartHub(Agent):
         
         self._set_sh_device_state(SH_DEVICE_LED_DEBUG, SH_DEVICE_STATE_ON, SCHEDULE_NOT_AVLB)
         time.sleep(1)
-
-        _log.debug('switch off debug led')
-        self._set_sh_device_state(SH_DEVICE_LED_DEBUG, SH_DEVICE_STATE_OFF, SCHEDULE_NOT_AVLB)
-        time.sleep(1)
-
-        _log.debug('switch on debug led')
-        self._set_sh_device_state(SH_DEVICE_LED_DEBUG, SH_DEVICE_STATE_ON, SCHEDULE_NOT_AVLB)
-        time.sleep(1)
-
+        
         _log.debug('switch off debug led')
         self._set_sh_device_state(SH_DEVICE_LED_DEBUG, SH_DEVICE_STATE_OFF, SCHEDULE_NOT_AVLB)
         time.sleep(1)
@@ -343,26 +336,32 @@ class SmartHub(Agent):
         _log.debug('switch on debug led')
         self._set_sh_device_state(SH_DEVICE_LED_DEBUG, SH_DEVICE_STATE_ON, SCHEDULE_NOT_AVLB)
         time.sleep(1)
-
+        
         _log.debug('switch off debug led')
         self._set_sh_device_state(SH_DEVICE_LED_DEBUG, SH_DEVICE_STATE_OFF, SCHEDULE_NOT_AVLB)
         time.sleep(1)
         
+        _log.debug('switch on debug led')
+        self._set_sh_device_state(SH_DEVICE_LED_DEBUG, SH_DEVICE_STATE_ON, SCHEDULE_NOT_AVLB)
+        time.sleep(1)
+        
+        _log.debug('switch off debug led')
+        self._set_sh_device_state(SH_DEVICE_LED_DEBUG, SH_DEVICE_STATE_OFF, SCHEDULE_NOT_AVLB)
         return
         
     def _test_led(self):
         _log.debug('switch on led')
         self._set_sh_device_state(SH_DEVICE_LED, SH_DEVICE_STATE_ON, SCHEDULE_NOT_AVLB)
         time.sleep(1)
-
+        
         _log.debug('change led level 0.3')
         self._set_sh_device_level(SH_DEVICE_LED, 0.3, SCHEDULE_NOT_AVLB)
         time.sleep(1)
-
+        
         _log.debug('change led level 0.6')
         self._set_sh_device_level(SH_DEVICE_LED, 0.6, SCHEDULE_NOT_AVLB)
         time.sleep(1)
-
+        
         _log.debug('change led level 0.9')
         self._set_sh_device_level(SH_DEVICE_LED, 0.9, SCHEDULE_NOT_AVLB)
         time.sleep(1)
@@ -373,9 +372,8 @@ class SmartHub(Agent):
         
         _log.debug('switch off led')
         self._set_sh_device_state(SH_DEVICE_LED, SH_DEVICE_STATE_OFF, SCHEDULE_NOT_AVLB)
-        time.sleep(1)
-        
         return
+        
     def _test_fan(self):
         _log.debug('switch on fan')
         self._set_sh_device_state(SH_DEVICE_FAN, SH_DEVICE_STATE_ON, SCHEDULE_NOT_AVLB)
@@ -384,11 +382,11 @@ class SmartHub(Agent):
         _log.debug('change fan level 0.3')
         self._set_sh_device_level(SH_DEVICE_FAN, 0.3, SCHEDULE_NOT_AVLB)
         time.sleep(1)
-
+        
         _log.debug('change fan level 0.6')
         self._set_sh_device_level(SH_DEVICE_FAN, 0.6, SCHEDULE_NOT_AVLB)
         time.sleep(1)
-
+        
         _log.debug('change fan level 0.9')
         self._set_sh_device_level(SH_DEVICE_FAN, 0.9, SCHEDULE_NOT_AVLB)
         time.sleep(1)
@@ -399,10 +397,9 @@ class SmartHub(Agent):
         
         _log.debug('switch off fan')
         self._set_sh_device_state(SH_DEVICE_FAN, SH_DEVICE_STATE_OFF, SCHEDULE_NOT_AVLB)
-        time.sleep(1)
-        
         return
         
+    #with schedule not available
     def _test_sensors(self):
         _log.debug('test lux sensor')
         lux_level = self._get_sh_device_level(SH_DEVICE_S_LUX, SCHEDULE_NOT_AVLB)
@@ -427,158 +424,144 @@ class SmartHub(Agent):
         _log.debug('test PIR sensor')
         pir_level = self._get_sh_device_level(SH_DEVICE_S_PIR, SCHEDULE_NOT_AVLB)
         _log.debug('PIR Level: {0:d}'.format(int(pir_level)))
-        time.sleep(1)
-        
         return
+        
+    #with schedule available
     def _test_sensors_2(self):
         task_id = str(randint(0, 99999999))
-        result = ispace_utils.get_task_schdl(self, task_id, 'iiit/cbs/smarthub', 300)
-        try:
-            if result['result'] == 'SUCCESS':
-                _log.debug('test lux sensor')
-                lux_level = self._get_sh_device_level(SH_DEVICE_S_LUX, SCHEDULE_AVLB)
-                _log.debug('lux Level: {:0.4f}'.format(lux_level))
-                
-                _log.debug('test rh sensor')
-                rh_level = self._get_sh_device_level(SH_DEVICE_S_RH, SCHEDULE_AVLB)
-                _log.debug('rh Level: {:0.4f}'.format(rh_level))
-                
-                _log.debug('test temp sensor')
-                temp_level = self._get_sh_device_level(SH_DEVICE_S_TEMP, SCHEDULE_AVLB)
-                _log.debug('temp Level: {:0.4f}'.format(temp_level))
-                
-                _log.debug('test co2 sensor')
-                co2_level = self._get_sh_device_level(SH_DEVICE_S_CO2, SCHEDULE_AVLB)
-                _log.debug('co2 Level: {:0.4f}'.format(co2_level))
-                
-                _log.debug('test pir sensor')
-                pir_level = self._get_sh_device_level(SH_DEVICE_S_PIR, SCHEDULE_AVLB)
-                _log.debug('pir Level: {:d}'.format(int(pir_level)))
-        except Exception as e:
-            _log.exception ("Expection: no task schdl for _test_sensors_2()")
-            #print(e)
-            return
-        finally:
-            #cancel the schedule
-            ispace_utils.cancel_task_schdl(self, task_id)
-            
+        success = get_task_schdl(self, task_id, 'iiit/cbs/smarthub', 300)
+        if not success: return
+        
+        _log.debug('test lux sensor')
+        lux_level = self._get_sh_device_level(SH_DEVICE_S_LUX, SCHEDULE_AVLB)
+        _log.debug('lux Level: {:0.4f}'.format(lux_level))
+        
+        _log.debug('test rh sensor')
+        rh_level = self._get_sh_device_level(SH_DEVICE_S_RH, SCHEDULE_AVLB)
+        _log.debug('rh Level: {:0.4f}'.format(rh_level))
+        
+        _log.debug('test temp sensor')
+        temp_level = self._get_sh_device_level(SH_DEVICE_S_TEMP, SCHEDULE_AVLB)
+        _log.debug('temp Level: {:0.4f}'.format(temp_level))
+        
+        _log.debug('test co2 sensor')
+        co2_level = self._get_sh_device_level(SH_DEVICE_S_CO2, SCHEDULE_AVLB)
+        _log.debug('co2 Level: {:0.4f}'.format(co2_level))
+        
+        _log.debug('test pir sensor')
+        pir_level = self._get_sh_device_level(SH_DEVICE_S_PIR, SCHEDULE_AVLB)
+        _log.debug('pir Level: {:d}'.format(int(pir_level)))
+        
+        cancel_task_schdl(self, task_id)
         return
         
     def _get_initial_hw_state(self):
         #_log.debug("_get_initial_hw_state()")
         task_id = str(randint(0, 99999999))
-        result = ispace_utils.get_task_schdl(self, task_id, 'iiit/cbs/smarthub', 300)
-        try:
-            if result['result'] == 'SUCCESS':
-                self._shDevicesState[SH_DEVICE_LED] = self.getShDeviceState(SH_DEVICE_LED, SCHEDULE_AVLB)
-                self._shDevicesState[SH_DEVICE_FAN] = self.getShDeviceState(SH_DEVICE_FAN, SCHEDULE_AVLB)
-                self._shDevicesLevel[SH_DEVICE_LED] = self._get_sh_device_level(SH_DEVICE_LED, SCHEDULE_AVLB)
-                self._shDevicesLevel[SH_DEVICE_FAN] = self._get_sh_device_level(SH_DEVICE_FAN, SCHEDULE_AVLB)
-        except Exception as e:
-            _log.exception ("Expection: no task schdl for _get_initial_hw_state()")
-            #print(e)
-            return
-        finally:
-            #cancel the schedule
-            ispace_utils.cancel_task_schdl(self, task_id)
+        success = get_task_schdl(self, task_id, 'iiit/cbs/smarthub', 300)
+        if not success: return
         
-        return
+        self._sh_devices_state[SH_DEVICE_LED]
+                                = self._get_sh_device_state(SH_DEVICE_LED, SCHEDULE_AVLB)
+        self._sh_devices_state[SH_DEVICE_FAN]
+                                = self._get_sh_device_state(SH_DEVICE_FAN, SCHEDULE_AVLB)
+        self._sh_devices_level[SH_DEVICE_LED]
+                                = self._get_sh_device_level(SH_DEVICE_LED, SCHEDULE_AVLB)
+        self._sh_devices_level[SH_DEVICE_FAN]
+                                = self._get_sh_device_level(SH_DEVICE_FAN, SCHEDULE_AVLB)
+        cancel_task_schdl(self, task_id)
+       return
         
-    def getShDeviceState(self, lhw_device_id, schd_exist):
-        state = E_UNKNOWN_STATE
-        if not self._validDeviceAction(lhw_device_id, AT_GET_STATE):
-            _log.exception ("Expection: not a valid device to get state, lhw_device_id: " + str(lhw_device_id))
-            return state
+    def _get_sh_device_state(self, lhw_device_id, schd_exist):
+        if not self._valid_device_action(lhw_device_id, AT_GET_STATE):
+            _log.error ('Error: not a valid device to get state, lhw_device_id:'
+                                                            + ' {}.'.format(lhw_device_id))
+            return E_UNKNOWN_STATE
             
+        state = E_UNKNOWN_STATE
         if schd_exist == SCHEDULE_AVLB: 
-            state = self.rpc_getShDeviceState(lhw_device_id);
+            state = self._rpcget_sh_device_state(lhw_device_id);
+            return state
         elif schd_exist == SCHEDULE_NOT_AVLB:
             task_id = str(randint(0, 99999999))
-            result = ispace_utils.get_task_schdl(self, task_id, 'iiit/cbs/smarthub')
+            success = get_task_schdl(self, task_id, 'iiit/cbs/smarthub')
+            if not success: return E_UNKNOWN_STATE
             try:
-                if result['result'] == 'SUCCESS':
-                    state = self.rpc_getShDeviceState(lhw_device_id);
+                state = self._rpcget_sh_device_state(lhw_device_id);
             except Exception as e:
                 _log.exception ("Expection: no task schdl for getting device state")
                 #print(e)
-                return state
             finally:
                 #cancel the schedule
-                ispace_utils.cancel_task_schdl(self, task_id)
+                cancel_task_schdl(self, task_id)
         else:
-            #do notthing
-            _log.exception ("not a valid param - schd_exist: " + schd_exist)
-            return state
-            
+            _log.error('Error: not a valid param - schd_exist: {}'.format(schd_exist))
+            return E_UNKNOWN_STATE
         return state
         
     def _get_sh_device_level(self, lhw_device_id, schd_exist):
         #_log.debug('_get_sh_device_level()')
-        level = E_UNKNOWN_LEVEL
-        if not self._validDeviceAction( lhw_device_id, AT_GET_LEVEL):
-            _log.exception ("not a valid device to get level, lhw_device_id: " + str(lhw_device_id))
-            return level
+        if not self._valid_device_action( lhw_device_id, AT_GET_LEVEL):
+            _log.error('Error: not a valid device to get level, lhw_device_id:'
+                                                            + ' {}.'.format(lhw_device_id))
+            return E_UNKNOWN_LEVEL
             
+        level = E_UNKNOWN_LEVEL
         if schd_exist == SCHEDULE_AVLB: 
             level = self._rpcget_sh_device_level(lhw_device_id);
         elif schd_exist == SCHEDULE_NOT_AVLB:
             task_id = str(randint(0, 99999999))
-            result = ispace_utils.get_task_schdl(self, task_id, 'iiit/cbs/smarthub')
+            success = get_task_schdl(self, task_id, 'iiit/cbs/smarthub')
+            if not success: return E_UNKNOWN_LEVEL
             try:
-                if result['result'] == 'SUCCESS':
-                    level = self._rpcget_sh_device_level(lhw_device_id);
+                level = self._rpcget_sh_device_level(lhw_device_id);
             except Exception as e:
-                _log.exception ("Expection: no task schdl for getting device level")
+                _log.exception ('Expection: no task schdl for getting device level')
                 #print(e)
-                return level
             finally:
                 #cancel the schedule
-                ispace_utils.cancel_task_schdl(self, task_id)
+                cancel_task_schdl(self, task_id)
         else:
-            #do notthing
-            _log.exception ("Expection: not a valid param - schd_exist: " + schd_exist)
-            return level
-            
+            _log.error('Error: not a valid param - schd_exist: {}'.format(schd_exist))
+            return E_UNKNOWN_LEVEL
         return level
                 
     def _set_sh_device_state(self, lhw_device_id, state, schd_exist):
         #_log.debug('_set_sh_device_state()')
-        if not self._validDeviceAction(lhw_device_id, AT_SET_STATE):
-            _log.exception ("Expection: not a valid device to change state, lhw_device_id: " + str(lhw_device_id))
+        if not self._valid_device_action(lhw_device_id, AT_SET_STATE):
+            _log.error('Error: not a valid device to change state, lhw_device_id:'
+                                                            + ' {}.'.format(lhw_device_id))
             return
-
-        if self._shDevicesState[lhw_device_id] == state:
+            
+        if self._sh_devices_state[lhw_device_id] == state:
             _log.debug('same state, do nothing')
             return
-
+            
         if schd_exist == SCHEDULE_AVLB: 
             self._rpcset_sh_device_state(lhw_device_id, state);
         elif schd_exist == SCHEDULE_NOT_AVLB:
             task_id = str(randint(0, 99999999))
-            result = ispace_utils.get_task_schdl(self, task_id, 'iiit/cbs/smarthub')
+            success = get_task_schdl(self, task_id, 'iiit/cbs/smarthub')
+            if not success: return
             try:
-                if result['result'] == 'SUCCESS':
-                    self._rpcset_sh_device_state(lhw_device_id, state);
+                self._rpcset_sh_device_state(lhw_device_id, state);
             except Exception as e:
-                _log.exception ("Expection: no task schdl for changing device state")
+                _log.exception ('Expection: no task schdl for changing device state')
                 #print(e)
-                return
             finally:
                 #cancel the schedule
-                ispace_utils.cancel_task_schdl(self, task_id)
+                cancel_task_schdl(self, task_id)
         else:
-            #do notthing
-            _log.exception ("not a valid param - schd_exist: " + schd_exist)
-            return
+            _log.exception ('Expection: not a valid param - schd_exist: {}'format(schd_exist))
         return
         
     def _set_sh_device_level(self, lhw_device_id, level, schd_exist):
         #_log.debug('_set_sh_device_level()')
-        if not self._validDeviceAction( lhw_device_id, AT_SET_LEVEL):
+        if not self._valid_device_action( lhw_device_id, AT_SET_LEVEL):
             _log.exception ("Expection: not a valid device to change level, lhw_device_id: " + str(lhw_device_id))
             return
             
-        if ispace_utils.isclose(level, self._shDevicesLevel[lhw_device_id], EPSILON):
+        if isclose(level, self._sh_devices_level[lhw_device_id], EPSILON):
             _log.debug('same level, do nothing')
             return
 
@@ -586,25 +569,23 @@ class SmartHub(Agent):
             self._rpcset_sh_device_level(lhw_device_id, level);
         elif schd_exist == SCHEDULE_NOT_AVLB:
             task_id = str(randint(0, 99999999))
-            result = ispace_utils.get_task_schdl(self, task_id, 'iiit/cbs/smarthub')
+            success = get_task_schdl(self, task_id, 'iiit/cbs/smarthub')
+            if not success: return
             try:
-                if result['result'] == 'SUCCESS':
-                    self._rpcset_sh_device_level(lhw_device_id, level);
+                self._rpcset_sh_device_level(lhw_device_id, level);
             except Exception as e:
                 _log.exception ("Expection: no task schdl for changing device level")
                 #print(e)
-                return
             finally:
                 #cancel the schedule
-                ispace_utils.cancel_task_schdl(self, task_id)
+                cancel_task_schdl(self, task_id)
         else:
             #do notthing
             _log.exception ("Expection: not a valid param - schd_exist: " + schd_exist)
-            return
         return
         
     def _set_sh_device_th_pp(self, lhw_device_id, thPP):
-        if not self._validDeviceAction(lhw_device_id, AT_SET_THPP):
+        if not self._valid_device_action(lhw_device_id, AT_SET_THPP):
             _log.exception ("Expection: not a valid device to change thPP, lhw_device_id: " + str(lhw_device_id))
             return
         
@@ -613,7 +594,7 @@ class SmartHub(Agent):
             return
         
         self._shDevicesPP_th[lhw_device_id] = thPP
-        self._publishShDeviceThPP(lhw_device_id, thPP)
+        self._publish_sh_device_th_pp(lhw_device_id, thPP)
         self._apply_pricing_policy(lhw_device_id, SCHEDULE_NOT_AVLB)
         return
         
@@ -627,68 +608,55 @@ class SmartHub(Agent):
     def _publish_sensor_data(self):
         #_log.debug('publish_sensor_data()')
         task_id = str(randint(0, 99999999))
-        result = ispace_utils.get_task_schdl(self, task_id, 'iiit/cbs/smarthub', 300)
-        #print(result)
-        try:
-            if result['result'] == 'SUCCESS':
-                pubTopic = self._root_topic + '/sensors/all'
-                lux_level = self._get_sh_device_level(SH_DEVICE_S_LUX, SCHEDULE_AVLB)
-                rh_level = self._get_sh_device_level(SH_DEVICE_S_RH, SCHEDULE_AVLB)
-                temp_level = self._get_sh_device_level(SH_DEVICE_S_TEMP, SCHEDULE_AVLB)
-                co2_level = self._get_sh_device_level(SH_DEVICE_S_CO2, SCHEDULE_AVLB)
-                pir_level = self._get_sh_device_level(SH_DEVICE_S_PIR, SCHEDULE_AVLB)
-                #time.sleep(1)  #yeild for a movement
-                #cancel the schedule
-                ispace_utils.cancel_task_schdl(self, task_id)
-                
-                _log.debug('lux Level: {:0.4f}'.format(lux_level)
-                            + ', rh Level: {:0.4f}'.format(rh_level)
-                            + ', temp Level: {:0.4f}'.format(temp_level)
-                            + ', co2 Level: {:0.4f}'.format(co2_level)
-                            + ', pir Level: {:d}'.format(int(pir_level))
-                            )
-                
-                pubMsg = [{'luxlevel':lux_level,
-                            'rhlevel':rh_level,
-                            'templevel':temp_level,
-                            'co2level': co2_level,
-                            'pirlevel': pir_level
-                            },
-                            {'luxlevel':{'units': 'lux', 'tz': 'UTC', 'type': 'float'},
-                                'rhlevel':{'units': 'cent', 'tz': 'UTC', 'type': 'float'},
-                                'templevel':{'units': 'degree', 'tz': 'UTC', 'type': 'float'},
-                                'co2level':{'units': 'ppm', 'tz': 'UTC', 'type': 'float'},
-                                'pirlevel':{'units': 'bool', 'tz': 'UTC', 'type': 'int'}
-                            }
-                            ]
-                ispace_utils.publish_to_bus(self, pubTopic, pubMsg)
+        success = get_task_schdl(self, task_id, 'iiit/cbs/smarthub', 300)
+        if not success: return
         
-        except Exception as e:
-            _log.exception ("Expection: no task schdl for publish_sensor_data()")
-            self.core.periodic(self._period_read_data, self.publish_sensor_data, wait=None)
-            #print(e)
-            return
-        finally:
-                #cancel the schedule
-                ispace_utils.cancel_task_schdl(self, task_id)
+        pubTopic = self._root_topic + '/sensors/all'
+        lux_level = self._get_sh_device_level(SH_DEVICE_S_LUX, SCHEDULE_AVLB)
+        rh_level = self._get_sh_device_level(SH_DEVICE_S_RH, SCHEDULE_AVLB)
+        temp_level = self._get_sh_device_level(SH_DEVICE_S_TEMP, SCHEDULE_AVLB)
+        co2_level = self._get_sh_device_level(SH_DEVICE_S_CO2, SCHEDULE_AVLB)
+        pir_level = self._get_sh_device_level(SH_DEVICE_S_PIR, SCHEDULE_AVLB)
+        
+        _log.debug('lux Level: {:0.4f}'.format(lux_level)
+                    + ', rh Level: {:0.4f}'.format(rh_level)
+                    + ', temp Level: {:0.4f}'.format(temp_level)
+                    + ', co2 Level: {:0.4f}'.format(co2_level)
+                    + ', pir Level: {:d}'.format(int(pir_level))
+                    )
+        pubMsg = [{'luxlevel':lux_level,
+                    'rhlevel':rh_level,
+                    'templevel':temp_level,
+                    'co2level': co2_level,
+                    'pirlevel': pir_level
+                    },
+                    {'luxlevel':{'units': 'lux', 'tz': 'UTC', 'type': 'float'},
+                        'rhlevel':{'units': 'cent', 'tz': 'UTC', 'type': 'float'},
+                        'templevel':{'units': 'degree', 'tz': 'UTC', 'type': 'float'},
+                        'co2level':{'units': 'ppm', 'tz': 'UTC', 'type': 'float'},
+                        'pirlevel':{'units': 'bool', 'tz': 'UTC', 'type': 'int'}
+                    }
+                    ]
+        publish_to_bus(self, pubTopic, pubMsg)
+        cancel_task_schdl(self, task_id)
         return
         
     def _publish_device_state(self):
         #_log.debug('publish_device_state()')
-        state_led = self._shDevicesState[SH_DEVICE_LED]
-        state_fan = self._shDevicesState[SH_DEVICE_FAN]
-        self._publishShDeviceState(SH_DEVICE_LED, state_led)
-        self._publishShDeviceState(SH_DEVICE_FAN, state_fan)
+        state_led = self._sh_devices_state[SH_DEVICE_LED]
+        state_fan = self._sh_devices_state[SH_DEVICE_FAN]
+        self._publish_sh_device_state(SH_DEVICE_LED, state_led)
+        self._publish_sh_device_state(SH_DEVICE_FAN, state_fan)
         _log.debug('led state: {:0.4f}'.format(float(state_led))
                     + ', fan state: {:0.4f}'.format(float(state_fan)))
         return
         
     def _publish_device_level(self):
         #_log.debug('publish_device_level()')
-        level_led = self._shDevicesLevel[SH_DEVICE_LED]
-        level_fan = self._shDevicesLevel[SH_DEVICE_FAN]
-        self._publishShDeviceLevel(SH_DEVICE_LED, level_led)
-        self._publishShDeviceLevel(SH_DEVICE_FAN, level_fan)
+        level_led = self._sh_devices_level[SH_DEVICE_LED]
+        level_fan = self._sh_devices_level[SH_DEVICE_FAN]
+        self._publish_sh_device_level(SH_DEVICE_LED, level_led)
+        self._publish_sh_device_level(SH_DEVICE_FAN, level_fan)
         _log.debug('led level: {:0.4f}'.format(float(level_led))
                     + ', fan level: {:0.4f}'.format(float(level_fan)))
         return
@@ -697,8 +665,8 @@ class SmartHub(Agent):
         #_log.debug('publish_device_th_pp()')
         thpp_led = self._shDevicesPP_th[SH_DEVICE_LED]
         thpp_fan = self._shDevicesPP_th[SH_DEVICE_FAN]
-        self._publishShDeviceThPP(SH_DEVICE_LED, thpp_led)
-        self._publishShDeviceThPP(SH_DEVICE_FAN, thpp_fan)
+        self._publish_sh_device_th_pp(SH_DEVICE_LED, thpp_led)
+        self._publish_sh_device_th_pp(SH_DEVICE_FAN, thpp_fan)
         _log.debug('led th pp: {:0.4f}'.format(float(thpp_led))
                     + ', fan th pp: {0:0.4f}'.format(float(thpp_fan)))
         return
@@ -801,13 +769,13 @@ class SmartHub(Agent):
         # however, since we don't have model for the battery charge controller
         # we are using below algo based on experimental data
         bid_ed = ispace_utils.calc_energy(SH_BASE_ENERGY, self._bid_pp_duration)
-        if self._shDevicesState[SH_DEVICE_LED] == SH_DEVICE_STATE_ON:
-            level_led = self._shDevicesLevel[SH_DEVICE_LED]
+        if self._sh_devices_state[SH_DEVICE_LED] == SH_DEVICE_STATE_ON:
+            level_led = self._sh_devices_level[SH_DEVICE_LED]
             led_energy = self.calc_energy(SH_LED_ENERGY, self._bid_pp_duration)
             bid_ed = bid_ed + ((led_energy * SH_LED_THRESHOLD_PCT)
                                     if level_led <= SH_LED_THRESHOLD_PCT 
                                     else (led_energy * level_led))
-        if self._shDevicesState[SH_DEVICE_FAN] == SH_DEVICE_STATE_ON:
+        if self._sh_devices_state[SH_DEVICE_FAN] == SH_DEVICE_STATE_ON:
             level_fan = self._get_new_fan_speed(self._bid_pp)/100
             fan_energy = self.calc_energy(SH_FAN_ENERGY, self._bid_pp_duration)
             bid_ed = bid_ed + ((fan_energy * SH_FAN_THRESHOLD_PCT)
@@ -869,14 +837,14 @@ class SmartHub(Agent):
         _log.debug("_apply_pricing_policy()")
         shDevicesPP_th = self._shDevicesPP_th[lhw_device_id]
         if self._price_point_latest > shDevicesPP_th: 
-            if self._shDevicesState[lhw_device_id] == SH_DEVICE_STATE_ON:
+            if self._sh_devices_state[lhw_device_id] == SH_DEVICE_STATE_ON:
                 _log.info(self._getEndPoint(lhw_device_id, AT_GET_STATE)
                             + 'Current price point > threshold'
                             + '({0:.2f}), '.format(shDevicesPP_th)
                             + 'Switching-Off Power'
                             )
                 self._set_sh_device_state(lhw_device_id, SH_DEVICE_STATE_OFF, schd_exist)
-                if not self._shDevicesState[lhw_device_id] == SH_DEVICE_STATE_OFF:
+                if not self._sh_devices_state[lhw_device_id] == SH_DEVICE_STATE_OFF:
                     self._process_opt_pp_success = True
             #else:
                 #do nothing
@@ -887,14 +855,14 @@ class SmartHub(Agent):
                         + 'Switching-On Power'
                         )
             self._set_sh_device_state(lhw_device_id, SH_DEVICE_STATE_ON, schd_exist)
-            if not self._shDevicesState[lhw_device_id] == SH_DEVICE_STATE_ON:
+            if not self._sh_devices_state[lhw_device_id] == SH_DEVICE_STATE_ON:
                 self._process_opt_pp_success = True
                 
             if lhw_device_id == SH_DEVICE_FAN:
                 fan_speed = self._get_new_fan_speed(self._price_point_latest)/100
                 _log.info ( "New Fan Speed: {0:.4f}".format(fan_speed))
                 self._set_sh_device_level(SH_DEVICE_FAN, fan_speed, schd_exist)
-                if not ispace_utils.isclose(fan_speed, self._shDevicesLevel[lhw_device_id], EPSILON):
+                if not ispace_utils.isclose(fan_speed, self._sh_devices_level[lhw_device_id], EPSILON):
                     self._process_opt_pp_success = True
 
         return
@@ -914,8 +882,8 @@ class SmartHub(Agent):
         speed = a*pp**2 + b*pp + c
         return ispace_utils.mround(speed, pf_roundup)
         
-    def rpc_getShDeviceState(self, lhw_device_id):
-        if not self._validDeviceAction(lhw_device_id,AT_GET_STATE):
+    def _rpcget_sh_device_state(self, lhw_device_id):
+        if not self._valid_device_action(lhw_device_id,AT_GET_STATE):
             _log.exception ("Expection: not a valid device to get state, lhw_device_id: " + str(lhw_device_id))
             return E_UNKNOWN_STATE
         endPoint = self._getEndPoint(lhw_device_id, AT_GET_STATE)
@@ -924,7 +892,7 @@ class SmartHub(Agent):
                     'platform.actuator','get_point',
                     'iiit/cbs/smarthub/' + endPoint).get(timeout=10 )
         except gevent.Timeout:
-            _log.exception("Expection: gevent.Timeout in rpc_getShDeviceState()")
+            _log.exception("Expection: gevent.Timeout in _rpcget_sh_device_state()")
             return E_UNKNOWN_STATE
         except RemoteError as re:
             #print(re)
@@ -936,7 +904,7 @@ class SmartHub(Agent):
         return int(device_level)
         
     def _rpcset_sh_device_state(self, lhw_device_id, state):
-        if not self._validDeviceAction(lhw_device_id, AT_SET_STATE):
+        if not self._valid_device_action(lhw_device_id, AT_SET_STATE):
             _log.exception ("Expection: not a valid device to change state, lhw_device_id: " + str(lhw_device_id))
             return
         endPoint = self._getEndPoint(lhw_device_id, AT_SET_STATE)
@@ -954,12 +922,12 @@ class SmartHub(Agent):
             _log.exception ("Expection: Could not contact actuator. Is it running?")
             #print(e)
             return
-        self._updateShDeviceState(lhw_device_id, endPoint,state)
+        self._update_sh_device_state(lhw_device_id, endPoint,state)
         return
         
     def _rpcget_sh_device_level(self, lhw_device_id):
         #_log.debug("_rpcget_sh_device_level()")
-        if not self._validDeviceAction(lhw_device_id, AT_GET_LEVEL):
+        if not self._valid_device_action(lhw_device_id, AT_GET_LEVEL):
             _log.exception ("Expection: not a valid device to get level, lhw_device_id: " + str(lhw_device_id))
             return E_UNKNOWN_LEVEL
         endPoint = self._getEndPoint(lhw_device_id, AT_GET_LEVEL)
@@ -979,7 +947,7 @@ class SmartHub(Agent):
         return E_UNKNOWN_LEVEL
         
     def _rpcset_sh_device_level(self, lhw_device_id, level):
-        if not self._validDeviceAction(lhw_device_id, AT_SET_LEVEL):
+        if not self._valid_device_action(lhw_device_id, AT_SET_LEVEL):
             _log.exception ("Expection: not a valid device to change level, lhw_device_id: " + str(lhw_device_id))
             return
         endPoint = self._getEndPoint(lhw_device_id, AT_SET_LEVEL)
@@ -1001,17 +969,17 @@ class SmartHub(Agent):
             #print(e)
             return
             
-    def _updateShDeviceState(self, lhw_device_id, endPoint, state):
-        #_log.debug('_updateShDeviceState()')
+    def _update_sh_device_state(self, lhw_device_id, endPoint, state):
+        #_log.debug('_update_sh_device_state()')
         headers = { 'requesterID': self._agent_id, }
         
-        device_state = self.rpc_getShDeviceState(lhw_device_id)
+        device_state = self._rpcget_sh_device_state(lhw_device_id)
         #check if the state really updated at the h/w, only then proceed with new state
         if state == device_state:
-            self._shDevicesState[lhw_device_id] = state
-            self._publishShDeviceState(lhw_device_id, state)
+            self._sh_devices_state[lhw_device_id] = state
+            self._publish_sh_device_state(lhw_device_id, state)
             
-        if self._shDevicesState[lhw_device_id] == SH_DEVICE_STATE_ON:
+        if self._sh_devices_state[lhw_device_id] == SH_DEVICE_STATE_ON:
             _log.debug('Current State: ' + endPoint + ' Switched ON!!!')
         else:
             _log.debug('Current State: ' + endPoint + ' Switched OFF!!!')
@@ -1026,15 +994,15 @@ class SmartHub(Agent):
         #check if the level really updated at the h/w, only then proceed with new level
         if ispace_utils.isclose(level, device_level, EPSILON):
             _log.debug('same value!!!')
-            self._shDevicesLevel[lhw_device_id] = level
-            self._publishShDeviceLevel(lhw_device_id, level)
+            self._sh_devices_level[lhw_device_id] = level
+            self._publish_sh_device_level(lhw_device_id, level)
             
         _log.debug('Current level, ' + endPoint + ': ' + "{0:0.4f}".format( device_level))
             
         return
         
-    def _publishShDeviceState(self, lhw_device_id, state):
-        if not self._validDeviceAction(lhw_device_id, AT_PUB_STATE):
+    def _publish_sh_device_state(self, lhw_device_id, state):
+        if not self._valid_device_action(lhw_device_id, AT_PUB_STATE):
             _log.exception ("not a valid device to pub state, lhw_device_id: " + str(lhw_device_id))
             return
         pubTopic = self._getPubTopic(lhw_device_id, AT_PUB_STATE)
@@ -1043,9 +1011,9 @@ class SmartHub(Agent):
         
         return
         
-    def _publishShDeviceLevel(self, lhw_device_id, level):
-        #_log.debug('_publishShDeviceLevel()')
-        if not self._validDeviceAction(lhw_device_id, AT_PUB_LEVEL):
+    def _publish_sh_device_level(self, lhw_device_id, level):
+        #_log.debug('_publish_sh_device_level()')
+        if not self._valid_device_action(lhw_device_id, AT_PUB_LEVEL):
             _log.exception ("Expection: not a valid device to pub level, lhw_device_id: " + str(lhw_device_id))
             return
         pubTopic = self._getPubTopic(lhw_device_id, AT_PUB_LEVEL)
@@ -1054,8 +1022,8 @@ class SmartHub(Agent):
         
         return
         
-    def _publishShDeviceThPP(self, lhw_device_id, thPP):
-        if not self._validDeviceAction(lhw_device_id, AT_PUB_THPP):
+    def _publish_sh_device_th_pp(self, lhw_device_id, thPP):
+        if not self._valid_device_action(lhw_device_id, AT_PUB_THPP):
             _log.exception ("Expection: not a valid device to pub level, lhw_device_id: " + str(lhw_device_id))
             return
         pubTopic = self._getPubTopic(lhw_device_id, AT_PUB_THPP)
@@ -1128,8 +1096,8 @@ class SmartHub(Agent):
         _log.exception ("Expection: not a valid device-action type for endpoint")
         return ""
         
-    def _validDeviceAction(self, lhw_device_id, actionType):
-        #_log.debug('_validDeviceAction()')
+    def _valid_device_action(self, lhw_device_id, actionType):
+        #_log.debug('_valid_device_action()')
         if actionType not in [AT_GET_STATE
                                 , AT_GET_LEVEL
                                 , AT_SET_STATE
@@ -1227,13 +1195,13 @@ class SmartHub(Agent):
         # however, since we don't have model for the battery charge controller
         # we are assumuing constant energy dfor the devices based on experimental data
         tap = SH_BASE_ENERGY
-        if self._shDevicesState[SH_DEVICE_LED] == SH_DEVICE_STATE_ON:
-            level_led = self._shDevicesLevel[SH_DEVICE_LED]
+        if self._sh_devices_state[SH_DEVICE_LED] == SH_DEVICE_STATE_ON:
+            level_led = self._sh_devices_level[SH_DEVICE_LED]
             tap += ((SH_LED_ENERGY * SH_LED_THRESHOLD_PCT)
                                     if level_led <= SH_LED_THRESHOLD_PCT
                                     else (SH_LED_ENERGY * level_led))
-        if self._shDevicesState[SH_DEVICE_FAN] == SH_DEVICE_STATE_ON:
-            level_fan = self._shDevicesLevel[SH_DEVICE_FAN]
+        if self._sh_devices_state[SH_DEVICE_FAN] == SH_DEVICE_STATE_ON:
+            level_fan = self._sh_devices_level[SH_DEVICE_FAN]
             tap = ((SH_FAN_ENERGY * SH_LED_THRESHOLD_PCT)
                                     if level_led <= SH_LED_THRESHOLD_PCT
                                     else (SH_FAN_ENERGY * level_fan))
