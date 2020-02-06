@@ -215,7 +215,7 @@ class ZoneController(Agent):
         
     def _config_get_points(self):
         self._vb_vip_identity = self.config.get('vb_vip_identity', 'iiit.volttronbridge')
-        self.root_topic = self.config.get('topic_root', 'zone')
+        self._root_topic = self.config.get('topic_root', 'zone')
         self._topic_energy_demand = self.config.get('topic_energy_demand', 'zone/energydemand')
         self._topic_price_point = self.config.get('topic_price_point', 'zone/pricepoint')
         return
@@ -548,14 +548,14 @@ class ZoneController(Agent):
 
     def _publish_zone_tsp(self, tsp):
         #_log.debug('_publish_zone_tsp()')
-        pubTopic = self.root_topic+"/rm_tsp"
+        pubTopic = self._root_topic+"/rm_tsp"
         pubMsg = [tsp, {'units': 'celcius', 'tz': 'UTC', 'type': 'float'}]
         publish_to_bus(self, pubTopic, pubMsg)
         return
         
     def _publish_zone_lsp(self, lsp):
         #_log.debug('_publish_zone_lsp()')
-        pubTopic = self.root_topic+"/rm_lsp"
+        pubTopic = self._root_topic+"/rm_lsp"
         pubMsg = [lsp, {'units': '%', 'tz': 'UTC', 'type': 'float'}]
         publish_to_bus(self, pubTopic, pubMsg)
         return

@@ -104,6 +104,21 @@ def smarthub(config_path, **kwargs):
 class SmartHub(Agent):
     '''Smart Hub
     '''
+    #initialized  during __init__ from config
+    _period_read_data = None
+    _period_process_pp = None
+    _price_point_current = None
+    _price_point_latest = None
+    
+    _vb_vip_identity = None
+    _root_topic = None
+    _topic_energy_demand = None
+    _topic_price_point = None
+    
+    _device_id = None
+    _discovery_address = None
+    
+    #any process that failed to apply pp sets this flag False
     _process_opt_pp_success = False
     
     _taskID_LedDebug = 1
@@ -111,33 +126,10 @@ class SmartHub(Agent):
     
     _voltState = 0
     
-    '''
-        SH_DEVICE_LED_DEBUG = 0 only state, no level
-        SH_DEVICE_LED       = 1 both state and level
-        SH_DEVICE_FAN       = 2 both state and level
-        SH_DEVICE_FAN_SWING = 3 state only
-        SH_DEVICE_S_LUX     = 4 only level
-        SH_DEVICE_S_RH      = 5 only level
-        SH_DEVICE_S_TEMP    = 6 only level
-        SH_DEVICE_S_CO2     = 7 only level
-        SH_DEVICE_S_PIR     = 8 only level (binary on/off)
-    '''
     _shDevicesState = [0, 0, 0, 0, 0, 0, 0, 0, 0]
     _shDevicesLevel = [0.3, 0.3, 0.3, 0.3, 0.3, 0.3, 0.3, 0.3, 0.3]
     _shDevicesPP_th = [ 0.95, 0.95, 0.95, 0.95, 0.95, 0.95, 0.95, 0.95, 0.95]
     
-    _price_point_current = 0.4
-    _price_point_latest = 0.45
-    _pp_id = randint(0, 99999999)
-    _pp_id_latest = randint(0, 99999999)
-    
-    #downstream energy demand and deviceId
-    _ds_ed = []
-    _ds_deviceId = []
-    
-    #smarthub total energy demand (including downstream smartstrips)
-    _ted = SH_BASE_ENERGY
-
     def __init__(self, config_path, **kwargs):
         super(SmartHub, self).__init__(**kwargs)
         _log.debug("vip_identity: " + self.core.identity)
@@ -243,15 +235,11 @@ class SmartHub(Agent):
         return
         
     def _configGetPoints(self):
-        self.vb_vip_identity = self.config.get('vb_vip_identity'
-                                                , 'volttronbridgeagent-0.3_1')
-        self.topic_root = self.config.get('topic_root', 'smarthub')
-        self.topic_price_point = self.config.get('topic_price_point'
-                                                    , 'smarthub/pricepoint')
-        self.energyDemand_topic = self.config.get('topic_energy_demand'
-                                                    , 'smarthub/energydemand')
-        self.energyDemand_topic_ds = self.config.get('topic_energy_demand_ds'
-                                                        , 'smartstrip/energydemand')
+        self._vb_vip_identity = self.config.get('vb_vip_identity', 'volttronbridgeagent-0.3_1')
+        self._root_topic = self.config.get('topic_root', 'smarthub')
+        self.topic_price_point = self.config.get('topic_price_point', 'smarthub/pricepoint')
+        self.energyDemand_topic = self.config.get('topic_energy_demand', 'smarthub/energydemand')
+        self.energyDemand_topic_ds = self.config.get('topic_energy_demand_ds', 'smartstrip/energydemand')
         return
         
     def _configGetPriceFucntions(self):
@@ -572,7 +560,7 @@ class SmartHub(Agent):
         #print(result)
         try:
             if result['result'] == 'SUCCESS':
-                pubTopic = self.topic_root + '/sensors/all'
+                pubTopic = self._root_topic + '/sensors/all'
                 lux_level = self.getShDeviceLevel(SH_DEVICE_S_LUX, SCHEDULE_AVLB)
                 rh_level = self.getShDeviceLevel(SH_DEVICE_S_RH, SCHEDULE_AVLB)
                 temp_level = self.getShDeviceLevel(SH_DEVICE_S_TEMP, SCHEDULE_AVLB)
@@ -1008,31 +996,31 @@ class SmartHub(Agent):
     def _getPubTopic(self, deviceId, actionType):
         if actionType == AT_PUB_STATE:
             if deviceId == SH_DEVICE_LED_DEBUG:
-                return self.topic_root + '/leddebugstate'
+                return self._root_topic + '/leddebugstate'
             elif deviceId == SH_DEVICE_LED:
-                return self.topic_root + '/ledstate'
+                return self._root_topic + '/ledstate'
             elif deviceId == SH_DEVICE_FAN:
-                return self.topic_root + '/fanstate'
+                return self._root_topic + '/fanstate'
         elif actionType == AT_PUB_LEVEL:
             if deviceId == SH_DEVICE_LED:
-                return self.topic_root + '/ledlevel'
+                return self._root_topic + '/ledlevel'
             elif deviceId == SH_DEVICE_FAN:
-                return self.topic_root + '/fanlevel'
+                return self._root_topic + '/fanlevel'
             elif deviceId == SH_DEVICE_S_LUX:
-                return self.topic_root + '/sensors/luxlevel'
+                return self._root_topic + '/sensors/luxlevel'
             elif deviceId == SH_DEVICE_S_RH:
-                return self.topic_root + '/sensors/rhlevel'
+                return self._root_topic + '/sensors/rhlevel'
             elif deviceId == SH_DEVICE_S_TEMP:
-                return self.topic_root + '/sensors/templevel'
+                return self._root_topic + '/sensors/templevel'
             elif deviceId == SH_DEVICE_S_CO2:
-                return self.topic_root + '/sensors/co2level'
+                return self._root_topic + '/sensors/co2level'
             elif deviceId == SH_DEVICE_S_PIR:
-                return self.topic_root + '/sensors/pirlevel'
+                return self._root_topic + '/sensors/pirlevel'
         elif actionType == AT_PUB_THPP:
             if deviceId == SH_DEVICE_LED:
-                return self.topic_root + '/ledthpp'
+                return self._root_topic + '/ledthpp'
             elif deviceId == SH_DEVICE_FAN:
-                return self.topic_root + '/fanthpp'
+                return self._root_topic + '/fanthpp'
         _log.exception ("Expection: not a valid device-action type for pubTopic")
         return ""
         

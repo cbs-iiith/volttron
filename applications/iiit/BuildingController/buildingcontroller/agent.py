@@ -86,6 +86,9 @@ class BuildingController(Agent):
     _device_id = None
     _discovery_address = None
     
+    #any process that failed to apply pp sets this flag False
+    _process_opt_pp_success = False
+    
     def __init__(self, config_path, **kwargs):
         super(BuildingController, self).__init__(**kwargs)
         _log.debug("vip_identity: " + self.core.identity)
