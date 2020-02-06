@@ -120,10 +120,7 @@ class SmartHub(Agent):
     #any process that failed to apply pp sets this flag False
     _process_opt_pp_success = False
     
-    _taskID_LedDebug = 1
-    _ledDebugState = 0
-    
-    _voltState = 0
+    _volt_state = 0
     
     _shDevicesState = [0, 0, 0, 0, 0, 0, 0, 0, 0]
     _shDevicesLevel = [0.3, 0.3, 0.3, 0.3, 0.3, 0.3, 0.3, 0.3, 0.3]
@@ -140,13 +137,13 @@ class SmartHub(Agent):
         self._config_get_init_values()
         self._config_get_price_fucntions()
         return
-
+        
     @Core.receiver('onsetup')
     def setup(self, sender, **kwargs):
         _log.info(self.config['message'])
         self._agent_id = self.config['agentid']
-        
         return
+        
     @Core.receiver('onstart')            
     def startup(self, sender, **kwargs):
         _log.info("Starting SmartHub...")
@@ -207,17 +204,16 @@ class SmartHub(Agent):
         #subscribing to topic_price_point
         self.vip.pubsub.subscribe("pubsub", self._topic_price_point, self.on_new_price)
         
-        self._voltState = 1
+        self._volt_state = 1
         
         _log.debug('switch on debug led')
         self._set_sh_device_state(SH_DEVICE_LED_DEBUG, SH_DEVICE_STATE_ON, SCHEDULE_NOT_AVLB)
-        
         return
         
     @Core.receiver('onstop')
     def onstop(self, sender, **kwargs):
         _log.debug('onstop()')
-        if self._voltState != 0:
+        if self._volt_state != 0:
             self._stopVolt()
         
         _log.debug('un registering rpc routes')
@@ -227,7 +223,7 @@ class SmartHub(Agent):
     @Core.receiver('onfinish')
     def onfinish(self, sender, **kwargs):
         _log.debug('onfinish()')
-        if self._voltState != 0:
+        if self._volt_state != 0:
             self._stopVolt()
         return 
         
@@ -292,7 +288,7 @@ class SmartHub(Agent):
             finally:
                 #cancel the schedule
                 cancel_task_schdl(self, task_id)
-        self._voltState = 0
+        self._volt_state = 0
         return
         
     def _config_get_init_values(self):
@@ -409,27 +405,27 @@ class SmartHub(Agent):
         
     def _test_sensors(self):
         _log.debug('test lux sensor')
-        lux_level = self.getShDeviceLevel(SH_DEVICE_S_LUX, SCHEDULE_NOT_AVLB)
+        lux_level = self._get_sh_device_level(SH_DEVICE_S_LUX, SCHEDULE_NOT_AVLB)
         _log.debug('lux Level: {:0.4f}'.format(lux_level))
         time.sleep(1)
         
         _log.debug('test rh sensor')
-        rh_level = self.getShDeviceLevel(SH_DEVICE_S_RH, SCHEDULE_NOT_AVLB)
+        rh_level = self._get_sh_device_level(SH_DEVICE_S_RH, SCHEDULE_NOT_AVLB)
         _log.debug('rh Level: {:0.4f}'.format(rh_level))
         time.sleep(1)
         
         _log.debug('test temp sensor')
-        temp_level = self.getShDeviceLevel(SH_DEVICE_S_TEMP, SCHEDULE_NOT_AVLB)
+        temp_level = self._get_sh_device_level(SH_DEVICE_S_TEMP, SCHEDULE_NOT_AVLB)
         _log.debug('temp Level: {:0.4f}'.format(temp_level))
         time.sleep(1)
         
         _log.debug('test co2 sensor')
-        co2_level = self.getShDeviceLevel(SH_DEVICE_S_CO2, SCHEDULE_NOT_AVLB)
+        co2_level = self._get_sh_device_level(SH_DEVICE_S_CO2, SCHEDULE_NOT_AVLB)
         _log.debug('co2 Level: {0:0.4f}'.format(co2_level))
         time.sleep(1)
         
         _log.debug('test PIR sensor')
-        pir_level = self.getShDeviceLevel(SH_DEVICE_S_PIR, SCHEDULE_NOT_AVLB)
+        pir_level = self._get_sh_device_level(SH_DEVICE_S_PIR, SCHEDULE_NOT_AVLB)
         _log.debug('PIR Level: {0:d}'.format(int(pir_level)))
         time.sleep(1)
         
@@ -440,23 +436,23 @@ class SmartHub(Agent):
         try:
             if result['result'] == 'SUCCESS':
                 _log.debug('test lux sensor')
-                lux_level = self.getShDeviceLevel(SH_DEVICE_S_LUX, SCHEDULE_AVLB)
+                lux_level = self._get_sh_device_level(SH_DEVICE_S_LUX, SCHEDULE_AVLB)
                 _log.debug('lux Level: {:0.4f}'.format(lux_level))
                 
                 _log.debug('test rh sensor')
-                rh_level = self.getShDeviceLevel(SH_DEVICE_S_RH, SCHEDULE_AVLB)
+                rh_level = self._get_sh_device_level(SH_DEVICE_S_RH, SCHEDULE_AVLB)
                 _log.debug('rh Level: {:0.4f}'.format(rh_level))
                 
                 _log.debug('test temp sensor')
-                temp_level = self.getShDeviceLevel(SH_DEVICE_S_TEMP, SCHEDULE_AVLB)
+                temp_level = self._get_sh_device_level(SH_DEVICE_S_TEMP, SCHEDULE_AVLB)
                 _log.debug('temp Level: {:0.4f}'.format(temp_level))
                 
                 _log.debug('test co2 sensor')
-                co2_level = self.getShDeviceLevel(SH_DEVICE_S_CO2, SCHEDULE_AVLB)
+                co2_level = self._get_sh_device_level(SH_DEVICE_S_CO2, SCHEDULE_AVLB)
                 _log.debug('co2 Level: {:0.4f}'.format(co2_level))
                 
                 _log.debug('test pir sensor')
-                pir_level = self.getShDeviceLevel(SH_DEVICE_S_PIR, SCHEDULE_AVLB)
+                pir_level = self._get_sh_device_level(SH_DEVICE_S_PIR, SCHEDULE_AVLB)
                 _log.debug('pir Level: {:d}'.format(int(pir_level)))
         except Exception as e:
             _log.exception ("Expection: no task schdl for _test_sensors_2()")
@@ -476,8 +472,8 @@ class SmartHub(Agent):
             if result['result'] == 'SUCCESS':
                 self._shDevicesState[SH_DEVICE_LED] = self.getShDeviceState(SH_DEVICE_LED, SCHEDULE_AVLB)
                 self._shDevicesState[SH_DEVICE_FAN] = self.getShDeviceState(SH_DEVICE_FAN, SCHEDULE_AVLB)
-                self._shDevicesLevel[SH_DEVICE_LED] = self.getShDeviceLevel(SH_DEVICE_LED, SCHEDULE_AVLB)
-                self._shDevicesLevel[SH_DEVICE_FAN] = self.getShDeviceLevel(SH_DEVICE_FAN, SCHEDULE_AVLB)
+                self._shDevicesLevel[SH_DEVICE_LED] = self._get_sh_device_level(SH_DEVICE_LED, SCHEDULE_AVLB)
+                self._shDevicesLevel[SH_DEVICE_FAN] = self._get_sh_device_level(SH_DEVICE_FAN, SCHEDULE_AVLB)
         except Exception as e:
             _log.exception ("Expection: no task schdl for _get_initial_hw_state()")
             #print(e)
@@ -516,8 +512,8 @@ class SmartHub(Agent):
             
         return state
         
-    def getShDeviceLevel(self, lhw_device_id, schd_exist):
-        #_log.debug('getShDeviceLevel()')
+    def _get_sh_device_level(self, lhw_device_id, schd_exist):
+        #_log.debug('_get_sh_device_level()')
         level = E_UNKNOWN_LEVEL
         if not self._validDeviceAction( lhw_device_id, AT_GET_LEVEL):
             _log.exception ("not a valid device to get level, lhw_device_id: " + str(lhw_device_id))
@@ -636,11 +632,11 @@ class SmartHub(Agent):
         try:
             if result['result'] == 'SUCCESS':
                 pubTopic = self._root_topic + '/sensors/all'
-                lux_level = self.getShDeviceLevel(SH_DEVICE_S_LUX, SCHEDULE_AVLB)
-                rh_level = self.getShDeviceLevel(SH_DEVICE_S_RH, SCHEDULE_AVLB)
-                temp_level = self.getShDeviceLevel(SH_DEVICE_S_TEMP, SCHEDULE_AVLB)
-                co2_level = self.getShDeviceLevel(SH_DEVICE_S_CO2, SCHEDULE_AVLB)
-                pir_level = self.getShDeviceLevel(SH_DEVICE_S_PIR, SCHEDULE_AVLB)
+                lux_level = self._get_sh_device_level(SH_DEVICE_S_LUX, SCHEDULE_AVLB)
+                rh_level = self._get_sh_device_level(SH_DEVICE_S_RH, SCHEDULE_AVLB)
+                temp_level = self._get_sh_device_level(SH_DEVICE_S_TEMP, SCHEDULE_AVLB)
+                co2_level = self._get_sh_device_level(SH_DEVICE_S_CO2, SCHEDULE_AVLB)
+                pir_level = self._get_sh_device_level(SH_DEVICE_S_PIR, SCHEDULE_AVLB)
                 #time.sleep(1)  #yeild for a movement
                 #cancel the schedule
                 ispace_utils.cancel_task_schdl(self, task_id)

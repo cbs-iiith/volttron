@@ -98,7 +98,7 @@ class ZoneController(Agent):
     def __init__(self, config_path, **kwargs):
         super(ZoneController, self).__init__(**kwargs)
         _log.debug("vip_identity: " + self.core.identity)
-
+        
         self.config = utils.load_config(config_path)
         self._config_get_points()
         self._config_get_init_values()
