@@ -90,7 +90,7 @@ class BuildingController(Agent):
     
     def __init__(self, config_path, **kwargs):
         super(BuildingController, self).__init__(**kwargs)
-        _log.debug("vip_identity: " + self.core.identity)
+        _log.debug('vip_identity: ' + self.core.identity)
         
         self.config = utils.load_config(config_path)
         self._config_get_points()
@@ -105,14 +105,14 @@ class BuildingController(Agent):
         
     @Core.receiver('onstart')
     def startup(self, sender, **kwargs):
-        _log.info("Starting BuildingController...")
+        _log.info('Starting BuildingController...')
         
         #retrive self._device_id and self._discovery_address from vb
         retrive_details_from_vb(self, 5)
         
         #register rpc routes with MASTER_WEB
         #register_rpc_route is a blocking call
-        register_rpc_route(self, "buildingcontroller", "rpc_from_net", 5)
+        register_rpc_route(self, 'buildingcontroller', 'rpc_from_net', 5)
         
         #register this agent with vb as local device for posting active power & bid energy demand
         #pca picks up the active power & energy demand bids only if registered with vb as local device
@@ -153,7 +153,7 @@ class BuildingController(Agent):
         self.core.periodic(self._period_process_pp, self.process_opt_pp, wait=None)
         
         #subscribing to topic_price_point
-        self.vip.pubsub.subscribe("pubsub", self._topic_price_point, self.on_new_price)
+        self.vip.pubsub.subscribe('pubsub', self._topic_price_point, self.on_new_price)
         
         _log.debug('startup() - Done. Agent is ready')
         return
@@ -188,7 +188,7 @@ class BuildingController(Agent):
                         + ', rpc method: {}'.format(rpcdata.method)
                         + ', rpc params: {}'.format(rpcdata.params)
                         )
-            if rpcdata.method == "ping":
+            if rpcdata.method == 'ping':
                 return True
             else:
                 return jsonrpc.json_error(rpcdata.id, METHOD_NOT_FOUND,
@@ -224,7 +224,7 @@ class BuildingController(Agent):
         return
         
     def _run_bms_test(self):
-        _log.debug("Running: _runBMS Commu Test()...")
+        _log.debug('Running: _runBMS Commu Test()...')
         self._test_new_pp(pp_msg, 0.10)
         time.sleep(1)
         
@@ -234,7 +234,7 @@ class BuildingController(Agent):
         self._test_new_pp(pp_msg, 0.25)
         time.sleep(1)
         
-        _log.debug("EOF Testing")
+        _log.debug('EOF Testing')
         return
         
     '''
@@ -255,10 +255,10 @@ class BuildingController(Agent):
                                     ).get(timeout=10)
             return pp
         except gevent.Timeout:
-            _log.exception("gevent.Timeout in _rpcget_bms_pp()")
+            _log.exception('gevent.Timeout in _rpcget_bms_pp()')
             return E_UNKNOWN_BPP
         except Exception as e:
-            _log.exception("Could not contact actuator. Is it running?")
+            _log.exception('Could not contact actuator. Is it running?')
             print(e)
             return E_UNKNOWN_BPP
         return E_UNKNOWN_BPP
@@ -278,9 +278,9 @@ class BuildingController(Agent):
                                         ).get(timeout=10)
             self._update_bms_pp()
         except gevent.Timeout:
-            _log.exception("gevent.Timeout in _rpcset_bms_pp()!!!")
+            _log.exception('gevent.Timeout in _rpcset_bms_pp()!!!')
         except Exception as e:
-            _log.exception("_rpcset_bms_pp() changing price in the bms!!!")
+            _log.exception('_rpcset_bms_pp() changing price in the bms!!!')
             #print(e)
         finally:
             #cancel the schedule
@@ -311,7 +311,7 @@ class BuildingController(Agent):
             
         pp_msg = copy(self._opt_pp_msg_latest)
         
-        pub_topic =  self._root_topic + "/Building_PricePoint"
+        pub_topic =  self._root_topic + '/Building_PricePoint'
         pub_msg = pp_msg.get_json_message(self._agent_id, 'bus_topic')
         _log.debug('publishing to local bus topic: {}'.format(pub_topic))
         _log.debug('Msg: {}'.format(pub_msg))
@@ -378,14 +378,14 @@ class BuildingController(Agent):
                             + ' , will try again in {} sec!!!'.format(self._period_process_pp))
             return
             
-        _log.info("New Price Point processed.")
+        _log.info('New Price Point processed.')
         #on successful process of apply_pricing_policy with the latest opt pp, current = latest
         self._opt_pp_msg_current = copy(self._opt_pp_msg_latest)
         self._process_opt_pp_success = True
         return
         
     def _apply_pricing_policy(self):
-        _log.debug("_apply_pricing_policy()")
+        _log.debug('_apply_pricing_policy()')
         #TODO: control the energy demand of devices at building level accordingly
         #      use self._opt_pp_msg_latest
         #      if applying self._price_point_latest failed, set self._process_opt_pp_success = False
