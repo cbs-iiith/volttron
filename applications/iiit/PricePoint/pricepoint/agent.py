@@ -75,7 +75,7 @@ class PricePoint(Agent):
     
     def __init__(self, config_path, **kwargs):
         super(PricePoint, self).__init__(**kwargs)
-        _log.debug("vip_identity: " + self.core.identity)
+        _log.debug('vip_identity: ' + self.core.identity)
         
         self.config = utils.load_config(config_path)
         self._config_get_points()
@@ -96,7 +96,7 @@ class PricePoint(Agent):
         
         #register rpc routes with MASTER_WEB
         #register_rpc_route is a blocking call
-        register_rpc_route(self, "pricepoint", "rpc_from_net", 5)
+        register_rpc_route(self, 'pricepoint', 'rpc_from_net', 5)
         
         _log.debug('startup() - Done. Agent is ready')
         return
@@ -136,9 +136,9 @@ class PricePoint(Agent):
                         + ', rpc method: {}'.format(rpcdata.method)
                         #+ ', rpc params: {}'.format(rpcdata.params)
                         )
-            if rpcdata.method == "ping":
+            if rpcdata.method == 'ping':
                 result = True
-            elif rpcdata.method == "new-pp":
+            elif rpcdata.method == 'new-pp':
                 result = self.update_price_point(rpcdata.id, message)
             else:
                 _log.error('method not found!!!')

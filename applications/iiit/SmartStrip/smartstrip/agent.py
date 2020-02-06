@@ -104,7 +104,7 @@ class SmartStrip(Agent):
     
     def __init__(self, config_path, **kwargs):
         super(SmartStrip, self).__init__(**kwargs)
-        _log.debug("vip_identity: " + self.core.identity)
+        _log.debug('vip_identity: ' + self.core.identity)
         
         self.config = utils.load_config(config_path)
         self._configGetPoints()
@@ -119,9 +119,9 @@ class SmartStrip(Agent):
         
     @Core.receiver('onstart')
     def startup(self, sender, **kwargs):
-        _log.info("yeild 30s for volttron platform to initiate properly...")
+        _log.info('yeild 30s for volttron platform to initiate properly...')
         time.sleep(30) #yeild for a movement
-        _log.info("Starting SmartStrip...")
+        _log.info('Starting SmartStrip...')
         
         self.runSmartStripTest()
         
@@ -146,11 +146,11 @@ class SmartStrip(Agent):
         self.core.periodic(self._period_process_pp, self.process_opt_pp, wait=None)
         
         #subscribing to topic_price_point
-        self.vip.pubsub.subscribe("pubsub", self.topic_price_point, self.on_new_price)
+        self.vip.pubsub.subscribe('pubsub', self.topic_price_point, self.on_new_price)
         
         self.vip.rpc.call(MASTER_WEB, 'register_agent_route'
                             , r'^/SmartStrip'
-                            , "rpc_from_net"
+                            , 'rpc_from_net'
                             ).get(timeout=10)
                       
         self.switchLedDebug(LED_ON)
@@ -198,7 +198,7 @@ class SmartStrip(Agent):
         return
         
     def runSmartStripTest(self):
-        _log.debug("Running: runSmartStripTest()...")
+        _log.debug('Running: runSmartStripTest()...')
         _log.debug('switch on debug led')
         self.switchLedDebug(LED_ON)
         time.sleep(1)
@@ -214,7 +214,7 @@ class SmartStrip(Agent):
         
         _log.debug('switch off debug led')
         self.switchLedDebug(LED_OFF)
-        _log.debug("EOF Testing")
+        _log.debug('EOF Testing')
         
         return
         
@@ -222,7 +222,7 @@ class SmartStrip(Agent):
         result = {}
         #get schedule for testing relays
         task_id = str(randint(0, 99999999))
-        #_log.debug("task_id: " + task_id)
+        #_log.debug('task_id: ' + task_id)
         result = get_task_schdl(self, task_id,'iiit/cbs/smartstrip')
         
         #test all four relays
@@ -272,7 +272,7 @@ class SmartStrip(Agent):
         
         #get schedule for to h/w latest data
         task_id = str(randint(0, 99999999))
-        #_log.debug("task_id: " + task_id)
+        #_log.debug('task_id: ' + task_id)
         result = get_task_schdl(self, task_id,'iiit/cbs/smartstrip')
         
         #run the task
@@ -344,10 +344,10 @@ class SmartStrip(Agent):
                     + ', ActivePower: {:.2f}'.format(fActivePower)
                     ))
         except gevent.Timeout:
-            _log.exception("gevent.Timeout in readMeterData()")
+            _log.exception('gevent.Timeout in readMeterData()')
             return
         except Exception as e:
-            _log.exception("exception in readMeterData()")
+            _log.exception('exception in readMeterData()')
             print(e)
             return
         return
@@ -425,10 +425,10 @@ class SmartStrip(Agent):
             _log.info('Tag 1: '+ self._newTagId1 +', Tag 2: ' + self._newTagId2 + ', Tag 3: '+ self._newTagId3 +', Tag 4: ' + self._newTagId4)
             
         except gevent.Timeout:
-            _log.exception("gevent.Timeout in readTagIDs()")
+            _log.exception('gevent.Timeout in readTagIDs()')
             return
         except Exception as e:
-            _log.exception("Exception: reading tag ids")
+            _log.exception('Exception: reading tag ids')
             print(e)
             return
         return
@@ -528,10 +528,10 @@ class SmartStrip(Agent):
         self._pp_failed = False     #any process that failed to apply pp, sets this flag True
         #get schedule for testing relays
         task_id = str(randint(0, 99999999))
-        #_log.debug("task_id: " + task_id)
+        #_log.debug('task_id: ' + task_id)
         result = get_task_schdl(self, task_id,'iiit/cbs/smartstrip')
         if result['result'] != 'SUCCESS':
-            _log.debug("unable to process_opt_pp(), will try again in " + str(self._period_process_pp))
+            _log.debug('unable to process_opt_pp(), will try again in ' + str(self._period_process_pp))
             self._pp_failed = True
             return
             
@@ -543,10 +543,10 @@ class SmartStrip(Agent):
         cancel_task_schdl(self, task_id)
         
         if self._pp_failed:
-            _log.debug("unable to process_opt_pp(), will try again in " + str(self._period_process_pp))
+            _log.debug('unable to process_opt_pp(), will try again in ' + str(self._period_process_pp))
             return
             
-        _log.info("New Price Point processed.")
+        _log.info('New Price Point processed.')
         self._price_point_old = self._price_point_latest
         self._pp_id = self._pp_id_new
         return
@@ -623,7 +623,7 @@ class SmartStrip(Agent):
             
         #get schedule to switchLedDebug
         task_id = str(randint(0, 99999999))
-        #_log.debug("task_id: " + task_id)
+        #_log.debug('task_id: ' + task_id)
         result = get_task_schdl(self, task_id,'iiit/cbs/smartstrip')
         
         if result['result'] == 'SUCCESS':
@@ -639,9 +639,9 @@ class SmartStrip(Agent):
                         
                 self.updateLedDebugState(state)
             except gevent.Timeout:
-                _log.exception("gevent.Timeout in switchLedDebug()")
+                _log.exception('gevent.Timeout in switchLedDebug()')
             except Exception as e:
-                _log.exception("setting ledDebug")
+                _log.exception('setting ledDebug')
                 print(e)
             finally:
                 #cancel the schedule
@@ -660,7 +660,7 @@ class SmartStrip(Agent):
         elif schdExist == SCHEDULE_NOT_AVLB:
             #get schedule to switchRelay
             task_id = str(randint(0, 99999999))
-            #_log.debug("task_id: " + task_id)
+            #_log.debug('task_id: ' + task_id)
             result = get_task_schdl(self, task_id,'iiit/cbs/smartstrip')
             
             if result['result'] == 'SUCCESS':
@@ -668,10 +668,10 @@ class SmartStrip(Agent):
                     self.rpc_switchRelay(plugID, state)
                     
                 except gevent.Timeout:
-                    _log.exception("gevent.Timeout in switchRelay()")
+                    _log.exception('gevent.Timeout in switchRelay()')
                     return
                 except Exception as e:
-                    _log.exception("setting plug" + str(plugID) + " relay")
+                    _log.exception('setting plug' + str(plugID) + ' relay')
                     print(e)
                     return
                 finally:
@@ -692,10 +692,10 @@ class SmartStrip(Agent):
                     'iiit/cbs/smartstrip/Plug' + str(plugID+1) + 'Relay',
                     state).get(timeout=10)
         except gevent.Timeout:
-            _log.exception("gevent.Timeout in rpc_switchRelay()")
+            _log.exception('gevent.Timeout in rpc_switchRelay()')
             #return E_UNKNOWN_STATE
         except Exception as e:
-            _log.exception("in rpc_switchRelay() Could not contact actuator. Is it running?")
+            _log.exception('in rpc_switchRelay() Could not contact actuator. Is it running?')
             print(e)
             #return E_UNKNOWN_STATE
             
@@ -711,10 +711,10 @@ class SmartStrip(Agent):
                     'platform.actuator','get_point',
                     'iiit/cbs/smartstrip/LEDDebug').get(timeout=10)
         except gevent.Timeout:
-            _log.exception("gevent.Timeout in updateLedDebugState()")
+            _log.exception('gevent.Timeout in updateLedDebugState()')
             ledDebug_status = E_UNKNOWN_STATE
         except Exception as e:
-            _log.exception("in updateLedDebugState() Could not contact actuator. Is it running?")
+            _log.exception('in updateLedDebugState() Could not contact actuator. Is it running?')
             print(e)
             ledDebug_status = E_UNKNOWN_STATE
             
@@ -737,10 +737,10 @@ class SmartStrip(Agent):
                     'platform.actuator','get_point',
                     'iiit/cbs/smartstrip/Plug' + str(plugID+1) + 'Relay').get(timeout=10)
         except gevent.Timeout:
-            _log.exception("gevent.Timeout in updatePlugRelayState()")
+            _log.exception('gevent.Timeout in updatePlugRelayState()')
             relay_status = E_UNKNOWN_STATE
         except Exception as e:
-            _log.exception("in updatePlugRelayState() Could not contact actuator. Is it running?")
+            _log.exception('in updatePlugRelayState() Could not contact actuator. Is it running?')
             print(e)
             relay_status = E_UNKNOWN_STATE
             
@@ -770,7 +770,7 @@ class SmartStrip(Agent):
         if not self._validPlugId(plugID):
             return
             
-        pubTopic = self.root_topic+"/plug"+str(plugID+1)+"/tagid"
+        pubTopic = self.root_topic+'/plug'+str(plugID+1)+'/tagid'
         pubMsg = [newTagId,{'units': '', 'tz': 'UTC', 'type': 'string'}]
         publish_to_bus(self, pubTopic, pubMsg)
         return
@@ -779,7 +779,7 @@ class SmartStrip(Agent):
         if not self._validPlugId(plugID):
             return
             
-        pubTopic = self.root_topic+"/plug" + str(plugID+1) + "/relaystate"
+        pubTopic = self.root_topic+'/plug' + str(plugID+1) + '/relaystate'
         pubMsg = [state,{'units': 'On/Off', 'tz': 'UTC', 'type': 'int'}]
         publish_to_bus(self, pubTopic, pubMsg)
         return
@@ -788,7 +788,7 @@ class SmartStrip(Agent):
         if not self._validPlugId(plugID):
             return
             
-        pubTopic = self.root_topic+"/plug" + str(plugID+1) + "/threshold"
+        pubTopic = self.root_topic+'/plug' + str(plugID+1) + '/threshold'
         pubMsg = [thresholdPP,{'units': 'cents', 'tz': 'UTC', 'type': 'float'}]
         publish_to_bus(self, pubTopic, pubMsg)
         return
@@ -803,9 +803,9 @@ class SmartStrip(Agent):
                         + ', rpc method: {}'.format(rpcdata.method)
                         + ', rpc params: {}'.format(rpcdata.params)
                         )
-            if rpcdata.method == "ping":
+            if rpcdata.method == 'ping':
                 result = True
-            elif rpcdata.method == "setPlugThPP":
+            elif rpcdata.method == 'setPlugThPP':
                 result = self.setThresholdPP(message)
             else:
                 return jsonrpc.json_error('NA', METHOD_NOT_FOUND,
@@ -845,7 +845,7 @@ class SmartStrip(Agent):
         self._ted = self._calculate_ted()
         _log.info( 'New TED: {:.4f}, publishing to bus.'.format(self._ted))
         pubTopic = self.energyDemand_topic
-        #_log.debug("TED pubTopic: " + pubTopic)
+        #_log.debug('TED pubTopic: ' + pubTopic)
         pubMsg = [self._ted
                     , {'units': 'W', 'tz': 'UTC', 'type': 'float'}
                     , self._pp_id
