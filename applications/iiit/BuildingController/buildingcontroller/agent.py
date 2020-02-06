@@ -237,6 +237,16 @@ class BuildingController(Agent):
         _log.debug("EOF Testing")
         return
         
+    '''
+        Functionality related to the controller
+        
+        1. control the local actuators
+                get/set various set point / levels / speeds
+        2. local sensors
+                report the sensors data at regular interval
+        3. run necessary traditional control algorithm (PID, on/off, etc.,)
+        
+    '''
     def _rpcget_bms_pp(self):
         try:
             pp = self.vip.rpc.call('platform.actuator'
@@ -308,6 +318,14 @@ class BuildingController(Agent):
         publish_to_bus(self, pub_topic, pub_msg)
         return
         
+    '''
+        Functionality related to the market mechanisms
+        
+        1. receive new prices (optimal pp or bid pp) from the pca
+        2. if opt pp, apply pricing policy by computing the new setpoint based on price functions
+        3. if bid pp, compute the new bid energy demand
+        
+    '''
     def on_new_price(self, peer, sender, bus,  topic, headers, message):
         if sender not in self._valid_senders_list_pp: return
         
