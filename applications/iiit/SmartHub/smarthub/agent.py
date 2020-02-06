@@ -104,7 +104,7 @@ def smarthub(config_path, **kwargs):
 class SmartHub(Agent):
     '''Smart Hub
     '''
-    _pp_failed = False
+    _process_opt_pp_success = False
     
     _taskID_LedDebug = 1
     _ledDebugState = 0
@@ -778,13 +778,13 @@ class SmartHub(Agent):
         if ispace_utils.isclose(self._price_point_old, self._price_point_latest, EPSILON) and self._pp_id == self._pp_id_new:
             return
             
-        self._pp_failed = False     #any process that failed to apply pp sets this flag True
+        self._process_opt_pp_success = False     #any process that failed to apply pp sets this flag True
         task_id = str(randint(0, 99999999))
         result = ispace_utils.get_task_schdl(self, task_id, 'iiit/cbs/smarthub')
         if result['result'] != 'SUCCESS':
-            self._pp_failed = True
+            self._process_opt_pp_success = True
         
-        if self._pp_failed:
+        if self._process_opt_pp_success:
             _log.debug("unable to process_opt_pp(), will try again in " + str(self._period_process_pp))
             return
             
@@ -793,7 +793,7 @@ class SmartHub(Agent):
         #cancel the schedule
         ispace_utils.cancel_task_schdl(self, task_id)
         
-        if self._pp_failed:
+        if self._process_opt_pp_success:
             _log.debug("unable to process_opt_pp(), will try again in " + str(self._period_process_pp))
             return
             
@@ -818,7 +818,7 @@ class SmartHub(Agent):
                             )
                 self.setShDeviceState(deviceId, SH_DEVICE_STATE_OFF, schdExist)
                 if not self._shDevicesState[deviceId] == SH_DEVICE_STATE_OFF:
-                    self._pp_failed = True
+                    self._process_opt_pp_success = True
             #else:
                 #do nothing
         else:
@@ -829,14 +829,14 @@ class SmartHub(Agent):
                         )
             self.setShDeviceState(deviceId, SH_DEVICE_STATE_ON, schdExist)
             if not self._shDevicesState[deviceId] == SH_DEVICE_STATE_ON:
-                self._pp_failed = True
+                self._process_opt_pp_success = True
                 
             if deviceId == SH_DEVICE_FAN:
                 fan_speed = self._get_new_fan_speed(self._price_point_latest)/100
                 _log.info ( "New Fan Speed: {0:.4f}".format(fan_speed))
                 self.setShDeviceLevel(SH_DEVICE_FAN, fan_speed, schdExist)
                 if not ispace_utils.isclose(fan_speed, self._shDevicesLevel[deviceId], EPSILON):
-                    self._pp_failed = True
+                    self._process_opt_pp_success = True
 
         return
         
