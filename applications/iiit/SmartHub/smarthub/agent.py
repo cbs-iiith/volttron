@@ -135,9 +135,9 @@ class SmartHub(Agent):
         _log.debug("vip_identity: " + self.core.identity)
         
         self.config = utils.load_config(config_path)
-        self._configGetPoints()
-        self._configGetInitValues()
-        self._configGetPriceFucntions()
+        self._config_get_points()
+        self._config_get_init_values()
+        self._config_get_price_fucntions()
         return
 
     @Core.receiver('onsetup')
@@ -190,7 +190,7 @@ class SmartHub(Agent):
         self.vip.pubsub.subscribe("pubsub", self.topic_price_point, self.on_new_price)
         
         #subscribing to ds energy demand, vb publishes ed from registered ds to this topic
-        self.vip.pubsub.subscribe("pubsub", self.energyDemand_topic_ds, self.on_ds_ed)
+        self.vip.pubsub.subscribe("pubsub", self.topic_energy_demand_ds, self.on_ds_ed)
         
         self.vip.rpc.call(MASTER_WEB, 'register_agent_route'
                             , r'^/SmartHub'
@@ -227,23 +227,24 @@ class SmartHub(Agent):
         self._voltState = 0
         return
 
-    def _configGetInitValues(self):
+    def _config_get_init_values(self):
         self._period_read_data = self.config.get('period_read_data', 30)
         self._period_process_pp = self.config.get('period_process_pp', 10)
         self._price_point_old = self.config.get('default_base_price', 0.1)
         self._price_point_latest = self.config.get('price_point_latest', 0.2)
         return
         
-    def _configGetPoints(self):
-        self._vb_vip_identity = self.config.get('vb_vip_identity', 'volttronbridgeagent-0.3_1')
+    def _config_get_points(self):
+        self._vb_vip_identity = self.config.get('vb_vip_identity', 'iiit.volttronbridge')
         self._root_topic = self.config.get('topic_root', 'smarthub')
         self.topic_price_point = self.config.get('topic_price_point', 'smarthub/pricepoint')
-        self.energyDemand_topic = self.config.get('topic_energy_demand', 'smarthub/energydemand')
-        self.energyDemand_topic_ds = self.config.get('topic_energy_demand_ds', 'smartstrip/energydemand')
+        self.topic_energy_demand = self.config.get('topic_energy_demand', 'smarthub/energydemand')
+        self.topic_energy_demand_ds = self.config.get('topic_energy_demand_ds'
+                                                                , 'smartstrip/energydemand')
         return
         
-    def _configGetPriceFucntions(self):
-        _log.debug("_configGetPriceFucntions()")
+    def _config_get_price_fucntions(self):
+        _log.debug("_config_get_price_fucntions()")
         self.pf_sh_fan = self.config.get('pf_sh_fan')
         return
         
@@ -746,7 +747,7 @@ class SmartHub(Agent):
         
     def publish_bid_ted(self):
         _log.info( "New Bid TED: {0:.4f}, publishing to bus.".format(self._bid_ted))
-        pubTopic = self.energyDemand_topic
+        pubTopic = self.topic_energy_demand
         #_log.debug("Bid TED pubTopic: " + pubTopic)
         pubMsg = [self._bid_ted
                     , {'units': 'kWh', 'tz': 'UTC', 'type': 'float'}
@@ -1162,7 +1163,7 @@ class SmartHub(Agent):
     def publish_ted(self):
         self._total_act_pwr = self._calc_total_act_pwr()
         _log.info( 'New Total Active Pwr: {:.4f}, publishing to bus.'.format(self._total_act_pwr))
-        pubTopic = self.energyDemand_topic
+        pubTopic = self.topic_energy_demand
         #_log.debug("TED pubTopic: " + pubTopic)
         #the act_pwr is for self._period_read_data (default 30s)
         #and this msg is valid for (ttl) self._pp_duration_old (default 1hour)
