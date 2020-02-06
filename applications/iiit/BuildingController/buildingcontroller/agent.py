@@ -312,26 +312,26 @@ class BuildingController(Agent):
     def publish_price_to_bms(self):
         _log.debug('publish_price_to_bms()')
         task_id = str(randint(0, 99999999))
-        result = get_task_schdl(self, task_id,'iiit/cbs/buildingcontroller')
-        if result['result'] == 'SUCCESS':
-            try:
-                result = self.vip.rpc.call('platform.actuator'
-                                            , 'set_point'
-                                            , self._agent_id
-                                            , 'iiit/cbs/buildingcontroller/Building_PricePoint'
-                                            , self._price_point_latest
-                                            ).get(timeout=10)
-                self.update_building_pp()
-            except gevent.Timeout:
-                _log.exception("Expection: gevent.Timeout in publish_price_to_bms()!!!")
-            except Exception as e:
-                _log.exception ("Expection: publish_price_to_bms() changing price in the bms!!!")
-                #print(e)
-            finally:
-                #cancel the schedule
-                cancel_task_schdl(self, task_id)
-        else:
+        result = get_task_schdl(self, task_id, 'iiit/cbs/buildingcontroller')
+        if result['result'] != 'SUCCESS':
             _log.debug('schedule NOT available')
+            return
+        try:
+            result = self.vip.rpc.call('platform.actuator'
+                                        , 'set_point'
+                                        , self._agent_id
+                                        , 'iiit/cbs/buildingcontroller/Building_PricePoint'
+                                        , self._price_point_latest
+                                        ).get(timeout=10)
+            self.update_building_pp()
+        except gevent.Timeout:
+            _log.exception("Expection: gevent.Timeout in publish_price_to_bms()!!!")
+        except Exception as e:
+            _log.exception ("Expection: publish_price_to_bms() changing price in the bms!!!")
+            #print(e)
+        finally:
+            #cancel the schedule
+            cancel_task_schdl(self, task_id)
         return
         
     def update_building_pp(self):
