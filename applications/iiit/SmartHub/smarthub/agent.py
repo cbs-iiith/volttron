@@ -124,7 +124,7 @@ class SmartHub(Agent):
     
     _sh_devices_state = [0, 0, 0, 0, 0, 0, 0, 0, 0]
     _sh_devices_level = [0.3, 0.3, 0.3, 0.3, 0.3, 0.3, 0.3, 0.3, 0.3]
-    _shDevicesPP_th = [ 0.95, 0.95, 0.95, 0.95, 0.95, 0.95, 0.95, 0.95, 0.95]
+    _sh_devices_th_pp = [ 0.95, 0.95, 0.95, 0.95, 0.95, 0.95, 0.95, 0.95, 0.95]
     
     _pf_sh_fan = None
     
@@ -588,11 +588,11 @@ class SmartHub(Agent):
             _log.exception("not a valid device to change thPP, lhw_device_id: " + str(lhw_device_id))
             return
         
-        if self._shDevicesPP_th[lhw_device_id] == thPP:
+        if self._sh_devices_th_pp[lhw_device_id] == thPP:
             _log.debug('same thPP, do nothing')
             return
         
-        self._shDevicesPP_th[lhw_device_id] = thPP
+        self._sh_devices_th_pp[lhw_device_id] = thPP
         self._publish_sh_device_th_pp(lhw_device_id, thPP)
         self._apply_pricing_policy(lhw_device_id, SCHEDULE_NOT_AVLB)
         return
@@ -662,8 +662,8 @@ class SmartHub(Agent):
         
     def _publish_device_th_pp(self):
         #_log.debug('publish_device_th_pp()')
-        thpp_led = self._shDevicesPP_th[SH_DEVICE_LED]
-        thpp_fan = self._shDevicesPP_th[SH_DEVICE_FAN]
+        thpp_led = self._sh_devices_th_pp[SH_DEVICE_LED]
+        thpp_fan = self._sh_devices_th_pp[SH_DEVICE_FAN]
         self._publish_sh_device_th_pp(SH_DEVICE_LED, thpp_led)
         self._publish_sh_device_th_pp(SH_DEVICE_FAN, thpp_fan)
         _log.debug('led th pp: {:0.4f}'.format(float(thpp_led))
@@ -814,12 +814,12 @@ class SmartHub(Agent):
         
     def _apply_pricing_policy(self, lhw_device_id, schd_exist):
         _log.debug("_apply_pricing_policy()")
-        shDevicesPP_th = self._shDevicesPP_th[lhw_device_id]
-        if self._price_point_latest > shDevicesPP_th: 
+        threshold_pp = self._sh_devices_th_pp[lhw_device_id]
+        if self._price_point_latest > threshold_pp: 
             if self._sh_devices_state[lhw_device_id] == SH_DEVICE_STATE_ON:
-                _log.info(self._getEndPoint(lhw_device_id, AT_GET_STATE)
+                _log.info(self._get_lhw_end_point(lhw_device_id, AT_GET_STATE)
                             + 'Current price point > threshold'
-                            + '({0:.2f}), '.format(shDevicesPP_th)
+                            + '({0:.2f}), '.format(threshold_pp)
                             + 'Switching-Off Power'
                             )
                 self._set_sh_device_state(lhw_device_id, SH_DEVICE_STATE_OFF, schd_exist)
@@ -828,9 +828,9 @@ class SmartHub(Agent):
             #else:
                 #do nothing
         else:
-            _log.info(self._getEndPoint(lhw_device_id, AT_GET_STATE)
+            _log.info(self._get_lhw_end_point(lhw_device_id, AT_GET_STATE)
                         + 'Current price point <= threshold'
-                        + '({0:.2f}), '.format(shDevicesPP_th)
+                        + '({0:.2f}), '.format(threshold_pp)
                         + 'Switching-On Power'
                         )
             self._set_sh_device_state(lhw_device_id, SH_DEVICE_STATE_ON, schd_exist)
@@ -865,7 +865,7 @@ class SmartHub(Agent):
         if not self._valid_device_action(lhw_device_id,AT_GET_STATE):
             _log.exception("not a valid device to get state, lhw_device_id: " + str(lhw_device_id))
             return E_UNKNOWN_STATE
-        endPoint = self._getEndPoint(lhw_device_id, AT_GET_STATE)
+        endPoint = self._get_lhw_end_point(lhw_device_id, AT_GET_STATE)
         try:
             device_level = self.vip.rpc.call(
                     'platform.actuator','get_point',
@@ -886,7 +886,7 @@ class SmartHub(Agent):
         if not self._valid_device_action(lhw_device_id, AT_SET_STATE):
             _log.exception("not a valid device to change state, lhw_device_id: " + str(lhw_device_id))
             return
-        endPoint = self._getEndPoint(lhw_device_id, AT_SET_STATE)
+        endPoint = self._get_lhw_end_point(lhw_device_id, AT_SET_STATE)
         try:
             result = self.vip.rpc.call(
                     'platform.actuator', 
@@ -909,7 +909,7 @@ class SmartHub(Agent):
         if not self._valid_device_action(lhw_device_id, AT_GET_LEVEL):
             _log.exception("not a valid device to get level, lhw_device_id: " + str(lhw_device_id))
             return E_UNKNOWN_LEVEL
-        endPoint = self._getEndPoint(lhw_device_id, AT_GET_LEVEL)
+        endPoint = self._get_lhw_end_point(lhw_device_id, AT_GET_LEVEL)
         #_log.debug("endPoint: " + endPoint)
         try:
             device_level = self.vip.rpc.call(
@@ -929,7 +929,7 @@ class SmartHub(Agent):
         if not self._valid_device_action(lhw_device_id, AT_SET_LEVEL):
             _log.exception("not a valid device to change level, lhw_device_id: " + str(lhw_device_id))
             return
-        endPoint = self._getEndPoint(lhw_device_id, AT_SET_LEVEL)
+        endPoint = self._get_lhw_end_point(lhw_device_id, AT_SET_LEVEL)
         
         try:
             result = self.vip.rpc.call(
@@ -984,7 +984,7 @@ class SmartHub(Agent):
         if not self._valid_device_action(lhw_device_id, AT_PUB_STATE):
             _log.exception("not a valid device to pub state, lhw_device_id: " + str(lhw_device_id))
             return
-        pubTopic = self._getPubTopic(lhw_device_id, AT_PUB_STATE)
+        pubTopic = self._get_lhw_sub_topic(lhw_device_id, AT_PUB_STATE)
         pubMsg = [state, {'units': 'On/Off', 'tz': 'UTC', 'type': 'int'}]
         publish_to_bus(self, pubTopic, pubMsg)
         
@@ -995,7 +995,7 @@ class SmartHub(Agent):
         if not self._valid_device_action(lhw_device_id, AT_PUB_LEVEL):
             _log.exception("not a valid device to pub level, lhw_device_id: " + str(lhw_device_id))
             return
-        pubTopic = self._getPubTopic(lhw_device_id, AT_PUB_LEVEL)
+        pubTopic = self._get_lhw_sub_topic(lhw_device_id, AT_PUB_LEVEL)
         pubMsg = [level, {'units': 'duty', 'tz': 'UTC', 'type': 'float'}]
         publish_to_bus(self, pubTopic, pubMsg)
         
@@ -1005,13 +1005,13 @@ class SmartHub(Agent):
         if not self._valid_device_action(lhw_device_id, AT_PUB_THPP):
             _log.exception("not a valid device to pub level, lhw_device_id: " + str(lhw_device_id))
             return
-        pubTopic = self._getPubTopic(lhw_device_id, AT_PUB_THPP)
+        pubTopic = self._get_lhw_sub_topic(lhw_device_id, AT_PUB_THPP)
         pubMsg = [thPP, {'units': 'cent', 'tz': 'UTC', 'type': 'float'}]
         publish_to_bus(self, pubTopic, pubMsg)
         
         return
         
-    def _getPubTopic(self, lhw_device_id, actionType):
+    def _get_lhw_sub_topic(self, lhw_device_id, actionType):
         if actionType == AT_PUB_STATE:
             if lhw_device_id == SH_DEVICE_LED_DEBUG:
                 return self._root_topic + '/leddebugstate'
@@ -1042,8 +1042,8 @@ class SmartHub(Agent):
         _log.exception("not a valid device-action type for pubTopic")
         return ""
         
-    def _getEndPoint(self, lhw_device_id, actionType):
-        #_log.debug('_getEndPoint()')
+    def _get_lhw_end_point(self, lhw_device_id, actionType):
+        #_log.debug('_get_lhw_end_point()')
         if  actionType == AT_SET_LEVEL:
             if lhw_device_id == SH_DEVICE_LED:
                 return "LEDPwmDuty"
