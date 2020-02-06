@@ -187,8 +187,12 @@ def isclose(a, b, rel_tol=1e-09, abs_tol=0.0):
     return (abs(a-b) <= max(rel_tol * max(abs(a), abs(b)), abs_tol))
     
 #return energy in kWh for the given duration
-def calc_energy(self, pwr_wh, duration_sec):
+def calc_energy_kwh(self, pwr_wh, duration_sec):
     return ((pwr_wh * duration_sec)/3600000)
+    
+#return energy in Wh for the given duration
+def calc_energy_wh(self, pwr_wh, duration_sec):
+    return ((pwr_wh * duration_sec)/3600)
     
 #TODO: do_rpc is synchrous, using requests which is a blocking operation
 #need to convert to async operations, maybe can use gevent 

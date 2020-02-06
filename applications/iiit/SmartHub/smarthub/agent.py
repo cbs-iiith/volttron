@@ -43,6 +43,7 @@ import gevent.event
 
 from ispace_utils import isclose, get_task_schdl, cancel_task_schdl, publish_to_bus, mround
 from ispace_utils import retrive_details_from_vb, register_agent_with_vb, register_rpc_route
+from ispace_utils import calc_energy_wh, calc_energy_kwh
 from ispace_msg import ISPACE_Msg, MessageType
 from ispace_msg_utils import parse_bustopic_msg, check_msg_type, tap_helper, ted_helper
 from ispace_msg_utils import get_default_pp_msg, valid_bustopic_msg
@@ -1054,16 +1055,16 @@ class SmartHub(Agent):
         # bid_ed should be measured in realtime from the connected plug
         # however, since we don't have model for the battery charge controller
         # we are using below algo based on experimental data
-        bid_ed = calc_energy(SH_BASE_ENERGY, self._bid_pp_duration)
+        bid_ed = calc_energy_wh(SH_BASE_ENERGY, self._bid_pp_duration)
         if self._sh_devices_state[SH_DEVICE_LED] == SH_DEVICE_STATE_ON:
             level_led = self._sh_devices_level[SH_DEVICE_LED]
-            led_energy = self.calc_energy(SH_LED_ENERGY, self._bid_pp_duration)
+            led_energy = calc_energy_wh(SH_LED_ENERGY, self._bid_pp_duration)
             bid_ed = bid_ed + ((led_energy * SH_LED_THRESHOLD_PCT)
                                     if level_led <= SH_LED_THRESHOLD_PCT 
                                     else (led_energy * level_led))
         if self._sh_devices_state[SH_DEVICE_FAN] == SH_DEVICE_STATE_ON:
             fan_speed = self._compute_new_fan_speed(self._bid_pp)
-            fan_energy = self.calc_energy(SH_FAN_ENERGY, self._bid_pp_duration)
+            fan_energy = calc_energy_wh(SH_FAN_ENERGY, self._bid_pp_duration)
             bid_ed = bid_ed + ((fan_energy * SH_FAN_THRESHOLD_PCT)
                                     if level_led <= SH_FAN_THRESHOLD_PCT
                                     else (fan_energy * fan_speed))
