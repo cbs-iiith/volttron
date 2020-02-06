@@ -1083,14 +1083,14 @@ class SmartHub(Agent):
             return
             
         self._apply_pricing_policy(SH_DEVICE_LED, SCHEDULE_AVLB)
-        if self._process_opt_pp_success:
+        if not self._process_opt_pp_success:
             _log.debug('unable to process_opt_pp()'
                                 + ', will try again in {} sec'.format(self._period_process_pp))
             cancel_task_schdl(self, task_id)
             return
             
         self._apply_pricing_policy(SH_DEVICE_FAN, SCHEDULE_AVLB)
-        if self._process_opt_pp_success:
+        if not self._process_opt_pp_success:
             _log.debug('unable to process_opt_pp()'
                                 + ', will try again in {} sec'.format(self._period_process_pp))
             cancel_task_schdl(self, task_id)
