@@ -233,31 +233,31 @@ class ZoneController(Agent):
         
         _log.debug('change tsp 26')
         self._rpcset_zone_tsp(26.0)
-        time.sleep(10)
+        time.sleep(2)
         
         _log.debug('change tsp 27')
         self._rpcset_zone_tsp(27.0)
-        time.sleep(10)
+        time.sleep(2)
         
         _log.debug('change tsp 28')
         self._rpcset_zone_tsp(28.0)
-        time.sleep(10)
+        time.sleep(2)
         
         _log.debug('change tsp 29')
         self._rpcset_zone_tsp(29.0)
-        time.sleep(10)
+        time.sleep(2)
         
         _log.debug('change lsp 25')
         self._rpcset_zone_tsp(25.0)
-        time.sleep(10)
+        time.sleep(2)
         
         _log.debug('change lsp 75')
         self._rpcset_zone_tsp(75.0)
-        time.sleep(10)
+        time.sleep(2)
         
         _log.debug('change lsp 100')
         self._rpcset_zone_tsp(100.0)
-        time.sleep(10)
+        time.sleep(2)
 
         _log.debug("EOF Testing")
         return
