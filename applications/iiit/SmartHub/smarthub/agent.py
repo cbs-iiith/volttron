@@ -1003,7 +1003,7 @@ class SmartHub(Agent):
             
         return
         
-    def _process_opt_pp(self, message):
+    def _process_opt_pp(self, pp_msg):
         self._opt_pp_msg_latest = copy(pp_msg)
         self._price_point_latest = pp_msg.get_value()
         
@@ -1013,7 +1013,7 @@ class SmartHub(Agent):
         self.process_opt_pp()
         return
         
-    def _process_bid_pp(self, message):
+    def _process_bid_pp(self, pp_msg):
         self._bid_pp_msg_latest = copy(pp_msg)
         self.process_bid_pp()
         return
