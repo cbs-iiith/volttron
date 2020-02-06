@@ -237,6 +237,77 @@ class BuildingController(Agent):
         _log.debug("EOF Testing")
         return
         
+    def _rpcget_bms_pp(self):
+        try:
+            pp = self.vip.rpc.call('platform.actuator'
+                                    ,'get_point'
+                                    , 'iiit/cbs/buildingcontroller/Building_PricePoint'
+                                    ).get(timeout=10)
+            return pp
+        except gevent.Timeout:
+            _log.exception("gevent.Timeout in _rpcget_bms_pp()")
+            return E_UNKNOWN_BPP
+        except Exception as e:
+            _log.exception("Could not contact actuator. Is it running?")
+            print(e)
+            return E_UNKNOWN_BPP
+        return E_UNKNOWN_BPP
+        
+    # Publish new price to bms (for logging (or) for further processing by the BMS)
+    def _rpcset_bms_pp(self):
+        _log.debug('_rpcset_bms_pp()')
+        task_id = str(randint(0, 99999999))
+        success = get_task_schdl(self, task_id, 'iiit/cbs/buildingcontroller')
+        if not success: return
+        try:
+            result = self.vip.rpc.call('platform.actuator'
+                                        , 'set_point'
+                                        , self._agent_id
+                                        , 'iiit/cbs/buildingcontroller/Building_PricePoint'
+                                        , self._price_point_latest
+                                        ).get(timeout=10)
+            self._update_bms_pp()
+        except gevent.Timeout:
+            _log.exception("gevent.Timeout in _rpcset_bms_pp()!!!")
+        except Exception as e:
+            _log.exception("_rpcset_bms_pp() changing price in the bms!!!")
+            #print(e)
+        finally:
+            #cancel the schedule
+            cancel_task_schdl(self, task_id)
+        return
+        
+    def _update_bms_pp(self):
+        #_log.debug('updateRmTsp()')
+        
+        building_pp = self._rpcget_bms_pp()
+        _log.debug('latest_pp: {:0.2f}'.format(self._price_point_latest)
+                        + ' , building_pp {:0.2f}'.format(building_pp))
+        
+        #check if the pp really updated at the bms, only then proceed with new pp
+        if isclose(self._price_point_latest, building_pp, EPSILON):
+            self._publish_bms_pp()
+        else:
+            self._process_opt_pp_success = False
+            
+        return
+        
+    def _publish_bms_pp(self):
+        #_log.debug('_publish_bms_pp()')
+        if self._opt_pp_msg_latest is None:
+            #this happens when the agent starts
+            _log.warning('_publish_bms_pp() - self._opt_pp_msg_latest is None')
+            return
+            
+        pp_msg = copy(self._opt_pp_msg_latest)
+        
+        pub_topic =  self._root_topic + "/Building_PricePoint"
+        pub_msg = pp_msg.get_json_message(self._agent_id, 'bus_topic')
+        _log.debug('publishing to local bus topic: {}'.format(pub_topic))
+        _log.debug('Msg: {}'.format(pub_msg))
+        publish_to_bus(self, pub_topic, pub_msg)
+        return
+        
     def on_new_price(self, peer, sender, bus,  topic, headers, message):
         if sender not in self._valid_senders_list_pp: return
         
@@ -276,16 +347,11 @@ class BuildingController(Agent):
         self.process_opt_pp()
         return
         
-    def _process_bid_pp(self, pp_msg):
-        self._bid_pp_msg_latest = copy(pp_msg)
-        self.process_bid_pp()
-        return
-        
     #this is a perodic function that keeps trying to apply the new pp till success
     def process_opt_pp(self):
         if self._process_opt_pp_success: return
             
-        self.publish_price_to_bms()
+        self._rpcset_bms_pp()
         if not self._process_opt_pp_success:
             self._apply_pricing_policy()
             
@@ -307,76 +373,6 @@ class BuildingController(Agent):
         #      if applying self._price_point_latest failed, set self._process_opt_pp_success = False
         return
         
-    # Publish new price to bms (for logging (o)r for further processing by the BMS)
-    def publish_price_to_bms(self):
-        _log.debug('publish_price_to_bms()')
-        task_id = str(randint(0, 99999999))
-        success = get_task_schdl(self, task_id, 'iiit/cbs/buildingcontroller')
-        if not success: return
-        try:
-            result = self.vip.rpc.call('platform.actuator'
-                                        , 'set_point'
-                                        , self._agent_id
-                                        , 'iiit/cbs/buildingcontroller/Building_PricePoint'
-                                        , self._price_point_latest
-                                        ).get(timeout=10)
-            self.update_building_pp()
-        except gevent.Timeout:
-            _log.exception("gevent.Timeout in publish_price_to_bms()!!!")
-        except Exception as e:
-            _log.exception("publish_price_to_bms() changing price in the bms!!!")
-            #print(e)
-        finally:
-            #cancel the schedule
-            cancel_task_schdl(self, task_id)
-        return
-        
-    def update_building_pp(self):
-        #_log.debug('updateRmTsp()')
-        
-        building_pp = self.rpc_get_building_pp()
-        _log.debug('latest_pp: {:0.2f}'.format(self._price_point_latest)
-                        + ' , building_pp {:0.2f}'.format(building_pp))
-        
-        #check if the pp really updated at the bms, only then proceed with new pp
-        if isclose(self._price_point_latest, building_pp, EPSILON):
-            self.publish_building_pp()
-        else:
-            self._process_opt_pp_success = False
-            
-        return
-        
-    def publish_building_pp(self):
-        #_log.debug('publish_building_pp()')
-        if self._opt_pp_msg_latest is None:
-            #this happens when the agent starts
-            _log.warning('publish_building_pp() - self._opt_pp_msg_latest is None')
-            return
-            
-        pp_msg = copy(self._opt_pp_msg_latest)
-        
-        pub_topic =  self._root_topic + "/Building_PricePoint"
-        pub_msg = pp_msg.get_json_message(self._agent_id, 'bus_topic')
-        _log.debug('publishing to local bus topic: {}'.format(pub_topic))
-        _log.debug('Msg: {}'.format(pub_msg))
-        publish_to_bus(self, pub_topic, pub_msg)
-        return
-        
-    def rpc_get_building_pp(self):
-        try:
-            pp = self.vip.rpc.call('platform.actuator'
-                                    ,'get_point'
-                                    , 'iiit/cbs/buildingcontroller/Building_PricePoint'
-                                    ).get(timeout=10)
-            return pp
-        except gevent.Timeout:
-            _log.exception("gevent.Timeout in rpc_get_building_pp()")
-            return E_UNKNOWN_BPP
-        except Exception as e:
-            _log.exception("Could not contact actuator. Is it running?")
-            print(e)
-            return E_UNKNOWN_BPP
-        return E_UNKNOWN_BPP
         
     #perodic function to publish active power
     def publish_opt_tap(self):
@@ -408,6 +404,11 @@ class BuildingController(Agent):
         #_log.debug('_calc_total_act_pwr()')
         tap = random() * 1000
         return tap
+        
+    def _process_bid_pp(self, pp_msg):
+        self._bid_pp_msg_latest = copy(pp_msg)
+        self.process_bid_pp()
+        return
         
     def process_bid_pp(self):
         self.publish_bid_ted()
