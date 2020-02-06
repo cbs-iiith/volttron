@@ -344,10 +344,10 @@ class SmartStrip(Agent):
                     + ', ActivePower: {:.2f}'.format(fActivePower)
                     ))
         except gevent.Timeout:
-            _log.exception("Expection: gevent.Timeout in readMeterData()")
+            _log.exception("gevent.Timeout in readMeterData()")
             return
         except Exception as e:
-            _log.exception ("Expection: exception in readMeterData()")
+            _log.exception ("exception in readMeterData()")
             print(e)
             return
         return
@@ -425,7 +425,7 @@ class SmartStrip(Agent):
             _log.info('Tag 1: '+ self._newTagId1 +', Tag 2: ' + self._newTagId2 + ', Tag 3: '+ self._newTagId3 +', Tag 4: ' + self._newTagId4)
             
         except gevent.Timeout:
-            _log.exception("Expection: gevent.Timeout in readTagIDs()")
+            _log.exception("gevent.Timeout in readTagIDs()")
             return
         except Exception as e:
             _log.exception ("Exception: reading tag ids")
@@ -639,9 +639,9 @@ class SmartStrip(Agent):
                         
                 self.updateLedDebugState(state)
             except gevent.Timeout:
-                _log.exception("Expection: gevent.Timeout in switchLedDebug()")
+                _log.exception("gevent.Timeout in switchLedDebug()")
             except Exception as e:
-                _log.exception ("Expection: setting ledDebug")
+                _log.exception ("setting ledDebug")
                 print(e)
             finally:
                 #cancel the schedule
@@ -668,10 +668,10 @@ class SmartStrip(Agent):
                     self.rpc_switchRelay(plugID, state)
                     
                 except gevent.Timeout:
-                    _log.exception("Expection: gevent.Timeout in switchRelay()")
+                    _log.exception("gevent.Timeout in switchRelay()")
                     return
                 except Exception as e:
-                    _log.exception ("Expection: setting plug" + str(plugID) + " relay")
+                    _log.exception ("setting plug" + str(plugID) + " relay")
                     print(e)
                     return
                 finally:
@@ -692,10 +692,10 @@ class SmartStrip(Agent):
                     'iiit/cbs/smartstrip/Plug' + str(plugID+1) + 'Relay',
                     state).get(timeout=10)
         except gevent.Timeout:
-            _log.exception("Expection: gevent.Timeout in rpc_switchRelay()")
+            _log.exception("gevent.Timeout in rpc_switchRelay()")
             #return E_UNKNOWN_STATE
         except Exception as e:
-            _log.exception ("Expection: in rpc_switchRelay() Could not contact actuator. Is it running?")
+            _log.exception ("in rpc_switchRelay() Could not contact actuator. Is it running?")
             print(e)
             #return E_UNKNOWN_STATE
             
@@ -711,10 +711,10 @@ class SmartStrip(Agent):
                     'platform.actuator','get_point',
                     'iiit/cbs/smartstrip/LEDDebug').get(timeout=10)
         except gevent.Timeout:
-            _log.exception("Expection: gevent.Timeout in updateLedDebugState()")
+            _log.exception("gevent.Timeout in updateLedDebugState()")
             ledDebug_status = E_UNKNOWN_STATE
         except Exception as e:
-            _log.exception ("Expection: in updateLedDebugState() Could not contact actuator. Is it running?")
+            _log.exception ("in updateLedDebugState() Could not contact actuator. Is it running?")
             print(e)
             ledDebug_status = E_UNKNOWN_STATE
             
@@ -737,10 +737,10 @@ class SmartStrip(Agent):
                     'platform.actuator','get_point',
                     'iiit/cbs/smartstrip/Plug' + str(plugID+1) + 'Relay').get(timeout=10)
         except gevent.Timeout:
-            _log.exception("Expection: gevent.Timeout in updatePlugRelayState()")
+            _log.exception("gevent.Timeout in updatePlugRelayState()")
             relay_status = E_UNKNOWN_STATE
         except Exception as e:
-            _log.exception ("Expection: in updatePlugRelayState() Could not contact actuator. Is it running?")
+            _log.exception ("in updatePlugRelayState() Could not contact actuator. Is it running?")
             print(e)
             relay_status = E_UNKNOWN_STATE
             

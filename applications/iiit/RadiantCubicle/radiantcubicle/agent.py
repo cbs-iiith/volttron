@@ -287,9 +287,9 @@ class RadiantCubicle(Agent):
                                             ).get(timeout=10)
                 self.updateRcTspLevel(level)
             except gevent.Timeout:
-                _log.exception("Expection: gevent.Timeout in setRcTspLevel()")
+                _log.exception("gevent.Timeout in setRcTspLevel()")
             except Exception as e:
-                _log.exception ("Expection: changing device level")
+                _log.exception ("changing device level")
                 print(e)
             finally:
                 #cancel the schedule
@@ -323,9 +323,9 @@ class RadiantCubicle(Agent):
                         
                 self.updateRcAutoCntrl(state)
             except gevent.Timeout:
-                _log.exception("Expection: gevent.Timeout in setRcAutoCntrl()")
+                _log.exception("gevent.Timeout in setRcAutoCntrl()")
             except Exception as e:
-                _log.exception ("Expection: setting RC_AUTO_CNTRL")
+                _log.exception ("setting RC_AUTO_CNTRL")
                 print(e)
             finally:
                 #cancel the schedule
@@ -375,10 +375,10 @@ class RadiantCubicle(Agent):
                                                     ).get(timeout=10)
                 return coolingEnergy
             except gevent.Timeout:
-                _log.exception("Expection: gevent.Timeout in rpc_getRcCalcCoolingEnergy()")
+                _log.exception("gevent.Timeout in rpc_getRcCalcCoolingEnergy()")
                 return E_UNKNOWN_CCE
             except Exception as e:
-                _log.exception ("Expection: Could not contact actuator. Is it running?")
+                _log.exception ("Could not contact actuator. Is it running?")
                 print(e)
                 return E_UNKNOWN_CCE
             finally:
@@ -395,10 +395,10 @@ class RadiantCubicle(Agent):
                     'iiit/cbs/radiantcubicle/RC_TSP').get(timeout=10)
             return device_level
         except gevent.Timeout:
-            _log.exception("Expection: gevent.Timeout in rpc_getShDeviceLevel()")
+            _log.exception("gevent.Timeout in rpc_getShDeviceLevel()")
             return E_UNKNOWN_LEVEL
         except Exception as e:
-            _log.exception ("Expection: Could not contact actuator. Is it running?")
+            _log.exception ("Could not contact actuator. Is it running?")
             print(e)
             return E_UNKNOWN_LEVEL
         return E_UNKNOWN_LEVEL
@@ -411,10 +411,10 @@ class RadiantCubicle(Agent):
                                         ).get(timeout=10)
             return state
         except gevent.Timeout:
-            _log.exception("Expection: gevent.Timeout in rpc_getShDeviceLevel()")
+            _log.exception("gevent.Timeout in rpc_getShDeviceLevel()")
             return E_UNKNOWN_STATE
         except Exception as e:
-            _log.exception ("Expection: Could not contact actuator. Is it running?")
+            _log.exception ("Could not contact actuator. Is it running?")
             print(e)
             return E_UNKNOWN_STATE
         return E_UNKNOWN_STATE

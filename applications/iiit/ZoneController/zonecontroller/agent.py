@@ -394,9 +394,9 @@ class ZoneController(Agent):
                                         ).get(timeout=10)
             self._update_zone_tsp(tsp)
         except gevent.Timeout:
-            _log.exception("Expection: gevent.Timeout in _rpcset_zone_tsp()")
+            _log.exception("gevent.Timeout in _rpcset_zone_tsp()")
         except Exception as e:
-            _log.exception ("Expection: changing ambient tsp")
+            _log.exception ("changing ambient tsp")
             #print(e)
         finally:
             #cancel the schedule
@@ -425,9 +425,9 @@ class ZoneController(Agent):
                                         ).get(timeout=10)
             self._update_zone_lsp(lsp)
         except gevent.Timeout:
-            _log.exception("Expection: gevent.Timeout in _rpcset_zone_lsp()")
+            _log.exception("gevent.Timeout in _rpcset_zone_lsp()")
         except Exception as e:
-            _log.exception ("Expection: changing ambient lsp")
+            _log.exception ("changing ambient lsp")
             #print(e)
         finally:
             #cancel the schedule
@@ -475,9 +475,9 @@ class ZoneController(Agent):
                                             ).get(timeout=10)
             return lightEnergy
         except gevent.Timeout:
-            _log.exception("Expection: gevent.Timeout in rpc_getRmCalcLightEnergy()")
+            _log.exception("gevent.Timeout in rpc_getRmCalcLightEnergy()")
         except Exception as e:
-            _log.exception ("Expection: Could not contact actuator. Is it running?")
+            _log.exception ("Could not contact actuator. Is it running?")
             #print(e)
         finally:
             #cancel the schedule
@@ -497,10 +497,10 @@ class ZoneController(Agent):
                                                 ).get(timeout=10)
             return coolingEnergy
         except gevent.Timeout:
-            _log.exception("Expection: gevent.Timeout in _rpcget_zone_cooling_power()")
+            _log.exception("gevent.Timeout in _rpcget_zone_cooling_power()")
             return E_UNKNOWN_CCE
         except Exception as e:
-            _log.exception ("Expection: Could not contact actuator. Is it running?")
+            _log.exception ("Could not contact actuator. Is it running?")
             #print(e)
             return E_UNKNOWN_CCE
         finally:
@@ -516,10 +516,10 @@ class ZoneController(Agent):
                                         ).get(timeout=10)
             return rm_tsp
         except gevent.Timeout:
-            _log.exception("Expection: gevent.Timeout in _rpcget_zone_tsp()")
+            _log.exception("gevent.Timeout in _rpcget_zone_tsp()")
             return E_UNKNOWN_TSP
         except Exception as e:
-            _log.exception ("Expection: Could not contact actuator. Is it running?")
+            _log.exception ("Could not contact actuator. Is it running?")
             #print(e)
             return E_UNKNOWN_TSP
         return E_UNKNOWN_TSP
@@ -532,10 +532,10 @@ class ZoneController(Agent):
                                         ).get(timeout=10)
             return rm_lsp
         except gevent.Timeout:
-            _log.exception("Expection: gevent.Timeout in _rpcget_zone_lsp()")
+            _log.exception("gevent.Timeout in _rpcget_zone_lsp()")
             return E_UNKNOWN_LSP
         except Exception as e:
-            _log.exception ("Expection: Could not contact actuator. Is it running?")
+            _log.exception ("Could not contact actuator. Is it running?")
             #print(e)
             return E_UNKNOWN_LSP
         return E_UNKNOWN_LSP

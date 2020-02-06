@@ -325,9 +325,9 @@ class BuildingController(Agent):
                                         ).get(timeout=10)
             self.update_building_pp()
         except gevent.Timeout:
-            _log.exception("Expection: gevent.Timeout in publish_price_to_bms()!!!")
+            _log.exception("gevent.Timeout in publish_price_to_bms()!!!")
         except Exception as e:
-            _log.exception ("Expection: publish_price_to_bms() changing price in the bms!!!")
+            _log.exception ("publish_price_to_bms() changing price in the bms!!!")
             #print(e)
         finally:
             #cancel the schedule
@@ -373,10 +373,10 @@ class BuildingController(Agent):
                                     ).get(timeout=10)
             return pp
         except gevent.Timeout:
-            _log.exception("Expection: gevent.Timeout in rpc_get_building_pp()")
+            _log.exception("gevent.Timeout in rpc_get_building_pp()")
             return E_UNKNOWN_BPP
         except Exception as e:
-            _log.exception ("Expection: Could not contact actuator. Is it running?")
+            _log.exception ("Could not contact actuator. Is it running?")
             print(e)
             return E_UNKNOWN_BPP
         return E_UNKNOWN_BPP

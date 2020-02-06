@@ -129,7 +129,7 @@ def publish_to_bus(self, topic, msg):
                                 , msg
                                 ).get(timeout=10)
     except gevent.Timeout:
-        _log.warning('Expection: gevent.Timeout in publish_to_bus()')
+        _log.warning('gevent.Timeout in publish_to_bus()')
         return
     except Exception as e:
         _log.warning('Expection in publish_to_bus(), {}'.format(e.message))
@@ -155,23 +155,24 @@ def get_task_schdl(self, task_id, device, time_ms=None):
         if result['result'] != 'SUCCESS':
             return False
     except gevent.Timeout:
-        _log.exception('Expection: gevent.Timeout in get_task_schdl()')
+        _log.exception('gevent.Timeout for task_id: {}'.format(task_id))
         return False
     except Exception as e:
-        _log.exception ('Expection: Could not contact actuator. Is it running?'
-                                                                + ' {}'.format(e.message))
+        _log.exception ('Could not contact actuator for task_id: {}.'
+                                            + ' Is it running? {}'.format(task_id, e.message))
         return False
         #print(e)
     return True
     
 def cancel_task_schdl(self, task_id):
     #_log.debug('cancel_task_schdl()')
-    result = self.vip.rpc.call('platform.actuator'
-                                , 'request_cancel_schedule'
-                                , self._agent_id, task_id
-                                ).get(timeout=10)
-    #_log.debug('task_id: ' + task_id)
-    #_log.debug(result)
+    try:
+        result = self.vip.rpc.call('platform.actuator'
+                                    , 'request_cancel_schedule'
+                                    , self._agent_id, task_id
+                                    ).get(timeout=10)
+    except Exception as e:
+        _log.exception('cancel_task_schdl() for task_id: {}'.format(task_id))
     return
     
 def mround(num, multipleOf):
@@ -233,7 +234,7 @@ def do_rpc(id, url_root, method, params=None, request_method='POST'):
                                     + ' response: {}'.format(response))
     except Exception as e:
         #print(e)
-        _log.exception('Exception: do_rpc() unhandled exception, most likely dest is down')
+        _log.exception('do_rpc() unhandled exception, most likely dest is down')
     return result
     
     
