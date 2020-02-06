@@ -1199,78 +1199,50 @@ class SmartHub(Agent):
         log.exception ("Expection: not a valid device-action")
         return False
         
-    def publish_ted(self):
-        self._total_act_pwr = self._calc_total_act_pwr()
-        _log.info( 'New Total Active Pwr: {:.4f}, publishing to bus.'.format(self._total_act_pwr))
-        pubTopic = self.topic_energy_demand
-        #_log.debug("TED pubTopic: " + pubTopic)
-        #the act_pwr is for self._period_read_data (default 30s)
-        #and this msg is valid for (ttl) self._pp_duration_old (default 1hour)
-        pubMsg = [self._total_act_pwr
-                    , {'units': 'W', 'tz': 'UTC', 'type': 'float'}
-                    , self._pp_id_old
-                    , True
-                    , None
-                    , None
-                    , self._period_read_data
-                    , self._pp_duration_old
-                    , datetime.datetime.utcnow().isoformat(' ') + 'Z'
-                    ]
-        ispace_utils.publish_to_bus(self, pubTopic, pubMsg)
+    #perodic function to publish active power
+    def publish_opt_tap(self):
+        #compute total active power and publish to local/energydemand
+        #(vb RPCs this value to the next level)
+        opt_tap = self._calc_total_act_pwr()
+        
+        #create a MessageType.active_power ISPACE_Msg
+        pp_msg = tap_helper(self._opt_pp_msg_current
+                            , self._device_id
+                            , self._discovery_address
+                            , opt_tap
+                            , self._period_read_data
+                            )
+        _log. info('[LOG] Total Active Power(TAP) opt'
+                                    + ' for us opt pp_msg({})'.format(pp_msg.get_price_id())
+                                    + ': {:0.4f}'.format(opt_tap))
+        #publish the new price point to the local message bus
+        _log.debug('post to the local-bus...')
+        pub_topic = self._topic_energy_demand
+        pub_msg = pp_msg.get_json_message(self._agent_id, 'bus_topic')
+        _log.debug('local bus topic: {}'.format(pub_topic))
+        _log. info('[LOG] Total Active Power(TAP) opt, Msg: {}'.format(pub_msg))
+        publish_to_bus(self, pub_topic, pub_msg)
         return
         
-    #calculate the total active power
+    #calculate total active power (tap)
     def _calc_total_act_pwr(self):
-        total_act_pwr = self._local_opt_act_pwr()
-        for act_pwr in self._ds_total_act_pwr:
-            total_act_pwr = total_act_pwr + act_pwr
-        return total_act_pwr
-        
-    '''return active power only -- W
-    '''
-    #calculate the local active power for opt_pp
-    def _local_opt_act_pwr(self):
         # active pwr should be measured in realtime from the connected plug
         # however, since we don't have model for the battery charge controller
         # we are assumuing constant energy dfor the devices based on experimental data
-        act_pwr = SH_BASE_ENERGY
+        tap = SH_BASE_ENERGY
         if self._shDevicesState[SH_DEVICE_LED] == SH_DEVICE_STATE_ON:
             level_led = self._shDevicesLevel[SH_DEVICE_LED]
-            act_pwr = act_pwr + ((SH_LED_ENERGY * SH_LED_THRESHOLD_PCT)
+            tap += ((SH_LED_ENERGY * SH_LED_THRESHOLD_PCT)
                                     if level_led <= SH_LED_THRESHOLD_PCT
                                     else (SH_LED_ENERGY * level_led))
         if self._shDevicesState[SH_DEVICE_FAN] == SH_DEVICE_STATE_ON:
             level_fan = self._shDevicesLevel[SH_DEVICE_FAN]
-            act_pwr = act_pwr + ((SH_FAN_ENERGY * SH_LED_THRESHOLD_PCT)
+            tap = ((SH_FAN_ENERGY * SH_LED_THRESHOLD_PCT)
                                     if level_led <= SH_LED_THRESHOLD_PCT
                                     else (SH_FAN_ENERGY * level_fan))
-        return act_pwr
+        return tap
         
-    def on_ds_ed(self, peer, sender, bus, topic, headers, message):
-        #post ed to us only if pp_id corresponds to these ids (i.e., ed for either us opt_pp_id or bid_pp_id)
-        valid_pp_ids = [self.self._pp_id, self._bid_pp_id]
-
-        #check for msg validity, pp_id, timeout, etc., also _log.info(message) if a valid msg
-        valid_msg = ispace_utils.sanity_check_ed(message, valid_pp_ids)
-        if not valid_msg:
-            return
         
-        idx = self._get_ds_device_idx(message[ParamED.idx_ed_device_id])
-        if message[ParamED.idx_ed_isoptimal]:
-            _log.debug(" - opt_pp - ed!!!")
-            self._ds_total_act_pwr[idx] = message[ParamED.idx_ed]
-        else:
-            _log.debug(" - bid_pp - ed!!!")
-            self._ds_bid_ed[idx] = message[ParamED.idx_ed]
-        return
-        
-    def _get_ds_device_idx(self, deviceID):
-        if deviceID not in self._ds_deviceId:
-            self._ds_deviceId.append(deviceID)
-            idx = self._ds_deviceId.index(deviceID)
-            self._ds_total_act_pwr.insert(idx, 0.0)
-            self._ds_bid_ed.insert(idx, 0.0)
-        return self._ds_deviceId.index(deviceID)
         
 def main(argv=sys.argv):
     '''Main method called by the eggsecutable.'''
