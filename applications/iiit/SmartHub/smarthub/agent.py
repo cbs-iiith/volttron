@@ -129,6 +129,8 @@ class SmartHub(Agent):
     _shDevicesLevel = [0.3, 0.3, 0.3, 0.3, 0.3, 0.3, 0.3, 0.3, 0.3]
     _shDevicesPP_th = [ 0.95, 0.95, 0.95, 0.95, 0.95, 0.95, 0.95, 0.95, 0.95]
     
+    _pf_sh_fan = None
+    
     def __init__(self, config_path, **kwargs):
         super(SmartHub, self).__init__(**kwargs)
         _log.debug("vip_identity: " + self.core.identity)
@@ -302,15 +304,15 @@ class SmartHub(Agent):
     def _config_get_points(self):
         self._vb_vip_identity = self.config.get('vb_vip_identity', 'iiit.volttronbridge')
         self._root_topic = self.config.get('topic_root', 'smarthub')
-        self.topic_price_point = self.config.get('topic_price_point', 'smarthub/pricepoint')
-        self.topic_energy_demand = self.config.get('topic_energy_demand', 'smarthub/energydemand')
-        self.topic_energy_demand_ds = self.config.get('topic_energy_demand_ds'
+        self._topic_price_point = self.config.get('topic_price_point', 'smarthub/pricepoint')
+        self._topic_energy_demand = self.config.get('topic_energy_demand', 'smarthub/energydemand')
+        self._topic_energy_demand_ds = self.config.get('topic_energy_demand_ds'
                                                                 , 'smartstrip/energydemand')
         return
         
     def _config_get_price_fucntions(self):
         _log.debug("_config_get_price_fucntions()")
-        self.pf_sh_fan = self.config.get('pf_sh_fan')
+        self._pf_sh_fan = self.config.get('pf_sh_fan')
         return
         
     def _run_smart_hub_test(self):
@@ -322,8 +324,8 @@ class SmartHub(Agent):
         #self._test_sensors()
         self._test_sensors_2()
         _log.debug("EOF Testing")
+        return
         
-        return   
     def _test_led_debug(self):
         _log.debug('switch on debug led')
         
@@ -719,7 +721,7 @@ class SmartHub(Agent):
                     , 120
                     , datetime.datetime.utcnow().isoformat(' ') + 'Z'
                     ]
-        ispace_utils.publish_to_bus(self, self.topic_price_point, pubMsg)
+        ispace_utils.publish_to_bus(self, self._topic_price_point, pubMsg)
         return
         
     def on_new_price(self, peer, sender, bus,  topic, headers, message):
@@ -819,7 +821,7 @@ class SmartHub(Agent):
         
     def publish_bid_ted(self):
         _log.info( "New Bid TED: {0:.4f}, publishing to bus.".format(self._bid_ted))
-        pubTopic = self.topic_energy_demand
+        pubTopic = self._topic_energy_demand
         #_log.debug("Bid TED pubTopic: " + pubTopic)
         pubMsg = [self._bid_ted
                     , {'units': 'kWh', 'tz': 'UTC', 'type': 'float'}
@@ -905,9 +907,9 @@ class SmartHub(Agent):
     def _get_new_fan_speed(self, pp):
         pp = 0 if pp < 0 else 1 if pp > 1 else pp
         
-        pf_idx = self.pf_sh_fan['pf_idx']
-        pf_roundup = self.pf_sh_fan['pf_roundup']
-        pf_coefficients = self.pf_sh_fan['pf_coefficients']
+        pf_idx = self._pf_sh_fan['pf_idx']
+        pf_roundup = self._pf_sh_fan['pf_roundup']
+        pf_coefficients = self._pf_sh_fan['pf_coefficients']
         
         a = pf_coefficients[pf_idx]['a']
         b = pf_coefficients[pf_idx]['b']
