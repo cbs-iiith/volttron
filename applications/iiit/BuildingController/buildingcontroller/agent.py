@@ -123,6 +123,7 @@ class BuildingController(Agent):
         self._valid_senders_list_pp = ['iiit.pricecontroller']
         
         #any process that failed to apply pp sets this flag False
+        #setting False here to initiate applying default pp on agent start
         self._process_opt_pp_success = False
         
         #on successful process of apply_pricing_policy with the latest opt pp, current = latest
@@ -325,7 +326,7 @@ class BuildingController(Agent):
         except gevent.Timeout:
             _log.exception("gevent.Timeout in publish_price_to_bms()!!!")
         except Exception as e:
-            _log.exception ("publish_price_to_bms() changing price in the bms!!!")
+            _log.exception("publish_price_to_bms() changing price in the bms!!!")
             #print(e)
         finally:
             #cancel the schedule
@@ -374,7 +375,7 @@ class BuildingController(Agent):
             _log.exception("gevent.Timeout in rpc_get_building_pp()")
             return E_UNKNOWN_BPP
         except Exception as e:
-            _log.exception ("Could not contact actuator. Is it running?")
+            _log.exception("Could not contact actuator. Is it running?")
             print(e)
             return E_UNKNOWN_BPP
         return E_UNKNOWN_BPP

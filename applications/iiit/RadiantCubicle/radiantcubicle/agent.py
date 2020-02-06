@@ -289,7 +289,7 @@ class RadiantCubicle(Agent):
             except gevent.Timeout:
                 _log.exception("gevent.Timeout in setRcTspLevel()")
             except Exception as e:
-                _log.exception ("changing device level")
+                _log.exception("changing device level")
                 print(e)
             finally:
                 #cancel the schedule
@@ -325,7 +325,7 @@ class RadiantCubicle(Agent):
             except gevent.Timeout:
                 _log.exception("gevent.Timeout in setRcAutoCntrl()")
             except Exception as e:
-                _log.exception ("setting RC_AUTO_CNTRL")
+                _log.exception("setting RC_AUTO_CNTRL")
                 print(e)
             finally:
                 #cancel the schedule
@@ -378,7 +378,7 @@ class RadiantCubicle(Agent):
                 _log.exception("gevent.Timeout in rpc_getRcCalcCoolingEnergy()")
                 return E_UNKNOWN_CCE
             except Exception as e:
-                _log.exception ("Could not contact actuator. Is it running?")
+                _log.exception("Could not contact actuator. Is it running?")
                 print(e)
                 return E_UNKNOWN_CCE
             finally:
@@ -398,7 +398,7 @@ class RadiantCubicle(Agent):
             _log.exception("gevent.Timeout in rpc_getShDeviceLevel()")
             return E_UNKNOWN_LEVEL
         except Exception as e:
-            _log.exception ("Could not contact actuator. Is it running?")
+            _log.exception("Could not contact actuator. Is it running?")
             print(e)
             return E_UNKNOWN_LEVEL
         return E_UNKNOWN_LEVEL
@@ -414,7 +414,7 @@ class RadiantCubicle(Agent):
             _log.exception("gevent.Timeout in rpc_getShDeviceLevel()")
             return E_UNKNOWN_STATE
         except Exception as e:
-            _log.exception ("Could not contact actuator. Is it running?")
+            _log.exception("Could not contact actuator. Is it running?")
             print(e)
             return E_UNKNOWN_STATE
         return E_UNKNOWN_STATE

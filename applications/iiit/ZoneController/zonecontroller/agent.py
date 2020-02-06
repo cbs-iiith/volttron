@@ -131,6 +131,7 @@ class ZoneController(Agent):
         self._valid_senders_list_pp = ['iiit.pricecontroller']
         
         #any process that failed to apply pp sets this flag False
+        #setting False here to initiate applying default pp on agent start
         self._process_opt_pp_success = False
         
         #on successful process of apply_pricing_policy with the latest opt pp, current = latest
@@ -394,7 +395,7 @@ class ZoneController(Agent):
         except gevent.Timeout:
             _log.exception("gevent.Timeout in _rpcset_zone_tsp()")
         except Exception as e:
-            _log.exception ("changing ambient tsp")
+            _log.exception("changing ambient tsp")
             #print(e)
         finally:
             #cancel the schedule
@@ -423,7 +424,7 @@ class ZoneController(Agent):
         except gevent.Timeout:
             _log.exception("gevent.Timeout in _rpcset_zone_lsp()")
         except Exception as e:
-            _log.exception ("changing ambient lsp")
+            _log.exception("changing ambient lsp")
             #print(e)
         finally:
             #cancel the schedule
@@ -471,7 +472,7 @@ class ZoneController(Agent):
         except gevent.Timeout:
             _log.exception("gevent.Timeout in rpc_getRmCalcLightEnergy()")
         except Exception as e:
-            _log.exception ("Could not contact actuator. Is it running?")
+            _log.exception("Could not contact actuator. Is it running?")
             #print(e)
         finally:
             #cancel the schedule
@@ -492,7 +493,7 @@ class ZoneController(Agent):
             _log.exception("gevent.Timeout in _rpcget_zone_cooling_power()")
             return E_UNKNOWN_CCE
         except Exception as e:
-            _log.exception ("Could not contact actuator. Is it running?")
+            _log.exception("Could not contact actuator. Is it running?")
             #print(e)
             return E_UNKNOWN_CCE
         finally:
@@ -511,7 +512,7 @@ class ZoneController(Agent):
             _log.exception("gevent.Timeout in _rpcget_zone_tsp()")
             return E_UNKNOWN_TSP
         except Exception as e:
-            _log.exception ("Could not contact actuator. Is it running?")
+            _log.exception("Could not contact actuator. Is it running?")
             #print(e)
             return E_UNKNOWN_TSP
         return E_UNKNOWN_TSP
@@ -527,7 +528,7 @@ class ZoneController(Agent):
             _log.exception("gevent.Timeout in _rpcget_zone_lsp()")
             return E_UNKNOWN_LSP
         except Exception as e:
-            _log.exception ("Could not contact actuator. Is it running?")
+            _log.exception("Could not contact actuator. Is it running?")
             #print(e)
             return E_UNKNOWN_LSP
         return E_UNKNOWN_LSP
