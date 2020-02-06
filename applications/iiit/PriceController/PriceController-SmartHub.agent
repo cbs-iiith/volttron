@@ -3,6 +3,11 @@
     "agentid": "PriceController",
     "message": "iSPACE - Price Controller Agent",
     "period_read_data": 30,
+    "period_process_pp": 10,
+    #period_process_loop is not same as period_process_pp
+    #period_process_loop: is used for optimization routines like aggregator & iterator functions
+    #                     these need to completed as soon as possible
+    #period_process_pp: is at what interval apply_pricing_policy should retry if failed previously
     "period_process_loop": 1,
     "energyDemand_topic": "smarthub/energydemand",
     "energyDemand_topic_ds": "ds/energydemand",
