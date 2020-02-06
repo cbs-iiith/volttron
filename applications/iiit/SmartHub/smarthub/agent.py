@@ -86,14 +86,13 @@ AT_GET_THPP = 327
 AT_SET_THPP = 328
 AT_PUB_THPP = 329
 
-# these provide the average active power (Wh) of the devices, observed based on experiments data
-# for bid - calculate total energy (kWh)
+# these provide the average active power (W) of the devices, observed based on experiments data
+# for bid - calculate total energy (Wh or kWh)
 # for opt - calculate total active power (W)
-# TODO: currently using _ted for variable names for both the cases, 
-#       rename the variable names accordingly
-SH_BASE_ENERGY = 10
-SH_FAN_ENERGY = 8
-SH_LED_ENERGY = 10
+SH_BASE_POWER = 10
+SH_FAN_POWER = 8
+SH_LED_POWER = 10
+
 SH_FAN_THRESHOLD_PCT = 0.30
 SH_LED_THRESHOLD_PCT = 0.30
 
@@ -1025,23 +1024,28 @@ class SmartHub(Agent):
         return
         
     def publish_bid_ted(self):
+        pp_msg = self._bid_pp_msg_latest
+        price_id = pp_msg.get_price_id()
+        
         # compute total bid energy demand and publish to local/energydemand
         # (vb RPCs this value to the next level)
         bid_ted = self._calc_total_energy_demand()
+        
         # create a MessageType.energy ISPACE_Msg
-        pp_msg = ted_helper(self._bid_pp_msg_latest
+        ed_msg = ted_helper(pp_msg
                             , self._device_id
                             , self._discovery_address
                             , bid_ted
                             , self._period_read_data
                             )
         _log. info('[LOG] Total Energy Demand(TED) bid'
-                                    + ' for us bid pp_msg({})'.format(pp_msg.get_price_id())
+                                    + ' for us bid pp_msg({})'.format(price_id)
                                     + ': {:0.4f}'.format(bid_ted))
+                                    
         # publish the new price point to the local message bus
         _log.debug('post to the local-bus...')
         pub_topic = self._topic_energy_demand
-        pub_msg = pp_msg.get_json_message(self._agent_id, 'bus_topic')
+        pub_msg = ed_msg.get_json_message(self._agent_id, 'bus_topic')
         _log.debug('local bus topic: {}'.format(pub_topic))
         _log. info('[LOG] Total Energy Demand(TED) bid, Msg: {}'.format(pub_msg))
         publish_to_bus(self, pub_topic, pub_msg)
@@ -1052,23 +1056,32 @@ class SmartHub(Agent):
     # the bid energy is for self._bid_pp_duration (default 1hr)
     # and this msg is valid for self._period_read_data (ttl - default 30s)
     def _calc_total_energy_demand(self):
-        # bid_ed should be measured in realtime from the connected plug
+        # ted should be measured in realtime from the connected plug
         # however, since we don't have model for the battery charge controller
         # we are using below algo based on experimental data
-        bid_ed = calc_energy_wh(SH_BASE_ENERGY, self._bid_pp_duration)
+        pp_msg = self._bid_pp_msg_latest
+        bid_pp = pp_msg.get_value()
+        duration = pp_msg.get_duration()
+        
+        #sh base energy demand
+        ted = calc_energy_wh(SH_BASE_POWER, duration)
+        
+        #sh led energy demand
         if self._sh_devices_state[SH_DEVICE_LED] == SH_DEVICE_STATE_ON:
-            level_led = self._sh_devices_level[SH_DEVICE_LED]
-            led_energy = calc_energy_wh(SH_LED_ENERGY, self._bid_pp_duration)
-            bid_ed = bid_ed + ((led_energy * SH_LED_THRESHOLD_PCT)
-                                    if level_led <= SH_LED_THRESHOLD_PCT 
-                                    else (led_energy * level_led))
+            led_level = self._sh_devices_level[SH_DEVICE_LED]
+            led_energy = calc_energy_wh(SH_LED_POWER, duration)
+            ted += ((led_energy * SH_LED_THRESHOLD_PCT)
+                                    if led_level <= SH_LED_THRESHOLD_PCT 
+                                    else (led_energy * led_level))
+                                    
+        #sh fan energy demand
         if self._sh_devices_state[SH_DEVICE_FAN] == SH_DEVICE_STATE_ON:
-            fan_speed = self._compute_new_fan_speed(self._bid_pp)
-            fan_energy = calc_energy_wh(SH_FAN_ENERGY, self._bid_pp_duration)
-            bid_ed = bid_ed + ((fan_energy * SH_FAN_THRESHOLD_PCT)
-                                    if level_led <= SH_FAN_THRESHOLD_PCT
+            fan_speed = self._compute_new_fan_speed(bid_pp)
+            fan_energy = calc_energy_wh(SH_FAN_POWER, duration)
+            ted += ((fan_energy * SH_FAN_THRESHOLD_PCT)
+                                    if fan_speed <= SH_FAN_THRESHOLD_PCT
                                     else (fan_energy * fan_speed))
-        return bid_ed
+        return ted
         
     # this is a perodic function that keeps trying to apply the new pp till success
     def process_opt_pp(self):
@@ -1157,24 +1170,26 @@ class SmartHub(Agent):
         
     # perodic function to publish active power
     def publish_opt_tap(self):
+        pp_msg = self._opt_pp_msg_current
+        price_id = pp_msg.get_price_id()
         # compute total active power and publish to local/energydemand
         # (vb RPCs this value to the next level)
         opt_tap = self._calc_total_act_pwr()
         
         # create a MessageType.active_power ISPACE_Msg
-        pp_msg = tap_helper(self._opt_pp_msg_current
+        ap_msg = tap_helper(pp_msg
                             , self._device_id
                             , self._discovery_address
                             , opt_tap
                             , self._period_read_data
                             )
         _log. info('[LOG] Total Active Power(TAP) opt'
-                                    + ' for us opt pp_msg({})'.format(pp_msg.get_price_id())
+                                    + ' for us opt pp_msg({})'.format(price_id)
                                     + ': {:0.4f}'.format(opt_tap))
         # publish the new price point to the local message bus
         _log.debug('post to the local-bus...')
         pub_topic = self._topic_energy_demand
-        pub_msg = pp_msg.get_json_message(self._agent_id, 'bus_topic')
+        pub_msg = ap_msg.get_json_message(self._agent_id, 'bus_topic')
         _log.debug('local bus topic: {}'.format(pub_topic))
         _log. info('[LOG] Total Active Power(TAP) opt, Msg: {}'.format(pub_msg))
         publish_to_bus(self, pub_topic, pub_msg)
@@ -1185,17 +1200,23 @@ class SmartHub(Agent):
         # active pwr should be measured in realtime from the connected plug
         # however, since we don't have model for the battery charge controller
         # we are assumuing constant energy dfor the devices based on experimental data
-        tap = SH_BASE_ENERGY
+        
+        #sh base energy demand
+        tap = SH_BASE_POWER
+        
+        #sh led active power
         if self._sh_devices_state[SH_DEVICE_LED] == SH_DEVICE_STATE_ON:
-            level_led = self._sh_devices_level[SH_DEVICE_LED]
-            tap += ((SH_LED_ENERGY * SH_LED_THRESHOLD_PCT)
-                                    if level_led <= SH_LED_THRESHOLD_PCT
-                                    else (SH_LED_ENERGY * level_led))
+            led_level = self._sh_devices_level[SH_DEVICE_LED]
+            tap += ((SH_LED_POWER * SH_LED_THRESHOLD_PCT)
+                                    if led_level <= SH_LED_THRESHOLD_PCT
+                                    else (SH_LED_POWER * led_level))
+                                    
+        #sh fan active power
         if self._sh_devices_state[SH_DEVICE_FAN] == SH_DEVICE_STATE_ON:
-            level_fan = self._sh_devices_level[SH_DEVICE_FAN]
-            tap = ((SH_FAN_ENERGY * SH_LED_THRESHOLD_PCT)
-                                    if level_led <= SH_LED_THRESHOLD_PCT
-                                    else (SH_FAN_ENERGY * level_fan))
+            fan_speed = self._sh_devices_level[SH_DEVICE_FAN]
+            tap += ((SH_FAN_POWER * SH_LED_THRESHOLD_PCT)
+                                    if fan_speed <= SH_LED_THRESHOLD_PCT
+                                    else (SH_FAN_POWER * fan_speed))
         return tap
         
         

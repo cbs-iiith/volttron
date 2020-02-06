@@ -395,24 +395,26 @@ class BuildingController(Agent):
         
     # perodic function to publish active power
     def publish_opt_tap(self):
+        pp_msg = self._opt_pp_msg_current
+        price_id = pp_msg.get_price_id()
         # compute total active power and publish to local/energydemand
         # (vb RPCs this value to the next level)
         opt_tap = self._calc_total_act_pwr()
         
         # create a MessageType.active_power ISPACE_Msg
-        pp_msg = tap_helper(self._opt_pp_msg_current
+        ap_msg = tap_helper(pp_msg
                             , self._device_id
                             , self._discovery_address
                             , opt_tap
                             , self._period_read_data
                             )
         _log. info('[LOG] Total Active Power(TAP) opt'
-                                    + ' for us opt pp_msg({})'.format(pp_msg.get_price_id())
+                                    + ' for us opt pp_msg({})'.format(price_id)
                                     + ': {:0.4f}'.format(opt_tap))
         # publish the new price point to the local message bus
         _log.debug('post to the local-bus...')
         pub_topic = self._topic_energy_demand
-        pub_msg = pp_msg.get_json_message(self._agent_id, 'bus_topic')
+        pub_msg = ap_msg.get_json_message(self._agent_id, 'bus_topic')
         _log.debug('local bus topic: {}'.format(pub_topic))
         _log. info('[LOG] Total Active Power(TAP) opt, Msg: {}'.format(pub_msg))
         publish_to_bus(self, pub_topic, pub_msg)
@@ -434,23 +436,28 @@ class BuildingController(Agent):
         return
         
     def publish_bid_ted(self):
+        pp_msg = self._bid_pp_msg_latest
+        price_id = pp_msg.get_price_id()
+        
         # compute total bid energy demand and publish to local/energydemand
         # (vb RPCs this value to the next level)
         bid_ted = self._calc_total_energy_demand()
+        
         # create a MessageType.energy ISPACE_Msg
-        pp_msg = ted_helper(self._bid_pp_msg_latest
+        ed_msg = ted_helper(pp_msg
                             , self._device_id
                             , self._discovery_address
                             , bid_ted
                             , self._period_read_data
                             )
         _log. info('[LOG] Total Energy Demand(TED) bid'
-                                    + ' for us bid pp_msg({})'.format(pp_msg.get_price_id())
+                                    + ' for us bid pp_msg({})'.format(price_id)
                                     + ': {:0.4f}'.format(bid_ted))
+                                    
         # publish the new price point to the local message bus
         _log.debug('post to the local-bus...')
         pub_topic = self._topic_energy_demand
-        pub_msg = pp_msg.get_json_message(self._agent_id, 'bus_topic')
+        pub_msg = ed_msg.get_json_message(self._agent_id, 'bus_topic')
         _log.debug('local bus topic: {}'.format(pub_topic))
         _log. info('[LOG] Total Energy Demand(TED) bid, Msg: {}'.format(pub_msg))
         publish_to_bus(self, pub_topic, pub_msg)
@@ -461,6 +468,10 @@ class BuildingController(Agent):
     # the bid energy is for self._bid_pp_duration (default 1hr)
     # and this msg is valid for self._period_read_data (ttl - default 30s)
     def _calc_total_energy_demand(self):
+        pp_msg = self._bid_pp_msg_latest
+        bid_pp = pp_msg.get_value()
+        duration = pp_msg.get_duration()
+        
         # for testing
         bid_ted = random() * 1000
         return bid_ted
