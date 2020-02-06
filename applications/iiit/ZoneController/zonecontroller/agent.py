@@ -97,7 +97,7 @@ class ZoneController(Agent):
     
     def __init__(self, config_path, **kwargs):
         super(ZoneController, self).__init__(**kwargs)
-        _log.debug("vip_identity: " + self.core.identity)
+        _log.debug('vip_identity: ' + self.core.identity)
         
         self.config = utils.load_config(config_path)
         self._config_get_points()
@@ -113,14 +113,14 @@ class ZoneController(Agent):
         
     @Core.receiver('onstart')
     def startup(self, sender, **kwargs):
-        _log.info("Starting ZoneController...")
+        _log.info('Starting ZoneController...')
         
         #retrive self._device_id and self._discovery_address from vb
         retrive_details_from_vb(self, 5)
         
         #register rpc routes with MASTER_WEB
         #register_rpc_route is a blocking call
-        register_rpc_route(self, "zonecontroller", "rpc_from_net", 5)
+        register_rpc_route(self, 'zonecontroller', 'rpc_from_net', 5)
         
         #register this agent with vb as local device for posting active power & bid energy demand
         #pca picks up the active power & energy demand bids only if registered with vb
@@ -164,7 +164,7 @@ class ZoneController(Agent):
         self.core.periodic(self._period_process_pp, self.process_opt_pp, wait=None)
         
         #subscribing to topic_price_point
-        self.vip.pubsub.subscribe("pubsub", self._topic_price_point, self.on_new_price)
+        self.vip.pubsub.subscribe('pubsub', self._topic_price_point, self.on_new_price)
         
         _log.debug('startup() - Done. Agent is ready')
         return
@@ -192,7 +192,7 @@ class ZoneController(Agent):
                         + ', rpc method: {}'.format(rpcdata.method)
                         + ', rpc params: {}'.format(rpcdata.params)
                         )
-            if rpcdata.method == "ping":
+            if rpcdata.method == 'ping':
                 return True
             else:
                 return jsonrpc.json_error(rpcdata.id, METHOD_NOT_FOUND,
@@ -220,7 +220,7 @@ class ZoneController(Agent):
         return
         
     def _config_get_pricefucntions(self):
-        _log.debug("_config_get_pricefucntions()")
+        _log.debug('_config_get_pricefucntions()')
         
         self._pf_zn_ac = self.config.get('pf_zn_ac')
         self._pf_zn_light = self.config.get('pf_zn_light')
@@ -228,7 +228,7 @@ class ZoneController(Agent):
         return
         
     def _run_bms_test(self):
-        _log.debug("Running: _runBMS Commu Test()...")
+        _log.debug('Running: _runBMS Commu Test()...')
         
         _log.debug('change tsp 26')
         self._rpcset_zone_tsp(26.0)
@@ -258,7 +258,7 @@ class ZoneController(Agent):
         self._rpcset_zone_tsp(100.0)
         time.sleep(1)
         
-        _log.debug("EOF Testing")
+        _log.debug('EOF Testing')
         return
         
     '''
@@ -291,9 +291,9 @@ class ZoneController(Agent):
                                         ).get(timeout=10)
             self._update_zone_tsp(tsp)
         except gevent.Timeout:
-            _log.exception("gevent.Timeout in _rpcset_zone_tsp()")
+            _log.exception('gevent.Timeout in _rpcset_zone_tsp()')
         except Exception as e:
-            _log.exception("changing ambient tsp")
+            _log.exception('changing ambient tsp')
             #print(e)
         finally:
             #cancel the schedule
@@ -320,9 +320,9 @@ class ZoneController(Agent):
                                         ).get(timeout=10)
             self._update_zone_lsp(lsp)
         except gevent.Timeout:
-            _log.exception("gevent.Timeout in _rpcset_zone_lsp()")
+            _log.exception('gevent.Timeout in _rpcset_zone_lsp()')
         except Exception as e:
-            _log.exception("changing ambient lsp")
+            _log.exception('changing ambient lsp')
             #print(e)
         finally:
             #cancel the schedule
@@ -368,9 +368,9 @@ class ZoneController(Agent):
                                             ).get(timeout=10)
             return lightEnergy
         except gevent.Timeout:
-            _log.exception("gevent.Timeout in rpc_getRmCalcLightEnergy()")
+            _log.exception('gevent.Timeout in rpc_getRmCalcLightEnergy()')
         except Exception as e:
-            _log.exception("Could not contact actuator. Is it running?")
+            _log.exception('Could not contact actuator. Is it running?')
             #print(e)
         finally:
             #cancel the schedule
@@ -388,10 +388,10 @@ class ZoneController(Agent):
                                                 ).get(timeout=10)
             return coolingEnergy
         except gevent.Timeout:
-            _log.exception("gevent.Timeout in _rpcget_zone_cooling_power()")
+            _log.exception('gevent.Timeout in _rpcget_zone_cooling_power()')
             return E_UNKNOWN_CCE
         except Exception as e:
-            _log.exception("Could not contact actuator. Is it running?")
+            _log.exception('Could not contact actuator. Is it running?')
             #print(e)
             return E_UNKNOWN_CCE
         finally:
@@ -407,10 +407,10 @@ class ZoneController(Agent):
                                         ).get(timeout=10)
             return rm_tsp
         except gevent.Timeout:
-            _log.exception("gevent.Timeout in _rpcget_zone_tsp()")
+            _log.exception('gevent.Timeout in _rpcget_zone_tsp()')
             return E_UNKNOWN_TSP
         except Exception as e:
-            _log.exception("Could not contact actuator. Is it running?")
+            _log.exception('Could not contact actuator. Is it running?')
             #print(e)
             return E_UNKNOWN_TSP
         return E_UNKNOWN_TSP
@@ -423,10 +423,10 @@ class ZoneController(Agent):
                                         ).get(timeout=10)
             return rm_lsp
         except gevent.Timeout:
-            _log.exception("gevent.Timeout in _rpcget_zone_lsp()")
+            _log.exception('gevent.Timeout in _rpcget_zone_lsp()')
             return E_UNKNOWN_LSP
         except Exception as e:
-            _log.exception("Could not contact actuator. Is it running?")
+            _log.exception('Could not contact actuator. Is it running?')
             #print(e)
             return E_UNKNOWN_LSP
         return E_UNKNOWN_LSP
@@ -503,7 +503,7 @@ class ZoneController(Agent):
                                 + ', will try again in {} sec'.format(self._period_process_pp))
             return
             
-        _log.info("New Price Point processed.")
+        _log.info('New Price Point processed.')
         #on successful process of apply_pricing_policy with the latest opt pp, current = latest
         self._opt_pp_msg_current = copy(self._opt_pp_msg_latest)
         self._price_point_current = copy(self._price_point_latest)
@@ -511,7 +511,7 @@ class ZoneController(Agent):
         return
         
     def _apply_pricing_policy(self):
-        _log.debug("_apply_pricing_policy()")
+        _log.debug('_apply_pricing_policy()')
         
         #apply for ambient ac
         tsp = self._compute_new_tsp(self._price_point_latest)
