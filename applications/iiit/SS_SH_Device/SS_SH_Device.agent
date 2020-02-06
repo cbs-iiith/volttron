@@ -1,5 +1,5 @@
 {
-    "exec":"ss_sh_device-0.3-py2.7.egg --config \"%c\"--sub\"%s\"--pub \"%p\"",
+    "exec":"ss_sh_device-0.4-py2.7.egg --config \"%c\"--sub\"%s\"--pub \"%p\"",
     "agentid": "SS_SH_DeviceAgent",
     "message": "iSPACE - SmartStrip - Smart Hub Device Agent",
     "period_read": 10,

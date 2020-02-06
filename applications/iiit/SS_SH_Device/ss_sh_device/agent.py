@@ -29,7 +29,7 @@ from ispace_utils import do_rpc
 
 utils.setup_logging()
 _log = logging.getLogger(__name__)
-__version__ = '0.3'
+__version__ = '0.4'
 
 MAX_RETRIES = 5
 MAX_THPP = 1

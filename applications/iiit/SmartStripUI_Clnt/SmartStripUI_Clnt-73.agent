@@ -1,5 +1,5 @@
 {
-    "exec":"smartstripui_clnt-0.3-py2.7.egg --config \"%c\"--sub\"%s\"--pub \"%p\"",
+    "exec":"smartstripui_clnt-0.4-py2.7.egg --config \"%c\"--sub\"%s\"--pub \"%p\"",
     "agentid": "SmartStripUI_Clnt",
     "message": "iSPACE - Smart Strip UI Clnt Agent",
     "ble_ui_server_address": "192.168.1.73",
