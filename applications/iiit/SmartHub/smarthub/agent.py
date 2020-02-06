@@ -685,23 +685,23 @@ class SmartHub(Agent):
                     , 120
                     , datetime.datetime.utcnow().isoformat(' ') + 'Z'
                     ]
-        ispace_utils.publish_to_bus(self, self._topic_price_point, pubMsg)
+        publish_to_bus(self, self._topic_price_point, pubMsg)
         return
         
     def on_new_price(self, peer, sender, bus,  topic, headers, message):
         if sender == 'pubsub.compat':
             message = compat.unpack_legacy_message(headers, message)
             
-        if not ispace_utils.valid_pp_msg(message):
+        if not valid_pp_msg(message):
             _log.warning('rcvd a invalid pp msg, message: {}'.format(message)
                         + ', do nothing!!!'
                         )
             return
             
-        ispace_utils.print_pp_msg(self, message)
+        print_pp_msg(self, message)
         
         #process ed only if msg is alive (didnot timeout)
-        if ispace_utils.ttl_timeout(message[ParamPP.idx_pp_ts], message[ParamPP.idx_pp_ttl]):
+        if ttl_timeout(message[ParamPP.idx_pp_ts], message[ParamPP.idx_pp_ttl]):
             _log.warning("msg timed out, do nothing")
             return
             
@@ -747,7 +747,7 @@ class SmartHub(Agent):
         ds_devices = self.vip.rpc.call('iiit.volttronbridge', 'count_ds_devices').get(timeout=10)
         rcvd_all_ds_bid_ed = True if ds_devices == len(self._ds_bid_ed) else False
         
-        if rcvd_all_ds_bid_ed or ispace_utils.ttl_timeout(self._bid_pp_ts, self._bid_pp_ttl):
+        if rcvd_all_ds_bid_ed or ttl_timeout(self._bid_pp_ts, self._bid_pp_ttl):
             #Calc total ed
             for ed in self._ds_bid_ed:
                 self._bid_ed = self._bid_ed + ed
@@ -768,7 +768,7 @@ class SmartHub(Agent):
         # bid_ed should be measured in realtime from the connected plug
         # however, since we don't have model for the battery charge controller
         # we are using below algo based on experimental data
-        bid_ed = ispace_utils.calc_energy(SH_BASE_ENERGY, self._bid_pp_duration)
+        bid_ed = calc_energy(SH_BASE_ENERGY, self._bid_pp_duration)
         if self._sh_devices_state[SH_DEVICE_LED] == SH_DEVICE_STATE_ON:
             level_led = self._sh_devices_level[SH_DEVICE_LED]
             led_energy = self.calc_energy(SH_LED_ENERGY, self._bid_pp_duration)
@@ -797,17 +797,17 @@ class SmartHub(Agent):
                     , self._bid_pp_ttl
                     , self._bid_pp_ts
                     ]
-        ispace_utils.publish_to_bus(self, pubTopic, pubMsg)
+        publish_to_bus(self, pubTopic, pubMsg)
         return
         
     #this is a perodic function that keeps trying to apply the new pp till success
     def process_opt_pp(self):
-        if ispace_utils.isclose(self._price_point_old, self._price_point_latest, EPSILON) and self._pp_id == self._pp_id_new:
+        if isclose(self._price_point_old, self._price_point_latest, EPSILON) and self._pp_id == self._pp_id_new:
             return
             
         self._process_opt_pp_success = False     #any process that failed to apply pp sets this flag True
         task_id = str(randint(0, 99999999))
-        result = ispace_utils.get_task_schdl(self, task_id, 'iiit/cbs/smarthub')
+        result = get_task_schdl(self, task_id, 'iiit/cbs/smarthub')
         if result['result'] != 'SUCCESS':
             self._process_opt_pp_success = True
         
@@ -818,7 +818,7 @@ class SmartHub(Agent):
         self._apply_pricing_policy(SH_DEVICE_LED, SCHEDULE_AVLB)
         self._apply_pricing_policy(SH_DEVICE_FAN, SCHEDULE_AVLB)
         #cancel the schedule
-        ispace_utils.cancel_task_schdl(self, task_id)
+        cancel_task_schdl(self, task_id)
         
         if self._process_opt_pp_success:
             _log.debug("unable to process_opt_pp(), will try again in " + str(self._period_process_pp))
@@ -862,7 +862,7 @@ class SmartHub(Agent):
                 fan_speed = self._get_new_fan_speed(self._price_point_latest)/100
                 _log.info ( "New Fan Speed: {0:.4f}".format(fan_speed))
                 self._set_sh_device_level(SH_DEVICE_FAN, fan_speed, schd_exist)
-                if not ispace_utils.isclose(fan_speed, self._sh_devices_level[lhw_device_id], EPSILON):
+                if not isclose(fan_speed, self._sh_devices_level[lhw_device_id], EPSILON):
                     self._process_opt_pp_success = True
 
         return
@@ -880,7 +880,7 @@ class SmartHub(Agent):
         c = pf_coefficients[pf_idx]['c']
         
         speed = a*pp**2 + b*pp + c
-        return ispace_utils.mround(speed, pf_roundup)
+        return mround(speed, pf_roundup)
         
     def _rpcget_sh_device_state(self, lhw_device_id):
         if not self._valid_device_action(lhw_device_id,AT_GET_STATE):
@@ -992,7 +992,7 @@ class SmartHub(Agent):
         _log.debug('level {0:0.4f}'.format( level))
         device_level = self._rpcget_sh_device_level(lhw_device_id)
         #check if the level really updated at the h/w, only then proceed with new level
-        if ispace_utils.isclose(level, device_level, EPSILON):
+        if isclose(level, device_level, EPSILON):
             _log.debug('same value!!!')
             self._sh_devices_level[lhw_device_id] = level
             self._publish_sh_device_level(lhw_device_id, level)
@@ -1007,7 +1007,7 @@ class SmartHub(Agent):
             return
         pubTopic = self._getPubTopic(lhw_device_id, AT_PUB_STATE)
         pubMsg = [state, {'units': 'On/Off', 'tz': 'UTC', 'type': 'int'}]
-        ispace_utils.publish_to_bus(self, pubTopic, pubMsg)
+        publish_to_bus(self, pubTopic, pubMsg)
         
         return
         
@@ -1018,7 +1018,7 @@ class SmartHub(Agent):
             return
         pubTopic = self._getPubTopic(lhw_device_id, AT_PUB_LEVEL)
         pubMsg = [level, {'units': 'duty', 'tz': 'UTC', 'type': 'float'}]
-        ispace_utils.publish_to_bus(self, pubTopic, pubMsg)
+        publish_to_bus(self, pubTopic, pubMsg)
         
         return
         
@@ -1028,7 +1028,7 @@ class SmartHub(Agent):
             return
         pubTopic = self._getPubTopic(lhw_device_id, AT_PUB_THPP)
         pubMsg = [thPP, {'units': 'cent', 'tz': 'UTC', 'type': 'float'}]
-        ispace_utils.publish_to_bus(self, pubTopic, pubMsg)
+        publish_to_bus(self, pubTopic, pubMsg)
         
         return
         
