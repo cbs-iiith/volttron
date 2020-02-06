@@ -1058,7 +1058,7 @@ class SmartHub(Agent):
                                     if level_led <= SH_LED_THRESHOLD_PCT 
                                     else (led_energy * level_led))
         if self._sh_devices_state[SH_DEVICE_FAN] == SH_DEVICE_STATE_ON:
-            fan_speed = self._get_new_fan_speed(self._bid_pp)
+            fan_speed = self._compute_new_fan_speed(self._bid_pp)
             fan_energy = self.calc_energy(SH_FAN_ENERGY, self._bid_pp_duration)
             bid_ed = bid_ed + ((fan_energy * SH_FAN_THRESHOLD_PCT)
                                     if level_led <= SH_FAN_THRESHOLD_PCT
@@ -1127,7 +1127,7 @@ class SmartHub(Agent):
                 self._process_opt_pp_success = True
                 
             if lhw_device_id == SH_DEVICE_FAN:
-                fan_speed = self._get_new_fan_speed(self._price_point_latest)
+                fan_speed = self._compute_new_fan_speed(self._price_point_latest)
                 _log.info ( "New Fan Speed: {0:.4f}".format(fan_speed))
                 self._set_sh_device_level(SH_DEVICE_FAN, fan_speed, schd_exist)
                 if not isclose(fan_speed, self._sh_devices_level[lhw_device_id], EPSILON):
@@ -1136,7 +1136,7 @@ class SmartHub(Agent):
         return
         
     #compute new Fan Speed from price functions
-    def _get_new_fan_speed(self, pp):
+    def _compute_new_fan_speed(self, pp):
         pp = 0 if pp < 0 else 1 if pp > 1 else pp
         
         pf_idx = self._pf_sh_fan['pf_idx']
