@@ -227,13 +227,13 @@ class BuildingController(Agent):
     def _run_bms_test(self):
         _log.debug("Running: _runBMS Commu Test()...")
         self._test_new_pp(pp_msg, 0.10)
-        time.sleep(10)
+        time.sleep(1)
         
         self._test_new_pp(pp_msg, 0.75)
-        time.sleep(10)
+        time.sleep(1)
         
         self._test_new_pp(pp_msg, 0.25)
-        time.sleep(10)
+        time.sleep(1)
         
         _log.debug("EOF Testing")
         return
