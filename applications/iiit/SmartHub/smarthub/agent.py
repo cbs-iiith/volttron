@@ -563,7 +563,7 @@ class SmartHub(Agent):
         if isclose(level, self._sh_devices_level[lhw_device_id], EPSILON):
             _log.debug('same level, do nothing')
             return
-
+            
         if schd_exist == SCHEDULE_AVLB: 
             self._rpcset_sh_device_level(lhw_device_id, level);
         elif schd_exist == SCHEDULE_NOT_AVLB:
@@ -1088,7 +1088,7 @@ class SmartHub(Agent):
                                 , AT_PUB_THPP
                                 ]:
             return False
-        
+            
         if actionType == AT_GET_STATE :
             if lhw_device_id in [SH_DEVICE_LED_DEBUG
                             , SH_DEVICE_LED
@@ -1187,7 +1187,6 @@ class SmartHub(Agent):
         return tap
         
         
-        
 def main(argv=sys.argv):
     '''Main method called by the eggsecutable.'''
     try:
@@ -1196,10 +1195,12 @@ def main(argv=sys.argv):
         print (e)
         _log.exception('unhandled exception')
         
+        
 if __name__ == '__main__':
     # Entry point for script
     try:
         sys.exit(main())
     except KeyboardInterrupt:
         pass
+        
         
