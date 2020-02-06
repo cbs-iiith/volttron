@@ -45,7 +45,7 @@ utils.setup_logging()
 _log = logging.getLogger(__name__)
 __version__ = '0.4'
 
-#checking if a floating point value is "numerically zero" by checking if it is lower than epsilon
+#checking if a floating point value is 'numerically zero' by checking if it is lower than epsilon
 EPSILON = 1e-04
 
 #if the rpc connection fails to post for more than MAX_RETRIES, 
@@ -97,7 +97,7 @@ class VolttronBridge(Agent):
     
     def __init__(self, config_path, **kwargs):
         super(VolttronBridge, self).__init__(**kwargs)
-        _log.debug("vip_identity: " + self.core.identity)
+        _log.debug('vip_identity: ' + self.core.identity)
         
         self.config = utils.load_config(config_path)
         self._config_get_points()
@@ -112,7 +112,7 @@ class VolttronBridge(Agent):
         self._bridge_host = self.config.get('bridge_host', 'LEVEL_HEAD')
         self._device_id = self.config.get('device_id', 'Building-1')
         
-        self._this_ip_addr = self.config.get('ip_addr', "192.168.1.51")
+        self._this_ip_addr = self.config.get('ip_addr', '192.168.1.51')
         self._this_port = int(self.config.get('port', 8082))
         
         self._period_process_pp = int(self.config.get('period_process_pp', 10))
@@ -134,7 +134,7 @@ class VolttronBridge(Agent):
             _log.debug(self._bridge_host)
             
             #upstream volttron instance
-            self._us_ip_addr = self.config.get('us_ip_addr', "192.168.1.51")
+            self._us_ip_addr = self.config.get('us_ip_addr', '192.168.1.51')
             self._us_port = int(self.config.get('us_port', 8082))
             _log.debug('self._us_ip_addr: ' + self._us_ip_addr 
                                             + ' self._us_port: ' + str(self._us_port))
@@ -150,7 +150,7 @@ class VolttronBridge(Agent):
         
         #register rpc routes with MASTER_WEB
         #register_rpc_route is a blocking call
-        register_rpc_route(self, "bridge", "rpc_from_net", 5)
+        register_rpc_route(self, 'bridge', 'rpc_from_net', 5)
         
         #price point
         self._valid_senders_list_pp = ['iiit.pricecontroller']
@@ -169,8 +169,8 @@ class VolttronBridge(Agent):
         
         #subscribe to price point so that it can be posted to downstream
         if self._bridge_host != 'LEVEL_TAILEND':
-            _log.debug("subscribing to _topic_price_point: " + self._topic_price_point)
-            self.vip.pubsub.subscribe("pubsub"
+            _log.debug('subscribing to _topic_price_point: ' + self._topic_price_point)
+            self.vip.pubsub.subscribe('pubsub'
                                         , self._topic_price_point
                                         , self.on_new_pp
                                         )
@@ -180,8 +180,8 @@ class VolttronBridge(Agent):
             
         #subscribe to energy demand so that it can be posted to upstream
         if self._bridge_host != 'LEVEL_HEAD':
-            _log.debug("subscribing to _topic_energy_demand: " + self._topic_energy_demand)
-            self.vip.pubsub.subscribe("pubsub"
+            _log.debug('subscribing to _topic_energy_demand: ' + self._topic_energy_demand)
+            self.vip.pubsub.subscribe('pubsub'
                                         , self._topic_energy_demand
                                         , self.on_new_ed
                                         )
@@ -189,7 +189,7 @@ class VolttronBridge(Agent):
         #register to upstream
         if self._bridge_host != 'LEVEL_HEAD':
             url_root = 'http://' + self._us_ip_addr + ':' + str(self._us_port) + '/bridge'
-            _log.debug("registering with upstream VolttronBridge: " + url_root)
+            _log.debug('registering with upstream VolttronBridge: ' + url_root)
             self._usConnected = do_rpc(self._agent_id, url_root, 'dsbridge'
                                             , {'discovery_address': self._discovery_address
                                             , 'device_id': self._device_id
@@ -227,7 +227,7 @@ class VolttronBridge(Agent):
             _log.debug(self._bridge_host)
             if self._usConnected:
                 try:
-                    _log.debug("unregistering with upstream VolttronBridge")
+                    _log.debug('unregistering with upstream VolttronBridge')
                     url_root = 'http://' + self._us_ip_addr + ':' + str(self._us_port) + '/bridge'
                     result = do_rpc(self._agent_id, url_root, 'dsbridge'
                                             , {'discovery_address': self._discovery_address
@@ -263,18 +263,18 @@ class VolttronBridge(Agent):
                         + ', rpc method: {}'.format(rpcdata.method)
                         #+ ', rpc params: {}'.format(rpcdata.params)
                         )
-            if rpcdata.method == "ping":
+            if rpcdata.method == 'ping':
                 result = True
-            elif rpcdata.method == "dsbridge" and header['REQUEST_METHOD'] == 'GET':
+            elif rpcdata.method == 'dsbridge' and header['REQUEST_METHOD'] == 'GET':
                 result = self._get_ds_bridge_status(rpcdata.id, message)
-            elif rpcdata.method == "dsbridge" and header['REQUEST_METHOD'] == 'POST':
+            elif rpcdata.method == 'dsbridge' and header['REQUEST_METHOD'] == 'POST':
                 result = self._register_ds_bridge(rpcdata.id, message)
-            elif rpcdata.method == "dsbridge" and header['REQUEST_METHOD'] == 'DELETE':
+            elif rpcdata.method == 'dsbridge' and header['REQUEST_METHOD'] == 'DELETE':
                 result = self._unregister_ds_bridge(rpcdata.id, message)
-            elif rpcdata.method == "energy" and header['REQUEST_METHOD'] == 'POST':
+            elif rpcdata.method == 'energy' and header['REQUEST_METHOD'] == 'POST':
                 #post the new energy demand from ds to the local bus
                 result = self._post_ed(rpcdata.id, message)
-            elif rpcdata.method == "pricepoint" and header['REQUEST_METHOD'] == 'POST':
+            elif rpcdata.method == 'pricepoint' and header['REQUEST_METHOD'] == 'POST':
                 #post the new new price point from us to the local-us-bus
                 result = self._post_pp(rpcdata.id, message)
             else:
@@ -466,17 +466,17 @@ class VolttronBridge(Agent):
                 return
         _log.debug('_usConnected: ' + str(self._usConnected))
         
-        _log.debug("posting energy demand to upstream...")
+        _log.debug('posting energy demand to upstream...')
         success = do_rpc(self._agent_id, url_root, 'energy'
                                     , self.tmp_bustopic_ed_msg.get_json_params()
                                     , 'POST')
         #_log.debug('success: ' + str(success))
         if success:
-            _log.debug("Success!!!")
+            _log.debug('Success!!!')
             self._us_retrycount = 0
             self._all_us_posts_success  = True
         else:
-            _log.debug("Failed!!!")
+            _log.debug('Failed!!!')
             self._us_retrycount = self._us_retrycount + 1
             if self._us_retrycount > MAX_RETRIES:
                 _log.debug('failed too many times to post ed'
@@ -545,12 +545,12 @@ class VolttronBridge(Agent):
             if success:
                 #success, reset retry count
                 self._ds_retrycount[index] = -1    #no need to retry on the next run
-                _log.debug("post to:" + discovery_address + " sucess!!!")
+                _log.debug('post to:' + discovery_address + ' sucess!!!')
             else:
                 #failed to post, increment retry count
                 self._ds_retrycount[index] = self._ds_retrycount[index]  + 1
-                _log.debug("post to:" + discovery_address +
-                            " failed, count: {:d} !!!".format(self._ds_retrycount[index]))
+                _log.debug('post to:' + discovery_address +
+                            ' failed, count: {:d} !!!'.format(self._ds_retrycount[index]))
                 if self._ds_retrycount[index] >= MAX_RETRIES:
                     #failed more than max retries, unregister the ds
                     _log.debug('posts to: {}'.format(discovery_address)
