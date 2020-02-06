@@ -245,13 +245,13 @@ class SmartHub(Agent):
             elif rpcdata.method == "rpc_setShDeviceState" and header['REQUEST_METHOD'] == 'POST':
                 args = {'deviceId': rpcdata.params['deviceId'], 
                         'state': rpcdata.params['newState'],
-                        'schdExist': SCHEDULE_NOT_AVLB
+                        'schd_exist': SCHEDULE_NOT_AVLB
                         }
                 result = self._set_sh_device_state(**args)
             elif rpcdata.method == "rpc_setShDeviceLevel" and header['REQUEST_METHOD'] == 'POST':
                 args = {'deviceId': rpcdata.params['deviceId'], 
                         'level': rpcdata.params['newLevel'],
-                        'schdExist': SCHEDULE_NOT_AVLB
+                        'schd_exist': SCHEDULE_NOT_AVLB
                         }
                 result = self._set_sh_device_level(**args)
             elif rpcdata.method == "rpc_setShDeviceThPP" and header['REQUEST_METHOD'] == 'POST':
@@ -487,15 +487,15 @@ class SmartHub(Agent):
         
         return
         
-    def getShDeviceState(self, deviceId, schdExist):
+    def getShDeviceState(self, deviceId, schd_exist):
         state = E_UNKNOWN_STATE
         if not self._validDeviceAction(deviceId, AT_GET_STATE):
             _log.exception ("Expection: not a valid device to get state, deviceId: " + str(deviceId))
             return state
             
-        if schdExist == SCHEDULE_AVLB: 
+        if schd_exist == SCHEDULE_AVLB: 
             state = self.rpc_getShDeviceState(deviceId);
-        elif schdExist == SCHEDULE_NOT_AVLB:
+        elif schd_exist == SCHEDULE_NOT_AVLB:
             task_id = str(randint(0, 99999999))
             result = ispace_utils.get_task_schdl(self, task_id, 'iiit/cbs/smarthub')
             try:
@@ -510,21 +510,21 @@ class SmartHub(Agent):
                 ispace_utils.cancel_task_schdl(self, task_id)
         else:
             #do notthing
-            _log.exception ("not a valid param - schdExist: " + schdExist)
+            _log.exception ("not a valid param - schd_exist: " + schd_exist)
             return state
             
         return state
         
-    def getShDeviceLevel(self, deviceId, schdExist):
+    def getShDeviceLevel(self, deviceId, schd_exist):
         #_log.debug('getShDeviceLevel()')
         level = E_UNKNOWN_LEVEL
         if not self._validDeviceAction( deviceId, AT_GET_LEVEL):
             _log.exception ("not a valid device to get level, deviceId: " + str(deviceId))
             return level
             
-        if schdExist == SCHEDULE_AVLB: 
+        if schd_exist == SCHEDULE_AVLB: 
             level = self._rpcget_sh_device_level(deviceId);
-        elif schdExist == SCHEDULE_NOT_AVLB:
+        elif schd_exist == SCHEDULE_NOT_AVLB:
             task_id = str(randint(0, 99999999))
             result = ispace_utils.get_task_schdl(self, task_id, 'iiit/cbs/smarthub')
             try:
@@ -539,12 +539,12 @@ class SmartHub(Agent):
                 ispace_utils.cancel_task_schdl(self, task_id)
         else:
             #do notthing
-            _log.exception ("Expection: not a valid param - schdExist: " + schdExist)
+            _log.exception ("Expection: not a valid param - schd_exist: " + schd_exist)
             return level
             
         return level
                 
-    def _set_sh_device_state(self, deviceId, state, schdExist):
+    def _set_sh_device_state(self, deviceId, state, schd_exist):
         #_log.debug('_set_sh_device_state()')
         if not self._validDeviceAction(deviceId, AT_SET_STATE):
             _log.exception ("Expection: not a valid device to change state, deviceId: " + str(deviceId))
@@ -554,9 +554,9 @@ class SmartHub(Agent):
             _log.debug('same state, do nothing')
             return
 
-        if schdExist == SCHEDULE_AVLB: 
+        if schd_exist == SCHEDULE_AVLB: 
             self._rpcset_sh_device_state(deviceId, state);
-        elif schdExist == SCHEDULE_NOT_AVLB:
+        elif schd_exist == SCHEDULE_NOT_AVLB:
             task_id = str(randint(0, 99999999))
             result = ispace_utils.get_task_schdl(self, task_id, 'iiit/cbs/smarthub')
             try:
@@ -571,11 +571,11 @@ class SmartHub(Agent):
                 ispace_utils.cancel_task_schdl(self, task_id)
         else:
             #do notthing
-            _log.exception ("not a valid param - schdExist: " + schdExist)
+            _log.exception ("not a valid param - schd_exist: " + schd_exist)
             return
         return
         
-    def _set_sh_device_level(self, deviceId, level, schdExist):
+    def _set_sh_device_level(self, deviceId, level, schd_exist):
         #_log.debug('_set_sh_device_level()')
         if not self._validDeviceAction( deviceId, AT_SET_LEVEL):
             _log.exception ("Expection: not a valid device to change level, deviceId: " + str(deviceId))
@@ -585,9 +585,9 @@ class SmartHub(Agent):
             _log.debug('same level, do nothing')
             return
 
-        if schdExist == SCHEDULE_AVLB: 
+        if schd_exist == SCHEDULE_AVLB: 
             self._rpcset_sh_device_level(deviceId, level);
-        elif schdExist == SCHEDULE_NOT_AVLB:
+        elif schd_exist == SCHEDULE_NOT_AVLB:
             task_id = str(randint(0, 99999999))
             result = ispace_utils.get_task_schdl(self, task_id, 'iiit/cbs/smarthub')
             try:
@@ -602,7 +602,7 @@ class SmartHub(Agent):
                 ispace_utils.cancel_task_schdl(self, task_id)
         else:
             #do notthing
-            _log.exception ("Expection: not a valid param - schdExist: " + schdExist)
+            _log.exception ("Expection: not a valid param - schd_exist: " + schd_exist)
             return
         return
         
@@ -868,7 +868,7 @@ class SmartHub(Agent):
         _log.info("New Price Point processed.")
         return
         
-    def _apply_pricing_policy(self, deviceId, schdExist):
+    def _apply_pricing_policy(self, deviceId, schd_exist):
         _log.debug("_apply_pricing_policy()")
         shDevicesPP_th = self._shDevicesPP_th[deviceId]
         if self._price_point_latest > shDevicesPP_th: 
@@ -878,7 +878,7 @@ class SmartHub(Agent):
                             + '({0:.2f}), '.format(shDevicesPP_th)
                             + 'Switching-Off Power'
                             )
-                self._set_sh_device_state(deviceId, SH_DEVICE_STATE_OFF, schdExist)
+                self._set_sh_device_state(deviceId, SH_DEVICE_STATE_OFF, schd_exist)
                 if not self._shDevicesState[deviceId] == SH_DEVICE_STATE_OFF:
                     self._process_opt_pp_success = True
             #else:
@@ -889,14 +889,14 @@ class SmartHub(Agent):
                         + '({0:.2f}), '.format(shDevicesPP_th)
                         + 'Switching-On Power'
                         )
-            self._set_sh_device_state(deviceId, SH_DEVICE_STATE_ON, schdExist)
+            self._set_sh_device_state(deviceId, SH_DEVICE_STATE_ON, schd_exist)
             if not self._shDevicesState[deviceId] == SH_DEVICE_STATE_ON:
                 self._process_opt_pp_success = True
                 
             if deviceId == SH_DEVICE_FAN:
                 fan_speed = self._get_new_fan_speed(self._price_point_latest)/100
                 _log.info ( "New Fan Speed: {0:.4f}".format(fan_speed))
-                self._set_sh_device_level(SH_DEVICE_FAN, fan_speed, schdExist)
+                self._set_sh_device_level(SH_DEVICE_FAN, fan_speed, schd_exist)
                 if not ispace_utils.isclose(fan_speed, self._shDevicesLevel[deviceId], EPSILON):
                     self._process_opt_pp_success = True
 
