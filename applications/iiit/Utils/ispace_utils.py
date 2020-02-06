@@ -139,8 +139,8 @@ def publish_to_bus(self, topic, msg):
 def get_task_schdl(self, task_id, device, time_ms=None):
     #_log.debug('get_task_schdl()')
     self.time_ms = 600 if time_ms is None else time_ms
+    result = {'result':'FAILED'}
     try:
-        result = {}
         start = str(datetime.datetime.now())
         end = str(datetime.datetime.now() 
                 + datetime.timedelta(milliseconds=self.time_ms))

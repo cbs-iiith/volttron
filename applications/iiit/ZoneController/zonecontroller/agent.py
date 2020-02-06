@@ -381,27 +381,26 @@ class ZoneController(Agent):
             return
             
         task_id = str(randint(0, 99999999))
-        result = get_task_schdl(self, task_id,'iiit/cbs/zonecontroller')
-        if result['result'] == 'SUCCESS':
-            result = {}
-            try:
-                result = self.vip.rpc.call('platform.actuator'
-                                            , 'set_point'
-                                            , self._agent_id
-                                            , 'iiit/cbs/zonecontroller/RM_TSP'
-                                            , tsp
-                                            ).get(timeout=10)
-                self._update_zone_tsp(tsp)
-            except gevent.Timeout:
-                _log.exception("Expection: gevent.Timeout in _rpcset_zone_tsp()")
-            except Exception as e:
-                _log.exception ("Expection: changing ambient tsp")
-                #print(e)
-            finally:
-                #cancel the schedule
-                cancel_task_schdl(self, task_id)
-        else:
+        result = get_task_schdl(self, task_id, 'iiit/cbs/zonecontroller')
+        if result['result'] != 'SUCCESS':
             _log.debug('schedule NOT available')
+            return
+        try:
+            result = self.vip.rpc.call('platform.actuator'
+                                        , 'set_point'
+                                        , self._agent_id
+                                        , 'iiit/cbs/zonecontroller/RM_TSP'
+                                        , tsp
+                                        ).get(timeout=10)
+            self._update_zone_tsp(tsp)
+        except gevent.Timeout:
+            _log.exception("Expection: gevent.Timeout in _rpcset_zone_tsp()")
+        except Exception as e:
+            _log.exception ("Expection: changing ambient tsp")
+            #print(e)
+        finally:
+            #cancel the schedule
+            cancel_task_schdl(self, task_id)
         return
         
     # change ambient light set point
@@ -414,28 +413,27 @@ class ZoneController(Agent):
             
         task_id = str(randint(0, 99999999))
         result = get_task_schdl(self, task_id,'iiit/cbs/zonecontroller')
-        if result['result'] == 'SUCCESS':
-            result = {}
-            try:
-                result = self.vip.rpc.call('platform.actuator'
-                                            , 'set_point'
-                                            , self._agent_id
-                                            , 'iiit/cbs/zonecontroller/RM_LSP'
-                                            , lsp
-                                            ).get(timeout=10)
-                self._update_zone_lsp(lsp)
-            except gevent.Timeout:
-                _log.exception("Expection: gevent.Timeout in _rpcset_zone_lsp()")
-            except Exception as e:
-                _log.exception ("Expection: changing ambient lsp")
-                #print(e)
-            finally:
-                #cancel the schedule
-                cancel_task_schdl(self, task_id)
-        else:
+        if result['result'] != 'SUCCESS':
             _log.debug('schedule NOT available')
+            return
+        try:
+            result = self.vip.rpc.call('platform.actuator'
+                                        , 'set_point'
+                                        , self._agent_id
+                                        , 'iiit/cbs/zonecontroller/RM_LSP'
+                                        , lsp
+                                        ).get(timeout=10)
+            self._update_zone_lsp(lsp)
+        except gevent.Timeout:
+            _log.exception("Expection: gevent.Timeout in _rpcset_zone_lsp()")
+        except Exception as e:
+            _log.exception ("Expection: changing ambient lsp")
+            #print(e)
+        finally:
+            #cancel the schedule
+            cancel_task_schdl(self, task_id)
         return
-
+        
     def _update_zone_tsp(self, tsp):
         #_log.debug('_update_zone_tsp()')
         _log.debug('tsp {:0.1f}'.format( tsp))
@@ -467,49 +465,47 @@ class ZoneController(Agent):
     def _rpcget_zone_lighting_power(self):
         task_id = str(randint(0, 99999999))
         result = get_task_schdl(self, task_id,'iiit/cbs/zonecontroller')
-        if result['result'] == 'SUCCESS':
-            try:
-                lightEnergy = self.vip.rpc.call('platform.actuator'
-                                                , 'get_point'
-                                                , 'iiit/cbs/zonecontroller/RM_LIGHT_CALC_PWR'
-                                                ).get(timeout=10)
-                return lightEnergy
-            except gevent.Timeout:
-                _log.exception("Expection: gevent.Timeout in rpc_getRmCalcLightEnergy()")
-                return E_UNKNOWN_CLE
-            except Exception as e:
-                _log.exception ("Expection: Could not contact actuator. Is it running?")
-                #print(e)
-                return E_UNKNOWN_CLE
-            finally:
-                #cancel the schedule
-                cancel_task_schdl(self, task_id)
-        else:
+        if result['result'] != 'SUCCESS':
             _log.debug('schedule NOT available')
+            return E_UNKNOWN_CLE
+        try:
+            lightEnergy = self.vip.rpc.call('platform.actuator'
+                                            , 'get_point'
+                                            , 'iiit/cbs/zonecontroller/RM_LIGHT_CALC_PWR'
+                                            ).get(timeout=10)
+            return lightEnergy
+        except gevent.Timeout:
+            _log.exception("Expection: gevent.Timeout in rpc_getRmCalcLightEnergy()")
+        except Exception as e:
+            _log.exception ("Expection: Could not contact actuator. Is it running?")
+            #print(e)
+        finally:
+            #cancel the schedule
+            cancel_task_schdl(self, task_id)
         return E_UNKNOWN_CLE
         
     def _rpcget_zone_cooling_power(self):
         task_id = str(randint(0, 99999999))
         result = get_task_schdl(self, task_id,'iiit/cbs/zonecontroller')
-        if result['result'] == 'SUCCESS':
-            try:
-                coolingEnergy = self.vip.rpc.call('platform.actuator'
-                                                    ,'get_point'
-                                                    , 'iiit/cbs/zonecontroller/RM_CCE'
-                                                    ).get(timeout=10)
-                return coolingEnergy
-            except gevent.Timeout:
-                _log.exception("Expection: gevent.Timeout in _rpcget_zone_cooling_power()")
-                return E_UNKNOWN_CCE
-            except Exception as e:
-                _log.exception ("Expection: Could not contact actuator. Is it running?")
-                #print(e)
-                return E_UNKNOWN_CCE
-            finally:
-                #cancel the schedule
-                cancel_task_schdl(self, task_id)
-        else:
+        if result['result'] != 'SUCCESS':
             _log.debug('schedule NOT available')
+            return E_UNKNOWN_CCE
+        try:
+            coolingEnergy = self.vip.rpc.call('platform.actuator'
+                                                ,'get_point'
+                                                , 'iiit/cbs/zonecontroller/RM_CCE'
+                                                ).get(timeout=10)
+            return coolingEnergy
+        except gevent.Timeout:
+            _log.exception("Expection: gevent.Timeout in _rpcget_zone_cooling_power()")
+            return E_UNKNOWN_CCE
+        except Exception as e:
+            _log.exception ("Expection: Could not contact actuator. Is it running?")
+            #print(e)
+            return E_UNKNOWN_CCE
+        finally:
+            #cancel the schedule
+            cancel_task_schdl(self, task_id)
         return E_UNKNOWN_CCE
         
     def _rpcget_zone_tsp(self):
@@ -543,7 +539,7 @@ class ZoneController(Agent):
             #print(e)
             return E_UNKNOWN_LSP
         return E_UNKNOWN_LSP
-
+        
     def _publish_zone_tsp(self, tsp):
         #_log.debug('_publish_zone_tsp()')
         pubTopic = self._root_topic+"/rm_tsp"
