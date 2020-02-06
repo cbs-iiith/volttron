@@ -300,14 +300,15 @@ class ISPACE_Msg:
             
     def decrement_ttl(self):
         #live for ever
-        if self.ttl <= 0:
+        if self.ttl <= -1:
             _log.warning('ttl: {} < 0, do nothing!!!'.format(self.ttl))
             return False
             
         if self.tz == 'UTC':
             ts  = dateutil.parser.parse(self.ts)
             now = dateutil.parser.parse(datetime.datetime.utcnow().isoformat(' ') + 'Z')
-            self.ttl = int((self.ttl - mround((now - ts).total_seconds(), 1)) - 1 )
+            new_ttl = int(self.ttl - (now - ts).total_seconds() - 1 )
+            self.ttl = new_ttl if new_ttl >= 0 else 0
             return True
         else:
             _log.warning('decrement_ttl(), unknown tz: {}'.format(self.tz))
@@ -517,7 +518,7 @@ class ISPACE_Msg:
         self.tz = tz
         
     def update_ts(self):
-        self.ts = dateutil.parser.parse(datetime.datetime.utcnow().isoformat(' ') + 'Z')
+        self.ts = datetime.datetime.utcnow().isoformat(' ') + 'Z'
         
     pass
     
