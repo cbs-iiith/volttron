@@ -245,7 +245,7 @@ class RadiantCubicle(Agent):
     def _apply_pricing_policy(self):
         _log.debug("_apply_pricing_policy()")
         tsp = self.getNewTsp(self._price_point_latest)
-        _log.debug('New Setpoint: {0:0.1f}'.format( tsp))
+        _log.debug('New Setpoint: {:0.1f}'.format( tsp))
         self.setRcTspLevel(tsp)
         if not ispace_utils.isclose(tsp, self._rcTspLevel, EPSILON):
             self._pp_failed = True
@@ -335,7 +335,7 @@ class RadiantCubicle(Agent):
         
     def updateRcTspLevel(self, level):
         #_log.debug('_updateShDeviceLevel()')
-        _log.debug('level {0:0.1f}'.format( level))
+        _log.debug('level {:0.1f}'.format( level))
         
         device_level = self.rpc_getRcTspLevel()
         
@@ -344,7 +344,7 @@ class RadiantCubicle(Agent):
             self._rcTspLevel = level
             self.publishRcTspLevel(level)
             
-        _log.debug('Current level: ' + "{0:0.1f}".format( device_level))
+        _log.debug('Current level: ' + "{:0.1f}".format( device_level))
         return
         
     def updateRcAutoCntrl(self, state):
@@ -433,7 +433,7 @@ class RadiantCubicle(Agent):
         
     def publish_ted(self):
         self._ted = self.rpc_getRcCalcCoolingEnergy()
-        _log.info( "New TED: {0:.4f}, publishing to bus.".format(self._ted))
+        _log.info( 'New TED: {:.4f}, publishing to bus.'.format(self._ted))
         pubTopic = self.energyDemand_topic + "/" + self._deviceId
         #_log.debug("TED pubTopic: " + pubTopic)
         pubMsg = [self._ted

@@ -351,27 +351,27 @@ class SmartHub(Agent):
     def testSensors(self):
         _log.debug('test lux sensor')
         lux_level = self.getShDeviceLevel(SH_DEVICE_S_LUX, SCHEDULE_NOT_AVLB)
-        _log.debug("lux Level: " + "{0:0.4f}".format(lux_level))
+        _log.debug('lux Level: {:0.4f}'.format(lux_level))
         time.sleep(1)
         
         _log.debug('test rh sensor')
         rh_level = self.getShDeviceLevel(SH_DEVICE_S_RH, SCHEDULE_NOT_AVLB)
-        _log.debug("rh Level: " + "{0:0.4f}".format(rh_level))
+        _log.debug('rh Level: {:0.4f}'.format(rh_level))
         time.sleep(1)
         
         _log.debug('test temp sensor')
         temp_level = self.getShDeviceLevel(SH_DEVICE_S_TEMP, SCHEDULE_NOT_AVLB)
-        _log.debug("temp Level: " + "{0:0.4f}".format(temp_level))
+        _log.debug('temp Level: {:0.4f}'.format(temp_level))
         time.sleep(1)
         
         _log.debug('test co2 sensor')
         co2_level = self.getShDeviceLevel(SH_DEVICE_S_CO2, SCHEDULE_NOT_AVLB)
-        _log.debug("co2 Level: " + "{0:0.4f}".format(co2_level))
+        _log.debug('co2 Level: {0:0.4f}'.format(co2_level))
         time.sleep(1)
         
         _log.debug('test PIR sensor')
         pir_level = self.getShDeviceLevel(SH_DEVICE_S_PIR, SCHEDULE_NOT_AVLB)
-        _log.debug("PIR Level: " + "{0:d}".format(int(pir_level)))
+        _log.debug('PIR Level: {0:d}'.format(int(pir_level)))
         time.sleep(1)
         
         return
@@ -382,23 +382,23 @@ class SmartHub(Agent):
             if result['result'] == 'SUCCESS':
                 _log.debug('test lux sensor')
                 lux_level = self.getShDeviceLevel(SH_DEVICE_S_LUX, SCHEDULE_AVLB)
-                _log.debug("lux Level: " + "{0:0.4f}".format(lux_level))
+                _log.debug('lux Level: {:0.4f}'.format(lux_level))
                 
                 _log.debug('test rh sensor')
                 rh_level = self.getShDeviceLevel(SH_DEVICE_S_RH, SCHEDULE_AVLB)
-                _log.debug("rh Level: " + "{0:0.4f}".format(rh_level))
+                _log.debug('rh Level: {:0.4f}'.format(rh_level))
                 
                 _log.debug('test temp sensor')
                 temp_level = self.getShDeviceLevel(SH_DEVICE_S_TEMP, SCHEDULE_AVLB)
-                _log.debug("temp Level: " + "{0:0.4f}".format(temp_level))
+                _log.debug('temp Level: {:0.4f}'.format(temp_level))
                 
                 _log.debug('test co2 sensor')
                 co2_level = self.getShDeviceLevel(SH_DEVICE_S_CO2, SCHEDULE_AVLB)
-                _log.debug("co2 Level: " + "{0:0.4f}".format(co2_level))
+                _log.debug('co2 Level: {:0.4f}'.format(co2_level))
                 
                 _log.debug('test pir sensor')
                 pir_level = self.getShDeviceLevel(SH_DEVICE_S_PIR, SCHEDULE_AVLB)
-                _log.debug("pir Level: " + "{0:d}".format(int(pir_level)))
+                _log.debug('pir Level: {:d}'.format(int(pir_level)))
         except Exception as e:
             _log.exception ("Expection: no task schdl for testSensors_2()")
             #print(e)
@@ -581,11 +581,11 @@ class SmartHub(Agent):
                 #cancel the schedule
                 ispace_utils.cancel_task_schdl(self, task_id)
                 
-                _log.debug("lux Level: " + "{0:0.4f}".format(lux_level)
-                            + ", rh Level: " + "{0:0.4f}".format(rh_level)
-                            + ", temp Level: " + "{0:0.4f}".format(temp_level)
-                            + ", co2 Level: " + "{0:0.4f}".format(co2_level)
-                            + ", pir Level: " + "{0:d}".format(int(pir_level))
+                _log.debug('lux Level: {:0.4f}'.format(lux_level)
+                            + ', rh Level: {:0.4f}'.format(rh_level)
+                            + ', temp Level: {:0.4f}'.format(temp_level)
+                            + ', co2 Level: {:0.4f}'.format(co2_level)
+                            + ', pir Level: {:d}'.format(int(pir_level))
                             )
                 
                 pubMsg = [{'luxlevel':lux_level,
@@ -619,8 +619,8 @@ class SmartHub(Agent):
         state_fan = self._shDevicesState[SH_DEVICE_FAN]
         self._publishShDeviceState(SH_DEVICE_LED, state_led)
         self._publishShDeviceState(SH_DEVICE_FAN, state_fan)
-        _log.debug("led state: " + "{0:0.4f}".format(float(state_led))
-                    + ", fan state: " + "{0:0.4f}".format(float(state_fan)))
+        _log.debug('led state: {:0.4f}'.format(float(state_led))
+                    + ', fan state: {:0.4f}'.format(float(state_fan)))
         return
         
     def publishDeviceLevel(self):
@@ -629,8 +629,8 @@ class SmartHub(Agent):
         level_fan = self._shDevicesLevel[SH_DEVICE_FAN]
         self._publishShDeviceLevel(SH_DEVICE_LED, level_led)
         self._publishShDeviceLevel(SH_DEVICE_FAN, level_fan)
-        _log.debug("led level: " + "{0:0.4f}".format(float(level_led))
-                    + ", fan level: " + "{0:0.4f}".format(float(level_fan)))
+        _log.debug('led level: {:0.4f}'.format(float(level_led))
+                    + ', fan level: {:0.4f}'.format(float(level_fan)))
         return
         
     def publishDeviceThPP(self):
@@ -639,14 +639,14 @@ class SmartHub(Agent):
         thpp_fan = self._shDevicesPP_th[SH_DEVICE_FAN]
         self._publishShDeviceThPP(SH_DEVICE_LED, thpp_led)
         self._publishShDeviceThPP(SH_DEVICE_FAN, thpp_fan)
-        _log.debug("led th pp: " + "{0:0.4f}".format(float(thpp_led))
-                    + ", fan th pp: " + "{0:0.4f}".format(float(thpp_fan)))
+        _log.debug('led th pp: {:0.4f}'.format(float(thpp_led))
+                    + ', fan th pp: {0:0.4f}'.format(float(thpp_fan)))
         return
         
     #this function is called only once on smarthub startup
     def publishCurrentPP(self):
         #_log.debug('publishCurrentPP()')
-        _log.debug("current price point: " + "{0:0.4f}".format(float(self._price_point_latest)))
+        _log.debug('current price point: {:0.4f}'.format(float(self._price_point_latest)))
         pubMsg = [self._price_point_latest
                     , {'units': 'cent', 'tz': 'UTC', 'type': 'float'}
                     , randint(0, 99999999)
@@ -1172,7 +1172,7 @@ class SmartHub(Agent):
         
     def publish_ted(self):
         self._total_act_pwr = self._calc_total_act_pwr()
-        _log.info( "New Total Active Pwr: {0:.4f}, publishing to bus.".format(self._total_act_pwr))
+        _log.info( 'New Total Active Pwr: {:.4f}, publishing to bus.'.format(self._total_act_pwr))
         pubTopic = self.energyDemand_topic
         #_log.debug("TED pubTopic: " + pubTopic)
         #the act_pwr is for self._period_read_data (default 30s)

@@ -338,8 +338,8 @@ class BuildingController(Agent):
         #_log.debug('updateRmTsp()')
         
         building_pp = self.rpc_get_building_pp()
-        _log.debug('latest_pp: {0:0.2f}'.format(self._price_point_latest)
-                        + ' , building_pp {1:0.2f}'.format(building_pp))
+        _log.debug('latest_pp: {:0.2f}'.format(self._price_point_latest)
+                        + ' , building_pp {:0.2f}'.format(building_pp))
         
         #check if the pp really updated at the bms, only then proceed with new pp
         if isclose(self._price_point_latest, building_pp, EPSILON):

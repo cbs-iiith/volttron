@@ -318,17 +318,17 @@ class SmartStrip(Agent):
                                             ,'get_point',
                                             'iiit/cbs/smartstrip/' + pointVolatge
                                             ).get(timeout=10)
-            #_log.debug('voltage: {0:.2f}'.format(fVolatge))
+            #_log.debug('voltage: {:.2f}'.format(fVolatge))
             fCurrent = self.vip.rpc.call('platform.actuator'
                                             ,'get_point',
                                             , 'iiit/cbs/smartstrip/' + pointCurrent
                                             ).get(timeout=10)
-            #_log.debug('current: {0:.2f}'.format(fCurrent))
+            #_log.debug('current: {:.2f}'.format(fCurrent))
             fActivePower = self.vip.rpc.call('platform.actuator'
                                             ,'get_point',
                                             'iiit/cbs/smartstrip/' + pointActivePower
                                             ).get(timeout=10)
-            #_log.debug('active: {0:.2f}'.format(fActivePower))
+            #_log.debug('active: {:.2f}'.format(fActivePower))
             
             #keep track of plug active power
             self._plugActivePwr[plugID] = fActivePower
@@ -336,10 +336,10 @@ class SmartStrip(Agent):
             #publish data to volttron bus
             self.publishMeterData(pubTopic, fVolatge, fCurrent, fActivePower)
             
-            _log.info(('Plug {0:d}: '.format(plugID + 1)
-                    + 'voltage: {0:.2f}'.format(fVolatge) 
-                    + ', Current: {0:.2f}'.format(fCurrent)
-                    + ', ActivePower: {0:.2f}'.format(fActivePower)
+            _log.info(('Plug {:d}: '.format(plugID + 1)
+                    + 'voltage: {:.2f}'.format(fVolatge) 
+                    + ', Current: {:.2f}'.format(fCurrent)
+                    + ', ActivePower: {:.2f}'.format(fActivePower)
                     ))
         except gevent.Timeout:
             _log.exception("Expection: gevent.Timeout in readMeterData()")
@@ -450,18 +450,18 @@ class SmartStrip(Agent):
                 if self.tagAuthorised(newTagId):
                     plug_pp_th = self._plug_pricepoint_th[plugID]
                     if self._price_point_latest < plug_pp_th:
-                        _log.info(('Plug {0:d}: '.format(plugID + 1),
+                        _log.info(('Plug {:d}: '.format(plugID + 1),
                                 'Current price point < '
-                                'threshold {0:.2f}, '.format(plug_pp_th),
+                                'threshold {:.2f}, '.format(plug_pp_th),
                                 'Switching-on power'))
                         self.switchRelay(plugID, RELAY_ON, SCHEDULE_AVLB)
                     else:
-                        _log.info(('Plug {0:d}: '.format(plugID + 1),
+                        _log.info(('Plug {:d}: '.format(plugID + 1),
                                 'Current price point > threshold',
-                                '({0:.2f}), '.format(plug_pp_th),
+                                '({:.2f}), '.format(plug_pp_th),
                                 'No-power'))
                 else:
-                    _log.info(('Plug {0:d}: '.format(plugID + 1),
+                    _log.info(('Plug {:d}: '.format(plugID + 1),
                             'Unauthorised device connected',
                             '(tag id: ',
                             newTagId, ')'))
@@ -553,9 +553,9 @@ class SmartStrip(Agent):
         plug_pp_th = self._plug_pricepoint_th[plugID]
         if self._price_point_latest > plug_pp_th:
             if self._plugRelayState[plugID] == RELAY_ON:
-                _log.info(('Plug {0:d}: '.format(plugID + 1)
+                _log.info(('Plug {:d}: '.format(plugID + 1)
                             , 'Current price point > threshold'
-                            , '({0:.2f}), '.format(plug_pp_th)
+                            , '({:.2f}), '.format(plug_pp_th)
                             , 'Switching-Off Power'
                             ))
                 self.switchRelay(plugID, RELAY_OFF, schdExist)
@@ -566,9 +566,9 @@ class SmartStrip(Agent):
                 #do nothing
         else:
             if self._plugConnected[plugID] == 1 and self.tagAuthorised(self._plug_tag_id[plugID]):
-                _log.info(('Plug {0:d}: '.format(plugID + 1)
+                _log.info(('Plug {:d}: '.format(plugID + 1)
                             , 'Current price point < threshold'
-                            , '({0:.2f}), '.format(plug_pp_th)
+                            , '({:.2f}), '.format(plug_pp_th)
                             , 'Switching-On Power'
                             ))
                 self.switchRelay(plugID, RELAY_ON, schdExist)
@@ -588,7 +588,7 @@ class SmartStrip(Agent):
     def convertToByteArray(self, fltVal1, fltVal2):
         idLsb = bytearray(struct.pack('f', fltVal1))
         #for id in idLsb:
-        #    print 'id: {0:02x}'.format(id)
+        #    print 'id: {:02x}'.format(id)
         idMsb = bytearray(struct.pack('f', fltVal2))
         
         idMsb = bytearray(struct.pack('f', fltVal2))
@@ -841,7 +841,7 @@ class SmartStrip(Agent):
         
     def publish_ted(self):
         self._ted = self._calculate_ted()
-        _log.info( "New TED: {0:.4f}, publishing to bus.".format(self._ted))
+        _log.info( 'New TED: {:.4f}, publishing to bus.'.format(self._ted))
         pubTopic = self.energyDemand_topic
         #_log.debug("TED pubTopic: " + pubTopic)
         pubMsg = [self._ted

@@ -279,11 +279,11 @@ class ZoneController(Agent):
         else: _log.debug('New pp msg on the local-bus, topic: {}'.format(topic))
         
         if pp_msg.get_isoptimal():
-            _log.debug('***** New optimal price point from pca: {0:0.2f}'.format(pp_msg.get_value())
+            _log.debug('***** New optimal price point from pca: {:0.2f}'.format(pp_msg.get_value())
                                         + ' , price_id: {}'.format(pp_msg.get_price_id()))
             self._process_opt_pp(pp_msg)
         else:
-            _log.debug('***** New bid price point from pca: {0:0.2f}'.format(pp_msg.get_value())
+            _log.debug('***** New bid price point from pca: {:0.2f}'.format(pp_msg.get_value())
                                         + ' , price_id: {}'.format(pp_msg.get_price_id()))
             self._process_bid_pp(pp_msg)
             
@@ -329,14 +329,14 @@ class ZoneController(Agent):
         
         #apply for ambient ac
         tsp = self._compute_new_tsp(self._price_point_latest)
-        _log.debug('New Ambient AC Setpoint: {0:0.1f}'.format( tsp))
+        _log.debug('New Ambient AC Setpoint: {:0.1f}'.format( tsp))
         self.setRmTsp(tsp)
         if not isclose(tsp, self._zone_tsp, EPSILON):
             self._process_opt_pp_success = False
             
         #apply for ambient lightinh
         lsp = self._compute_new_lsp(self._price_point_latest)
-        _log.debug('New Ambient Lighting Setpoint: {0:0.1f}'.format( lsp))
+        _log.debug('New Ambient Lighting Setpoint: {:0.1f}'.format( lsp))
         self._rpcset_zone_lsp(lsp)
         if not isclose(lsp, self._zone_lsp, EPSILON):
             self._process_opt_pp_success = False
@@ -438,7 +438,7 @@ class ZoneController(Agent):
 
     def _update_zone_tsp(self, tsp):
         #_log.debug('_update_zone_tsp()')
-        _log.debug('tsp {0:0.1f}'.format( tsp))
+        _log.debug('tsp {:0.1f}'.format( tsp))
         
         rm_tsp = self._rpcget_zone_tsp()
         
@@ -447,12 +447,12 @@ class ZoneController(Agent):
             self._zone_tsp = tsp
             self._publish_zone_tsp(tsp)
             
-        _log.debug('Current TSP: ' + "{0:0.1f}".format( rm_tsp))
+        _log.debug('Current TSP: {:0.1f}'.format( rm_tsp))
         return
         
     def _update_zone_lsp(self, lsp):
         #_log.debug('_update_zone_lsp()')
-        _log.debug('lsp {0:0.1f}'.format( lsp))
+        _log.debug('lsp {:0.1f}'.format( lsp))
         
         rm_lsp = self._rpcget_zone_lsp()
         
@@ -461,7 +461,7 @@ class ZoneController(Agent):
             self._zone_lsp = lsp
             self._publish_zone_lsp(lsp)
             
-        _log.debug('Current LSP: ' + "{0:0.1f}".format( rm_lsp))
+        _log.debug('Current LSP: {:0.1f}'.format( rm_lsp))
         return
         
     def _rpcget_zone_lighting_power(self):
