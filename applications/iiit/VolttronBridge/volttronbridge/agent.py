@@ -384,11 +384,11 @@ class VolttronBridge(Agent):
         
         if pp_msg.get_isoptimal():
             _log.debug('***** New optimal price point from local:'
-                                                + ' {0:0.2f}'.format(pp_msg.get_value()))
+                                                + ' {:0.2f}'.format(pp_msg.get_value()))
             self.local_opt_pp_id = pp_msg.get_price_id()
         else :
             _log.debug('***** New bid price point from local:'
-                                                + ' {0:0.2f}'.format(pp_msg.get_value()))
+                                                + ' {:0.2f}'.format(pp_msg.get_value()))
             self.local_bid_pp_id = pp_msg.get_price_id()
                 
         #log this msg
@@ -550,7 +550,7 @@ class VolttronBridge(Agent):
                 #failed to post, increment retry count
                 self._ds_retrycount[index] = self._ds_retrycount[index]  + 1
                 _log.debug("post to:" + discovery_address +
-                            " failed, count: {0:d} !!!".format(self._ds_retrycount[index]))
+                            " failed, count: {:d} !!!".format(self._ds_retrycount[index]))
                 if self._ds_retrycount[index] >= MAX_RETRIES:
                     #failed more than max retries, unregister the ds
                     _log.debug('posts to: {}'.format(discovery_address)
@@ -656,11 +656,11 @@ class VolttronBridge(Agent):
         if pp_msg.get_src_device_id() != self._device_id:
             if pp_msg.get_isoptimal():
                 _log.info('***** New optimal price point from us:'
-                                    + ' {0:0.2f}'.format(pp_msg.get_value()))
+                                    + ' {:0.2f}'.format(pp_msg.get_value()))
                 self.us_opt_pp_id = pp_msg.get_price_id()
             else :
                 _log.info('***** New bid price point from us:'
-                                    + ' {0:0.2f}'.format(pp_msg.get_value()))
+                                    + ' {:0.2f}'.format(pp_msg.get_value()))
                 self.us_bid_pp_id = pp_msg.get_price_id()
             
         #publish the new price point to the local us message bus

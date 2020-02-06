@@ -363,11 +363,11 @@ class PriceController(Agent):
         if pp_msg.get_isoptimal():
             self.us_opt_pp_msg = copy(pp_msg)
             _log.debug('***** New optimal price point from us:'
-                                                + ' {0:0.2f}'.format(pp_msg.get_value()))
+                                                + ' {:0.2f}'.format(pp_msg.get_value()))
         else:
             self.us_bid_pp_msg = copy(pp_msg)
             _log.debug('***** New bid price point from us:'
-                                                + ' {0:0.2f}'.format(pp_msg.get_value()))
+                                                + ' {:0.2f}'.format(pp_msg.get_value()))
         #log this msg
         _log.info('[LOG] pp msg from us: {}'.format(pp_msg))
         

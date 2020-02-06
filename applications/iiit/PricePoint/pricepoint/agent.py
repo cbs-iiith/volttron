@@ -197,10 +197,10 @@ class PricePoint(Agent):
         pub_msg = pp_msg.get_json_message(self._agent_id, 'bus_topic')
         #keep a track of us pp_msg
         if pp_msg.get_isoptimal():
-            _log.info('***** New optimal price point from rpc: {0:0.2f}'.format(pp_msg.get_value())
+            _log.info('***** New optimal price point from rpc: {:0.2f}'.format(pp_msg.get_value())
                                 + ' price_id: {}'.format(pp_msg.get_price_id()))
         else:
-            _log.info('***** New bid price point from rpc: {0:0.2f}'.format(pp_msg.get_value())
+            _log.info('***** New bid price point from rpc: {:0.2f}'.format(pp_msg.get_value())
                                 + ' price_id: {}'.format(pp_msg.get_price_id()))
                                 
         _log.debug('publishing to local bus topic: {}'.format(pub_topic))
