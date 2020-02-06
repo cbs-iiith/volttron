@@ -31,7 +31,8 @@ from volttron.platform.jsonrpc import (
         UNABLE_TO_UNREGISTER_INSTANCE, UNAVAILABLE_PLATFORM, INVALID_PARAMS,
         UNAVAILABLE_AGENT)
 
-from random import randint
+from random import random, randint
+from copy import copy
 
 import settings
 
