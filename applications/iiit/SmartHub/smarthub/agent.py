@@ -148,58 +148,69 @@ class SmartHub(Agent):
         return
     @Core.receiver('onstart')            
     def startup(self, sender, **kwargs):
-        _log.info("yeild 30s for volttron platform to initiate properly...")
-        time.sleep(30) #yeild for a movement
         _log.info("Starting SmartHub...")
         
-        self.runSmartHubTest()
+        #retrive self._device_id and self._discovery_address from vb
+        retrive_details_from_vb(self, 5)
+        
+        #register rpc routes with MASTER_WEB
+        #register_rpc_route is a blocking call
+        register_rpc_route(self, "smarthub", "rpc_from_net", 5)
+        
+        #register this agent with vb as local device for posting active power & bid energy demand
+        #pca picks up the active power & energy demand bids only if registered with vb
+        #require self._vb_vip_identity, self.core.identity, self._device_id
+        #register_agent_with_vb is a blocking call
+        register_agent_with_vb(self, 5)
+        
+        self._valid_senders_list_pp = ['iiit.pricecontroller']
+        
+        #any process that failed to apply pp sets this flag False
+        self._process_opt_pp_success = False
+        
+        #on successful process of apply_pricing_policy with the latest opt pp, current = latest
+        self._opt_pp_msg_current = get_default_pp_msg(self._discovery_address, self._device_id)
+        #latest opt pp msg received on the message bus
+        self._opt_pp_msg_latest = get_default_pp_msg(self._discovery_address, self._device_id)
+        
+        self._bid_pp_msg_latest = get_default_pp_msg(self._discovery_address, self._device_id)
+        
+        self._run_smart_hub_test()
         
         #get the latest values (states/levels) from h/w
-        self.getInitialHwState()
+        self._get_initial_hw_state()
         
         #apply pricing policy for default values
         self._apply_pricing_policy(SH_DEVICE_LED, SCHEDULE_NOT_AVLB)
         self._apply_pricing_policy(SH_DEVICE_FAN, SCHEDULE_NOT_AVLB)
         
-        #publish initial data to volttron bus
-        self.publishDeviceState();
-        self.publishDeviceLevel();
-        self.publishDeviceThPP();
-        self.publishSensorData();
-        self.publishCurrentPP();
+        #publish initial data from hw to volttron bus
+        self.publish_hw_data()
+        
+        #TODO: need to relook at this
+        self._publish_current_pp();
+        
+        #perodically publish hw data to volttron bus. 
+        #The data includes fan, light & various sensors(state/level/readings) 
+        self.core.periodic(self._period_read_data, self.publish_hw_data, wait=None)
+        
+        #perodically publish total active power to volttron bus
+        #active power is comupted at regular interval (_period_read_data default(30s))
+        #this power corresponds to current opt pp
+        #tap --> total active power (Wh)
+        self.core.periodic(self._period_read_data, self.publish_opt_tap, wait=None)
         
         #perodically process new pricing point that keeps trying to apply the new pp till success
         self.core.periodic(self._period_process_pp, self.process_opt_pp, wait=None)
         
-        #perodically publish device state to volttron bus
-        self.core.periodic(self._period_read_data, self.publishDeviceState, wait=None)
+        #subscribing to topic_price_point
+        self.vip.pubsub.subscribe("pubsub", self._topic_price_point, self.on_new_price)
         
-        #perodically publish device level to volttron bus
-        self.core.periodic(self._period_read_data, self.publishDeviceLevel, wait=None)
-        
-        #perodically publish device threshold price point to volttron bus
-        self.core.periodic(self._period_read_data, self.publishDeviceThPP, wait=None)
-        
-        #perodically publish sensor data to volttron bus
-        self.core.periodic(self._period_read_data, self.publishSensorData, wait=None)
-        
-        #perodically publish sensor data to volttron bus
-        self.core.periodic(self._period_read_data, self.publish_ted, wait=None)
-        
-        #subscribing to smarthub price point, sh gc published sh pp
-        self.vip.pubsub.subscribe("pubsub", self.topic_price_point, self.on_new_price)
-        
-        #subscribing to ds energy demand, vb publishes ed from registered ds to this topic
-        self.vip.pubsub.subscribe("pubsub", self.topic_energy_demand_ds, self.on_ds_ed)
-        
-        self.vip.rpc.call(MASTER_WEB, 'register_agent_route'
-                            , r'^/SmartHub'
-                            , "rpc_from_net"
-                            ).get(timeout=30)
         self._voltState = 1
         
         _log.debug('switch on debug led')
         self.setShDeviceState(SH_DEVICE_LED_DEBUG, SH_DEVICE_STATE_ON, SCHEDULE_NOT_AVLB)
+        
         return
         
     @Core.receiver('onstop')
@@ -219,14 +230,54 @@ class SmartHub(Agent):
             self._stopVolt()
         return 
         
+    @RPC.export
+    def rpc_from_net(self, header, message):
+        result = False
+        try:
+            rpcdata = jsonrpc.JsonRpcData.parse(message)
+            _log.debug('rpc_from_net()...'
+                        + 'header: {}'.format(header)
+                        + ', rpc method: {}'.format(rpcdata.method)
+                        + ', rpc params: {}'.format(rpcdata.params)
+                        )
+            if rpcdata.method == "ping":
+                result = True
+            elif rpcdata.method == "setShDeviceState" and header['REQUEST_METHOD'] == 'POST':
+                result = self.setShDeviceState(message)
+            elif rpcdata.method == "rpc_setShDeviceLevel" and header['REQUEST_METHOD'] == 'POST':
+                result = self.setShDeviceLevel(**args)
+            elif rpcdata.method == "rpc_setShDeviceThPP" and header['REQUEST_METHOD'] == 'POST':
+                result = self.setShDeviceThPP(**args)
+            else:
+                return jsonrpc.json_error(rpcdata.id, METHOD_NOT_FOUND,
+                                            'Invalid method {}'.format(rpcdata.method))
+        except KeyError as ke:
+            #print(ke)
+            return jsonrpc.json_error(rpcdata.id, INVALID_PARAMS,
+                                        'Invalid params {}'.format(rpcdata.params))
+        except Exception as e:
+            #print(e)
+            return jsonrpc.json_error(rpcdata.id, UNHANDLED_EXCEPTION, e)
+        return jsonrpc.json_result(rpcdata.id, result)
+        
     def _stopVolt(self):
         _log.debug('_stopVolt()')
-        self.setShDeviceState(SH_DEVICE_LED_DEBUG, SH_DEVICE_STATE_OFF, SCHEDULE_NOT_AVLB)
-        self.setShDeviceState(SH_DEVICE_LED, SH_DEVICE_STATE_OFF, SCHEDULE_NOT_AVLB)
-        self.setShDeviceState(SH_DEVICE_FAN, SH_DEVICE_STATE_OFF, SCHEDULE_NOT_AVLB)
+        task_id = str(randint(0, 99999999))
+        result = get_task_schdl(self, task_id,'iiit/cbs/zonecontroller')
+        if result['result'] == 'SUCCESS':
+            try:
+                self.setShDeviceState(SH_DEVICE_LED_DEBUG, SH_DEVICE_STATE_OFF, SCHEDULE_AVLB)
+                self.setShDeviceState(SH_DEVICE_LED, SH_DEVICE_STATE_OFF, SCHEDULE_AVLB)
+                self.setShDeviceState(SH_DEVICE_FAN, SH_DEVICE_STATE_OFF, SCHEDULE_AVLB)
+            except Exception as e:
+                _log.exception ("Expection: Could not contact actuator. Is it running?")
+                pass
+            finally:
+                #cancel the schedule
+                cancel_task_schdl(self, task_id)
         self._voltState = 0
         return
-
+        
     def _config_get_init_values(self):
         self._period_read_data = self.config.get('period_read_data', 30)
         self._period_process_pp = self.config.get('period_process_pp', 10)
@@ -248,18 +299,18 @@ class SmartHub(Agent):
         self.pf_sh_fan = self.config.get('pf_sh_fan')
         return
         
-    def runSmartHubTest(self):
-        _log.debug("Running: runSmartHubTest()...")
+    def _run_smart_hub_test(self):
+        _log.debug("Running: _run_smart_hub_test()...")
         
-        self.testLedDebug()
-        self.testLed()
-        self.testFan()
-        #self.testSensors()
-        self.testSensors_2()
+        self._test_led_debug()
+        self._test_led()
+        self._test_fan()
+        #self._test_sensors()
+        self._test_sensors_2()
         _log.debug("EOF Testing")
         
         return   
-    def testLedDebug(self):
+    def _test_led_debug(self):
         _log.debug('switch on debug led')
         
         self.setShDeviceState(SH_DEVICE_LED_DEBUG, SH_DEVICE_STATE_ON, SCHEDULE_NOT_AVLB)
@@ -286,24 +337,25 @@ class SmartHub(Agent):
         time.sleep(1)
         
         return
-    def testLed(self):
+        
+    def _test_led(self):
         _log.debug('switch on led')
         self.setShDeviceState(SH_DEVICE_LED, SH_DEVICE_STATE_ON, SCHEDULE_NOT_AVLB)
         time.sleep(1)
 
-        _log.debug('change led level 0.3')        
+        _log.debug('change led level 0.3')
         self.setShDeviceLevel(SH_DEVICE_LED, 0.3, SCHEDULE_NOT_AVLB)
         time.sleep(1)
 
-        _log.debug('change led level 0.6')        
+        _log.debug('change led level 0.6')
         self.setShDeviceLevel(SH_DEVICE_LED, 0.6, SCHEDULE_NOT_AVLB)
         time.sleep(1)
 
-        _log.debug('change led level 0.9')        
+        _log.debug('change led level 0.9')
         self.setShDeviceLevel(SH_DEVICE_LED, 0.9, SCHEDULE_NOT_AVLB)
         time.sleep(1)
         
-        _log.debug('change led level 0.4')        
+        _log.debug('change led level 0.4')
         self.setShDeviceLevel(SH_DEVICE_LED, 0.4, SCHEDULE_NOT_AVLB)
         time.sleep(1)
         
@@ -312,33 +364,34 @@ class SmartHub(Agent):
         time.sleep(1)
         
         return
-    def testFan(self):
+    def _test_fan(self):
         _log.debug('switch on fan')
         self.setShDeviceState(SH_DEVICE_FAN, SH_DEVICE_STATE_ON, SCHEDULE_NOT_AVLB)
         time.sleep(1)
         
-        _log.debug('change fan level 0.3')        
+        _log.debug('change fan level 0.3')
         self.setShDeviceLevel(SH_DEVICE_FAN, 0.3, SCHEDULE_NOT_AVLB)
         time.sleep(1)
 
-        _log.debug('change fan level 0.6')        
+        _log.debug('change fan level 0.6')
         self.setShDeviceLevel(SH_DEVICE_FAN, 0.6, SCHEDULE_NOT_AVLB)
         time.sleep(1)
 
-        _log.debug('change fan level 0.9')        
+        _log.debug('change fan level 0.9')
         self.setShDeviceLevel(SH_DEVICE_FAN, 0.9, SCHEDULE_NOT_AVLB)
         time.sleep(1)
         
-        _log.debug('change fan level 0.4')        
+        _log.debug('change fan level 0.4')
         self.setShDeviceLevel(SH_DEVICE_FAN, 0.4, SCHEDULE_NOT_AVLB)
         time.sleep(1)
         
         _log.debug('switch off fan')
         self.setShDeviceState(SH_DEVICE_FAN, SH_DEVICE_STATE_OFF, SCHEDULE_NOT_AVLB)
         time.sleep(1)
-
+        
         return
-    def testSensors(self):
+        
+    def _test_sensors(self):
         _log.debug('test lux sensor')
         lux_level = self.getShDeviceLevel(SH_DEVICE_S_LUX, SCHEDULE_NOT_AVLB)
         _log.debug('lux Level: {:0.4f}'.format(lux_level))
@@ -365,7 +418,7 @@ class SmartHub(Agent):
         time.sleep(1)
         
         return
-    def testSensors_2(self):
+    def _test_sensors_2(self):
         task_id = str(randint(0, 99999999))
         result = ispace_utils.get_task_schdl(self, task_id, 'iiit/cbs/smarthub', 300)
         try:
@@ -390,7 +443,7 @@ class SmartHub(Agent):
                 pir_level = self.getShDeviceLevel(SH_DEVICE_S_PIR, SCHEDULE_AVLB)
                 _log.debug('pir Level: {:d}'.format(int(pir_level)))
         except Exception as e:
-            _log.exception ("Expection: no task schdl for testSensors_2()")
+            _log.exception ("Expection: no task schdl for _test_sensors_2()")
             #print(e)
             return
         finally:
@@ -399,8 +452,8 @@ class SmartHub(Agent):
             
         return
         
-    def getInitialHwState(self):
-        #_log.debug("getInitialHwState()")
+    def _get_initial_hw_state(self):
+        #_log.debug("_get_initial_hw_state()")
         task_id = str(randint(0, 99999999))
         result = ispace_utils.get_task_schdl(self, task_id, 'iiit/cbs/smarthub', 300)
         try:
@@ -410,7 +463,7 @@ class SmartHub(Agent):
                 self._shDevicesLevel[SH_DEVICE_LED] = self.getShDeviceLevel(SH_DEVICE_LED, SCHEDULE_AVLB)
                 self._shDevicesLevel[SH_DEVICE_FAN] = self.getShDeviceLevel(SH_DEVICE_FAN, SCHEDULE_AVLB)
         except Exception as e:
-            _log.exception ("Expection: no task schdl for getInitialHwState()")
+            _log.exception ("Expection: no task schdl for _get_initial_hw_state()")
             #print(e)
             return
         finally:
@@ -536,14 +589,13 @@ class SmartHub(Agent):
             #do notthing
             _log.exception ("Expection: not a valid param - schdExist: " + schdExist)
             return
-        
         return
         
     def setShDeviceThPP(self, deviceId, thPP):
         if not self._validDeviceAction(deviceId, AT_SET_THPP):
             _log.exception ("Expection: not a valid device to change thPP, deviceId: " + str(deviceId))
             return
-         
+        
         if self._shDevicesPP_th[deviceId] == thPP:
             _log.debug('same thPP, do nothing')
             return
@@ -551,11 +603,17 @@ class SmartHub(Agent):
         self._shDevicesPP_th[deviceId] = thPP
         self._publishShDeviceThPP(deviceId, thPP)
         self._apply_pricing_policy(deviceId, SCHEDULE_NOT_AVLB)
-        
         return
         
-    def publishSensorData(self):
-        #_log.debug('publishSensorData()')
+    def publish_hw_data(self):
+        self._publish_device_state();
+        self._publish_device_level();
+        self._publish_device_th_pp();
+        self._publish_sensor_data();
+        return
+        
+    def _publish_sensor_data(self):
+        #_log.debug('publish_sensor_data()')
         task_id = str(randint(0, 99999999))
         result = ispace_utils.get_task_schdl(self, task_id, 'iiit/cbs/smarthub', 300)
         #print(result)
@@ -594,8 +652,8 @@ class SmartHub(Agent):
                 ispace_utils.publish_to_bus(self, pubTopic, pubMsg)
         
         except Exception as e:
-            _log.exception ("Expection: no task schdl for publishSensorData()")
-            self.core.periodic(self._period_read_data, self.publishSensorData, wait=None)
+            _log.exception ("Expection: no task schdl for publish_sensor_data()")
+            self.core.periodic(self._period_read_data, self.publish_sensor_data, wait=None)
             #print(e)
             return
         finally:
@@ -603,8 +661,8 @@ class SmartHub(Agent):
                 ispace_utils.cancel_task_schdl(self, task_id)
         return
         
-    def publishDeviceState(self):
-        #_log.debug('publishDeviceState()')
+    def _publish_device_state(self):
+        #_log.debug('publish_device_state()')
         state_led = self._shDevicesState[SH_DEVICE_LED]
         state_fan = self._shDevicesState[SH_DEVICE_FAN]
         self._publishShDeviceState(SH_DEVICE_LED, state_led)
@@ -613,8 +671,8 @@ class SmartHub(Agent):
                     + ', fan state: {:0.4f}'.format(float(state_fan)))
         return
         
-    def publishDeviceLevel(self):
-        #_log.debug('publishDeviceLevel()')
+    def _publish_device_level(self):
+        #_log.debug('publish_device_level()')
         level_led = self._shDevicesLevel[SH_DEVICE_LED]
         level_fan = self._shDevicesLevel[SH_DEVICE_FAN]
         self._publishShDeviceLevel(SH_DEVICE_LED, level_led)
@@ -623,8 +681,8 @@ class SmartHub(Agent):
                     + ', fan level: {:0.4f}'.format(float(level_fan)))
         return
         
-    def publishDeviceThPP(self):
-        #_log.debug('publishDeviceThPP()')
+    def _publish_device_th_pp(self):
+        #_log.debug('publish_device_th_pp()')
         thpp_led = self._shDevicesPP_th[SH_DEVICE_LED]
         thpp_fan = self._shDevicesPP_th[SH_DEVICE_FAN]
         self._publishShDeviceThPP(SH_DEVICE_LED, thpp_led)
@@ -634,8 +692,8 @@ class SmartHub(Agent):
         return
         
     #this function is called only once on smarthub startup
-    def publishCurrentPP(self):
-        #_log.debug('publishCurrentPP()')
+    def _publish_current_pp(self):
+        #_log.debug('publish_current_pp()')
         _log.debug('current price point: {:0.4f}'.format(float(self._price_point_latest)))
         pubMsg = [self._price_point_latest
                     , {'units': 'cent', 'tz': 'UTC', 'type': 'float'}
@@ -1125,40 +1183,6 @@ class SmartHub(Agent):
                 return True
         log.exception ("Expection: not a valid device-action")
         return False
-        
-    @RPC.export
-    def rpc_from_net(self, header, message):
-        result = False
-        try:
-            rpcdata = jsonrpc.JsonRpcData.parse(message)
-            _log.debug('rpc_from_net()...'
-                        + 'header: {}'.format(header)
-                        + ', rpc method: {}'.format(rpcdata.method)
-                        + ', rpc params: {}'.format(rpcdata.params)
-                        )
-            if rpcdata.method == "ping":
-                result = True
-            elif rpcdata.method == "setShDeviceState":
-                result = self.setShDeviceState(message)
-            elif rpcdata.method == "rpc_setShDeviceLevel":
-                result = self.setShDeviceLevel(**args)
-            elif rpcdata.method == "rpc_setShDeviceThPP":
-                result = self.setShDeviceThPP(**args)
-            else:
-                return jsonrpc.json_error('NA', METHOD_NOT_FOUND,
-                    'Invalid method {}'.format(rpcdata.method))
-        except KeyError as ke:
-            #print(ke)
-            return jsonrpc.json_error('NA', INVALID_PARAMS,
-                    'Invalid params {}'.format(rpcdata.params))
-        except AssertionError:
-            #print('AssertionError')
-            return jsonrpc.json_error('NA', INVALID_REQUEST,
-                    'Invalid rpc data {}'.format(rpcdata))
-        except Exception as e:
-            #print(e)
-            return jsonrpc.json_error('NA', UNHANDLED_EXCEPTION, e)
-        return jsonrpc.json_result(rpcdata.id, result)
         
     def publish_ted(self):
         self._total_act_pwr = self._calc_total_act_pwr()
