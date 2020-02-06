@@ -453,6 +453,16 @@ class SmartHub(Agent):
         cancel_task_schdl(self, task_id)
         return
         
+    '''
+        Functionality related to the controller
+        
+        1. control the local actuators
+                get/set various set point / levels / speeds
+        2. local sensors
+                report the sensors data at regular interval
+        3. run necessary traditional control algorithm (PID, on/off, etc.,)
+        
+    '''
     def _get_initial_hw_state(self):
         #_log.debug("_get_initial_hw_state()")
         task_id = str(randint(0, 99999999))
@@ -669,179 +679,6 @@ class SmartHub(Agent):
         _log.debug('led th pp: {:0.4f}'.format(float(thpp_led))
                     + ', fan th pp: {0:0.4f}'.format(float(thpp_fan)))
         return
-        
-    def on_new_price(self, peer, sender, bus,  topic, headers, message):
-        if sender not in self._valid_senders_list_pp: return
-        
-        #check message type before parsing
-        if not check_msg_type(message, MessageType.price_point): return False
-            
-        valid_senders_list = self._valid_senders_list_pp
-        minimum_fields = ['msg_type', 'value', 'value_data_type', 'units', 'price_id']
-        validate_fields = ['value', 'units', 'price_id', 'isoptimal', 'duration', 'ttl']
-        valid_price_ids = []
-        (success, pp_msg) = valid_bustopic_msg(sender, valid_senders_list
-                                                , minimum_fields
-                                                , validate_fields
-                                                , valid_price_ids
-                                                , message)
-        if not success or pp_msg is None: return
-        else: _log.debug('New pp msg on the local-bus, topic: {}'.format(topic))
-        
-        if pp_msg.get_isoptimal():
-            _log.debug('***** New optimal price point from pca: {:0.2f}'.format(pp_msg.get_value())
-                                        + ' , price_id: {}'.format(pp_msg.get_price_id()))
-            self._process_opt_pp(pp_msg)
-        else:
-            _log.debug('***** New bid price point from pca: {:0.2f}'.format(pp_msg.get_value())
-                                        + ' , price_id: {}'.format(pp_msg.get_price_id()))
-            self._process_bid_pp(pp_msg)
-            
-        return
-        
-    def _process_opt_pp(self, message):
-        self._opt_pp_msg_latest = copy(pp_msg)
-        self._price_point_latest = pp_msg.get_value()
-        
-        #any process that failed to apply pp sets this flag False
-        self._process_opt_pp_success = False
-        #initiate the periodic process
-        self.process_opt_pp()
-        return
-        
-    def _process_bid_pp(self, message):
-        self._bid_pp_msg_latest = copy(pp_msg)
-        self.process_bid_pp()
-        return
-    
-    #this is a perodic function that keeps trying to apply the new pp till success
-    def process_bid_pp(self):
-        self.publish_bid_ted()
-        return
-        
-    def publish_bid_ted(self):
-        #compute total bid energy demand and publish to local/energydemand
-        #(vb RPCs this value to the next level)
-        bid_ted = self._calc_total_energy_demand()
-        #create a MessageType.energy ISPACE_Msg
-        pp_msg = ted_helper(self._bid_pp_msg_latest
-                            , self._device_id
-                            , self._discovery_address
-                            , bid_ted
-                            , self._period_read_data
-                            )
-        _log. info('[LOG] Total Energy Demand(TED) bid'
-                                    + ' for us bid pp_msg({})'.format(pp_msg.get_price_id())
-                                    + ': {:0.4f}'.format(bid_ted))
-        #publish the new price point to the local message bus
-        _log.debug('post to the local-bus...')
-        pub_topic = self._topic_energy_demand
-        pub_msg = pp_msg.get_json_message(self._agent_id, 'bus_topic')
-        _log.debug('local bus topic: {}'.format(pub_topic))
-        _log. info('[LOG] Total Energy Demand(TED) bid, Msg: {}'.format(pub_msg))
-        publish_to_bus(self, pub_topic, pub_msg)
-        _log.debug('Done!!!')
-        return
-        
-    #calculate the local energy demand for bid_pp
-    #the bid energy is for self._bid_pp_duration (default 1hr)
-    #and this msg is valid for self._period_read_data (ttl - default 30s)
-    def _calc_total_energy_demand(self):
-        # bid_ed should be measured in realtime from the connected plug
-        # however, since we don't have model for the battery charge controller
-        # we are using below algo based on experimental data
-        bid_ed = calc_energy(SH_BASE_ENERGY, self._bid_pp_duration)
-        if self._sh_devices_state[SH_DEVICE_LED] == SH_DEVICE_STATE_ON:
-            level_led = self._sh_devices_level[SH_DEVICE_LED]
-            led_energy = self.calc_energy(SH_LED_ENERGY, self._bid_pp_duration)
-            bid_ed = bid_ed + ((led_energy * SH_LED_THRESHOLD_PCT)
-                                    if level_led <= SH_LED_THRESHOLD_PCT 
-                                    else (led_energy * level_led))
-        if self._sh_devices_state[SH_DEVICE_FAN] == SH_DEVICE_STATE_ON:
-            level_fan = self._get_new_fan_speed(self._bid_pp)/100
-            fan_energy = self.calc_energy(SH_FAN_ENERGY, self._bid_pp_duration)
-            bid_ed = bid_ed + ((fan_energy * SH_FAN_THRESHOLD_PCT)
-                                    if level_led <= SH_FAN_THRESHOLD_PCT
-                                    else (fan_energy * level_fan))
-        return bid_ed
-        
-    #this is a perodic function that keeps trying to apply the new pp till success
-    def process_opt_pp(self):
-        if self._process_opt_pp_success: return
-            
-        #any process that failed to apply pp sets this flag False
-        self._process_opt_pp_success = True
-        task_id = str(randint(0, 99999999))
-        success = get_task_schdl(self, task_id, 'iiit/cbs/smarthub')
-        if not success:
-            _log.debug("unable to process_opt_pp(), will try again in " + str(self._period_process_pp))
-            return
-            
-        self._apply_pricing_policy(SH_DEVICE_LED, SCHEDULE_AVLB)
-        self._apply_pricing_policy(SH_DEVICE_FAN, SCHEDULE_AVLB)
-        #cancel the schedule
-        cancel_task_schdl(self, task_id)
-        
-        if self._process_opt_pp_success:
-            _log.debug('unable to process_opt_pp()'
-                                + ', will try again in {} sec'.format(self._period_process_pp))
-            return
-            
-        _log.info("New Price Point processed.")
-        #on successful process of apply_pricing_policy with the latest opt pp, current = latest
-        self._opt_pp_msg_current = copy(self._opt_pp_msg_latest)
-        self._price_point_current = copy(self._price_point_latest)
-        self._process_opt_pp_success = True
-        return
-        
-    def _apply_pricing_policy(self, lhw_device_id, schd_exist):
-        _log.debug("_apply_pricing_policy()")
-        threshold_pp = self._sh_devices_th_pp[lhw_device_id]
-        if self._price_point_latest > threshold_pp: 
-            if self._sh_devices_state[lhw_device_id] == SH_DEVICE_STATE_ON:
-                _log.info(self._get_lhw_end_point(lhw_device_id, AT_GET_STATE)
-                            + 'Current price point > threshold'
-                            + '({0:.2f}), '.format(threshold_pp)
-                            + 'Switching-Off Power'
-                            )
-                self._set_sh_device_state(lhw_device_id, SH_DEVICE_STATE_OFF, schd_exist)
-                if not self._sh_devices_state[lhw_device_id] == SH_DEVICE_STATE_OFF:
-                    self._process_opt_pp_success = True
-            #else:
-                #do nothing
-        else:
-            _log.info(self._get_lhw_end_point(lhw_device_id, AT_GET_STATE)
-                        + 'Current price point <= threshold'
-                        + '({0:.2f}), '.format(threshold_pp)
-                        + 'Switching-On Power'
-                        )
-            self._set_sh_device_state(lhw_device_id, SH_DEVICE_STATE_ON, schd_exist)
-            if not self._sh_devices_state[lhw_device_id] == SH_DEVICE_STATE_ON:
-                self._process_opt_pp_success = True
-                
-            if lhw_device_id == SH_DEVICE_FAN:
-                fan_speed = self._get_new_fan_speed(self._price_point_latest)/100
-                _log.info ( "New Fan Speed: {0:.4f}".format(fan_speed))
-                self._set_sh_device_level(SH_DEVICE_FAN, fan_speed, schd_exist)
-                if not isclose(fan_speed, self._sh_devices_level[lhw_device_id], EPSILON):
-                    self._process_opt_pp_success = True
-
-        return
-        
-    #compute new Fan Speed from price functions
-    def _get_new_fan_speed(self, pp):
-        pp = 0 if pp < 0 else 1 if pp > 1 else pp
-        
-        pf_idx = self._pf_sh_fan['pf_idx']
-        pf_roundup = self._pf_sh_fan['pf_roundup']
-        pf_coefficients = self._pf_sh_fan['pf_coefficients']
-        
-        a = pf_coefficients[pf_idx]['a']
-        b = pf_coefficients[pf_idx]['b']
-        c = pf_coefficients[pf_idx]['c']
-        
-        speed = a*pp**2 + b*pp + c
-        return mround(speed, pf_roundup)
         
     def _rpcget_sh_device_state(self, lhw_device_id):
         if not self._valid_device_action(lhw_device_id,AT_GET_STATE):
@@ -1124,6 +961,194 @@ class SmartHub(Agent):
                 return True
         log.exception ("not a valid device-action")
         return False
+        
+    '''
+        Functionality related to the market mechanisms
+        
+        1. receive new prices (optimal pp or bid pp) from the pca
+        2. if opt pp, apply pricing policy by computing the new setpoint based on price functions
+        3. if bid pp, compute the new bid energy demand
+        
+    '''
+    def on_new_price(self, peer, sender, bus,  topic, headers, message):
+        if sender not in self._valid_senders_list_pp: return
+        
+        #check message type before parsing
+        if not check_msg_type(message, MessageType.price_point): return False
+            
+        valid_senders_list = self._valid_senders_list_pp
+        minimum_fields = ['msg_type', 'value', 'value_data_type', 'units', 'price_id']
+        validate_fields = ['value', 'units', 'price_id', 'isoptimal', 'duration', 'ttl']
+        valid_price_ids = []
+        (success, pp_msg) = valid_bustopic_msg(sender, valid_senders_list
+                                                , minimum_fields
+                                                , validate_fields
+                                                , valid_price_ids
+                                                , message)
+        if not success or pp_msg is None: return
+        else: _log.debug('New pp msg on the local-bus, topic: {}'.format(topic))
+        
+        if pp_msg.get_isoptimal():
+            _log.debug('***** New optimal price point from pca: {:0.2f}'.format(pp_msg.get_value())
+                                        + ' , price_id: {}'.format(pp_msg.get_price_id()))
+            self._process_opt_pp(pp_msg)
+        else:
+            _log.debug('***** New bid price point from pca: {:0.2f}'.format(pp_msg.get_value())
+                                        + ' , price_id: {}'.format(pp_msg.get_price_id()))
+            self._process_bid_pp(pp_msg)
+            
+        return
+        
+    def _process_opt_pp(self, message):
+        self._opt_pp_msg_latest = copy(pp_msg)
+        self._price_point_latest = pp_msg.get_value()
+        
+        #any process that failed to apply pp sets this flag False
+        self._process_opt_pp_success = False
+        #initiate the periodic process
+        self.process_opt_pp()
+        return
+        
+    def _process_bid_pp(self, message):
+        self._bid_pp_msg_latest = copy(pp_msg)
+        self.process_bid_pp()
+        return
+    
+    #this is a perodic function that keeps trying to apply the new pp till success
+    def process_bid_pp(self):
+        self.publish_bid_ted()
+        return
+        
+    def publish_bid_ted(self):
+        #compute total bid energy demand and publish to local/energydemand
+        #(vb RPCs this value to the next level)
+        bid_ted = self._calc_total_energy_demand()
+        #create a MessageType.energy ISPACE_Msg
+        pp_msg = ted_helper(self._bid_pp_msg_latest
+                            , self._device_id
+                            , self._discovery_address
+                            , bid_ted
+                            , self._period_read_data
+                            )
+        _log. info('[LOG] Total Energy Demand(TED) bid'
+                                    + ' for us bid pp_msg({})'.format(pp_msg.get_price_id())
+                                    + ': {:0.4f}'.format(bid_ted))
+        #publish the new price point to the local message bus
+        _log.debug('post to the local-bus...')
+        pub_topic = self._topic_energy_demand
+        pub_msg = pp_msg.get_json_message(self._agent_id, 'bus_topic')
+        _log.debug('local bus topic: {}'.format(pub_topic))
+        _log. info('[LOG] Total Energy Demand(TED) bid, Msg: {}'.format(pub_msg))
+        publish_to_bus(self, pub_topic, pub_msg)
+        _log.debug('Done!!!')
+        return
+        
+    #calculate the local energy demand for bid_pp
+    #the bid energy is for self._bid_pp_duration (default 1hr)
+    #and this msg is valid for self._period_read_data (ttl - default 30s)
+    def _calc_total_energy_demand(self):
+        # bid_ed should be measured in realtime from the connected plug
+        # however, since we don't have model for the battery charge controller
+        # we are using below algo based on experimental data
+        bid_ed = calc_energy(SH_BASE_ENERGY, self._bid_pp_duration)
+        if self._sh_devices_state[SH_DEVICE_LED] == SH_DEVICE_STATE_ON:
+            level_led = self._sh_devices_level[SH_DEVICE_LED]
+            led_energy = self.calc_energy(SH_LED_ENERGY, self._bid_pp_duration)
+            bid_ed = bid_ed + ((led_energy * SH_LED_THRESHOLD_PCT)
+                                    if level_led <= SH_LED_THRESHOLD_PCT 
+                                    else (led_energy * level_led))
+        if self._sh_devices_state[SH_DEVICE_FAN] == SH_DEVICE_STATE_ON:
+            fan_speed = self._get_new_fan_speed(self._bid_pp)
+            fan_energy = self.calc_energy(SH_FAN_ENERGY, self._bid_pp_duration)
+            bid_ed = bid_ed + ((fan_energy * SH_FAN_THRESHOLD_PCT)
+                                    if level_led <= SH_FAN_THRESHOLD_PCT
+                                    else (fan_energy * fan_speed))
+        return bid_ed
+        
+    #this is a perodic function that keeps trying to apply the new pp till success
+    def process_opt_pp(self):
+        if self._process_opt_pp_success: return
+            
+        #any process that failed to apply pp sets this flag False
+        self._process_opt_pp_success = True
+        task_id = str(randint(0, 99999999))
+        success = get_task_schdl(self, task_id, 'iiit/cbs/smarthub')
+        if not success:
+            _log.debug('unable to process_opt_pp()'
+                                + ', will try again in {} sec'.format(self._period_process_pp))
+            return
+            
+        self._apply_pricing_policy(SH_DEVICE_LED, SCHEDULE_AVLB)
+        if self._process_opt_pp_success:
+            _log.debug('unable to process_opt_pp()'
+                                + ', will try again in {} sec'.format(self._period_process_pp))
+            cancel_task_schdl(self, task_id)
+            return
+            
+        self._apply_pricing_policy(SH_DEVICE_FAN, SCHEDULE_AVLB)
+        if self._process_opt_pp_success:
+            _log.debug('unable to process_opt_pp()'
+                                + ', will try again in {} sec'.format(self._period_process_pp))
+            cancel_task_schdl(self, task_id)
+            return
+            
+        cancel_task_schdl(self, task_id)
+        
+        _log.info("New Price Point processed.")
+        #on successful process of apply_pricing_policy with the latest opt pp, current = latest
+        self._opt_pp_msg_current = copy(self._opt_pp_msg_latest)
+        self._price_point_current = copy(self._price_point_latest)
+        self._process_opt_pp_success = True
+        return
+        
+    def _apply_pricing_policy(self, lhw_device_id, schd_exist):
+        _log.debug("_apply_pricing_policy()")
+        threshold_pp = self._sh_devices_th_pp[lhw_device_id]
+        if self._price_point_latest > threshold_pp: 
+            if self._sh_devices_state[lhw_device_id] == SH_DEVICE_STATE_ON:
+                _log.info(self._get_lhw_end_point(lhw_device_id, AT_GET_STATE)
+                            + 'Current price point > threshold'
+                            + '({0:.2f}), '.format(threshold_pp)
+                            + 'Switching-Off Power'
+                            )
+                self._set_sh_device_state(lhw_device_id, SH_DEVICE_STATE_OFF, schd_exist)
+                if not self._sh_devices_state[lhw_device_id] == SH_DEVICE_STATE_OFF:
+                    self._process_opt_pp_success = True
+            #else:
+                #do nothing
+        else:
+            _log.info(self._get_lhw_end_point(lhw_device_id, AT_GET_STATE)
+                        + 'Current price point <= threshold'
+                        + '({0:.2f}), '.format(threshold_pp)
+                        + 'Switching-On Power'
+                        )
+            self._set_sh_device_state(lhw_device_id, SH_DEVICE_STATE_ON, schd_exist)
+            if not self._sh_devices_state[lhw_device_id] == SH_DEVICE_STATE_ON:
+                self._process_opt_pp_success = True
+                
+            if lhw_device_id == SH_DEVICE_FAN:
+                fan_speed = self._get_new_fan_speed(self._price_point_latest)
+                _log.info ( "New Fan Speed: {0:.4f}".format(fan_speed))
+                self._set_sh_device_level(SH_DEVICE_FAN, fan_speed, schd_exist)
+                if not isclose(fan_speed, self._sh_devices_level[lhw_device_id], EPSILON):
+                    self._process_opt_pp_success = True
+                    
+        return
+        
+    #compute new Fan Speed from price functions
+    def _get_new_fan_speed(self, pp):
+        pp = 0 if pp < 0 else 1 if pp > 1 else pp
+        
+        pf_idx = self._pf_sh_fan['pf_idx']
+        pf_roundup = self._pf_sh_fan['pf_roundup']
+        pf_coefficients = self._pf_sh_fan['pf_coefficients']
+        
+        a = pf_coefficients[pf_idx]['a']
+        b = pf_coefficients[pf_idx]['b']
+        c = pf_coefficients[pf_idx]['c']
+        
+        speed = a*pp**2 + b*pp + c
+        return mround(speed, pf_roundup)/100
         
     #perodic function to publish active power
     def publish_opt_tap(self):
