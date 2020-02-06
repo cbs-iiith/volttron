@@ -307,9 +307,7 @@ class ZoneController(Agent):
         
     #this is a perodic function that keeps trying to apply the new pp till success
     def process_opt_pp(self):
-        if self._process_opt_pp_success:
-            #_log.debug('all apply opt pp processess success, do nothing')
-            return
+        if self._process_opt_pp_success: return
             
         self._apply_pricing_policy()
         

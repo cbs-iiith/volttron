@@ -671,82 +671,82 @@ class SmartHub(Agent):
         return
         
     def on_new_price(self, peer, sender, bus,  topic, headers, message):
-        if sender == 'pubsub.compat':
-            message = compat.unpack_legacy_message(headers, message)
-            
-        if not valid_pp_msg(message):
-            _log.warning('rcvd a invalid pp msg, message: {}'.format(message)
-                        + ', do nothing!!!'
-                        )
-            return
-            
-        print_pp_msg(self, message)
+        if sender not in self._valid_senders_list_pp: return
         
-        #process ed only if msg is alive (didnot timeout)
-        if ttl_timeout(message[ParamPP.idx_pp_ts], message[ParamPP.idx_pp_ttl]):
-            _log.warning("msg timed out, do nothing")
-            return
+        #check message type before parsing
+        if not check_msg_type(message, MessageType.price_point): return False
             
-        if message[ParamPP.idx_pp_isoptimal]:
-            _log.debug('optimal pp!!!')
-            self._process_opt_pp(message)
+        valid_senders_list = self._valid_senders_list_pp
+        minimum_fields = ['msg_type', 'value', 'value_data_type', 'units', 'price_id']
+        validate_fields = ['value', 'units', 'price_id', 'isoptimal', 'duration', 'ttl']
+        valid_price_ids = []
+        (success, pp_msg) = valid_bustopic_msg(sender, valid_senders_list
+                                                , minimum_fields
+                                                , validate_fields
+                                                , valid_price_ids
+                                                , message)
+        if not success or pp_msg is None: return
+        else: _log.debug('New pp msg on the local-bus, topic: {}'.format(topic))
+        
+        if pp_msg.get_isoptimal():
+            _log.debug('***** New optimal price point from pca: {:0.2f}'.format(pp_msg.get_value())
+                                        + ' , price_id: {}'.format(pp_msg.get_price_id()))
+            self._process_opt_pp(pp_msg)
         else:
-            _log.debug('not optimal pp!!!')
-            self._process_bid_pp(message)
+            _log.debug('***** New bid price point from pca: {:0.2f}'.format(pp_msg.get_value())
+                                        + ' , price_id: {}'.format(pp_msg.get_price_id()))
+            self._process_bid_pp(pp_msg)
+            
         return
         
     def _process_opt_pp(self, message):
-        self._price_point_latest = message[ParamPP.idx_pp]
-        self._pp_datatype_latest = message[ParamPP.idx_pp_datatype]
-        self._pp_id_latest = message[ParamPP.idx_pp_id]
-        self._pp_duration_latest = message[ParamPP.idx_pp_duration]
-        self._pp_ttl_latest = message[ParamPP.idx_pp_ttl]
-        self._pp_ts_latest = message[ParamPP.idx_pp_ts]
-        self._total_act_pwr = -1        #reset total active pwr to zero on new opt_pp
-        self._ds_total_act_pwr[:] = []
-        self.process_opt_pp()     #initiate the periodic process
+        self._opt_pp_msg_latest = copy(pp_msg)
+        self._price_point_latest = pp_msg.get_value()
+        
+        #any process that failed to apply pp sets this flag False
+        self._process_opt_pp_success = False
+        #initiate the periodic process
+        self.process_opt_pp()
         return
         
     def _process_bid_pp(self, message):
-        self._bid_pp = message[ParamPP.idx_pp]
-        self._bid_pp_datatype = message[ParamPP.idx_pp_datatype]
-        self._bid_pp_id = message[ParamPP.idx_pp_id]
-        self._bid_pp_duration = message[ParamPP.idx_pp_duration]
-        self._bid_pp_ttl = message[ParamPP.idx_pp_ttl]
-        self._bid_pp_ts = message[ParamPP.idx_pp_ts]
-        self._bid_ed = -1        #reset bid_ed to zero on new bid_pp
-        self._ds_bid_ed[:] = []
-        self.process_bid_pp()   #initiate the periodic process
+        self._bid_pp_msg_latest = copy(pp_msg)
+        self.process_bid_pp()
         return
     
-    #this is a periodic function, runs till all the ds bid_ed are received and bid_ted is published
+    #this is a perodic function that keeps trying to apply the new pp till success
     def process_bid_pp(self):
-        if self._bid_ed_published:
-            return
-        if self._bid_ed < -1:
-            self._bid_ed = self._local_bid_ed(self._bid_pp, self._bid_pp_duration)
+        self.publish_bid_ted()
+        return
         
-        ds_devices = self.vip.rpc.call('iiit.volttronbridge', 'count_ds_devices').get(timeout=10)
-        rcvd_all_ds_bid_ed = True if ds_devices == len(self._ds_bid_ed) else False
-        
-        if rcvd_all_ds_bid_ed or ttl_timeout(self._bid_pp_ts, self._bid_pp_ttl):
-            #Calc total ed
-            for ed in self._ds_bid_ed:
-                self._bid_ed = self._bid_ed + ed
-            #publish ted
-            self.publish_bid_ted()
-            #reset counters
-            self._bid_ed = -1 
-            self._bid_ed_published = True
-        else:
-            #do nothing, wait for all ds ed or ttl timeout
-            pass
+    def publish_bid_ted(self):
+        #compute total bid energy demand and publish to local/energydemand
+        #(vb RPCs this value to the next level)
+        bid_ted = self._calc_total_energy_demand()
+        #create a MessageType.energy ISPACE_Msg
+        pp_msg = ted_helper(self._bid_pp_msg_latest
+                            , self._device_id
+                            , self._discovery_address
+                            , bid_ted
+                            , self._period_read_data
+                            )
+        _log. info('[LOG] Total Energy Demand(TED) bid'
+                                    + ' for us bid pp_msg({})'.format(pp_msg.get_price_id())
+                                    + ': {:0.4f}'.format(bid_ted))
+        #publish the new price point to the local message bus
+        _log.debug('post to the local-bus...')
+        pub_topic = self._topic_energy_demand
+        pub_msg = pp_msg.get_json_message(self._agent_id, 'bus_topic')
+        _log.debug('local bus topic: {}'.format(pub_topic))
+        _log. info('[LOG] Total Energy Demand(TED) bid, Msg: {}'.format(pub_msg))
+        publish_to_bus(self, pub_topic, pub_msg)
+        _log.debug('Done!!!')
         return
         
     #calculate the local energy demand for bid_pp
     #the bid energy is for self._bid_pp_duration (default 1hr)
     #and this msg is valid for self._period_read_data (ttl - default 30s)
-    def _local_bid_ed(self):
+    def _calc_total_energy_demand(self):
         # bid_ed should be measured in realtime from the connected plug
         # however, since we don't have model for the battery charge controller
         # we are using below algo based on experimental data
@@ -765,23 +765,6 @@ class SmartHub(Agent):
                                     else (fan_energy * level_fan))
         return bid_ed
         
-    def publish_bid_ted(self):
-        _log.info( "New Bid TED: {0:.4f}, publishing to bus.".format(self._bid_ted))
-        pubTopic = self._topic_energy_demand
-        #_log.debug("Bid TED pubTopic: " + pubTopic)
-        pubMsg = [self._bid_ted
-                    , {'units': 'kWh', 'tz': 'UTC', 'type': 'float'}
-                    , self._bid_pp_id
-                    , False
-                    , None
-                    , None
-                    , self._bid_pp_duration
-                    , self._bid_pp_ttl
-                    , self._bid_pp_ts
-                    ]
-        publish_to_bus(self, pubTopic, pubMsg)
-        return
-        
     #this is a perodic function that keeps trying to apply the new pp till success
     def process_opt_pp(self):
         if self._process_opt_pp_success: return
@@ -799,17 +782,16 @@ class SmartHub(Agent):
         #cancel the schedule
         cancel_task_schdl(self, task_id)
         
-        if not self._process_opt_pp_success:
-            _log.debug("unable to process_opt_pp(), will try again in " + str(self._period_process_pp))
+        if self._process_opt_pp_success:
+            _log.debug('unable to process_opt_pp()'
+                                + ', will try again in {} sec'.format(self._period_process_pp))
             return
             
-        self._price_point_old = self._price_point_latest
-        self._pp_datatype_old = self._pp_datatype_new
-        self._pp_id_old = self._pp_id_new
-        self._pp_duration_old = self._pp_duration_new
-        self._pp_ttl_old = self._pp_ttl_new
-        self._pp_ts_old = self._pp_ts_new
         _log.info("New Price Point processed.")
+        #on successful process of apply_pricing_policy with the latest opt pp, current = latest
+        self._opt_pp_msg_current = copy(self._opt_pp_msg_latest)
+        self._price_point_current = copy(self._price_point_latest)
+        self._process_opt_pp_success = True
         return
         
     def _apply_pricing_policy(self, lhw_device_id, schd_exist):
