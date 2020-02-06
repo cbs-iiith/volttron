@@ -802,16 +802,13 @@ class SmartHub(Agent):
         
     #this is a perodic function that keeps trying to apply the new pp till success
     def process_opt_pp(self):
-        if isclose(self._price_point_old, self._price_point_latest, EPSILON) and self._pp_id == self._pp_id_new:
-            return
+        if self._process_opt_pp_success: return
             
-        self._process_opt_pp_success = False     #any process that failed to apply pp sets this flag True
+        #any process that failed to apply pp sets this flag False
+        self._process_opt_pp_success = True
         task_id = str(randint(0, 99999999))
-        result = get_task_schdl(self, task_id, 'iiit/cbs/smarthub')
-        if result['result'] != 'SUCCESS':
-            self._process_opt_pp_success = True
-        
-        if self._process_opt_pp_success:
+        success = get_task_schdl(self, task_id, 'iiit/cbs/smarthub')
+        if not success:
             _log.debug("unable to process_opt_pp(), will try again in " + str(self._period_process_pp))
             return
             
@@ -820,7 +817,7 @@ class SmartHub(Agent):
         #cancel the schedule
         cancel_task_schdl(self, task_id)
         
-        if self._process_opt_pp_success:
+        if not self._process_opt_pp_success:
             _log.debug("unable to process_opt_pp(), will try again in " + str(self._period_process_pp))
             return
             
