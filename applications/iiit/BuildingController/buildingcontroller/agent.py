@@ -312,10 +312,8 @@ class BuildingController(Agent):
     def publish_price_to_bms(self):
         _log.debug('publish_price_to_bms()')
         task_id = str(randint(0, 99999999))
-        result = get_task_schdl(self, task_id, 'iiit/cbs/buildingcontroller')
-        if result['result'] != 'SUCCESS':
-            _log.debug('schedule NOT available')
-            return
+        success = get_task_schdl(self, task_id, 'iiit/cbs/buildingcontroller')
+        if not success: return
         try:
             result = self.vip.rpc.call('platform.actuator'
                                         , 'set_point'

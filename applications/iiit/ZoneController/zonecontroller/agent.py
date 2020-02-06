@@ -381,10 +381,8 @@ class ZoneController(Agent):
             return
             
         task_id = str(randint(0, 99999999))
-        result = get_task_schdl(self, task_id, 'iiit/cbs/zonecontroller')
-        if result['result'] != 'SUCCESS':
-            _log.debug('schedule NOT available')
-            return
+        success = get_task_schdl(self, task_id, 'iiit/cbs/zonecontroller')
+        if not success: return
         try:
             result = self.vip.rpc.call('platform.actuator'
                                         , 'set_point'
@@ -412,10 +410,8 @@ class ZoneController(Agent):
             return
             
         task_id = str(randint(0, 99999999))
-        result = get_task_schdl(self, task_id,'iiit/cbs/zonecontroller')
-        if result['result'] != 'SUCCESS':
-            _log.debug('schedule NOT available')
-            return
+        success = get_task_schdl(self, task_id,'iiit/cbs/zonecontroller')
+        if not success: return
         try:
             result = self.vip.rpc.call('platform.actuator'
                                         , 'set_point'
@@ -464,10 +460,8 @@ class ZoneController(Agent):
         
     def _rpcget_zone_lighting_power(self):
         task_id = str(randint(0, 99999999))
-        result = get_task_schdl(self, task_id,'iiit/cbs/zonecontroller')
-        if result['result'] != 'SUCCESS':
-            _log.debug('schedule NOT available')
-            return E_UNKNOWN_CLE
+        success = get_task_schdl(self, task_id,'iiit/cbs/zonecontroller')
+        if not success: return E_UNKNOWN_CLE
         try:
             lightEnergy = self.vip.rpc.call('platform.actuator'
                                             , 'get_point'
@@ -486,10 +480,8 @@ class ZoneController(Agent):
         
     def _rpcget_zone_cooling_power(self):
         task_id = str(randint(0, 99999999))
-        result = get_task_schdl(self, task_id,'iiit/cbs/zonecontroller')
-        if result['result'] != 'SUCCESS':
-            _log.debug('schedule NOT available')
-            return E_UNKNOWN_CCE
+        success = get_task_schdl(self, task_id,'iiit/cbs/zonecontroller')
+        if not success: return E_UNKNOWN_CCE
         try:
             coolingEnergy = self.vip.rpc.call('platform.actuator'
                                                 ,'get_point'
