@@ -210,6 +210,8 @@ class SmartHub(Agent):
         
         _log.debug('switch on debug led')
         self._set_sh_device_state(SH_DEVICE_LED_DEBUG, SH_DEVICE_STATE_ON, SCHEDULE_NOT_AVLB)
+        
+        _log.debug('startup() - Done. Agent is ready')
         return
         
     @Core.receiver('onstop')
