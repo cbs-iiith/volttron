@@ -1075,7 +1075,7 @@ class SmartHub(Agent):
                 self._process_opt_pp_success = True
                 
             if lhw_device_id == SH_DEVICE_FAN:
-                fan_speed = self._compute_new_fan_speed(self._price_point_latest)
+                fan_speed = self._compute_new_fan_speed(self._price_point_latest) / 100
                 _log.info ( 'New Fan Speed: {0:.4f}'.format(fan_speed))
                 self._set_sh_device_level(SH_DEVICE_FAN, fan_speed, schd_exist)
                 if not isclose(fan_speed, self._sh_devices_level[lhw_device_id], EPSILON):
@@ -1083,20 +1083,20 @@ class SmartHub(Agent):
                     
         return
         
-    # compute new Fan Speed from price functions
+    # compute new Fan Speed (0-100%) from price functions
     def _compute_new_fan_speed(self, pp):
         pp = 0 if pp < 0 else 1 if pp > 1 else pp
         
-        pf_idx = self._pf_sh_fan['pf_idx']
-        pf_roundup = self._pf_sh_fan['pf_roundup']
-        pf_coefficients = self._pf_sh_fan['pf_coefficients']
+        idx = self._pf_sh_fan['idx']
+        roundup = self._pf_sh_fan['roundup']
+        coefficients = self._pf_sh_fan['coefficients']
         
         a = pf_coefficients[pf_idx]['a']
         b = pf_coefficients[pf_idx]['b']
         c = pf_coefficients[pf_idx]['c']
         
         speed = a*pp**2 + b*pp + c
-        return (mround(speed, pf_roundup)/100)
+        return mround(speed, roundup)
         
     # perodic function to publish active power
     def publish_opt_tap(self):
@@ -1148,11 +1148,12 @@ class SmartHub(Agent):
                                     if fan_speed <= SH_LED_THRESHOLD_PCT
                                     else (SH_FAN_POWER * fan_speed))
         return tap
+        
     def _process_bid_pp(self, pp_msg):
         self._bid_pp_msg_latest = copy(pp_msg)
         self.process_bid_pp()
         return
-    
+        
     # this is a perodic function that keeps trying to apply the new pp till success
     def process_bid_pp(self):
         self.publish_bid_ted()

@@ -316,7 +316,7 @@ class RadiantCubicle(Agent):
                 # _log.debug('schl avlb')
                 result = self.vip.rpc.call('platform.actuator'
                                             , 'set_point'
-                                            , self._agent_id,
+                                            , self._agent_id
                                             , 'iiit/cbs/radiantcubicle/RC_AUTO_CNTRL'
                                             , state
                                             ).get(timeout=10)
@@ -512,16 +512,16 @@ class RadiantCubicle(Agent):
     def _compute_rc_new_tsp(self, pp):
         pp = 0 if pp < 0 else 1 if pp > 1 else pp
         
-        pf_idx = self.pf_rc['pf_idx']
-        pf_roundup = self.pf_rc['pf_roundup']
-        pf_coefficients = self.pf_rc['pf_coefficients']
+        idx = self.pf_rc['idx']
+        roundup = self.pf_rc['roundup']
+        coefficients = self.pf_rc['coefficients']
         
-        a = pf_coefficients[pf_idx]['a']
-        b = pf_coefficients[pf_idx]['b']
-        c = pf_coefficients[pf_idx]['c']
+        a = pf_coefficients[idx]['a']
+        b = pf_coefficients[idx]['b']
+        c = pf_coefficients[idx]['c']
         
         tsp = a*pp**2 + b*pp + c
-        return mround(tsp, pf_roundup)
+        return mround(tsp, roundup)
         
     # perodic function to publish active power
     def publish_opt_tap(self):

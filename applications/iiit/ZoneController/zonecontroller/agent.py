@@ -533,31 +533,31 @@ class ZoneController(Agent):
     def _compute_new_tsp(self, pp):
         pp = 0 if pp < 0 else 1 if pp > 1 else pp
         
-        pf_idx = self._pf_zn_ac['pf_idx']
-        pf_roundup = self._pf_zn_ac['pf_roundup']
-        pf_coefficients = self._pf_zn_ac['pf_coefficients']
+        idx = self._pf_zn_ac['idx']
+        roundup = self._pf_zn_ac['roundup']
+        coefficients = self._pf_zn_ac['coefficients']
         
-        a = pf_coefficients[pf_idx]['a']
-        b = pf_coefficients[pf_idx]['b']
-        c = pf_coefficients[pf_idx]['c']
+        a = pf_coefficients[idx]['a']
+        b = pf_coefficients[idx]['b']
+        c = pf_coefficients[idx]['c']
         
         tsp = a*pp**2 + b*pp + c
-        return mround(tsp, pf_roundup)
+        return mround(tsp, roundup)
         
-    # compute new zone lighting setpoint from price functions
+    # compute new zone lighting setpoint (0-100%) from price functions
     def _compute_new_lsp(self, pp):
         pp = 0 if pp < 0 else 1 if pp > 1 else pp
         
-        pf_idx = self._pf_zn_light['pf_idx']
-        pf_roundup = self._pf_zn_light['pf_roundup']
-        pf_coefficients = self._pf_zn_light['pf_coefficients']
+        idx = self._pf_zn_light['idx']
+        roundup = self._pf_zn_light['roundup']
+        coefficients = self._pf_zn_light['coefficients']
         
-        a = pf_coefficients[pf_idx]['a']
-        b = pf_coefficients[pf_idx]['b']
-        c = pf_coefficients[pf_idx]['c']
+        a = pf_coefficients[idx]['a']
+        b = pf_coefficients[idx]['b']
+        c = pf_coefficients[idx]['c']
         
         lsp = a*pp**2 + b*pp + c
-        return mround(lsp, pf_roundup)
+        return mround(lsp, roundup)
         
     # perodic function to publish active power
     def publish_opt_tap(self):
@@ -644,8 +644,8 @@ class ZoneController(Agent):
         bid_pp = pp_msg.get_value()
         duration = pp_msg.get_duration()
         
-        tsp = self._zone_tsp
-        lsp = self._zone_lsp
+        #bid_tsp = self._compute_new_tsp(bid_pp)
+        #bid_lsp = self._compute_new_lsp(bid_pp)
         
         
         # TODO: Sam
