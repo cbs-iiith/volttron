@@ -96,6 +96,7 @@ SH_LED_POWER = 10
 SH_FAN_THRESHOLD_PCT = 0.30
 SH_LED_THRESHOLD_PCT = 0.30
 
+
 def smarthub(config_path, **kwargs):
     config = utils.load_config(config_path)
     vip_identity = config.get('vip_identity', 'iiit.smarthub')
@@ -104,6 +105,7 @@ def smarthub(config_path, **kwargs):
     
     Agent.__name__ = 'SmartHub_Agent'
     return SmartHub(config_path, identity=vip_identity, **kwargs)
+    
     
 class SmartHub(Agent):
     '''Smart Hub
