@@ -430,64 +430,82 @@ class RadiantCubicle(Agent):
         pub_msg = [state, {'units': 'On/Off', 'tz': 'UTC', 'type': 'int'}]
         publish_to_bus(self, pub_topic, pub_msg)
         return
-
-
-
+        
+    '''
+        Functionality related to the market mechanisms
+        
+        1. receive new prices (optimal pp or bid pp) from the pca
+        2. if opt pp, apply pricing policy by computing the new setpoint based on price functions
+        3. if bid pp, compute the new bid energy demand
+        
+    '''
     def on_new_price(self, peer, sender, bus,  topic, headers, message):
-        if sender == 'pubsub.compat':
-            message = compat.unpack_legacy_message(headers, message)
+        if sender not in self._valid_senders_list_pp: return
+        
+        # check message type before parsing
+        if not check_msg_type(message, MessageType.price_point): return False
             
-        new_pp = message[ParamPP.idx_pp]
-        new_pp_datatype = message[ParamPP.idx_pp_datatype]
-        new_pp_id = message[ParamPP.idx_pp_id]
-        new_pp_isoptimal = message[ParamPP.idx_pp_isoptimal]
-        discovery_address = message[ParamPP.idx_pp_discovery_addrs]
-        deviceId = message[ParamPP.idx_pp_device_id]
-        new_pp_ttl = message[ParamPP.idx_pp_ttl]
-        new_pp_ts = message[ParamPP.idx_pp_ts]
-        print_pp(self, new_pp
-                , new_pp_datatype
-                , new_pp_id
-                , new_pp_isoptimal
-                , discovery_address
-                , deviceId
-                , new_pp_ttl
-                , new_pp_ts
-                )
-                
-        if not new_pp_isoptimal:
-            _log.debug('not optimal pp!!!, do nothing')
-            return
+        valid_senders_list = self._valid_senders_list_pp
+        minimum_fields = ['msg_type', 'value', 'value_data_type', 'units', 'price_id']
+        validate_fields = ['value', 'units', 'price_id', 'isoptimal', 'duration', 'ttl']
+        valid_price_ids = []
+        (success, pp_msg) = valid_bustopic_msg(sender, valid_senders_list
+                                                , minimum_fields
+                                                , validate_fields
+                                                , valid_price_ids
+                                                , message)
+        if not success or pp_msg is None: return
+        else: _log.debug('New pp msg on the local-bus, topic: {}'.format(topic))
+        
+        if pp_msg.get_isoptimal():
+            _log.debug('***** New optimal price point from pca: {:0.2f}'.format(pp_msg.get_value())
+                                        + ' , price_id: {}'.format(pp_msg.get_price_id()))
+            self._process_opt_pp(pp_msg)
+        else:
+            _log.debug('***** New bid price point from pca: {:0.2f}'.format(pp_msg.get_value())
+                                        + ' , price_id: {}'.format(pp_msg.get_price_id()))
+            self._process_bid_pp(pp_msg)
             
-        self._price_point_latest = new_pp
-        self._pp_id_latest = new_pp_id
+        return
+        
+    def _process_opt_pp(self, pp_msg):
+        self._opt_pp_msg_latest = copy(pp_msg)
+        self._price_point_latest = pp_msg.get_value()
+        
+        # any process that failed to apply pp sets this flag False
+        self._process_opt_pp_success = False
+        # initiate the periodic process
         self.process_opt_pp()
         return
         
     # this is a perodic function that keeps trying to apply the new pp till success
     def process_opt_pp(self):
-        if isclose(self._price_point_old, self._price_point_latest, EPSILON) and self._pp_id == self._pp_id_new:
-            return
+        if self._process_opt_pp_success: return
             
-        self._pp_failed = False     # any process that failed to apply pp sets this flag True
+        # any process that failed to apply pp sets this flag False
+        self._process_opt_pp_success = True
+        
         self._apply_pricing_policy()
         
-        if self._pp_failed:
-            _log.debug('unable to process_opt_pp(), will try again in ' + str(self._period_process_pp))
+        if not self._process_opt_pp_success:
+            _log.debug('unable to process_opt_pp()'
+                            + ', will try again in {} sec'.format(self._period_process_pp))
             return
             
         _log.info('New Price Point processed.')
-        self._price_point_old = self._price_point_latest
-        self._pp_id = self._pp_id_new
+        # on successful process of apply_pricing_policy with the latest opt pp, current = latest
+        self._opt_pp_msg_current = copy(self._opt_pp_msg_latest)
+        self._price_point_current = copy(self._price_point_latest)
+        self._process_opt_pp_success = True
         return
         
     def _apply_pricing_policy(self):
         _log.debug('_apply_pricing_policy()')
-        tsp = self._compute_rc_new_tsp(self._price_point_latest)
+        new_rc_tsp = self._compute_rc_new_tsp(self._price_point_latest)
         _log.debug('New Setpoint: {:0.1f}'.format( tsp))
-        self._rcpset_rc_tsp(tsp)
-        if not isclose(tsp, self._rc_tsp, EPSILON):
-            self._pp_failed = True
+        self._rcpset_rc_tsp(new_rc_tsp)
+        if not isclose(new_rc_tsp, self._rc_tsp, EPSILON):
+            self._process_opt_pp_success = False
         return
         
     # compute new TSP from price functions
@@ -505,24 +523,96 @@ class RadiantCubicle(Agent):
         tsp = a*pp**2 + b*pp + c
         return mround(tsp, pf_roundup)
         
+    # perodic function to publish active power
+    def publish_opt_tap(self):
+        pp_msg = self._opt_pp_msg_current
+        price_id = pp_msg.get_price_id()
+        # compute total active power and publish to local/energydemand
+        # (vb RPCs this value to the next level)
+        opt_tap = self._calc_total_act_pwr()
         
-    def publish_ted(self):
-        self._ted = self._rpcget_rc_active_power()
-        _log.info( 'New TED: {:.4f}, publishing to bus.'.format(self._ted))
-        pub_topic = self.energyDemand_topic + '/' + self._deviceId
-        # _log.debug('TED pub_topic: ' + pub_topic)
-        pub_msg = [self._ted
-                    , {'units': 'W', 'tz': 'UTC', 'type': 'float'}
-                    , self._pp_id
-                    , True
-                    , None
-                    , self._deviceId
-                    , None
-                    , self._period_read_data
-                    , datetime.datetime.utcnow().isoformat(' ') + 'Z'
-                    ]
+        # create a MessageType.active_power ISPACE_Msg
+        ap_msg = tap_helper(pp_msg
+                            , self._device_id
+                            , self._discovery_address
+                            , opt_tap
+                            , self._period_read_data
+                            )
+        _log. info('[LOG] Total Active Power(TAP) opt'
+                                    + ' for us opt pp_msg({})'.format(price_id)
+                                    + ': {:0.4f}'.format(opt_tap))
+        # publish the new price point to the local message bus
+        _log.debug('post to the local-bus...')
+        pub_topic = self._topic_energy_demand
+        pub_msg = ap_msg.get_json_message(self._agent_id, 'bus_topic')
+        _log.debug('local bus topic: {}'.format(pub_topic))
+        _log. info('[LOG] Total Active Power(TAP) opt, Msg: {}'.format(pub_msg))
         publish_to_bus(self, pub_topic, pub_msg)
         return
+        
+    # calculate total active power (tap)
+    def _calc_total_act_pwr(self):
+        # active pwr should be measured in realtime from the connected plug
+        tap = 0
+        rc_active_power = self._rpcget_rc_active_power()
+        tap = rc_active_power if rc_active_power != E_UNKNOWN_CCE else 0
+        return tap
+        
+    def _process_bid_pp(self, pp_msg):
+        self._bid_pp_msg_latest = copy(pp_msg)
+        self.process_bid_pp()
+        return
+        
+    # this is a perodic function that keeps trying to apply the new pp till success
+    def process_bid_pp(self):
+        self.publish_bid_ted()
+        return
+        
+    def publish_bid_ted(self):
+        pp_msg = self._bid_pp_msg_latest
+        price_id = pp_msg.get_price_id()
+        
+        # compute total bid energy demand and publish to local/energydemand
+        # (vb RPCs this value to the next level)
+        bid_ted = self._calc_total_energy_demand()
+        
+        # create a MessageType.energy ISPACE_Msg
+        ed_msg = ted_helper(pp_msg
+                            , self._device_id
+                            , self._discovery_address
+                            , bid_ted
+                            , self._period_read_data
+                            )
+        _log. info('[LOG] Total Energy Demand(TED) bid'
+                                    + ' for us bid pp_msg({})'.format(price_id)
+                                    + ': {:0.4f}'.format(bid_ted))
+                                    
+        # publish the new price point to the local message bus
+        _log.debug('post to the local-bus...')
+        pub_topic = self._topic_energy_demand
+        pub_msg = ed_msg.get_json_message(self._agent_id, 'bus_topic')
+        _log.debug('local bus topic: {}'.format(pub_topic))
+        _log. info('[LOG] Total Energy Demand(TED) bid, Msg: {}'.format(pub_msg))
+        publish_to_bus(self, pub_topic, pub_msg)
+        _log.debug('Done!!!')
+        return
+        
+    # calculate the local energy demand for bid_pp
+    # the bid energy is for self._bid_pp_duration (default 1hr)
+    # and this msg is valid for self._period_read_data (ttl - default 30s)
+    def _calc_total_energy_demand(self):
+        pp_msg = self._bid_pp_msg_latest
+        bid_pp = pp_msg.get_value()
+        duration = pp_msg.get_duration()
+        
+        # TODO: Sam
+        # get actual tsp from energy functions
+        #bid_tsp = self._compute_rc_new_tsp(bid_pp)
+        #bid_ed = 
+        
+        ted = random() * 300
+        
+        return ted
         
         
 def main(argv=sys.argv):
