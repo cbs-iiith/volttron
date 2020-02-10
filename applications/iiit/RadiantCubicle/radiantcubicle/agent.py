@@ -216,7 +216,7 @@ class RadiantCubicle(Agent):
         self._period_read_data = self.config.get('period_read_data', 30)
         self._period_process_pp = self.config.get('period_process_pp', 10)
         self._price_point_old = self.config.get('price_point_latest', 0.2)
-        self._deviceId = self.config.get('deviceId', 'RadiantCubicle-61')
+        self._device_id = self.config.get('device_id', 'RadiantCubicle-61')
         return
         
     def _config_get_points(self):

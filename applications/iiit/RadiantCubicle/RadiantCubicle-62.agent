@@ -2,7 +2,7 @@
     "exec":"radiantcubicle-0.3-py2.7.egg --config \"%c\"--sub\"%s\"--pub \"%p\"",
     "agentid": "RadiantCubicle",
     "message": "iSPACE - RadiantCubicle Agent",
-    "deviceId": "RadiantCubicle-62",
+    "device_id": "RadiantCubicle-62",
     "period_read_data": 30,
     "period_process_pp": 10,
     "topic_root": "radiantcubicle",
