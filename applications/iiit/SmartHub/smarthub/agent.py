@@ -181,7 +181,7 @@ class SmartHub(Agent):
         
         self._bid_pp_msg_latest = get_default_pp_msg(self._discovery_address, self._device_id)
         
-        self._run_smart_hub_test()
+        self._run_smarthub_test()
         
         # get the latest values (states/levels) from h/w
         self._get_initial_hw_state()
@@ -238,9 +238,9 @@ class SmartHub(Agent):
         try:
             rpcdata = jsonrpc.JsonRpcData.parse(message)
             _log.debug('rpc_from_net()...'
-                        + 'header: {}'.format(header)
+                        #+ 'header: {}'.format(header)
                         + ', rpc method: {}'.format(rpcdata.method)
-                        + ', rpc params: {}'.format(rpcdata.params)
+                        #+ ', rpc params: {}'.format(rpcdata.params)
                         )
             if rpcdata.method == 'ping':
                 result = True
@@ -315,8 +315,8 @@ class SmartHub(Agent):
         self._pf_sh_fan = self.config.get('pf_sh_fan')
         return
         
-    def _run_smart_hub_test(self):
-        _log.debug('Running: _run_smart_hub_test()...')
+    def _run_smarthub_test(self):
+        _log.debug('Running: _run_smarthub_test()...')
         
         self._test_led_debug()
         self._test_led()

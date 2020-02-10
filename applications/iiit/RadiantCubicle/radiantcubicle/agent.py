@@ -150,7 +150,7 @@ class RadiantCubicle(Agent):
         
         self._bid_pp_msg_latest = get_default_pp_msg(self._discovery_address, self._device_id)
         
-        self._run_radiant_cubicle_test()
+        self._run_rc_test()
         
         # TODO: get the latest values (states/levels) from h/w
         # self.getInitialHwState()
@@ -195,9 +195,9 @@ class RadiantCubicle(Agent):
         try:
             rpcdata = jsonrpc.JsonRpcData.parse(message)
             _log.debug('rpc_from_net()...'
-                        + 'header: {}'.format(header)
+                        #+ 'header: {}'.format(header)
                         + ', rpc method: {}'.format(rpcdata.method)
-                        + ', rpc params: {}'.format(rpcdata.params)
+                        #+ ', rpc params: {}'.format(rpcdata.params)
                         )
             if rpcdata.method == 'ping':
                 result = True
@@ -220,7 +220,7 @@ class RadiantCubicle(Agent):
     def _config_get_init_values(self):
         self._period_read_data = self.config.get('period_read_data', 30)
         self._period_process_pp = self.config.get('period_process_pp', 10)
-        self._price_point_old = self.config.get('price_point_latest', 0.2)
+        self._price_point_latest = self.config.get('price_point_latest', 0.2)
         self._device_id = self.config.get('device_id', 'RadiantCubicle-61')
         return
         
@@ -236,8 +236,8 @@ class RadiantCubicle(Agent):
         self._pf_rc = self.config.get('pf_rc')
         return
         
-    def _run_radiant_cubicle_test(self):
-        _log.debug('Running: _run_radiant_cubicle_test()...')
+    def _run_rc_test(self):
+        _log.debug('Running: _run_rc_test()...')
         
         _log.debug('change level 26')
         self._rcpset_rc_tsp(26.0)
@@ -298,7 +298,7 @@ class RadiantCubicle(Agent):
         except gevent.Timeout:
             _log.exception('gevent.Timeout in _rcpset_rc_tsp()')
         except Exception as e:
-            _log.exception('changing rc tsp')
+            _log.exception('changing rc tsp, message: {}'.format(e.message))
             #print(e)
         finally:
             # cancel the schedule
@@ -330,7 +330,7 @@ class RadiantCubicle(Agent):
         except gevent.Timeout:
             _log.exception('gevent.Timeout in _rpcset_rc_auto_cntrl()')
         except Exception as e:
-            _log.exception('setting RC_AUTO_CNTRL')
+            _log.exception('setting RC_AUTO_CNTRL, message: {}'.format(e.message))
             #print(e)
         finally:
             # cancel the schedule
@@ -381,7 +381,7 @@ class RadiantCubicle(Agent):
             return E_UNKNOWN_CCE
         except Exception as e:
             _log.exception('Could not contact actuator. Is it running?')
-            print(e)
+            #print(e)
             return E_UNKNOWN_CCE
         finally:
             # cancel the schedule
@@ -399,7 +399,7 @@ class RadiantCubicle(Agent):
             return E_UNKNOWN_LEVEL
         except Exception as e:
             _log.exception('Could not contact actuator. Is it running?')
-            print(e)
+            #print(e)
             return E_UNKNOWN_LEVEL
         return E_UNKNOWN_LEVEL
         
@@ -415,7 +415,7 @@ class RadiantCubicle(Agent):
             return E_UNKNOWN_STATE
         except Exception as e:
             _log.exception('Could not contact actuator. Is it running?')
-            print(e)
+            #print(e)
             return E_UNKNOWN_STATE
         return E_UNKNOWN_STATE
         

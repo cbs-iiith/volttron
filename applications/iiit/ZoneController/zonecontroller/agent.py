@@ -192,9 +192,9 @@ class ZoneController(Agent):
         try:
             rpcdata = jsonrpc.JsonRpcData.parse(message)
             _log.debug('rpc_from_net()... '
-                        + 'header: {}'.format(header)
+                        #+ 'header: {}'.format(header)
                         + ', rpc method: {}'.format(rpcdata.method)
-                        + ', rpc params: {}'.format(rpcdata.params)
+                        #+ ', rpc params: {}'.format(rpcdata.params)
                         )
             if rpcdata.method == 'ping':
                 return True
