@@ -566,8 +566,6 @@ class RadiantCubicle(Agent):
         
     # this is a perodic function that keeps trying to apply the new pp till success
     def process_bid_pp(self):
-        #tmp fix
-        time.sleep(1)
         self.publish_bid_ted()
         return
         
