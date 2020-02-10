@@ -229,28 +229,28 @@ class RadiantCubicle(Agent):
         _log.debug('Running: _run_radiant_cubicle_test()...')
         
         _log.debug('change level 26')
-        self.setRcTspLevel(26.0)
-        time.sleep(10)
+        self._rcpset_rc_tsp(26.0)
+        time.sleep(1)
         
         _log.debug('change level 27')
-        self.setRcTspLevel(27.0)
-        time.sleep(10)
+        self._rcpset_rc_tsp(27.0)
+        time.sleep(1)
         
         _log.debug('change level 28')
-        self.setRcTspLevel(28.0)
-        time.sleep(10)
+        self._rcpset_rc_tsp(28.0)
+        time.sleep(1)
         
         _log.debug('change level 29')
-        self.setRcTspLevel(29.0)
-        time.sleep(10)
+        self._rcpset_rc_tsp(29.0)
+        time.sleep(1)
         
         _log.debug('switch ON RC_AUTO_CNTRL')
         self.setRcAutoCntrl(RC_AUTO_CNTRL_ON)
-        time.sleep(10)
+        time.sleep(1)
         
         _log.debug('switch OFF RC_AUTO_CNTRL')
         self.setRcAutoCntrl(RC_AUTO_CNTRL_OFF)
-        time.sleep(10)
+        time.sleep(1)
         
         _log.debug('EOF Testing')
         return
@@ -305,15 +305,15 @@ class RadiantCubicle(Agent):
         
     def _apply_pricing_policy(self):
         _log.debug('_apply_pricing_policy()')
-        tsp = self.getNewTsp(self._price_point_latest)
+        tsp = self._compute_rc_new_tsp(self._price_point_latest)
         _log.debug('New Setpoint: {:0.1f}'.format( tsp))
-        self.setRcTspLevel(tsp)
+        self._rcpset_rc_tsp(tsp)
         if not ispace_utils.isclose(tsp, self._rcTspLevel, EPSILON):
             self._pp_failed = True
         return
         
-    # compute new TSP
-    def getNewTsp(self, pp):
+    # compute new TSP from price functions
+    def _compute_rc_new_tsp(self, pp):
         pp = 0 if pp < 0 else 1 if pp > 1 else pp
         
         pf_idx = self.pf_rc['pf_idx']
@@ -328,8 +328,8 @@ class RadiantCubicle(Agent):
         return ispace_utils.mround(tsp, pf_roundup)
         
     # change rc surface temperature set point
-    def setRcTspLevel(self, level):
-        # _log.debug('setRcTspLevel()')
+    def _rcpset_rc_tsp(self, level):
+        # _log.debug('_rcpset_rc_tsp()')
         
         if ispace_utils.isclose(level, self._rcTspLevel, EPSILON):
             _log.debug('same level, do nothing')
@@ -347,7 +347,7 @@ class RadiantCubicle(Agent):
                                             ).get(timeout=10)
                 self.updateRcTspLevel(level)
             except gevent.Timeout:
-                _log.exception('gevent.Timeout in setRcTspLevel()')
+                _log.exception('gevent.Timeout in _rcpset_rc_tsp()')
             except Exception as e:
                 _log.exception('changing device level')
                 print(e)
