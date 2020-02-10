@@ -583,6 +583,13 @@ class PriceController(Agent):
             if not success_ed:
                 return
                 
+        # add the message to ds_ed_msgs to be processed by process_ds_ed_msg_que()
+        #msg_id = randint(0, 99999999)
+        #ds_ed_msgs[msg_id] = {'msg_type': (MessageType.active_power
+        #                                if success_ap else MessageType.energy_demand)
+        #                        , 'message': message
+        #                        }
+        
         if ping_vb_failed(self):
             _log.error('!!! unable to contact bridge !!!')
             return
