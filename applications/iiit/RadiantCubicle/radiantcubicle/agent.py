@@ -60,6 +60,7 @@ E_UNKNOWN_CCE = -4
 RC_AUTO_CNTRL_ON = 1
 RC_AUTO_CNTRL_OFF = 0
 
+
 def radiantcubicle(config_path, **kwargs):
     config = utils.load_config(config_path)
     vip_identity = config.get('vip_identity', 'iiit.radiantcubicle')
@@ -68,6 +69,7 @@ def radiantcubicle(config_path, **kwargs):
     
     Agent.__name__ = 'RadiantCubicle_Agent'
     return RadiantCubicle(config_path, identity=vip_identity, **kwargs)
+    
     
 class RadiantCubicle(Agent):
     '''Radiant Cubicle
@@ -89,7 +91,7 @@ class RadiantCubicle(Agent):
     _process_opt_pp_success = False
     
     _rc_auto_cntrl_state = RC_AUTO_CNTRL_OFF
-    _rcTspLevel = 25
+    _rc_tsp = 25
     
     def __init__(self, config_path, **kwargs):
         super(RadiantCubicle, self).__init__(**kwargs)
@@ -308,7 +310,7 @@ class RadiantCubicle(Agent):
         tsp = self._compute_rc_new_tsp(self._price_point_latest)
         _log.debug('New Setpoint: {:0.1f}'.format( tsp))
         self._rcpset_rc_tsp(tsp)
-        if not isclose(tsp, self._rcTspLevel, EPSILON):
+        if not isclose(tsp, self._rc_tsp, EPSILON):
             self._pp_failed = True
         return
         
@@ -331,7 +333,7 @@ class RadiantCubicle(Agent):
     def _rcpset_rc_tsp(self, level):
         # _log.debug('_rcpset_rc_tsp()')
         
-        if isclose(level, self._rcTspLevel, EPSILON):
+        if isclose(level, self._rc_tsp, EPSILON):
             _log.debug('same level, do nothing')
             return
             
@@ -345,7 +347,7 @@ class RadiantCubicle(Agent):
                                             , 'iiit/cbs/radiantcubicle/RC_TSP'
                                             , level
                                             ).get(timeout=10)
-                self.updateRcTspLevel(level)
+                self._update_rc_tsp(level)
             except gevent.Timeout:
                 _log.exception('gevent.Timeout in _rcpset_rc_tsp()')
             except Exception as e:
@@ -381,7 +383,7 @@ class RadiantCubicle(Agent):
                                             , state
                                             ).get(timeout=10)
                         
-                self.updateRcAutoCntrl(state)
+                self._update_rc_auto_cntrl(state)
             except gevent.Timeout:
                 _log.exception('gevent.Timeout in _rpcset_rc_auto_cntrl()')
             except Exception as e:
@@ -394,28 +396,27 @@ class RadiantCubicle(Agent):
             _log.debug('schedule NOT available')
         return
         
-    def updateRcTspLevel(self, level):
-        # _log.debug('_updateShDeviceLevel()')
-        _log.debug('level {:0.1f}'.format( level))
+    def _update_rc_tsp(self, new_tsp):
+        _log.debug('new_tsp {:0.1f}'.format( new_tsp))
         
-        device_level = self.rpc_getRcTspLevel()
+        rc_tsp = self._rpcget_rc_tsp()
         
-        # check if the level really updated at the h/w, only then proceed with new level
-        if isclose(level, device_level, EPSILON):
-            self._rcTspLevel = level
-            self.publishRcTspLevel(level)
+        # check if the new tsp really updated at the h/w, only then proceed with new tsp
+        if isclose(new_tsp, rc_tsp, EPSILON):
+            self._rc_tsp = new_tsp
+            self._publish_rc_tsp(new_tsp)
             
-        _log.debug('Current level: ' + '{:0.1f}'.format( device_level))
+        _log.debug('Current tsp: ' + '{:0.1f}'.format( rc_tsp))
         return
         
-    def updateRcAutoCntrl(self, state):
-        _log.debug('updateRcAutoCntrl()')
+    def _update_rc_auto_cntrl(self, new_state):
+        _log.debug('_update_rc_auto_cntrl()')
         
-        rcAutoCntrlState = self.rpc_getRcAutoCntrlState()
+        rc_auto_cntrl_state = self._rpcget_rc_auto_cntrl_state()
         
-        if state == int(rcAutoCntrlState):
-            self._rc_auto_cntrl_state = state
-            self.publishRcAutoCntrlState(state)
+        if new_state == int(rc_auto_cntrl_state):
+            self._rc_auto_cntrl_state = new_state
+            self._publish_rc_auto_cntrl_state(new_state)
             
         if self._rc_auto_cntrl_state == RC_AUTO_CNTRL_ON:
             _log.info('Current State: RC Auto Cntrl is ON!!!')
@@ -424,7 +425,7 @@ class RadiantCubicle(Agent):
             
         return
         
-    def rpc_getRcCalcCoolingEnergy(self):
+    def _rpcget_rc_active_power(self):
         task_id = str(randint(0, 99999999))
         result = get_task_schdl(self, task_id,'iiit/cbs/radiantcubicle')
         if result['result'] == 'SUCCESS':
@@ -435,7 +436,7 @@ class RadiantCubicle(Agent):
                                                     ).get(timeout=10)
                 return coolingEnergy
             except gevent.Timeout:
-                _log.exception('gevent.Timeout in rpc_getRcCalcCoolingEnergy()')
+                _log.exception('gevent.Timeout in _rpcget_rc_active_power()')
                 return E_UNKNOWN_CCE
             except Exception as e:
                 _log.exception('Could not contact actuator. Is it running?')
@@ -448,7 +449,7 @@ class RadiantCubicle(Agent):
             _log.debug('schedule NOT available')
         return E_UNKNOWN_CCE
         
-    def rpc_getRcTspLevel(self):
+    def _rpcget_rc_tsp(self):
         try:
             device_level = self.vip.rpc.call(
                     'platform.actuator','get_point',
@@ -463,7 +464,7 @@ class RadiantCubicle(Agent):
             return E_UNKNOWN_LEVEL
         return E_UNKNOWN_LEVEL
         
-    def rpc_getRcAutoCntrlState(self):
+    def _rpcget_rc_auto_cntrl_state(self):
         try:
             state = self.vip.rpc.call('platform.actuator'
                                         ,'get_point'
@@ -479,25 +480,25 @@ class RadiantCubicle(Agent):
             return E_UNKNOWN_STATE
         return E_UNKNOWN_STATE
         
-    def publishRcTspLevel(self, level):
-        # _log.debug('publishRcTspLevel()')
-        pubTopic = self.root_topic+'/rc_tsp_level'
-        pubMsg = [level, {'units': 'celcius', 'tz': 'UTC', 'type': 'float'}]
-        publish_to_bus(self, pubTopic, pubMsg)
+    def _publish_rc_tsp(self, level):
+        # _log.debug('_publish_rc_tsp()')
+        pub_topic = self.root_topic+'/rc_tsp_level'
+        pub_msg = [level, {'units': 'celcius', 'tz': 'UTC', 'type': 'float'}]
+        publish_to_bus(self, pub_topic, pub_msg)
         return
         
-    def publishRcAutoCntrlState(self, state):
-        pubTopic = self.root_topic+'/rc_auto_cntrl_state'
-        pubMsg = [state, {'units': 'On/Off', 'tz': 'UTC', 'type': 'int'}]
-        publish_to_bus(self, pubTopic, pubMsg)
+    def _publish_rc_auto_cntrl_state(self, state):
+        pub_topic = self.root_topic+'/rc_auto_cntrl_state'
+        pub_msg = [state, {'units': 'On/Off', 'tz': 'UTC', 'type': 'int'}]
+        publish_to_bus(self, pub_topic, pub_msg)
         return
         
     def publish_ted(self):
-        self._ted = self.rpc_getRcCalcCoolingEnergy()
+        self._ted = self._rpcget_rc_active_power()
         _log.info( 'New TED: {:.4f}, publishing to bus.'.format(self._ted))
-        pubTopic = self.energyDemand_topic + '/' + self._deviceId
-        # _log.debug('TED pubTopic: ' + pubTopic)
-        pubMsg = [self._ted
+        pub_topic = self.energyDemand_topic + '/' + self._deviceId
+        # _log.debug('TED pub_topic: ' + pub_topic)
+        pub_msg = [self._ted
                     , {'units': 'W', 'tz': 'UTC', 'type': 'float'}
                     , self._pp_id
                     , True
@@ -507,8 +508,9 @@ class RadiantCubicle(Agent):
                     , self._period_read_data
                     , datetime.datetime.utcnow().isoformat(' ') + 'Z'
                     ]
-        publish_to_bus(self, pubTopic, pubMsg)
+        publish_to_bus(self, pub_topic, pub_msg)
         return
+        
         
 def main(argv=sys.argv):
     '''Main method called by the eggsecutable.'''
@@ -518,10 +520,12 @@ def main(argv=sys.argv):
         print (e)
         _log.exception('unhandled exception')
         
+        
 if __name__ == '__main__':
     # Entry point for script
     try:
         sys.exit(main())
     except KeyboardInterrupt:
         pass
+        
         
