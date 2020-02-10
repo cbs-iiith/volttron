@@ -121,14 +121,14 @@ class RadiantCubicle(Agent):
         _log.info('Starting RadiantCubicle...')
         
         # we need to retain the device_id, retrive_details_from_vb() overwrite with vb device_id
-        _device_id = self._device_id
+        device_id = self._device_id
         # retrive self._device_id and self._discovery_address from vb
         retrive_details_from_vb(self, 5)
-        self._device_id = _device_id
+        self._device_id = device_id
         
         # register rpc routes with MASTER_WEB
         # register_rpc_route is a blocking call
-        register_rpc_route(self, 'smarthub', 'rpc_from_net', 5)
+        register_rpc_route(self, 'radiantcubicle', 'rpc_from_net', 5)
         
         # register this agent with vb as local device for posting active power & bid energy demand
         # pca picks up the active power & energy demand bids only if registered with vb

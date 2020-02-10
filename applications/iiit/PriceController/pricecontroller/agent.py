@@ -776,15 +776,29 @@ class PriceController(Agent):
         return
         
     def _get_vb_local_device_ids(self):
-        return self.vip.rpc.call(self._vb_vip_identity
-                                    , 'get_local_device_ids'
-                                    ).get(timeout=10)
-                                    
+        result = []
+        try:
+            result = self.vip.rpc.call(self._vb_vip_identity
+                                        , 'get_local_device_ids'
+                                        ).get(timeout=10)
+        except Exception as e:
+            #print(e)
+            _log.exception('Maybe the Volttron Bridge Agent is not yet started!!!')
+            pass
+        return result
+        
     def _get_vb_ds_device_ids(self):
-        return self.vip.rpc.call(self._vb_vip_identity
-                                    , 'get_ds_device_ids'
-                                    ).get(timeout=10)
-                                    
+        result = []
+        try:
+            result = self.vip.rpc.call(self._vb_vip_identity
+                                        , 'get_ds_device_ids'
+                                        ).get(timeout=10)
+        except Exception as e:
+            #print(e)
+            _log.exception('Maybe the Volttron Bridge Agent is not yet started!!!')
+            pass
+        return result
+        
     def _get_valid_price_ids(self):
         price_ids = []
         if self._pca_mode == 'PASS_ON_PP':
