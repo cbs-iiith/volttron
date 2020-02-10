@@ -183,10 +183,6 @@ class SmartHub(Agent):
         # get the latest values (states/levels) from h/w
         self._get_initial_hw_state()
         
-        # apply pricing policy for default values
-        self._apply_pricing_policy(SH_DEVICE_LED, SCHEDULE_NOT_AVLB)
-        self._apply_pricing_policy(SH_DEVICE_FAN, SCHEDULE_NOT_AVLB)
-        
         # publish initial data from hw to volttron bus
         self.publish_hw_data()
         
