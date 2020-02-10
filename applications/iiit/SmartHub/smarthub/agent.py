@@ -624,7 +624,7 @@ class SmartHub(Agent):
         success = get_task_schdl(self, task_id, 'iiit/cbs/smarthub', 300)
         if not success: return
         
-        pubTopic = self._root_topic + '/sensors/all'
+        pub_topic = self._root_topic + '/sensors/all'
         lux_level = self._get_sh_device_level(SH_DEVICE_S_LUX, SCHEDULE_AVLB)
         rh_level = self._get_sh_device_level(SH_DEVICE_S_RH, SCHEDULE_AVLB)
         temp_level = self._get_sh_device_level(SH_DEVICE_S_TEMP, SCHEDULE_AVLB)
@@ -637,7 +637,7 @@ class SmartHub(Agent):
                     + ', co2 Level: {:0.4f}'.format(co2_level)
                     + ', pir Level: {:d}'.format(int(pir_level))
                     )
-        pubMsg = [{'luxlevel':lux_level,
+        pub_msg = [{'luxlevel':lux_level,
                     'rhlevel':rh_level,
                     'templevel':temp_level,
                     'co2level': co2_level,
@@ -650,7 +650,7 @@ class SmartHub(Agent):
                         'pirlevel':{'units': 'bool', 'tz': 'UTC', 'type': 'int'}
                     }
                     ]
-        publish_to_bus(self, pubTopic, pubMsg)
+        publish_to_bus(self, pub_topic, pub_msg)
         cancel_task_schdl(self, task_id)
         return
         
@@ -807,9 +807,9 @@ class SmartHub(Agent):
         if not self._valid_device_action(lhw_device_id, AT_PUB_STATE):
             _log.exception('not a valid device to pub state, lhw_device_id: ' + str(lhw_device_id))
             return
-        pubTopic = self._get_lhw_sub_topic(lhw_device_id, AT_PUB_STATE)
-        pubMsg = [state, {'units': 'On/Off', 'tz': 'UTC', 'type': 'int'}]
-        publish_to_bus(self, pubTopic, pubMsg)
+        pub_topic = self._get_lhw_sub_topic(lhw_device_id, AT_PUB_STATE)
+        pub_msg = [state, {'units': 'On/Off', 'tz': 'UTC', 'type': 'int'}]
+        publish_to_bus(self, pub_topic, pub_msg)
         
         return
         
@@ -818,9 +818,9 @@ class SmartHub(Agent):
         if not self._valid_device_action(lhw_device_id, AT_PUB_LEVEL):
             _log.exception('not a valid device to pub level, lhw_device_id: ' + str(lhw_device_id))
             return
-        pubTopic = self._get_lhw_sub_topic(lhw_device_id, AT_PUB_LEVEL)
-        pubMsg = [level, {'units': 'duty', 'tz': 'UTC', 'type': 'float'}]
-        publish_to_bus(self, pubTopic, pubMsg)
+        pub_topic = self._get_lhw_sub_topic(lhw_device_id, AT_PUB_LEVEL)
+        pub_msg = [level, {'units': 'duty', 'tz': 'UTC', 'type': 'float'}]
+        publish_to_bus(self, pub_topic, pub_msg)
         
         return
         
@@ -828,9 +828,9 @@ class SmartHub(Agent):
         if not self._valid_device_action(lhw_device_id, AT_PUB_THPP):
             _log.exception('not a valid device to pub level, lhw_device_id: ' + str(lhw_device_id))
             return
-        pubTopic = self._get_lhw_sub_topic(lhw_device_id, AT_PUB_THPP)
-        pubMsg = [thPP, {'units': 'cent', 'tz': 'UTC', 'type': 'float'}]
-        publish_to_bus(self, pubTopic, pubMsg)
+        pub_topic = self._get_lhw_sub_topic(lhw_device_id, AT_PUB_THPP)
+        pub_msg = [thPP, {'units': 'cent', 'tz': 'UTC', 'type': 'float'}]
+        publish_to_bus(self, pub_topic, pub_msg)
         
         return
         
@@ -862,7 +862,7 @@ class SmartHub(Agent):
                 return self._root_topic + '/ledthpp'
             elif lhw_device_id == SH_DEVICE_FAN:
                 return self._root_topic + '/fanthpp'
-        _log.exception('not a valid device-action type for pubTopic')
+        _log.exception('not a valid device-action type for pub_topic')
         return ''
         
     def _get_lhw_end_point(self, lhw_device_id, actionType):
