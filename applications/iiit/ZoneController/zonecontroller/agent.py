@@ -217,7 +217,7 @@ class ZoneController(Agent):
         self._vb_vip_identity = self.config.get('vb_vip_identity', 'iiit.volttronbridge')
         self._root_topic = self.config.get('topic_root', 'zone')
         self._topic_price_point = self.config.get('topic_price_point', 'zone/pricepoint')
-        self._topic_energy_demand = self.config.get('topic_energy_demand', 'zone/energydemand')
+        self._topic_energy_demand = self.config.get('topic_energy_demand', 'ds/energydemand')
         return
         
     def _config_get_pricefucntions(self):

@@ -191,9 +191,9 @@ class VolttronBridge(Agent):
             url_root = 'http://' + self._us_ip_addr + ':' + str(self._us_port) + '/bridge'
             _log.debug('registering with upstream VolttronBridge: ' + url_root)
             self._usConnected = do_rpc(self._agent_id, url_root, 'dsbridge'
-                                            , {'discovery_address': self._discovery_address
-                                            , 'device_id': self._device_id
-                                            }, 'POST')
+                                        , {'discovery_address': self._discovery_address
+                                        , 'device_id': self._device_id
+                                        }, 'POST')
         # keep track of us opt_pp_id & bid_pp_id
         if self._bridge_host != 'LEVEL_HEAD':
             self.us_opt_pp_id = randint(0, 99999999)
@@ -228,14 +228,16 @@ class VolttronBridge(Agent):
             if self._usConnected:
                 try:
                     _log.debug('unregistering with upstream VolttronBridge')
-                    url_root = 'http://' + self._us_ip_addr + ':' + str(self._us_port) + '/bridge'
+                    url_root = 'http://' + self._us_ip_addr
+                                        + ':' + str(self._us_port)
+                                        + '/bridge'
                     result = do_rpc(self._agent_id, url_root, 'dsbridge'
-                                            , {'discovery_address': self._discovery_address
-                                            , 'device_id': self._device_id
-                                            }, 'DELETE')
+                                        , {'discovery_address': self._discovery_address
+                                        , 'device_id': self._device_id
+                                        }, 'DELETE')
                 except Exception as e:
                     _log.exception('Failed to unregister with'
-                                                    + ' us bridge agent!!!'.format(e.message))
+                                            + ' us bridge agent!!!'.format(e.message))
                     pass
                 self._usConnected = False
             
@@ -246,10 +248,10 @@ class VolttronBridge(Agent):
         return
         
     def _config_get_points(self):
+        #default config point for zone vb
         self._topic_energy_demand = self.config.get('energyDemand_topic', 'zone/energydemand')
-        self._topic_energy_demand_ds = self.config.get('energyDemand_topic_ds'
-                                                                , 'smarthub/energydemand')
-        self._topic_price_point_us = self.config.get('pricePoint_topic_us', 'building/pricepoint')
+        self._topic_energy_demand_ds = self.config.get('energyDemand_topic_ds', 'ds/energydemand')
+        self._topic_price_point_us = self.config.get('pricePoint_topic_us', 'us/pricepoint')
         self._topic_price_point = self.config.get('pricePoint_topic', 'zone/pricepoint')
         return
         
