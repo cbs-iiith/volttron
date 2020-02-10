@@ -98,6 +98,8 @@ class RadiantCubicle(Agent):
     _rc_auto_cntrl_state = RC_AUTO_CNTRL_OFF
     _rc_tsp = 25
     
+    _pf_rc = None
+    
     def __init__(self, config_path, **kwargs):
         super(RadiantCubicle, self).__init__(**kwargs)
         _log.debug('vip_identity: ' + self.core.identity)
@@ -228,7 +230,7 @@ class RadiantCubicle(Agent):
         
     def _config_get_price_fucntions(self):
         _log.debug('_config_get_price_fucntions()')
-        self.pf_rc = self.config.get('pf_rc')
+        self._pf_rc = self.config.get('pf_rc')
         return
         
     def _run_radiant_cubicle_test(self):
@@ -508,13 +510,13 @@ class RadiantCubicle(Agent):
     def _compute_rc_new_tsp(self, pp):
         pp = 0 if pp < 0 else 1 if pp > 1 else pp
         
-        idx = self.pf_rc['idx']
-        roundup = self.pf_rc['roundup']
-        coefficients = self.pf_rc['coefficients']
+        idx = self._pf_rc['idx']
+        roundup = self._pf_rc['roundup']
+        coefficients = self._pf_rc['coefficients']
         
-        a = pf_coefficients[idx]['a']
-        b = pf_coefficients[idx]['b']
-        c = pf_coefficients[idx]['c']
+        a = coefficients[idx]['a']
+        b = coefficients[idx]['b']
+        c = coefficients[idx]['c']
         
         tsp = a*pp**2 + b*pp + c
         return mround(tsp, roundup)

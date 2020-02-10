@@ -537,9 +537,9 @@ class ZoneController(Agent):
         roundup = self._pf_zn_ac['roundup']
         coefficients = self._pf_zn_ac['coefficients']
         
-        a = pf_coefficients[idx]['a']
-        b = pf_coefficients[idx]['b']
-        c = pf_coefficients[idx]['c']
+        a = coefficients[idx]['a']
+        b = coefficients[idx]['b']
+        c = coefficients[idx]['c']
         
         tsp = a*pp**2 + b*pp + c
         return mround(tsp, roundup)
@@ -552,9 +552,9 @@ class ZoneController(Agent):
         roundup = self._pf_zn_light['roundup']
         coefficients = self._pf_zn_light['coefficients']
         
-        a = pf_coefficients[idx]['a']
-        b = pf_coefficients[idx]['b']
-        c = pf_coefficients[idx]['c']
+        a = coefficients[idx]['a']
+        b = coefficients[idx]['b']
+        c = coefficients[idx]['c']
         
         lsp = a*pp**2 + b*pp + c
         return mround(lsp, roundup)

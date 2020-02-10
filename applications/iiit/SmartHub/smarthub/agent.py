@@ -1089,9 +1089,9 @@ class SmartHub(Agent):
         roundup = self._pf_sh_fan['roundup']
         coefficients = self._pf_sh_fan['coefficients']
         
-        a = pf_coefficients[pf_idx]['a']
-        b = pf_coefficients[pf_idx]['b']
-        c = pf_coefficients[pf_idx]['c']
+        a = coefficients[pf_idx]['a']
+        b = coefficients[pf_idx]['b']
+        c = coefficients[pf_idx]['c']
         
         speed = a*pp**2 + b*pp + c
         return mround(speed, roundup)

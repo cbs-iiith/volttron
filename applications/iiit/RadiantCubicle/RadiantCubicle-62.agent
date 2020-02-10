@@ -16,15 +16,29 @@
     #             where a,b,c are coefficients of the quadratic function,
     #                   f(x) --> setpoint,
     #                   x --> price point,
-    #                   pf_roundup --> roundup, and 
-    #                   pf_idx --> default pf_coefficients
+    #                   roundup --> roundup, and 
+    #                   idx --> default pf coefficients
     "pf_rc": {
-        "pf_roundup":0.5,
-        "pf_idx":0,
-        "pf_coefficients": [
+        "roundup":0.5,
+        "idx":0,
+        "coefficients": [
             {"a": 1, "b": -3.5, "c": 23},
             {"a": 1, "b": -3.5, "c": 24},
             {"a": 1, "b": -3.5, "c": 25}
+        ]
+    },
+    
+    #energy demand functions(edf), quadratic functions of the form f(x) = ax2 + bx + c, 
+    #             where a,b,c are coefficients of the quadratic function,
+    #                   f(x) --> ed,
+    #                   x --> set point,
+    #                   roundup --> roundup, and 
+    #                   idx --> default edf coefficients
+    "edf_rc": {
+        "roundup":0.5,
+        "idx":0,
+        "coefficients": [
+            {"a": 7.5, "b": -1.5, "c": 24}
         ]
     }
 }
