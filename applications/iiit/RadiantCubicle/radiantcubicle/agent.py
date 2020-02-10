@@ -272,34 +272,32 @@ class RadiantCubicle(Agent):
         
     '''
     # change rc surface temperature set point
-    def _rcpset_rc_tsp(self, level):
+    def _rcpset_rc_tsp(self, tsp):
         # _log.debug('_rcpset_rc_tsp()')
         
-        if isclose(level, self._rc_tsp, EPSILON):
+        if isclose(tsp, self._rc_tsp, EPSILON):
             _log.debug('same level, do nothing')
             return
             
         task_id = str(randint(0, 99999999))
-        result = get_task_schdl(self, task_id,'iiit/cbs/radiantcubicle')
-        if result['result'] == 'SUCCESS':
-            try:
-                result = self.vip.rpc.call('platform.actuator'
-                                            , 'set_point'
-                                            , self._agent_id
-                                            , 'iiit/cbs/radiantcubicle/RC_TSP'
-                                            , level
-                                            ).get(timeout=10)
-                self._update_rc_tsp(level)
-            except gevent.Timeout:
-                _log.exception('gevent.Timeout in _rcpset_rc_tsp()')
-            except Exception as e:
-                _log.exception('changing device level')
-                print(e)
-            finally:
-                # cancel the schedule
-                cancel_task_schdl(self, task_id)
-        else:
-            _log.debug('schedule NOT available')
+        success = get_task_schdl(self, task_id,'iiit/cbs/radiantcubicle')
+        if not success: return
+        try:
+            result = self.vip.rpc.call('platform.actuator'
+                                        , 'set_point'
+                                        , self._agent_id
+                                        , 'iiit/cbs/radiantcubicle/RC_TSP'
+                                        , tsp
+                                        ).get(timeout=10)
+            self._update_rc_tsp(tsp)
+        except gevent.Timeout:
+            _log.exception('gevent.Timeout in _rcpset_rc_tsp()')
+        except Exception as e:
+            _log.exception('changing rc tsp')
+            #print(e)
+        finally:
+            # cancel the schedule
+            cancel_task_schdl(self, task_id)
         return
         
     def _rpcset_rc_auto_cntrl(self, state):
@@ -312,30 +310,26 @@ class RadiantCubicle(Agent):
         # get schedule to _rpcset_rc_auto_cntrl
         task_id = str(randint(0, 99999999))
         # _log.debug('task_id: ' + task_id)
-        result = get_task_schdl(self, task_id,'iiit/cbs/radiantcubicle')
-        
-        if result['result'] == 'SUCCESS':
-            result = {}
-            try:
-                # _log.debug('schl avlb')
-                result = self.vip.rpc.call('platform.actuator'
-                                            , 'set_point'
-                                            , self._agent_id
-                                            , 'iiit/cbs/radiantcubicle/RC_AUTO_CNTRL'
-                                            , state
-                                            ).get(timeout=10)
-                        
-                self._update_rc_auto_cntrl(state)
-            except gevent.Timeout:
-                _log.exception('gevent.Timeout in _rpcset_rc_auto_cntrl()')
-            except Exception as e:
-                _log.exception('setting RC_AUTO_CNTRL')
-                print(e)
-            finally:
-                # cancel the schedule
-                cancel_task_schdl(self, task_id)
-        else:
-            _log.debug('schedule NOT available')
+        success = get_task_schdl(self, task_id,'iiit/cbs/radiantcubicle')
+        if not success : return
+        try:
+            # _log.debug('schl avlb')
+            result = self.vip.rpc.call('platform.actuator'
+                                        , 'set_point'
+                                        , self._agent_id
+                                        , 'iiit/cbs/radiantcubicle/RC_AUTO_CNTRL'
+                                        , state
+                                        ).get(timeout=10)
+                    
+            self._update_rc_auto_cntrl(state)
+        except gevent.Timeout:
+            _log.exception('gevent.Timeout in _rpcset_rc_auto_cntrl()')
+        except Exception as e:
+            _log.exception('setting RC_AUTO_CNTRL')
+            #print(e)
+        finally:
+            # cancel the schedule
+            cancel_task_schdl(self, task_id)
         return
         
     def _update_rc_tsp(self, new_tsp):
@@ -369,26 +363,24 @@ class RadiantCubicle(Agent):
         
     def _rpcget_rc_active_power(self):
         task_id = str(randint(0, 99999999))
-        result = get_task_schdl(self, task_id,'iiit/cbs/radiantcubicle')
-        if result['result'] == 'SUCCESS':
-            try:
-                coolingEnergy = self.vip.rpc.call('platform.actuator'
-                                                    ,'get_point'
-                                                    , 'iiit/cbs/radiantcubicle/RC_CCE_ELEC'
-                                                    ).get(timeout=10)
-                return coolingEnergy
-            except gevent.Timeout:
-                _log.exception('gevent.Timeout in _rpcget_rc_active_power()')
-                return E_UNKNOWN_CCE
-            except Exception as e:
-                _log.exception('Could not contact actuator. Is it running?')
-                print(e)
-                return E_UNKNOWN_CCE
-            finally:
-                # cancel the schedule
-                cancel_task_schdl(self, task_id)
-        else:
-            _log.debug('schedule NOT available')
+        success = get_task_schdl(self, task_id,'iiit/cbs/radiantcubicle')
+        if not success: return E_UNKNOWN_CCE
+        try:
+            coolingEnergy = self.vip.rpc.call('platform.actuator'
+                                                ,'get_point'
+                                                , 'iiit/cbs/radiantcubicle/RC_CCE_ELEC'
+                                                ).get(timeout=10)
+            return coolingEnergy
+        except gevent.Timeout:
+            _log.exception('gevent.Timeout in _rpcget_rc_active_power()')
+            return E_UNKNOWN_CCE
+        except Exception as e:
+            _log.exception('Could not contact actuator. Is it running?')
+            print(e)
+            return E_UNKNOWN_CCE
+        finally:
+            # cancel the schedule
+            cancel_task_schdl(self, task_id)
         return E_UNKNOWN_CCE
         
     def _rpcget_rc_tsp(self):
