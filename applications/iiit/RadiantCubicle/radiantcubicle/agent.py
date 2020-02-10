@@ -257,78 +257,16 @@ class RadiantCubicle(Agent):
         _log.debug('EOF Testing')
         return
         
-    def on_new_price(self, peer, sender, bus,  topic, headers, message):
-        if sender == 'pubsub.compat':
-            message = compat.unpack_legacy_message(headers, message)
-            
-        new_pp = message[ParamPP.idx_pp]
-        new_pp_datatype = message[ParamPP.idx_pp_datatype]
-        new_pp_id = message[ParamPP.idx_pp_id]
-        new_pp_isoptimal = message[ParamPP.idx_pp_isoptimal]
-        discovery_address = message[ParamPP.idx_pp_discovery_addrs]
-        deviceId = message[ParamPP.idx_pp_device_id]
-        new_pp_ttl = message[ParamPP.idx_pp_ttl]
-        new_pp_ts = message[ParamPP.idx_pp_ts]
-        print_pp(self, new_pp
-                , new_pp_datatype
-                , new_pp_id
-                , new_pp_isoptimal
-                , discovery_address
-                , deviceId
-                , new_pp_ttl
-                , new_pp_ts
-                )
-                
-        if not new_pp_isoptimal:
-            _log.debug('not optimal pp!!!, do nothing')
-            return
-            
-        self._price_point_latest = new_pp
-        self._pp_id_latest = new_pp_id
-        self.process_opt_pp()
-        return
+    '''
+        Functionality related to the controller
         
-    # this is a perodic function that keeps trying to apply the new pp till success
-    def process_opt_pp(self):
-        if isclose(self._price_point_old, self._price_point_latest, EPSILON) and self._pp_id == self._pp_id_new:
-            return
-            
-        self._pp_failed = False     # any process that failed to apply pp sets this flag True
-        self._apply_pricing_policy()
+        1. control the local actuators
+                get/set various set point / levels / speeds
+        2. local sensors
+                report the sensors data at regular interval
+        3. run necessary traditional control algorithm (PID, on/off, etc.,)
         
-        if self._pp_failed:
-            _log.debug('unable to process_opt_pp(), will try again in ' + str(self._period_process_pp))
-            return
-            
-        _log.info('New Price Point processed.')
-        self._price_point_old = self._price_point_latest
-        self._pp_id = self._pp_id_new
-        return
-        
-    def _apply_pricing_policy(self):
-        _log.debug('_apply_pricing_policy()')
-        tsp = self._compute_rc_new_tsp(self._price_point_latest)
-        _log.debug('New Setpoint: {:0.1f}'.format( tsp))
-        self._rcpset_rc_tsp(tsp)
-        if not isclose(tsp, self._rc_tsp, EPSILON):
-            self._pp_failed = True
-        return
-        
-    # compute new TSP from price functions
-    def _compute_rc_new_tsp(self, pp):
-        pp = 0 if pp < 0 else 1 if pp > 1 else pp
-        
-        pf_idx = self.pf_rc['pf_idx']
-        pf_roundup = self.pf_rc['pf_roundup']
-        pf_coefficients = self.pf_rc['pf_coefficients']
-        
-        a = pf_coefficients[pf_idx]['a']
-        b = pf_coefficients[pf_idx]['b']
-        c = pf_coefficients[pf_idx]['c']
-        
-        tsp = a*pp**2 + b*pp + c
-        return mround(tsp, pf_roundup)
-        
+    '''
     # change rc surface temperature set point
     def _rcpset_rc_tsp(self, level):
         # _log.debug('_rcpset_rc_tsp()')
@@ -492,6 +430,81 @@ class RadiantCubicle(Agent):
         pub_msg = [state, {'units': 'On/Off', 'tz': 'UTC', 'type': 'int'}]
         publish_to_bus(self, pub_topic, pub_msg)
         return
+
+
+
+    def on_new_price(self, peer, sender, bus,  topic, headers, message):
+        if sender == 'pubsub.compat':
+            message = compat.unpack_legacy_message(headers, message)
+            
+        new_pp = message[ParamPP.idx_pp]
+        new_pp_datatype = message[ParamPP.idx_pp_datatype]
+        new_pp_id = message[ParamPP.idx_pp_id]
+        new_pp_isoptimal = message[ParamPP.idx_pp_isoptimal]
+        discovery_address = message[ParamPP.idx_pp_discovery_addrs]
+        deviceId = message[ParamPP.idx_pp_device_id]
+        new_pp_ttl = message[ParamPP.idx_pp_ttl]
+        new_pp_ts = message[ParamPP.idx_pp_ts]
+        print_pp(self, new_pp
+                , new_pp_datatype
+                , new_pp_id
+                , new_pp_isoptimal
+                , discovery_address
+                , deviceId
+                , new_pp_ttl
+                , new_pp_ts
+                )
+                
+        if not new_pp_isoptimal:
+            _log.debug('not optimal pp!!!, do nothing')
+            return
+            
+        self._price_point_latest = new_pp
+        self._pp_id_latest = new_pp_id
+        self.process_opt_pp()
+        return
+        
+    # this is a perodic function that keeps trying to apply the new pp till success
+    def process_opt_pp(self):
+        if isclose(self._price_point_old, self._price_point_latest, EPSILON) and self._pp_id == self._pp_id_new:
+            return
+            
+        self._pp_failed = False     # any process that failed to apply pp sets this flag True
+        self._apply_pricing_policy()
+        
+        if self._pp_failed:
+            _log.debug('unable to process_opt_pp(), will try again in ' + str(self._period_process_pp))
+            return
+            
+        _log.info('New Price Point processed.')
+        self._price_point_old = self._price_point_latest
+        self._pp_id = self._pp_id_new
+        return
+        
+    def _apply_pricing_policy(self):
+        _log.debug('_apply_pricing_policy()')
+        tsp = self._compute_rc_new_tsp(self._price_point_latest)
+        _log.debug('New Setpoint: {:0.1f}'.format( tsp))
+        self._rcpset_rc_tsp(tsp)
+        if not isclose(tsp, self._rc_tsp, EPSILON):
+            self._pp_failed = True
+        return
+        
+    # compute new TSP from price functions
+    def _compute_rc_new_tsp(self, pp):
+        pp = 0 if pp < 0 else 1 if pp > 1 else pp
+        
+        pf_idx = self.pf_rc['pf_idx']
+        pf_roundup = self.pf_rc['pf_roundup']
+        pf_coefficients = self.pf_rc['pf_coefficients']
+        
+        a = pf_coefficients[pf_idx]['a']
+        b = pf_coefficients[pf_idx]['b']
+        c = pf_coefficients[pf_idx]['c']
+        
+        tsp = a*pp**2 + b*pp + c
+        return mround(tsp, pf_roundup)
+        
         
     def publish_ted(self):
         self._ted = self._rpcget_rc_active_power()
