@@ -72,12 +72,21 @@ def radiantcubicle(config_path, **kwargs):
 class RadiantCubicle(Agent):
     '''Radiant Cubicle
     '''
-    _pp_failed = False
+    # initialized  during __init__ from config
+    _period_read_data = None
+    _period_process_pp = None
+    _price_point_latest = None
     
-    _price_point_current = 0.4 
-    _price_point_latest = 0.45
-    _pp_id = randint(0, 99999999)
-    _pp_id_latest = randint(0, 99999999)
+    _vb_vip_identity = None
+    _root_topic = None
+    _topic_energy_demand = None
+    _topic_price_point = None
+    
+    _device_id = None
+    _discovery_address = None
+    
+    # any process that failed to apply pp sets this flag False
+    _process_opt_pp_success = False
     
     _rcAutoCntrlState = RC_AUTO_CNTRL_OFF
     _rcTspLevel = 25
@@ -87,9 +96,9 @@ class RadiantCubicle(Agent):
         _log.debug('vip_identity: ' + self.core.identity)
         
         self.config = utils.load_config(config_path)
-        self._configGetPoints()
-        self._configGetInitValues()
-        self._configGetPriceFucntions()
+        self._config_get_points()
+        self._config_get_init_values()
+        self._config_get_price_fucntions()
         return
         
     @Core.receiver('onsetup')
@@ -100,36 +109,59 @@ class RadiantCubicle(Agent):
 
     @Core.receiver('onstart')
     def startup(self, sender, **kwargs):
-        _log.info('yeild 30s for volttron platform to initiate properly...')
-        time.sleep(30) # yeild for a movement
         _log.info('Starting RadiantCubicle...')
         
-        self._runRadiantCubicleTest()
+        # we need to retain the device_id, retrive_details_from_vb() overwrite with vb device_id
+        _device_id = self._device_id
+        # retrive self._device_id and self._discovery_address from vb
+        retrive_details_from_vb(self, 5)
+        self._device_id = _device_id
+        
+        # register rpc routes with MASTER_WEB
+        # register_rpc_route is a blocking call
+        register_rpc_route(self, 'smarthub', 'rpc_from_net', 5)
+        
+        # register this agent with vb as local device for posting active power & bid energy demand
+        # pca picks up the active power & energy demand bids only if registered with vb
+        # require self._vb_vip_identity, self.core.identity, self._device_id
+        # register_agent_with_vb is a blocking call
+        register_agent_with_vb(self, 5)
+        
+        self._valid_senders_list_pp = ['iiit.pricecontroller']
+        
+        # any process that failed to apply pp sets this flag False
+        # setting False here to initiate applying default pp on agent start
+        self._process_opt_pp_success = False
+        
+        # on successful process of apply_pricing_policy with the latest opt pp, current = latest
+        self._opt_pp_msg_current = get_default_pp_msg(self._discovery_address, self._device_id)
+        # latest opt pp msg received on the message bus
+        self._opt_pp_msg_latest = get_default_pp_msg(self._discovery_address, self._device_id)
+        
+        self._bid_pp_msg_latest = get_default_pp_msg(self._discovery_address, self._device_id)
+        
+        self._run_radiant_cubicle_test()
         
         # TODO: get the latest values (states/levels) from h/w
         # self.getInitialHwState()
-        # time.sleep(1) # yeild for a movement
-        
-        # TODO: apply pricing policy for default values
-        
         # TODO: publish initial data to volttron bus
         
-        # perodically publish total energy demand to volttron bus
-        self.core.periodic(self._period_read_data, self.publish_ted, wait=None)
+        # perodically publish total active power to volttron bus
+        # active power is comupted at regular interval (_period_read_data default(30s))
+        # this power corresponds to current opt pp
+        # tap --> total active power (Wh)
+        self.core.periodic(self._period_read_data, self.publish_opt_tap, wait=None)
         
         # perodically process new pricing point that keeps trying to apply the new pp till success
         self.core.periodic(self._period_process_pp, self.process_opt_pp, wait=None)
         
         # subscribing to topic_price_point
-        self.vip.pubsub.subscribe('pubsub', self.topic_price_point, self.on_new_price)
+        self.vip.pubsub.subscribe('pubsub', self._topic_price_point, self.on_new_price)
         
-        self.vip.rpc.call(MASTER_WEB, 'register_agent_route'
-                            , r'^/RadiantCubicle'
-                            , 'rpc_from_net'            # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # add rpc_from_net
-                            ).get(timeout=10)
-                            
         _log.debug('switch ON RC_AUTO_CNTRL')
         self.setRcAutoCntrl(RC_AUTO_CNTRL_ON)
+        
+        _log.debug('startup() - Done. Agent is ready')
         return
         
     @Core.receiver('onstop')
@@ -145,14 +177,42 @@ class RadiantCubicle(Agent):
         _log.debug('onfinish()')
         return
         
-    def _configGetInitValues(self):
+    @RPC.export
+    def rpc_from_net(self, header, message):
+        result = False
+        try:
+            rpcdata = jsonrpc.JsonRpcData.parse(message)
+            _log.debug('rpc_from_net()...'
+                        + 'header: {}'.format(header)
+                        + ', rpc method: {}'.format(rpcdata.method)
+                        + ', rpc params: {}'.format(rpcdata.params)
+                        )
+            if rpcdata.method == 'ping':
+                result = True
+            else:
+                return jsonrpc.json_error(rpcdata.id, METHOD_NOT_FOUND,
+                                            'Invalid method {}'.format(rpcdata.method))
+        except KeyError as ke:
+            # print(ke)
+            return jsonrpc.json_error(rpcdata.id, INVALID_PARAMS,
+                                        'Invalid params {}'.format(rpcdata.params))
+        except Exception as e:
+            # print(e)
+            return jsonrpc.json_error(rpcdata.id, UNHANDLED_EXCEPTION, e)
+        return jsonrpc.json_result(rpcdata.id, result)
+        
+    @RPC.export
+    def ping(self):
+        return True
+        
+    def _config_get_init_values(self):
         self._period_read_data = self.config.get('period_read_data', 30)
         self._period_process_pp = self.config.get('period_process_pp', 10)
         self._price_point_old = self.config.get('price_point_latest', 0.2)
         self._deviceId = self.config.get('deviceId', 'RadiantCubicle-61')
         return
         
-    def _configGetPoints(self):
+    def _config_get_points(self):
         self.root_topic = self.config.get('topic_root', 'radiantcubicle')
         self.energyDemand_topic = self.config.get('topic_energy_demand',
                                                     'radiantcubicle/energydemand')
@@ -160,13 +220,13 @@ class RadiantCubicle(Agent):
                                                     'topic_price_point')
         return
         
-    def _configGetPriceFucntions(self):
-        _log.debug('_configGetPriceFucntions()')
+    def _config_get_price_fucntions(self):
+        _log.debug('_config_get_price_fucntions()')
         self.pf_rc = self.config.get('pf_rc')
         return
         
-    def _runRadiantCubicleTest(self):
-        _log.debug('Running: _runRadiantCubicleTest()...')
+    def _run_radiant_cubicle_test(self):
+        _log.debug('Running: _run_radiant_cubicle_test()...')
         
         _log.debug('change level 26')
         self.setRcTspLevel(26.0)
