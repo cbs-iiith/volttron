@@ -303,7 +303,7 @@ class RadiantCubicle(Agent):
         return
         
     def _rpcset_rc_auto_cntrl(self, state):
-        _log.debug('_rpcset_rc_auto_cntrl()')
+        #_log.debug('_rpcset_rc_auto_cntrl()')
         
         if self._rc_auto_cntrl_state == state:
             _log.info('same state, do nothing')
@@ -500,7 +500,7 @@ class RadiantCubicle(Agent):
     def _apply_pricing_policy(self):
         _log.debug('_apply_pricing_policy()')
         new_rc_tsp = self._compute_rc_new_tsp(self._price_point_latest)
-        _log.debug('New Setpoint: {:0.1f}'.format( tsp))
+        _log.debug('New Setpoint: {:0.1f}'.format( new_rc_tsp))
         self._rcpset_rc_tsp(new_rc_tsp)
         if not isclose(new_rc_tsp, self._rc_tsp, EPSILON):
             self._process_opt_pp_success = False
