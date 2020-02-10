@@ -142,8 +142,6 @@ class PriceController(Agent):
         self._ds_senders_list = ['iiit.volttronbridge']
         self._local_ed_agents = []
         
-        self.tmp_bustopic_pp_msg = get_default_pp_msg(self._discovery_address, self._device_id)
-        
         self.us_opt_pp_msg = get_default_pp_msg(self._discovery_address, self._device_id)
         self.us_bid_pp_msg = get_default_pp_msg(self._discovery_address, self._device_id)
         self.act_opt_pp_msg = get_default_pp_msg(self._discovery_address, self._device_id)
@@ -301,8 +299,6 @@ class PriceController(Agent):
             _log.info('self.pca_standby: ' + str(self._pca_standby) + ', do nothing!!!')
             return
             
-        self.tmp_bustopic_pp_msg = None
-        
         # check message type before parsing
         if not check_msg_type(message, MessageType.price_point): return False
         
@@ -342,8 +338,6 @@ class PriceController(Agent):
             _log.info('self.pca_standby: ' + str(self._pca_standby) + ', do nothing!!!')
             return False
             
-        self.tmp_bustopic_pp_msg = None
-        
         # check message type before parsing
         if not check_msg_type(message, MessageType.price_point): return False
         
@@ -579,8 +573,6 @@ class PriceController(Agent):
         # 9.      if opt_pp
         # post ed to us only if pp_id corresponds to these ids 
         #      (i.e., ed for either us opt_pp_id or bid_pp_id)
-        
-        self.tmp_bustopic_pp_msg = None
         
         success_ap = False
         success_ed = False

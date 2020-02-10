@@ -348,7 +348,7 @@ class RadiantCubicle(Agent):
         return
         
     def _update_rc_auto_cntrl(self, new_state):
-        _log.debug('_update_rc_auto_cntrl()')
+        #_log.debug('_update_rc_auto_cntrl()')
         
         rc_auto_cntrl_state = self._rpcget_rc_auto_cntrl_state()
         
@@ -563,6 +563,8 @@ class RadiantCubicle(Agent):
         
     # this is a perodic function that keeps trying to apply the new pp till success
     def process_bid_pp(self):
+        #tmp fix
+        time.sleep(1)
         self.publish_bid_ted()
         return
         
