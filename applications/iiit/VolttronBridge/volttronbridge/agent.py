@@ -228,8 +228,8 @@ class VolttronBridge(Agent):
             if self._usConnected:
                 try:
                     _log.debug('unregistering with upstream VolttronBridge')
-                    url_root = 'http://' + self._us_ip_addr
-                                        + ':' + str(self._us_port)
+                    url_root = 'http://' + self._us_ip_addr \
+                                        + ':' + str(self._us_port) \
                                         + '/bridge'
                     result = do_rpc(self._agent_id, url_root, 'dsbridge'
                                         , {'discovery_address': self._discovery_address
