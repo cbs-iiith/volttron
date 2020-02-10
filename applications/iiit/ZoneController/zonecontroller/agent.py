@@ -39,8 +39,9 @@ import gevent
 import gevent.event
 
 from ispace_utils import isclose, get_task_schdl, cancel_task_schdl, publish_to_bus, mround
-from ispace_utils import retrive_details_from_vb, register_agent_with_vb, register_rpc_route
+from ispace_utils import retrive_details_from_vb, register_with_bridge, register_rpc_route
 from ispace_utils import calc_energy_wh, calc_energy_kwh
+from ispace_utils import unregister_with_bridge
 from ispace_msg import ISPACE_Msg, MessageType
 from ispace_msg_utils import parse_bustopic_msg, check_msg_type, tap_helper, ted_helper
 from ispace_msg_utils import get_default_pp_msg, valid_bustopic_msg
@@ -126,8 +127,8 @@ class ZoneController(Agent):
         # register this agent with vb as local device for posting active power & bid energy demand
         # pca picks up the active power & energy demand bids only if registered with vb
         # require self._vb_vip_identity, self.core.identity, self._device_id
-        # register_agent_with_vb is a blocking call
-        register_agent_with_vb(self, 5)
+        # register_with_bridge is a blocking call
+        register_with_bridge(self, 5)
         
         self._valid_senders_list_pp = ['iiit.pricecontroller']
         
@@ -173,6 +174,8 @@ class ZoneController(Agent):
     @Core.receiver('onstop')
     def onstop(self, sender, **kwargs):
         _log.debug('onstop()')
+        
+        unregister_with_bridge(self)
         
         _log.debug('un registering rpc routes')
         self.vip.rpc.call(MASTER_WEB, 'unregister_all_agent_routes').get(timeout=10)

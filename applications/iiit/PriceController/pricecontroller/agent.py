@@ -184,7 +184,6 @@ class PriceController(Agent):
     @Core.receiver('onstop')
     def onstop(self, sender, **kwargs):
         _log.debug('onstop()')
-        _log.debug('un registering rpc routes')
         
         self._us_local_opt_ap.clear()
         self._us_local_bid_ed.clear()
@@ -194,6 +193,7 @@ class PriceController(Agent):
         self._us_ds_bid_ed.clear()
         self._ds_bid_ed.clear()
         
+        _log.debug('un registering rpc routes')
         self.vip.rpc.call(MASTER_WEB, 'unregister_all_agent_routes').get(timeout=10)
         return
         

@@ -51,7 +51,7 @@ def ping_vb_failed(self):
 #register agent with local vb, blocking fucntion
 #register this agent with vb as local device for posting active power & bid energy demand
 #pca picks up the active power & energy demand bids only if registered with vb as local device
-def register_agent_with_vb(self, sleep_time=10):
+def register_with_bridge(self, sleep_time=10):
     while True:
         try:
             _log.info('registering with the Volttron Bridge...')
@@ -70,6 +70,20 @@ def register_agent_with_vb(self, sleep_time=10):
             pass
         _log.debug('will try again in {} sec'.format(sleep_time))
         time.sleep(sleep_time)
+    return
+    
+def unregister_with_bridge(self):
+    try:
+        _log.info('unregistering with the bridge...')
+        success = self.vip.rpc.call(self._vb_vip_identity
+                                    , 'unregister_local_ed_agent'
+                                    , self.core.identity
+                                    ).get(timeout=10)
+        _log.debug ('self.vip.rpc.call() result: {}'.format(success))
+    except Exception as e:
+        #print(e)
+        _log.exception('Maybe the bridge agent had stopped already!!!')
+        pass
     return
     
 #register rpc routes with MASTER_WEB
@@ -111,7 +125,8 @@ def retrive_details_from_vb(self, sleep_time=10):
                 _log.debug('Done.')
                 break
         except Exception as e:
-            _log.exception (e)
+            _log.exception ('Expection in retrive_details_from_vb()'
+                                                        + ', message: {}.'.format(e.message))
             pass
         _log.debug('will try again in {} sec'.format(sleep_time))
         time.sleep(sleep_time)
@@ -239,6 +254,7 @@ def do_rpc(id, url_root, method, params=None, request_method='POST'):
     except Exception as e:
         #print(e)
         _log.exception('do_rpc() unhandled exception, most likely dest is down')
+        pass
     return result
     
     

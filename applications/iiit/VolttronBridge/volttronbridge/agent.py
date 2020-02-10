@@ -339,6 +339,7 @@ class VolttronBridge(Agent):
         
     @RPC.export
     def register_local_ed_agent(self, sender, device_id):
+        if device_id is None: return False
         _log.debug('register_local_ed_agent(), sender: ' + sender 
                     + ' device_id: ' + device_id
                     )
