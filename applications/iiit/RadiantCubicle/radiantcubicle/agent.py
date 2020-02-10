@@ -88,7 +88,7 @@ class RadiantCubicle(Agent):
     # any process that failed to apply pp sets this flag False
     _process_opt_pp_success = False
     
-    _rcAutoCntrlState = RC_AUTO_CNTRL_OFF
+    _rc_auto_cntrl_state = RC_AUTO_CNTRL_OFF
     _rcTspLevel = 25
     
     def __init__(self, config_path, **kwargs):
@@ -361,7 +361,7 @@ class RadiantCubicle(Agent):
     def _rpcset_rc_auto_cntrl(self, state):
         _log.debug('_rpcset_rc_auto_cntrl()')
         
-        if self._rcAutoCntrlState == state:
+        if self._rc_auto_cntrl_state == state:
             _log.info('same state, do nothing')
             return
             
@@ -414,10 +414,10 @@ class RadiantCubicle(Agent):
         rcAutoCntrlState = self.rpc_getRcAutoCntrlState()
         
         if state == int(rcAutoCntrlState):
-            self._rcAutoCntrlState = state
+            self._rc_auto_cntrl_state = state
             self.publishRcAutoCntrlState(state)
             
-        if self._rcAutoCntrlState == RC_AUTO_CNTRL_ON:
+        if self._rc_auto_cntrl_state == RC_AUTO_CNTRL_ON:
             _log.info('Current State: RC Auto Cntrl is ON!!!')
         else:
             _log.info('Current State: RC Auto Cntrl OFF!!!')
