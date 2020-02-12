@@ -502,23 +502,23 @@ class SmartStrip(Agent):
             return
         return
         
-    def _process_new_tag_id(self, plug_id, newTagId):
+    def _process_new_tag_id(self, plug_id, new_tag_id):
         # empty string
-        if not newTagId:
+        if not new_tag_id:
             # do nothing
             return
             
-        if newTagId != '7FC000007FC00000':
+        if new_tag_id != '7FC000007FC00000':
             # device is connected condition
             # check if current tag id is same as new, if so, do nothing
-            if newTagId == self._plugs_tag_id[plug_id]:
+            if new_tag_id == self._plugs_tag_id[plug_id]:
                 return
             else:
                 # update the tag id and change connected state
-                self._plugs_tag_id[plug_id] = newTagId
-                self._publish_tag_id(plug_id, newTagId)
+                self._plugs_tag_id[plug_id] = new_tag_id
+                self._publish_tag_id(plug_id, new_tag_id)
                 self._plugs_connected[plug_id] = 1
-                if self.is_tag_authorised(newTagId):
+                if self.is_tag_authorised(new_tag_id):
                     plug_pp_th = self._plugs_th_pp[plug_id]
                     if self._price_point_latest < plug_pp_th:
                         _log.info(('Plug {:d}: '.format(plug_id + 1),
@@ -535,8 +535,8 @@ class SmartStrip(Agent):
                     _log.info(('Plug {:d}: '.format(plug_id + 1),
                             'Unauthorised device connected',
                             '(tag id: ',
-                            newTagId, ')'))
-                    self._publish_tag_id(plug_id, newTagId)
+                            new_tag_id, ')'))
+                    self._publish_tag_id(plug_id, new_tag_id)
                     # TODO: bug with new unauthorised tag id, switch-off power if its already swithched-on
                     
         else:
@@ -544,11 +544,11 @@ class SmartStrip(Agent):
             if self._plugs_connected[plug_id] == 0:
                 return
             elif self._plugs_connected[plug_id] == 1 or
-                    newTagId != self._plugs_tag_id[plug_id] or
+                    new_tag_id != self._plugs_tag_id[plug_id] or
                     self._plugs_relay_state[plug_id] == RELAY_ON:
                 # update the tag id and change connected state
-                self._plugs_tag_id[plug_id] = newTagId
-                self._publish_tag_id(plug_id, newTagId)
+                self._plugs_tag_id[plug_id] = new_tag_id
+                self._publish_tag_id(plug_id, new_tag_id)
                 self._plugs_connected[plug_id] = 0
                 self._switch_relay(plug_id, RELAY_OFF, SCHEDULE_AVLB)
         return
@@ -831,12 +831,12 @@ class SmartStrip(Agent):
         publish_to_bus(self, pub_topic, pub_msg)
         return
         
-    def _publish_tag_id(self, plug_id, newTagId):
+    def _publish_tag_id(self, plug_id, new_tag_id):
         if not self._validplug_id(plug_id):
             return
             
         pub_topic = self._root_topic + '/plug' + str(plug_id+1) + '/tagid'
-        pub_msg = [newTagId,{'units': '', 'tz': 'UTC', 'type': 'string'}]
+        pub_msg = [new_tag_id,{'units': '', 'tz': 'UTC', 'type': 'string'}]
         publish_to_bus(self, pub_topic, pub_msg)
         return
         
