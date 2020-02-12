@@ -1194,9 +1194,7 @@ class SmartHub(Agent):
     # the bid energy is for self._bid_pp_duration (default 1hr)
     # and this msg is valid for self._period_read_data (ttl - default 30s)
     def _calc_total_energy_demand(self):
-        # ted should be measured in realtime from the connected plug
-        # however, since we don't have model for the battery charge controller
-        # we are using below algo based on experimental data
+        # TODO: ted should be computed based on some  predictive modeling
         pp_msg = self._bid_pp_msg_latest
         bid_pp = pp_msg.get_value()
         duration = pp_msg.get_duration()
@@ -1205,7 +1203,7 @@ class SmartHub(Agent):
         ted = calc_energy_wh(SH_BASE_POWER, duration)
         
         #sh led energy demand
-        if self._sh_devices_state[SH_DEVICE_LED] == SH_DEVICE_STATE_ON:
+        if bid_pp <= _sh_devices_th_pp[SH_DEVICE_LED]:
             led_level = self._sh_devices_level[SH_DEVICE_LED]
             led_energy = calc_energy_wh(SH_LED_POWER, duration)
             ted += ((led_energy * SH_LED_THRESHOLD_PCT)
@@ -1213,7 +1211,7 @@ class SmartHub(Agent):
                                     else (led_energy * led_level))
                                     
         #sh fan energy demand
-        if self._sh_devices_state[SH_DEVICE_FAN] == SH_DEVICE_STATE_ON:
+        if bid_pp <= self._sh_devices_th_pp[SH_DEVICE_FAN]:
             fan_speed = self._compute_new_fan_speed(bid_pp)
             fan_energy = calc_energy_wh(SH_FAN_POWER, duration)
             ted += ((fan_energy * SH_FAN_THRESHOLD_PCT)
