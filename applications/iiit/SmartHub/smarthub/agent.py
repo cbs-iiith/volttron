@@ -1131,7 +1131,7 @@ class SmartHub(Agent):
     def _calc_total_act_pwr(self):
         # active pwr should be measured in realtime from the connected plug
         # however, since we don't have model for the battery charge controller
-        # we are assumuing constant energy dfor the devices based on experimental data
+        # we are assumuing constant energy for the devices based on experimental data
         
         #sh base energy demand
         tap = SH_BASE_POWER
