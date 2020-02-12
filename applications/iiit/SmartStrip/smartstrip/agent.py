@@ -582,102 +582,6 @@ class SmartStrip(Agent):
                 self._switch_relay(plug_id, RELAY_OFF, SCHEDULE_AVLB)
         return
         
-    def on_new_price(self, peer, sender, bus,  topic, headers, message):
-        if sender == 'pubsub.compat':
-            message = compat.unpack_legacy_message(headers, message)
-            
-        new_pp = message[ParamPP.idx_pp]
-        new_pp_datatype = message[ParamPP.idx_pp_datatype]
-        new_pp_id = message[ParamPP.idx_pp_id]
-        new_pp_isoptimal = message[ParamPP.idx_pp_isoptimal]
-        discovery_address = message[ParamPP.idx_pp_discovery_addrs]
-        deviceId = message[ParamPP.idx_pp_device_id]
-        new_pp_ttl = message[ParamPP.idx_pp_ttl]
-        new_pp_ts = message[ParamPP.idx_pp_ts]
-                
-        if not new_pp_isoptimal:
-            _log.debug('not optimal pp!!!')
-            self._bid_pp = new_pp
-            self._bid_pp_datatype = new_pp_datatype
-            self._bid_pp_id = new_pp_id
-            self._bid_pp_ttl = new_pp_ttl
-            self._bid_pp_ts = new_pp_ts
-            # process bid_pp
-            self.process_bid_pp()
-            return
-            
-        self._price_point_latest = new_pp
-        self._pp_id_latest = new_pp_id
-        self.process_opt_pp()
-        return
-        
-    # this is a periodic function that
-    def process_bid_pp(self):
-        bid_ed = self.compute_bid_ed(self._bid_pp)
-        # publish bid_ed
-        
-        return
-        
-    # this is a perodic function that keeps trying to apply the new pp till success
-    def process_opt_pp(self):
-        if isclose(self._price_point_old, self._price_point_latest, EPSILON) and self._pp_id == self._pp_id_new:
-            return
-            
-        self._process_opt_pp_success = True     # any process that failed to apply pp, sets this flag True
-        # get schedule for testing relays
-        task_id = str(randint(0, 99999999))
-        # _log.debug('task_id: ' + task_id)
-        result = get_task_schdl(self, task_id,'iiit/cbs/smartstrip')
-        if result['result'] != 'SUCCESS':
-            _log.debug('unable to process_opt_pp(), will try again in ' + str(self._period_process_pp))
-            self._process_opt_pp_success = False
-            return
-            
-        self._apply_pricing_policy(PLUG_ID_1, SCHEDULE_AVLB)
-        self._apply_pricing_policy(PLUG_ID_2, SCHEDULE_AVLB)
-        self._apply_pricing_policy(PLUG_ID_3, SCHEDULE_AVLB)
-        self._apply_pricing_policy(PLUG_ID_4, SCHEDULE_AVLB)
-        # cancel the schedule
-        cancel_task_schdl(self, task_id)
-        
-        if self._process_opt_pp_success:
-            _log.debug('unable to process_opt_pp(), will try again in ' + str(self._period_process_pp))
-            return
-            
-        _log.info('New Price Point processed.')
-        self._price_point_old = self._price_point_latest
-        self._pp_id = self._pp_id_new
-        return
-        
-    def _apply_pricing_policy(self, plug_id, schdExist):
-        plug_pp_th = self._plugs_th_pp[plug_id]
-        if self._price_point_latest > plug_pp_th:
-            if self._plugs_relay_state[plug_id] == RELAY_ON:
-                _log.info(('Plug {:d}: '.format(plug_id + 1)
-                            , 'Current price point > threshold'
-                            , '({:.2f}), '.format(plug_pp_th)
-                            , 'Switching-Off Power'
-                            ))
-                self._switch_relay(plug_id, RELAY_OFF, schdExist)
-                if not self._plugs_relay_state[plug_id] == RELAY_OFF:
-                    self._process_opt_pp_success = False
-                    
-            # else:
-                # do nothing
-        else:
-            if self._plugs_connected[plug_id] == 1 and self._authorised_tag_id(self._plugs_tag_id[plug_id]):
-                _log.info(('Plug {:d}: '.format(plug_id + 1)
-                            , 'Current price point < threshold'
-                            , '({:.2f}), '.format(plug_pp_th)
-                            , 'Switching-On Power'
-                            ))
-                self._switch_relay(plug_id, RELAY_ON, schdExist)
-                if not self._plugs_relay_state[plug_id] == RELAY_ON:
-                    self._process_opt_pp_success = False
-            # else:
-                # do nothing
-        return
-        
     def _construct_tag_id(self, f1_tag_id, f2_tag_id):
         buff = self._convert_to_byte_array(f1_tag_id, f2_tag_id)
         tag = ''
@@ -875,6 +779,120 @@ class SmartStrip(Agent):
         pub_topic = self._root_topic + '/plug' + str(plug_id+1) + '/threshold'
         pub_msg = [thresholdPP,{'units': 'cents', 'tz': 'UTC', 'type': 'float'}]
         publish_to_bus(self, pub_topic, pub_msg)
+        return
+        
+    '''
+        Functionality related to the market mechanisms
+        
+        1. receive new prices (optimal pp or bid pp) from the pca
+        2. if opt pp, apply pricing policy by computing the new setpoint based on price functions
+        3. if bid pp, compute the new bid energy demand
+        
+    '''
+    def on_new_price(self, peer, sender, bus,  topic, headers, message):
+        if sender not in self._valid_senders_list_pp: return
+        
+        # check message type before parsing
+        if not check_msg_type(message, MessageType.price_point): return False
+            
+        valid_senders_list = self._valid_senders_list_pp
+        minimum_fields = ['msg_type', 'value', 'value_data_type', 'units', 'price_id']
+        validate_fields = ['value', 'units', 'price_id', 'isoptimal', 'duration', 'ttl']
+        valid_price_ids = []
+        (success, pp_msg) = valid_bustopic_msg(sender, valid_senders_list
+                                                , minimum_fields
+                                                , validate_fields
+                                                , valid_price_ids
+                                                , message)
+        if not success or pp_msg is None: return
+        else: _log.debug('New pp msg on the local-bus, topic: {}'.format(topic))
+        
+        if pp_msg.get_isoptimal():
+            _log.debug('***** New optimal price point from pca: {:0.2f}'.format(pp_msg.get_value())
+                                        + ' , price_id: {}'.format(pp_msg.get_price_id()))
+            self._process_opt_pp(pp_msg)
+        else:
+            _log.debug('***** New bid price point from pca: {:0.2f}'.format(pp_msg.get_value())
+                                        + ' , price_id: {}'.format(pp_msg.get_price_id()))
+            self._process_bid_pp(pp_msg)
+            
+        return
+        
+    def _process_opt_pp(self, pp_msg):
+        self._opt_pp_msg_latest = copy(pp_msg)
+        self._price_point_latest = pp_msg.get_value()
+        
+        # any process that failed to apply pp sets this flag False
+        self._process_opt_pp_success = False
+        # initiate the periodic process
+        self.process_opt_pp()
+        return
+        
+    # this is a periodic function that
+    def process_bid_pp(self):
+        bid_ed = self.compute_bid_ed(self._bid_pp)
+        # publish bid_ed
+        
+        return
+        
+    # this is a perodic function that keeps trying to apply the new pp till success
+    def process_opt_pp(self):
+        if isclose(self._price_point_old, self._price_point_latest, EPSILON) and self._pp_id == self._pp_id_new:
+            return
+            
+        self._process_opt_pp_success = True     # any process that failed to apply pp, sets this flag True
+        # get schedule for testing relays
+        task_id = str(randint(0, 99999999))
+        # _log.debug('task_id: ' + task_id)
+        result = get_task_schdl(self, task_id,'iiit/cbs/smartstrip')
+        if result['result'] != 'SUCCESS':
+            _log.debug('unable to process_opt_pp(), will try again in ' + str(self._period_process_pp))
+            self._process_opt_pp_success = False
+            return
+            
+        self._apply_pricing_policy(PLUG_ID_1, SCHEDULE_AVLB)
+        self._apply_pricing_policy(PLUG_ID_2, SCHEDULE_AVLB)
+        self._apply_pricing_policy(PLUG_ID_3, SCHEDULE_AVLB)
+        self._apply_pricing_policy(PLUG_ID_4, SCHEDULE_AVLB)
+        # cancel the schedule
+        cancel_task_schdl(self, task_id)
+        
+        if self._process_opt_pp_success:
+            _log.debug('unable to process_opt_pp(), will try again in ' + str(self._period_process_pp))
+            return
+            
+        _log.info('New Price Point processed.')
+        self._price_point_old = self._price_point_latest
+        self._pp_id = self._pp_id_new
+        return
+        
+    def _apply_pricing_policy(self, plug_id, schdExist):
+        plug_pp_th = self._plugs_th_pp[plug_id]
+        if self._price_point_latest > plug_pp_th:
+            if self._plugs_relay_state[plug_id] == RELAY_ON:
+                _log.info(('Plug {:d}: '.format(plug_id + 1)
+                            , 'Current price point > threshold'
+                            , '({:.2f}), '.format(plug_pp_th)
+                            , 'Switching-Off Power'
+                            ))
+                self._switch_relay(plug_id, RELAY_OFF, schdExist)
+                if not self._plugs_relay_state[plug_id] == RELAY_OFF:
+                    self._process_opt_pp_success = False
+                    
+            # else:
+                # do nothing
+        else:
+            if self._plugs_connected[plug_id] == 1 and self._authorised_tag_id(self._plugs_tag_id[plug_id]):
+                _log.info(('Plug {:d}: '.format(plug_id + 1)
+                            , 'Current price point < threshold'
+                            , '({:.2f}), '.format(plug_pp_th)
+                            , 'Switching-On Power'
+                            ))
+                self._switch_relay(plug_id, RELAY_ON, schdExist)
+                if not self._plugs_relay_state[plug_id] == RELAY_ON:
+                    self._process_opt_pp_success = False
+            # else:
+                # do nothing
         return
         
     # calculate the bid total energy demand (TED)
