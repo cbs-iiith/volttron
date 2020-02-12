@@ -211,7 +211,7 @@ class RadiantCubicle(Agent):
         except Exception as e:
             # print(e)
             return jsonrpc.json_error(rpcdata.id, UNHANDLED_EXCEPTION, e)
-        return jsonrpc.json_result(rpcdata.id, result)
+        return (jsonrpc.json_result(rpcdata.id, result) if result else result)
         
     @RPC.export
     def ping(self):

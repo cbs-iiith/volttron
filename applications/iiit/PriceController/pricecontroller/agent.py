@@ -230,7 +230,7 @@ class PriceController(Agent):
         except Exception as e:
             # print(e)
             return jsonrpc.json_error(rpcdata.id, UNHANDLED_EXCEPTION, e)
-        return jsonrpc.json_result(rpcdata.id, result)
+        return (jsonrpc.json_result(rpcdata.id, result) if result else result)
         
     def _pca_state(self, rpcdata_id, message):
         state = jsonrpc.JsonRpcData.parse(message).params['state']

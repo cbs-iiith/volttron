@@ -294,7 +294,7 @@ class VolttronBridge(Agent):
             _log.exception('id: {}, message: unhandled exception'
                                         + ' {}!!!'.format(rpcdata.id, e.message))
             return jsonrpc.json_error('NA', UNHANDLED_EXCEPTION, e)
-        return jsonrpc.json_result(rpcdata.id, result)
+        return (jsonrpc.json_result(rpcdata.id, result) if result else result)
         
     @RPC.export
     def ping(self):
@@ -705,7 +705,7 @@ class VolttronBridge(Agent):
                     'Invalid params {}'.format(rpcdata.params))
         except Exception as e:
             # print(e)
-            return jsonrpc.json_error(rpcdata_id, UNHANDLED_EXCEPTION, e)
+            return jsonrpc.json_error(rpcdata_id, UNHANDLED_EXCEPTION, e.message)
             
         _log.debug('sanity checks....')
         # validate various sanity measure like, valid fields, valid pp ids, ttl expiry, etc.,
@@ -728,7 +728,7 @@ class VolttronBridge(Agent):
             # if the ds is unregistered by the bridge in the previous iteration, this return msg
             # indicates ds that it needs to retry after registering once again
             _log.warning('msg not from registered ds, do nothing!!!')
-            return False
+            return jsonrpc.json_error(rpcdata_id, PARSE_ERROR, 'Msg not from registered ds!!!')
         _log.debug('yes.')
         
         # post to bus

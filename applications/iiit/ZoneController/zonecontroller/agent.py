@@ -211,7 +211,7 @@ class ZoneController(Agent):
         except Exception as e:
             # print(e)
             return jsonrpc.json_error(rpcdata.id, UNHANDLED_EXCEPTION, e)
-        return jsonrpc.json_result(rpcdata.id, result)
+        return (jsonrpc.json_result(rpcdata.id, result) if result else result)
         
     def _config_get_init_values(self):
         self._period_read_data = self.config.get('period_read_data', 30)
