@@ -239,11 +239,13 @@ def do_rpc(id, url_root, method, params=None, request_method='POST'):
         if response.ok:
             if 'result' in response.json().keys():
                 success = response.json()['result']
-                if success:
-                    #_log.debug('response - ok, {} result:{}'.format(method, success))
+                if request_method not in ['POST', 'DELETE']:
+                    result = success
+                elif success:
+                    #_log.debug('response - ok, {} result success: {}'.format(method, success))
                     result = True
                 else:
-                    _log.debug('respone - not ok, {} result:{}'.format(method, success))
+                    _log.debug('respone - ok, {} result success: {}'.format(method, success))
             elif 'error' in response.json().keys():
                 error = response.json()['error']
                 _log.error('{} returned error, Error: {}'.format(method, error))
