@@ -169,11 +169,11 @@ class SmartStrip(Agent):
         self.publish_hw_data()
         
         # perodically publish hw data to volttron bus. 
-        # The data includes plug th_pp, meter data, tag_ids
+        # The data includes plug th_pp, meter data
         self.core.periodic(self._period_read_data, self.publish_hw_data, wait=None)
         
-        # perodically read the meter data & connected tag ids from h/w
-        self.core.periodic(self._period_read_data, self.get_plug_data, wait=None)
+        # perodically process connected tag ids from h/w
+        self.core.periodic(self._period_read_data, self.process_plugs_tag_id, wait=None)
         
         # perodically publish total active power to volttron bus
         # active power is comupted at regular interval (_period_read_data default(30s))
@@ -431,35 +431,35 @@ class SmartStrip(Agent):
             return E_UNKNOWN_STATE
         return state
         
-    def get_plugs_data(self):
+    def process_plugs_tag_id(self):
         # _log.debug('get_plug_data()...')
         
         # get schedule for to h/w latest data
         task_id = str(randint(0, 99999999))
-        success = get_task_schdl(self, task_id,'iiit/cbs/smartstrip')
+        success = get_task_schdl(self, task_id, 'iiit/cbs/smartstrip')
         if not success: return
-        self._rpcget_tag_ids()
         
-        # _log.debug('start _process_new_tag_id()...')
-        self._process_new_tag_id(PLUG_ID_1, self._new_tag_id1)
-        self._process_new_tag_id(PLUG_ID_2, self._new_tag_id2)
-        self._process_new_tag_id(PLUG_ID_3, self._new_tag_id3)
-        self._process_new_tag_id(PLUG_ID_4, self._new_tag_id4)
+        log_msg = '[LOG] tag_ids - '
+        for plug_id, plug_tag_id in enumerate(self._plugs_tag_id):
+            plug_tag_id = self._rpcget_plug_tag_id(plug_id)
+            self._process_new_tag_id(plug_id, plug_tag_id)
+            log_msg += 'Plug_{}: {}'.format(plug_id, plug_tag_id)
         # _log.debug('...done _process_new_tag_id()')
         
         # cancel the schedule
         cancel_task_schdl(self, task_id)
+        
+        _log.info(log_msg)
         return
         
     def _rpcget_meter_data(self, plug_id):
         # _log.debug ('_rpcget_meter_data(), plug_id: ' + str(plug_id))
-        if plug_id not in [PLUG_ID_1, PLUG_ID_2, PLUG_ID_3, PLUG_ID_4]:
-            return
+        if not self._valid_plug_id(plug_id): return
             
-        point_voltage = 'Plug' + str(plug_id+1) + 'Voltage'
-        point_current = 'Plug' + str(plug_id+1) + 'Current'
-        point_active_power = 'Plug' + str(plug_id+1) +'ActivePower'
-        pub_topic = self._root_topic + '/plug' + str(plug_id+1) + '/meterdata/all'
+        point_voltage = 'Plug' + str(plug_id + 1) + 'Voltage'
+        point_current = 'Plug' + str(plug_id + 1) + 'Current'
+        point_active_power = 'Plug' + str(plug_id + 1) +'ActivePower'
+        pub_topic = self._root_topic + '/plug' + str(plug_id + 1) + '/meterdata/all'
         
         try:
             f_voltage = self.vip.rpc.call('platform.actuator'
@@ -498,77 +498,33 @@ class SmartStrip(Agent):
             return
         return
         
-    def _rpcget_tag_ids(self):
-        # _log.debug('_rpcget_tag_ids()')
-        self._new_tag_id1 = ''
-        self._new_tag_id2 = ''
-        self._new_tag_id3 = ''
-        self._new_tag_id4 = ''
-        
-        try:
-            '''
+    def _rpcget_plug_tag_id(self, plug_id):
+        '''
             Smart Strip bacnet server splits the 64 bit tag id 
             into two parts and sends them accros as two float values.
             Hence need to get both the points (floats value)
             and recover the actual tag id
-            '''
-            f1_tag_id_1 = self.vip.rpc.call('platform.actuator'
-                                            ,'get_point',
-                                            'iiit/cbs/smartstrip/TagID1_1'
-                                            ).get(timeout=10)
-                                            
-            f2_tag_id_1 = self.vip.rpc.call('platform.actuator'
-                                            ,'get_point',
-                                            , 'iiit/cbs/smartstrip/TagID1_2'
-                                            ).get(timeout=10)
-            self._new_tag_id1 = self._construct_tag_id(f1_tag_id_1, f2_tag_id_1)
-            
-            # get second tag id
-            f1_tag_id_2 = self.vip.rpc.call('platform.actuator'
-                                            ,'get_point'
-                                            , 'iiit/cbs/smartstrip/TagID2_1'
-                                            ).get(timeout=10)
-                    
-            f2_tag_id_2 = self.vip.rpc.call('platform.actuator'
-                                            ,'get_point'
-                                            , 'iiit/cbs/smartstrip/TagID2_2'
-                                            ).get(timeout=10)
-            self._new_tag_id2 = self._construct_tag_id(f1_tag_id_2, f2_tag_id_2)
-            
-            # get third tag id
-            f1_tag_id_3 = self.vip.rpc.call('platform.actuator'
+        '''
+        tag_id = DEFAULT_TAG_ID
+        end_point_1 = 'TagID' + str(plug_id + 1) + '_1'
+        end_point_2 = 'TagID' + str(plug_id + 1) + '_2'
+        try:
+            f1_tag_id = self.vip.rpc.call('platform.actuator'
                                             , 'get_point'
-                                            , 'iiit/cbs/smartstrip/TagID3_1'
+                                            , 'iiit/cbs/smartstrip/' + end_point_1
                                             ).get(timeout=10)
-                    
-            f2_tag_id_3 = self.vip.rpc.call('platform.actuator'
-                                            , 'get_point'
-                                            , 'iiit/cbs/smartstrip/TagID3_2'
-                                            ).get(timeout=10)
-            self._new_tag_id3 = self._construct_tag_id(f1_tag_id_3, f2_tag_id_3)
-            
-            # get fourth tag id
-            f1_tag_id_4 = self.vip.rpc.call('platform.actuator'
-                                            , 'get_point'
-                                            , 'iiit/cbs/smartstrip/TagID4_1'
-                                            ).get(timeout=10)
-                    
-            f2_tag_id_4 = self.vip.rpc.call('platform.actuator'
+            f2_tag_id = self.vip.rpc.call('platform.actuator'
                                             ,'get_point'
-                                            , 'iiit/cbs/smartstrip/TagID4_2'
+                                            , 'iiit/cbs/smartstrip/' + end_point_2
                                             ).get(timeout=10)
-            self._new_tag_id4 = self._construct_tag_id(f1_tag_id_4, f2_tag_id_4)
-            
-            _log.info('Tag 1: '+ self._new_tag_id1 +', Tag 2: ' + self._new_tag_id2 + ', Tag 3: '+ self._new_tag_id3 +', Tag 4: ' + self._new_tag_id4)
-            
+            tag_id = self._construct_tag_id(f1_tag_id, f2_tag_id)
         except gevent.Timeout:
             _log.exception('gevent.Timeout in _rpcget_tag_ids()')
-            return
+            pass
         except Exception as e:
-            _log.exception('Exception: reading tag ids')
-            print(e)
-            return
-        return
+            _log.exception('Exception: reading tag ids, message: {}'.format(e.message))
+            pass
+        return tag_id
         
     def _process_new_tag_id(self, plug_id, new_tag_id):
         # empty string
@@ -599,13 +555,14 @@ class SmartStrip(Agent):
                                 'Current price point > threshold',
                                 '({:.2f}), '.format(plug_pp_th),
                                 'No-power'))
+                        self._switch_relay(plug_id, RELAY_OFF, SCHEDULE_AVLB)
                 else:
                     _log.info(('Plug {:d}: '.format(plug_id + 1),
                             'Unauthorised device connected',
                             '(tag id: ',
                             new_tag_id, ')'))
                     self._publish_tag_id(plug_id, new_tag_id)
-                    # TODO: bug with new unauthorised tag id, switch-off power if its already swithched-on
+                    self._switch_relay(plug_id, RELAY_OFF, SCHEDULE_AVLB)
                     
         else:
             # no device connected condition, new tag id is DEFAULT_TAG_ID
