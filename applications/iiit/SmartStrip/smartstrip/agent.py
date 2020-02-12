@@ -38,7 +38,13 @@ import struct
 import gevent
 import gevent.event
 
-from ispace_utils import get_task_schdl, cancel_task_schdl, isclose, publish_to_bus
+from ispace_utils import isclose, get_task_schdl, cancel_task_schdl, publish_to_bus, mround
+from ispace_utils import retrive_details_from_vb, register_with_bridge, register_rpc_route
+from ispace_utils import calc_energy_wh, calc_energy_kwh
+from ispace_utils import unregister_with_bridge
+from ispace_msg import ISPACE_Msg, MessageType
+from ispace_msg_utils import parse_bustopic_msg, check_msg_type, tap_helper, ted_helper
+from ispace_msg_utils import get_default_pp_msg, valid_bustopic_msg
 
 utils.setup_logging()
 _log = logging.getLogger(__name__)
@@ -89,7 +95,8 @@ class SmartStrip(Agent):
     
     # any process that failed to apply pp sets this flag False
     _process_opt_pp_success = False
-    _process_opt_pp_success = False
+    
+    _volt_state = 0
     
     _taskID_LedDebug = 1
     _taskID_Plug1Relay = 2
@@ -190,6 +197,9 @@ class SmartStrip(Agent):
         # subscribing to topic_price_point
         self.vip.pubsub.subscribe('pubsub', self._topic_price_point, self.on_new_price)
         
+        self._volt_state = 1
+        
+        _log.debug('switch on debug led')
         self.switchLedDebug(LED_ON)
         
         _log.debug('startup() - Done. Agent is ready')
@@ -198,12 +208,11 @@ class SmartStrip(Agent):
     @Core.receiver('onstop')
     def onstop(self, sender, **kwargs):
         _log.debug('onstop()')
-        self.switchLedDebug(LED_OFF)
-        self.switchRelay(PLUG_ID_1, RELAY_OFF, SCHEDULE_NOT_AVLB)
-        self.switchRelay(PLUG_ID_2, RELAY_OFF, SCHEDULE_NOT_AVLB)
-        self.switchRelay(PLUG_ID_3, RELAY_OFF, SCHEDULE_NOT_AVLB)
-        self.switchRelay(PLUG_ID_4, RELAY_OFF, SCHEDULE_NOT_AVLB)
-
+        if self._volt_state != 0:
+            self._stop_volt()
+        
+        unregister_with_bridge(self)
+        
         _log.debug('un registering rpc routes')
         self.vip.rpc.call(MASTER_WEB, 'unregister_all_agent_routes').get(timeout=10)
         return
@@ -211,11 +220,58 @@ class SmartStrip(Agent):
     @Core.receiver('onfinish')
     def onfinish(self, sender, **kwargs):
         _log.debug('onfinish()')
-        # self.switchLedDebug(LED_OFF)
-        # self.switchRelay(PLUG_ID_1, RELAY_OFF, SCHEDULE_NOT_AVLB)
-        # self.switchRelay(PLUG_ID_2, RELAY_OFF, SCHEDULE_NOT_AVLB)
-        # self.switchRelay(PLUG_ID_3, RELAY_OFF, SCHEDULE_NOT_AVLB)
-        # self.switchRelay(PLUG_ID_4, RELAY_OFF, SCHEDULE_NOT_AVLB)
+        _log.debug('onfinish()')
+        if self._volt_state != 0:
+            self._stop_volt()
+        return
+        
+    @RPC.export
+    def rpc_from_net(self, header, message):
+        result = False
+        try:
+            rpcdata = jsonrpc.JsonRpcData.parse(message)
+            _log.debug('rpc_from_net()...'
+                        #+ 'header: {}'.format(header)
+                        + ', rpc method: {}'.format(rpcdata.method)
+                        #+ ', rpc params: {}'.format(rpcdata.params)
+                        )
+            if rpcdata.method == 'ping':
+                result = True
+            else:
+                return jsonrpc.json_error(rpcdata.id, METHOD_NOT_FOUND,
+                                            'Invalid method {}'.format(rpcdata.method))
+        except KeyError as ke:
+            # print(ke)
+            return jsonrpc.json_error(rpcdata.id, INVALID_PARAMS,
+                                        'Invalid params {}'.format(rpcdata.params))
+        except Exception as e:
+            # print(e)
+            return jsonrpc.json_error(rpcdata.id, UNHANDLED_EXCEPTION, e)
+        return jsonrpc.json_result(rpcdata.id, result)
+        
+    @RPC.export
+    def ping(self):
+        return True
+        
+    def _stop_volt(self):
+        _log.debug('_stop_volt()')
+        task_id = str(randint(0, 99999999))
+        success = get_task_schdl(self, task_id,'iiit/cbs/zonecontroller')
+        if not success:
+            self._volt_state = 0
+            return
+        try:
+            self.switchLedDebug(LED_OFF)
+            self.switchRelay(PLUG_ID_1, RELAY_OFF, SCHEDULE_AVLB)
+            self.switchRelay(PLUG_ID_2, RELAY_OFF, SCHEDULE_AVLB)
+            self.switchRelay(PLUG_ID_3, RELAY_OFF, SCHEDULE_AVLB)
+            self.switchRelay(PLUG_ID_4, RELAY_OFF, SCHEDULE_AVLB)
+        except Exception as e:
+            _log.exception('Could not contact actuator. Is it running?')
+        finally:
+            # cancel the schedule
+            cancel_task_schdl(self, task_id)
+        self._volt_state = 0
         return
         
     def _config_get_init_values(self):
