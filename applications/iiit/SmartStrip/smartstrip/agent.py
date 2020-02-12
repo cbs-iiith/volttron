@@ -372,18 +372,6 @@ class SmartStrip(Agent):
         3. run necessary traditional control algorithm (PID, on/off, etc.,)
         
     '''
-    def _get_initial_hw_state(self):
-        # _log.debug('_get_initial_hw_state()')
-        task_id = str(randint(0, 99999999))
-        success = get_task_schdl(self, task_id, 'iiit/cbs/smarthub', 300)
-        if not success: return
-        
-        for plug_id, state in enumerate(self._plugs_relay_state):
-            self._plugs_relay_state[plug_id] = self._get_plug_relay_state(plug_id, SCHEDULE_AVLB)
-            
-        cancel_task_schdl(self, task_id)
-        return
-        
     # perodic function to publish h/w data to msg bus
     def publish_hw_data(self):
         # publish plug threshold price point to msg bus
@@ -402,6 +390,39 @@ class SmartStrip(Agent):
             if state == RELAY_ON: self._rpcget_meter_data(plug_id)
         cancel_task_schdl(self, task_id)
         
+        return
+        
+    def process_plugs_tag_id(self):
+        # _log.debug('get_plug_data()...')
+        
+        # get schedule for to h/w latest data
+        task_id = str(randint(0, 99999999))
+        success = get_task_schdl(self, task_id, 'iiit/cbs/smartstrip')
+        if not success: return
+        
+        log_msg = '[LOG] tag_ids - '
+        for plug_id, plug_tag_id in enumerate(self._plugs_tag_id):
+            plug_tag_id = self._rpcget_plug_tag_id(plug_id)
+            self._process_new_tag_id(plug_id, plug_tag_id)
+            log_msg += 'Plug_{}: {}'.format(plug_id, plug_tag_id)
+        # _log.debug('...done _process_new_tag_id()')
+        
+        # cancel the schedule
+        cancel_task_schdl(self, task_id)
+        
+        _log.info(log_msg)
+        return
+        
+    def _get_initial_hw_state(self):
+        # _log.debug('_get_initial_hw_state()')
+        task_id = str(randint(0, 99999999))
+        success = get_task_schdl(self, task_id, 'iiit/cbs/smarthub', 300)
+        if not success: return
+        
+        for plug_id, state in enumerate(self._plugs_relay_state):
+            self._plugs_relay_state[plug_id] = self._get_plug_relay_state(plug_id, SCHEDULE_AVLB)
+            
+        cancel_task_schdl(self, task_id)
         return
         
     def _get_plug_relay_state(self, plug_id, schd_exist):
@@ -425,101 +446,6 @@ class SmartStrip(Agent):
             _log.error('Error: not a valid param - schd_exist: {}'.format(schd_exist))
             return E_UNKNOWN_STATE
         return state
-        
-    def process_plugs_tag_id(self):
-        # _log.debug('get_plug_data()...')
-        
-        # get schedule for to h/w latest data
-        task_id = str(randint(0, 99999999))
-        success = get_task_schdl(self, task_id, 'iiit/cbs/smartstrip')
-        if not success: return
-        
-        log_msg = '[LOG] tag_ids - '
-        for plug_id, plug_tag_id in enumerate(self._plugs_tag_id):
-            plug_tag_id = self._rpcget_plug_tag_id(plug_id)
-            self._process_new_tag_id(plug_id, plug_tag_id)
-            log_msg += 'Plug_{}: {}'.format(plug_id, plug_tag_id)
-        # _log.debug('...done _process_new_tag_id()')
-        
-        # cancel the schedule
-        cancel_task_schdl(self, task_id)
-        
-        _log.info(log_msg)
-        return
-        
-    def _rpcget_meter_data(self, plug_id):
-        # _log.debug ('_rpcget_meter_data(), plug_id: ' + str(plug_id))
-        if not self._valid_plug_id(plug_id): return
-            
-        point_voltage = 'Plug' + str(plug_id + 1) + 'Voltage'
-        point_current = 'Plug' + str(plug_id + 1) + 'Current'
-        point_active_power = 'Plug' + str(plug_id + 1) +'ActivePower'
-        pub_topic = self._root_topic + '/plug' + str(plug_id + 1) + '/meterdata/all'
-        
-        try:
-            f_voltage = self.vip.rpc.call('platform.actuator'
-                                            , 'get_point'
-                                            , 'iiit/cbs/smartstrip/' + point_voltage
-                                            ).get(timeout=10)
-            # _log.debug('voltage: {:.2f}'.format(f_voltage))
-            f_current = self.vip.rpc.call('platform.actuator'
-                                            , 'get_point'
-                                            , 'iiit/cbs/smartstrip/' + point_current
-                                            ).get(timeout=10)
-            # _log.debug('current: {:.2f}'.format(f_current))
-            f_active_power = self.vip.rpc.call('platform.actuator'
-                                            , 'get_point'
-                                            , 'iiit/cbs/smartstrip/' + point_active_power
-                                            ).get(timeout=10)
-            # _log.debug('active: {:.2f}'.format(f_active_power))
-            
-            # keep track of plug active power
-            self._plugs_active_pwr[plug_id] = f_active_power
-            
-            # publish data to volttron bus
-            self._publish_meter_data(pub_topic, f_voltage, f_current, f_active_power)
-            
-            _log.info(('Plug {:d}: '.format(plug_id + 1)
-                    + 'voltage: {:.2f}'.format(f_voltage) 
-                    + ', Current: {:.2f}'.format(f_current)
-                    + ', ActivePower: {:.2f}'.format(f_active_power)
-                    ))
-        except gevent.Timeout:
-            _log.exception('gevent.Timeout in _rpcget_meter_data()')
-            return
-        except Exception as e:
-            _log.exception('exception in _rpcget_meter_data()')
-            print(e)
-            return
-        return
-        
-    def _rpcget_plug_tag_id(self, plug_id):
-        '''
-            Smart Strip bacnet server splits the 64 bit tag id 
-            into two parts and sends them accros as two float values.
-            Hence need to get both the points (floats value)
-            and recover the actual tag id
-        '''
-        tag_id = DEFAULT_TAG_ID
-        end_point_1 = 'TagID' + str(plug_id + 1) + '_1'
-        end_point_2 = 'TagID' + str(plug_id + 1) + '_2'
-        try:
-            f1_tag_id = self.vip.rpc.call('platform.actuator'
-                                            , 'get_point'
-                                            , 'iiit/cbs/smartstrip/' + end_point_1
-                                            ).get(timeout=10)
-            f2_tag_id = self.vip.rpc.call('platform.actuator'
-                                            ,'get_point'
-                                            , 'iiit/cbs/smartstrip/' + end_point_2
-                                            ).get(timeout=10)
-            tag_id = self._construct_tag_id(f1_tag_id, f2_tag_id)
-        except gevent.Timeout:
-            _log.exception('gevent.Timeout in _rpcget_tag_ids()')
-            pass
-        except Exception as e:
-            _log.exception('Exception: reading tag ids, message: {}'.format(e.message))
-            pass
-        return tag_id
         
     def _process_new_tag_id(self, plug_id, new_tag_id):
         # empty string
@@ -702,7 +628,81 @@ class SmartStrip(Agent):
                                         + ' {}!!!'.format(e.message))
             return E_UNKNOWN_STATE
         return relay_state
-
+        
+    def _rpcget_meter_data(self, plug_id):
+        # _log.debug ('_rpcget_meter_data(), plug_id: ' + str(plug_id))
+        if not self._valid_plug_id(plug_id): return
+            
+        point_voltage = 'Plug' + str(plug_id + 1) + 'Voltage'
+        point_current = 'Plug' + str(plug_id + 1) + 'Current'
+        point_active_power = 'Plug' + str(plug_id + 1) +'ActivePower'
+        pub_topic = self._root_topic + '/plug' + str(plug_id + 1) + '/meterdata/all'
+        
+        try:
+            f_voltage = self.vip.rpc.call('platform.actuator'
+                                            , 'get_point'
+                                            , 'iiit/cbs/smartstrip/' + point_voltage
+                                            ).get(timeout=10)
+            # _log.debug('voltage: {:.2f}'.format(f_voltage))
+            f_current = self.vip.rpc.call('platform.actuator'
+                                            , 'get_point'
+                                            , 'iiit/cbs/smartstrip/' + point_current
+                                            ).get(timeout=10)
+            # _log.debug('current: {:.2f}'.format(f_current))
+            f_active_power = self.vip.rpc.call('platform.actuator'
+                                            , 'get_point'
+                                            , 'iiit/cbs/smartstrip/' + point_active_power
+                                            ).get(timeout=10)
+            # _log.debug('active: {:.2f}'.format(f_active_power))
+            
+            # keep track of plug active power
+            self._plugs_active_pwr[plug_id] = f_active_power
+            
+            # publish data to volttron bus
+            self._publish_meter_data(pub_topic, f_voltage, f_current, f_active_power)
+            
+            _log.info(('Plug {:d}: '.format(plug_id + 1)
+                    + 'voltage: {:.2f}'.format(f_voltage) 
+                    + ', Current: {:.2f}'.format(f_current)
+                    + ', ActivePower: {:.2f}'.format(f_active_power)
+                    ))
+        except gevent.Timeout:
+            _log.exception('gevent.Timeout in _rpcget_meter_data()')
+            return
+        except Exception as e:
+            _log.exception('exception in _rpcget_meter_data()')
+            print(e)
+            return
+        return
+        
+    def _rpcget_plug_tag_id(self, plug_id):
+        '''
+            Smart Strip bacnet server splits the 64 bit tag id 
+            into two parts and sends them accros as two float values.
+            Hence need to get both the points (floats value)
+            and recover the actual tag id
+        '''
+        tag_id = DEFAULT_TAG_ID
+        end_point_1 = 'TagID' + str(plug_id + 1) + '_1'
+        end_point_2 = 'TagID' + str(plug_id + 1) + '_2'
+        try:
+            f1_tag_id = self.vip.rpc.call('platform.actuator'
+                                            , 'get_point'
+                                            , 'iiit/cbs/smartstrip/' + end_point_1
+                                            ).get(timeout=10)
+            f2_tag_id = self.vip.rpc.call('platform.actuator'
+                                            ,'get_point'
+                                            , 'iiit/cbs/smartstrip/' + end_point_2
+                                            ).get(timeout=10)
+            tag_id = self._construct_tag_id(f1_tag_id, f2_tag_id)
+        except gevent.Timeout:
+            _log.exception('gevent.Timeout in _rpcget_tag_ids()')
+            pass
+        except Exception as e:
+            _log.exception('Exception: reading tag ids, message: {}'.format(e.message))
+            pass
+        return tag_id
+        
     def _update_led_debug_state(self, state):
         _log.debug('_update_led_debug_state()')
         headers = { 'requesterID': self._agent_id, }
