@@ -281,7 +281,7 @@ class SmartHub(Agent):
     def _stopVolt(self):
         _log.debug('_stopVolt()')
         task_id = str(randint(0, 99999999))
-        success = get_task_schdl(self, task_id,'iiit/cbs/zonecontroller')
+        success = get_task_schdl(self, task_id,'iiit/cbs/smarthub')
         if not success:
             self._volt_state = 0
             return
