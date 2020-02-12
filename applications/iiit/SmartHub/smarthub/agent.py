@@ -1020,6 +1020,7 @@ class SmartHub(Agent):
             
         # any process that failed to apply pp sets this flag False
         self._process_opt_pp_success = True
+        
         task_id = str(randint(0, 99999999))
         success = get_task_schdl(self, task_id, 'iiit/cbs/smarthub')
         if not success:
@@ -1047,8 +1048,6 @@ class SmartHub(Agent):
         _log.info('New Price Point processed.')
         # on successful process of apply_pricing_policy with the latest opt pp, current = latest
         self._opt_pp_msg_current = copy(self._opt_pp_msg_latest)
-        self._price_point_current = copy(self._price_point_latest)
-        self._process_opt_pp_success = True
         return
         
     def _apply_pricing_policy(self, lhw_device_id, schd_exist):
@@ -1062,8 +1061,8 @@ class SmartHub(Agent):
                             + 'Switching-Off Power'
                             )
                 self._set_sh_device_state(lhw_device_id, SH_DEVICE_STATE_OFF, schd_exist)
-                if not self._sh_devices_state[lhw_device_id] == SH_DEVICE_STATE_OFF:
-                    self._process_opt_pp_success = True
+                if self._sh_devices_state[lhw_device_id] != SH_DEVICE_STATE_OFF:
+                    self._process_opt_pp_success = False
             # else:
                 # do nothing
         else:
@@ -1073,15 +1072,15 @@ class SmartHub(Agent):
                         + 'Switching-On Power'
                         )
             self._set_sh_device_state(lhw_device_id, SH_DEVICE_STATE_ON, schd_exist)
-            if not self._sh_devices_state[lhw_device_id] == SH_DEVICE_STATE_ON:
-                self._process_opt_pp_success = True
+            if self._sh_devices_state[lhw_device_id] != SH_DEVICE_STATE_ON:
+                self._process_opt_pp_success = False
                 
             if lhw_device_id == SH_DEVICE_FAN:
                 fan_speed = self._compute_new_fan_speed(self._price_point_latest) / 100
                 _log.info ( 'New Fan Speed: {0:.4f}'.format(fan_speed))
                 self._set_sh_device_level(SH_DEVICE_FAN, fan_speed, schd_exist)
                 if not isclose(fan_speed, self._sh_devices_level[lhw_device_id], EPSILON):
-                    self._process_opt_pp_success = True
+                    self._process_opt_pp_success = False
                     
         return
         

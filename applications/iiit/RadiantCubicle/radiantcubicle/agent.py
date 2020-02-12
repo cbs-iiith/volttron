@@ -487,7 +487,6 @@ class RadiantCubicle(Agent):
         self._process_opt_pp_success = True
         
         self._apply_pricing_policy()
-        
         if not self._process_opt_pp_success:
             _log.debug('unable to process_opt_pp()'
                             + ', will try again in {} sec'.format(self._period_process_pp))
@@ -496,8 +495,6 @@ class RadiantCubicle(Agent):
         _log.info('New Price Point processed.')
         # on successful process of apply_pricing_policy with the latest opt pp, current = latest
         self._opt_pp_msg_current = copy(self._opt_pp_msg_latest)
-        self._price_point_current = copy(self._price_point_latest)
-        self._process_opt_pp_success = True
         return
         
     def _apply_pricing_policy(self):

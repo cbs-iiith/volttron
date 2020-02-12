@@ -832,13 +832,6 @@ class SmartStrip(Agent):
         self.process_opt_pp()
         return
         
-    # this is a periodic function that
-    def process_bid_pp(self):
-        bid_ed = self.compute_bid_ed(self._bid_pp)
-        # publish bid_ed
-        
-        return
-        
     # this is a perodic function that keeps trying to apply the new pp till success
     def process_opt_pp(self):
         if self._process_opt_pp_success: return
@@ -867,7 +860,6 @@ class SmartStrip(Agent):
         _log.info('New Price Point processed.')
         # on successful process of apply_pricing_policy with the latest opt pp, current = latest
         self._opt_pp_msg_current = copy(self._opt_pp_msg_latest)
-        self._price_point_current = copy(self._price_point_latest)
         return
         
     def _apply_pricing_policy(self, plug_id, schdExist):
@@ -880,7 +872,7 @@ class SmartStrip(Agent):
                             , 'Switching-Off Power'
                             ))
                 self._switch_relay(plug_id, RELAY_OFF, schdExist)
-                if not self._plugs_relay_state[plug_id] == RELAY_OFF:
+                if self._plugs_relay_state[plug_id] != RELAY_OFF:
                     self._process_opt_pp_success = False
                     
             # else:
@@ -893,7 +885,7 @@ class SmartStrip(Agent):
                             , 'Switching-On Power'
                             ))
                 self._switch_relay(plug_id, RELAY_ON, schdExist)
-                if not self._plugs_relay_state[plug_id] == RELAY_ON:
+                if self._plugs_relay_state[plug_id] != RELAY_ON:
                     self._process_opt_pp_success = False
             # else:
                 # do nothing

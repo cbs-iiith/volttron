@@ -261,8 +261,9 @@ class BuildingController(Agent):
         return E_UNKNOWN_BPP
         
     # Publish new price to bms (for logging (or) for further processing by the BMS)
-    def _rpcset_bms_pp(self):
+    def _rpcset_bms_pp(self, new_pp):
         _log.debug('_rpcset_bms_pp()')
+        
         task_id = str(randint(0, 99999999))
         success = get_task_schdl(self, task_id, 'iiit/cbs/buildingcontroller')
         if not success: return
@@ -271,9 +272,9 @@ class BuildingController(Agent):
                                         , 'set_point'
                                         , self._agent_id
                                         , 'iiit/cbs/buildingcontroller/Building_PricePoint'
-                                        , self._price_point_latest
+                                        , new_pp
                                         ).get(timeout=10)
-            self._update_bms_pp()
+            self._update_bms_pp(new_pp)
         except gevent.Timeout:
             _log.exception('gevent.Timeout in _rpcset_bms_pp()!!!')
         except Exception as e:
@@ -284,19 +285,14 @@ class BuildingController(Agent):
             cancel_task_schdl(self, task_id)
         return
         
-    def _update_bms_pp(self):
-        # _log.debug('updateRmTsp()')
-        
+    def _update_bms_pp(self, new_pp):
         building_pp = self._rpcget_bms_pp()
-        _log.debug('latest_pp: {:0.2f}'.format(self._price_point_latest)
-                        + ' , building_pp {:0.2f}'.format(building_pp))
+        _log.debug('new_pp for bms: {:0.2f}'.format(new_pp)
+                        + ' , pp at bms {:0.2f}'.format(building_pp))
         
         # check if the pp really updated at the bms, only then proceed with new pp
-        if isclose(self._price_point_latest, building_pp, EPSILON):
+        if isclose(new_pp, building_pp, EPSILON):
             self._publish_bms_pp()
-        else:
-            self._process_opt_pp_success = False
-            
         return
         
     def _publish_bms_pp(self):
@@ -308,7 +304,8 @@ class BuildingController(Agent):
             
         pp_msg = copy(self._opt_pp_msg_latest)
         
-        pub_topic =  self._root_topic + '/Building_PricePoint'
+        # NOTE: not to be confused by "pricePoint_topic": "building/pricepoint" used by bridge
+        pub_topic =  self._root_topic + '/bms_pp'
         pub_msg = pp_msg.get_json_message(self._agent_id, 'bus_topic')
         _log.debug('publishing to local bus topic: {}'.format(pub_topic))
         _log.debug('Msg: {}'.format(pub_msg))
@@ -366,23 +363,28 @@ class BuildingController(Agent):
     def process_opt_pp(self):
         if self._process_opt_pp_success: return
             
-        self._rpcset_bms_pp()
+        # any process that failed to apply pp sets this flag False
+        self._process_opt_pp_success = True
+        
+        self._apply_pricing_policy()
         if not self._process_opt_pp_success:
-            self._apply_pricing_policy()
-            
-        if self._process_opt_pp_success:
             _log.debug('unable to process_opt_pp()'
-                            + ' , will try again in {} sec!!!'.format(self._period_process_pp))
+                        + ' , will try again in {} sec!!!'.format(self._period_process_pp))
             return
             
         _log.info('New Price Point processed.')
         # on successful process of apply_pricing_policy with the latest opt pp, current = latest
         self._opt_pp_msg_current = copy(self._opt_pp_msg_latest)
-        self._process_opt_pp_success = True
         return
         
     def _apply_pricing_policy(self):
         _log.debug('_apply_pricing_policy()')
+        new_pp = self._opt_pp_msg_latest.get_value()
+        self._rpcset_bms_pp(new_pp)
+        bms_pp = self._rpcget_bms_pp()
+        if not isclose(new_pp, bms_pp, EPSILON):
+            self._process_opt_pp_success = False
+
         # TODO: control the energy demand of devices at building level accordingly
         #      use self._opt_pp_msg_latest
         #      if applying self._price_point_latest failed, set self._process_opt_pp_success = False
