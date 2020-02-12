@@ -122,8 +122,8 @@ class SmartStrip(Agent):
         _log.debug('vip_identity: ' + self.core.identity)
         
         self.config = utils.load_config(config_path)
-        self._configGetPoints()
-        self._configGetInitValues()
+        self._config_get_points()
+        self._config_get_init_values()
         return
         
     @Core.receiver('onsetup')
@@ -134,11 +134,35 @@ class SmartStrip(Agent):
         
     @Core.receiver('onstart')
     def startup(self, sender, **kwargs):
-        _log.info('yeild 30s for volttron platform to initiate properly...')
-        time.sleep(30) # yeild for a movement
         _log.info('Starting SmartStrip...')
         
-        self.runSmartStripTest()
+        # retrive self._device_id and self._discovery_address from vb
+        retrive_details_from_vb(self, 5)
+        
+        # register rpc routes with MASTER_WEB
+        # register_rpc_route is a blocking call
+        register_rpc_route(self, 'smartstrip', 'rpc_from_net', 5)
+        
+        # register this agent with vb as local device for posting active power & bid energy demand
+        # pca picks up the active power & energy demand bids only if registered with vb
+        # require self._vb_vip_identity, self.core.identity, self._device_id
+        # register_with_bridge is a blocking call
+        register_with_bridge(self, 5)
+        
+        self._valid_senders_list_pp = ['iiit.pricecontroller']
+        
+        # any process that failed to apply pp sets this flag False
+        # setting False here to initiate applying default pp on agent start
+        self._process_opt_pp_success = False
+        
+        # on successful process of apply_pricing_policy with the latest opt pp, current = latest
+        self._opt_pp_msg_current = get_default_pp_msg(self._discovery_address, self._device_id)
+        # latest opt pp msg received on the message bus
+        self._opt_pp_msg_latest = get_default_pp_msg(self._discovery_address, self._device_id)
+        
+        self._bid_pp_msg_latest = get_default_pp_msg(self._discovery_address, self._device_id)
+        
+        self._run_smartstrip_test()
         
         # TODO: get the latest values (states/levels) from h/w
         # self.getInitialHwState()
@@ -154,21 +178,21 @@ class SmartStrip(Agent):
         # perodically publish plug threshold price point to volttron bus
         self.core.periodic(self._period_read_data, self.publishPlugThPP, wait=None)
         
-        # perodically publish total energy demand to volttron bus
-        self.core.periodic(self._period_read_data, self.publish_ted, wait=None)
+        # perodically publish total active power to volttron bus
+        # active power is comupted at regular interval (_period_read_data default(30s))
+        # this power corresponds to current opt pp
+        # tap --> total active power (Wh)
+        self.core.periodic(self._period_read_data, self.publish_opt_tap, wait=None)
         
         # perodically process new pricing point that keeps trying to apply the new pp till success
         self.core.periodic(self._period_process_pp, self.process_opt_pp, wait=None)
         
         # subscribing to topic_price_point
-        self.vip.pubsub.subscribe('pubsub', self.topic_price_point, self.on_new_price)
+        self.vip.pubsub.subscribe('pubsub', self._topic_price_point, self.on_new_price)
         
-        self.vip.rpc.call(MASTER_WEB, 'register_agent_route'
-                            , r'^/SmartStrip'
-                            , 'rpc_from_net'
-                            ).get(timeout=10)
-                      
         self.switchLedDebug(LED_ON)
+        
+        _log.debug('startup() - Done. Agent is ready')
         return
         
     @Core.receiver('onstop')
@@ -194,26 +218,25 @@ class SmartStrip(Agent):
         # self.switchRelay(PLUG_ID_4, RELAY_OFF, SCHEDULE_NOT_AVLB)
         return
         
-    def _configGetInitValues(self):
+    def _config_get_init_values(self):
         self._period_read_data = self.config.get('period_read_data', 30)
         self._period_process_pp = self.config.get('period_process_pp', 10)
-        self._price_point_old = self.config.get('default_base_price', 0.1)
         self._price_point_latest = self.config.get('price_point_latest', 0.2)
         self._tag_ids = self.config['tag_ids']
         self._plug_pricepoint_th = self.config['plug_pricepoint_th']
         self._sh_plug_id = self.config.get('smarthub_plug', 4) - 1
         return
         
-    def _configGetPoints(self):
-        self.root_topic = self.config.get('topic_root', 'smartstrip')
-        self.energyDemand_topic = self.config.get('topic_energy_demand',
-                                                    'smartstrip/energydemand')
-        self.topic_price_point = self.config.get('topic_price_point',
+    def _config_get_points(self):
+        self._root_topic = self.config.get('topic_root', 'smartstrip')
+        self._topic_price_point = self.config.get('topic_price_point',
                                                     'topic_price_point')
+        self._topic_energy_demand = self.config.get('topic_energy_demand',
+                                                    'smartstrip/energydemand')
         return
         
-    def runSmartStripTest(self):
-        _log.debug('Running: runSmartStripTest()...')
+    def _run_smartstrip_test(self):
+        _log.debug('Running: _run_smartstrip_test()...')
         _log.debug('switch on debug led')
         self.switchLedDebug(LED_ON)
         time.sleep(1)
@@ -328,7 +351,7 @@ class SmartStrip(Agent):
         pointVolatge = 'Plug'+str(plugID+1)+'Voltage'
         pointCurrent = 'Plug'+str(plugID+1)+'Current'
         pointActivePower = 'Plug'+str(plugID+1)+'ActivePower'
-        pubTopic = self.root_topic + '/plug' + str(plugID+1) + '/meterdata/all'
+        pubTopic = self._root_topic + '/plug' + str(plugID+1) + '/meterdata/all'
         
         try:
             fVolatge = self.vip.rpc.call('platform.actuator'
@@ -785,7 +808,7 @@ class SmartStrip(Agent):
         if not self._validPlugId(plugID):
             return
             
-        pubTopic = self.root_topic+'/plug'+str(plugID+1)+'/tagid'
+        pubTopic = self._root_topic + '/plug' + str(plugID+1) + '/tagid'
         pubMsg = [newTagId,{'units': '', 'tz': 'UTC', 'type': 'string'}]
         publish_to_bus(self, pubTopic, pubMsg)
         return
@@ -794,7 +817,7 @@ class SmartStrip(Agent):
         if not self._validPlugId(plugID):
             return
             
-        pubTopic = self.root_topic+'/plug' + str(plugID+1) + '/relaystate'
+        pubTopic = self._root_topic + '/plug' + str(plugID+1) + '/relaystate'
         pubMsg = [state,{'units': 'On/Off', 'tz': 'UTC', 'type': 'int'}]
         publish_to_bus(self, pubTopic, pubMsg)
         return
@@ -803,7 +826,7 @@ class SmartStrip(Agent):
         if not self._validPlugId(plugID):
             return
             
-        pubTopic = self.root_topic+'/plug' + str(plugID+1) + '/threshold'
+        pubTopic = self._root_topic + '/plug' + str(plugID+1) + '/threshold'
         pubMsg = [thresholdPP,{'units': 'cents', 'tz': 'UTC', 'type': 'float'}]
         publish_to_bus(self, pubTopic, pubMsg)
         return
@@ -859,7 +882,7 @@ class SmartStrip(Agent):
     def publish_ted(self):
         self._ted = self._calculate_ted()
         _log.info( 'New TED: {:.4f}, publishing to bus.'.format(self._ted))
-        pubTopic = self.energyDemand_topic
+        pubTopic = self._topic_energy_demand
         # _log.debug('TED pubTopic: ' + pubTopic)
         pubMsg = [self._ted
                     , {'units': 'W', 'tz': 'UTC', 'type': 'float'}
