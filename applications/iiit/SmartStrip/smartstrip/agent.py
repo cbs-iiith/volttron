@@ -625,7 +625,7 @@ class SmartStrip(Agent):
                         'iiit/cbs/smartstrip/LEDDebug',
                         state).get(timeout=10)
                         
-                self.updateLedDebugState(state)
+                self._update_led_debug_state(state)
             except gevent.Timeout:
                 _log.exception('gevent.Timeout in _switch_led_debug()')
             except Exception as e:
@@ -688,25 +688,25 @@ class SmartStrip(Agent):
             # return E_UNKNOWN_STATE
             
         # _log.debug('OK call updatePlug1RelayState()')
-        self.updatePlugRelayState(plug_id, state)
+        self._update_plug_relay_state(plug_id, state)
         return
         
-    def updateLedDebugState(self, state):
-        _log.debug('updateLedDebugState()')
+    def _update_led_debug_state(self, state):
+        _log.debug('_update_led_debug_state()')
         headers = { 'requesterID': self._agent_id, }
         try:
-            ledDebug_status = self.vip.rpc.call(
+            led_debug_state = self.vip.rpc.call(
                     'platform.actuator','get_point',
                     'iiit/cbs/smartstrip/LEDDebug').get(timeout=10)
         except gevent.Timeout:
-            _log.exception('gevent.Timeout in updateLedDebugState()')
-            ledDebug_status = E_UNKNOWN_STATE
+            _log.exception('gevent.Timeout in _update_led_debug_state()')
+            led_debug_state = E_UNKNOWN_STATE
         except Exception as e:
-            _log.exception('in updateLedDebugState() Could not contact actuator. Is it running?')
+            _log.exception('in _update_led_debug_state() Could not contact actuator. Is it running?')
             print(e)
-            ledDebug_status = E_UNKNOWN_STATE
+            led_debug_state = E_UNKNOWN_STATE
             
-        if state == int(ledDebug_status):
+        if state == int(led_debug_state):
             self._led_debug_state = state
             
         if state == LED_ON:
@@ -717,7 +717,7 @@ class SmartStrip(Agent):
             _log.info('Current State: LED Debug STATE UNKNOWN!!!')
         return
         
-    def updatePlugRelayState(self, plug_id, state):
+    def _update_plug_relay_state(self, plug_id, state):
         # _log.debug('updatePlug1RelayState()')
         headers = { 'requesterID': self._agent_id, }
         try:
@@ -725,16 +725,16 @@ class SmartStrip(Agent):
                     'platform.actuator','get_point',
                     'iiit/cbs/smartstrip/Plug' + str(plug_id+1) + 'Relay').get(timeout=10)
         except gevent.Timeout:
-            _log.exception('gevent.Timeout in updatePlugRelayState()')
+            _log.exception('gevent.Timeout in _update_plug_relay_state()')
             relay_status = E_UNKNOWN_STATE
         except Exception as e:
-            _log.exception('in updatePlugRelayState() Could not contact actuator. Is it running?')
+            _log.exception('in _update_plug_relay_state() Could not contact actuator. Is it running?')
             print(e)
             relay_status = E_UNKNOWN_STATE
             
         if state == int(relay_status):
             self._plugs_relay_state[plug_id] = state
-            self.publishRelayState(plug_id, state)
+            self._publish_plug_relay_state(plug_id, state)
             
         if state == RELAY_ON:
             _log.info('Current State: Plug ' + str(plug_id+1) + ' Relay Switched ON!!!')
@@ -763,7 +763,7 @@ class SmartStrip(Agent):
         publish_to_bus(self, pub_topic, pub_msg)
         return
         
-    def publishRelayState(self, plug_id, state):
+    def _publish_plug_relay_state(self, plug_id, state):
         if not self._valid_plug_id(plug_id):
             return
             
