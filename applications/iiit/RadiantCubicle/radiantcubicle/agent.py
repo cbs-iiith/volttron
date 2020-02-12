@@ -606,10 +606,10 @@ class RadiantCubicle(Agent):
         bid_pp = pp_msg.get_value()
         duration = pp_msg.get_duration()
         
-        # TODO: Sam
+        # TODO: ted should be computed based on some  predictive modeling
         # get actual tsp from energy functions
-        #bid_tsp = self._compute_rc_new_tsp(bid_pp)
-        #bid_ed = 
+        # bid_tsp = self._compute_rc_new_tsp(bid_pp)
+        # bid_ed = 
         
         ted = random() * 300
         
