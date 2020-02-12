@@ -98,23 +98,12 @@ class SmartStrip(Agent):
     
     _volt_state = 0
     
-    _taskID_LedDebug = 1
-    _taskID_Plug1Relay = 2
-    _taskID_Plug2Relay = 3
-    _taskID_ReadTagIDs = 4
-    _taskID_ReadMeterData = 5
-
-    _ledDebugState = 0
-    _plugRelayState = [0, 0, 0, 0]
-    _plugConnected = [ 0, 0, 0, 0]
-    _plugActivePwr = [0.0, 0.0, 0.0, 0.0]
-    _plug_tag_id = ['7FC000007FC00000', '7FC000007FC00000', '7FC000007FC00000', '7FC000007FC00000']
-    _plug_pricepoint_th = [0.35, 0.5, 0.75, 0.95]
-    
-    _price_point_current = 0.4 
-    _price_point_latest = 0.45
-    _pp_id = randint(0, 99999999)
-    _pp_id_latest = randint(0, 99999999)
+    _led_debug_state = 0
+    _plugs_relay_state = [0, 0, 0, 0]
+    _plugs_connected = [ 0, 0, 0, 0]
+    _plugs_active_pwr = [0.0, 0.0, 0.0, 0.0]
+    _plugs_tag_id = ['7FC000007FC00000', '7FC000007FC00000', '7FC000007FC00000', '7FC000007FC00000']
+    _plugs_th_pp = [0.35, 0.5, 0.75, 0.95]
     
     _newTagId1 = ''
     _newTagId2 = ''
@@ -180,10 +169,10 @@ class SmartStrip(Agent):
         # TODO: publish initial data to volttron bus
         
         # perodically read the meter data & connected tag ids from h/w
-        self.core.periodic(self._period_read_data, self.getData, wait=None)
+        self.core.periodic(self._period_read_data, self.get_plug_data, wait=None)
         
         # perodically publish plug threshold price point to volttron bus
-        self.core.periodic(self._period_read_data, self.publishPlugThPP, wait=None)
+        self.core.periodic(self._period_read_data, self.publish_plug_th_pp, wait=None)
         
         # perodically publish total active power to volttron bus
         # active power is comupted at regular interval (_period_read_data default(30s))
@@ -200,7 +189,7 @@ class SmartStrip(Agent):
         self._volt_state = 1
         
         _log.debug('switch on debug led')
-        self.switchLedDebug(LED_ON)
+        self._switch_led_debug(LED_ON)
         
         _log.debug('startup() - Done. Agent is ready')
         return
@@ -261,7 +250,7 @@ class SmartStrip(Agent):
             self._volt_state = 0
             return
         try:
-            self.switchLedDebug(LED_OFF)
+            self._switch_led_debug(LED_OFF)
             self.switchRelay(PLUG_ID_1, RELAY_OFF, SCHEDULE_AVLB)
             self.switchRelay(PLUG_ID_2, RELAY_OFF, SCHEDULE_AVLB)
             self.switchRelay(PLUG_ID_3, RELAY_OFF, SCHEDULE_AVLB)
@@ -279,7 +268,7 @@ class SmartStrip(Agent):
         self._period_process_pp = self.config.get('period_process_pp', 10)
         self._price_point_latest = self.config.get('price_point_latest', 0.2)
         self._tag_ids = self.config['tag_ids']
-        self._plug_pricepoint_th = self.config['plug_pricepoint_th']
+        self._plugs_th_pp = self.config['plug_pricepoint_th']
         self._sh_plug_id = self.config.get('smarthub_plug', 4) - 1
         return
         
@@ -293,25 +282,25 @@ class SmartStrip(Agent):
     def _run_smartstrip_test(self):
         _log.debug('Running: _run_smartstrip_test()...')
         _log.debug('switch on debug led')
-        self.switchLedDebug(LED_ON)
+        self._switch_led_debug(LED_ON)
         time.sleep(1)
         
         _log.debug('switch off debug led')
-        self.switchLedDebug(LED_OFF)
+        self._switch_led_debug(LED_OFF)
         time.sleep(1)
         
         _log.debug('switch on debug led')
-        self.switchLedDebug(LED_ON)
+        self._switch_led_debug(LED_ON)
         
-        self.testRelays()
+        self._test_relays()
         
         _log.debug('switch off debug led')
-        self.switchLedDebug(LED_OFF)
+        self._switch_led_debug(LED_OFF)
         _log.debug('EOF Testing')
         
         return
         
-    def testRelays(self):
+    def _test_relays(self):
         result = {}
         # get schedule for testing relays
         task_id = str(randint(0, 99999999))
@@ -348,19 +337,15 @@ class SmartStrip(Agent):
             cancel_task_schdl(self, task_id)
         return
         
-    def publishPlugThPP(self):
-        self.publishThresholdPP(PLUG_ID_1,
-                                self._plug_pricepoint_th[PLUG_ID_1])
-        self.publishThresholdPP(PLUG_ID_2,
-                                self._plug_pricepoint_th[PLUG_ID_2])
-        self.publishThresholdPP(PLUG_ID_3,
-                                self._plug_pricepoint_th[PLUG_ID_3])
-        self.publishThresholdPP(PLUG_ID_4,
-                                self._plug_pricepoint_th[PLUG_ID_4])
+    def publish_plug_th_pp(self):
+        self._publish_threshold_pp(PLUG_ID_1, self._plugs_th_pp[PLUG_ID_1])
+        self._publish_threshold_pp(PLUG_ID_2, self._plugs_th_pp[PLUG_ID_2])
+        self._publish_threshold_pp(PLUG_ID_3, self._plugs_th_pp[PLUG_ID_3])
+        self._publish_threshold_pp(PLUG_ID_4, self._plugs_th_pp[PLUG_ID_4])
         return
         
-    def getData(self):
-        # _log.debug('getData()...')
+    def get_plug_data(self):
+        # _log.debug('get_plug_data()...')
         result = {}
         
         # get schedule for to h/w latest data
@@ -372,17 +357,17 @@ class SmartStrip(Agent):
         if result['result'] == 'SUCCESS':
         
             # _log.debug('meterData()')
-            if self._plugRelayState[PLUG_ID_1] == RELAY_ON:
-                self.readMeterData(PLUG_ID_1)
+            if self._plugs_relay_state[PLUG_ID_1] == RELAY_ON:
+                self._rpcget_meter_data(PLUG_ID_1)
                 
-            if self._plugRelayState[PLUG_ID_2] == RELAY_ON:
-                self.readMeterData(PLUG_ID_2)
+            if self._plugs_relay_state[PLUG_ID_2] == RELAY_ON:
+                self._rpcget_meter_data(PLUG_ID_2)
                 
-            if self._plugRelayState[PLUG_ID_3] == RELAY_ON:
-                self.readMeterData(PLUG_ID_3)
+            if self._plugs_relay_state[PLUG_ID_3] == RELAY_ON:
+                self._rpcget_meter_data(PLUG_ID_3)
                 
-            if self._plugRelayState[PLUG_ID_4] == RELAY_ON:
-                self.readMeterData(PLUG_ID_4)
+            if self._plugs_relay_state[PLUG_ID_4] == RELAY_ON:
+                self._rpcget_meter_data(PLUG_ID_4)
                 
             # _log.debug('...readTagIDs()')
             self.readTagIDs()
@@ -398,8 +383,8 @@ class SmartStrip(Agent):
             cancel_task_schdl(self, task_id)
         return
         
-    def readMeterData(self, plugID):
-        # _log.debug ('readMeterData(), plugID: ' + str(plugID))
+    def _rpcget_meter_data(self, plugID):
+        # _log.debug ('_rpcget_meter_data(), plugID: ' + str(plugID))
         if plugID not in [PLUG_ID_1, PLUG_ID_2, PLUG_ID_3, PLUG_ID_4]:
             return
             
@@ -426,7 +411,7 @@ class SmartStrip(Agent):
             # _log.debug('active: {:.2f}'.format(fActivePower))
             
             # keep track of plug active power
-            self._plugActivePwr[plugID] = fActivePower
+            self._plugs_active_pwr[plugID] = fActivePower
             
             # publish data to volttron bus
             self.publishMeterData(pubTopic, fVolatge, fCurrent, fActivePower)
@@ -437,10 +422,10 @@ class SmartStrip(Agent):
                     + ', ActivePower: {:.2f}'.format(fActivePower)
                     ))
         except gevent.Timeout:
-            _log.exception('gevent.Timeout in readMeterData()')
+            _log.exception('gevent.Timeout in _rpcget_meter_data()')
             return
         except Exception as e:
-            _log.exception('exception in readMeterData()')
+            _log.exception('exception in _rpcget_meter_data()')
             print(e)
             return
         return
@@ -535,15 +520,15 @@ class SmartStrip(Agent):
         if newTagId != '7FC000007FC00000':
             # device is connected condition
             # check if current tag id is same as new, if so, do nothing
-            if newTagId == self._plug_tag_id[plugID]:
+            if newTagId == self._plugs_tag_id[plugID]:
                 return
             else:
                 # update the tag id and change connected state
-                self._plug_tag_id[plugID] = newTagId
+                self._plugs_tag_id[plugID] = newTagId
                 self.publishTagId(plugID, newTagId)
-                self._plugConnected[plugID] = 1
+                self._plugs_connected[plugID] = 1
                 if self.tagAuthorised(newTagId):
-                    plug_pp_th = self._plug_pricepoint_th[plugID]
+                    plug_pp_th = self._plugs_th_pp[plugID]
                     if self._price_point_latest < plug_pp_th:
                         _log.info(('Plug {:d}: '.format(plugID + 1),
                                 'Current price point < '
@@ -565,15 +550,15 @@ class SmartStrip(Agent):
                     
         else:
             # no device connected condition, new tag id is DEFAULT_TAG_ID
-            if self._plugConnected[plugID] == 0:
+            if self._plugs_connected[plugID] == 0:
                 return
-            elif self._plugConnected[plugID] == 1 or
-                    newTagId != self._plug_tag_id[plugID] or
-                    self._plugRelayState[plugID] == RELAY_ON:
+            elif self._plugs_connected[plugID] == 1 or
+                    newTagId != self._plugs_tag_id[plugID] or
+                    self._plugs_relay_state[plugID] == RELAY_ON:
                 # update the tag id and change connected state
-                self._plug_tag_id[plugID] = newTagId
+                self._plugs_tag_id[plugID] = newTagId
                 self.publishTagId(plugID, newTagId)
-                self._plugConnected[plugID] = 0
+                self._plugs_connected[plugID] = 0
                 self.switchRelay(plugID, RELAY_OFF, SCHEDULE_AVLB)
         return
         
@@ -645,29 +630,29 @@ class SmartStrip(Agent):
         return
         
     def _apply_pricing_policy(self, plugID, schdExist):
-        plug_pp_th = self._plug_pricepoint_th[plugID]
+        plug_pp_th = self._plugs_th_pp[plugID]
         if self._price_point_latest > plug_pp_th:
-            if self._plugRelayState[plugID] == RELAY_ON:
+            if self._plugs_relay_state[plugID] == RELAY_ON:
                 _log.info(('Plug {:d}: '.format(plugID + 1)
                             , 'Current price point > threshold'
                             , '({:.2f}), '.format(plug_pp_th)
                             , 'Switching-Off Power'
                             ))
                 self.switchRelay(plugID, RELAY_OFF, schdExist)
-                if not self._plugRelayState[plugID] == RELAY_OFF:
+                if not self._plugs_relay_state[plugID] == RELAY_OFF:
                     self._process_opt_pp_success = False
                     
             # else:
                 # do nothing
         else:
-            if self._plugConnected[plugID] == 1 and self.tagAuthorised(self._plug_tag_id[plugID]):
+            if self._plugs_connected[plugID] == 1 and self.tagAuthorised(self._plugs_tag_id[plugID]):
                 _log.info(('Plug {:d}: '.format(plugID + 1)
                             , 'Current price point < threshold'
                             , '({:.2f}), '.format(plug_pp_th)
                             , 'Switching-On Power'
                             ))
                 self.switchRelay(plugID, RELAY_ON, schdExist)
-                if not self._plugRelayState[plugID] == RELAY_ON:
+                if not self._plugs_relay_state[plugID] == RELAY_ON:
                     self._process_opt_pp_success = False
             # else:
                 # do nothing
@@ -699,22 +684,22 @@ class SmartStrip(Agent):
     @RPC.export
     def setThresholdPP(self, plugID, newThreshold):
         _log.debug('setThresholdPP()')
-        if self._plug_pricepoint_th[plugID] != newThreshold:
+        if self._plugs_th_pp[plugID] != newThreshold:
             _log.info(('Changing Threshold: Plug ',
                         str(plugID+1), ': ', newThreshold))
-            self._plug_pricepoint_th[plugID] = newThreshold
-            self.publishThresholdPP(plugID, newThreshold)
+            self._plugs_th_pp[plugID] = newThreshold
+            self._publish_threshold_pp(plugID, newThreshold)
         return 'success'
         
-    def switchLedDebug(self, state):
-        _log.debug('switchLedDebug()')
+    def _switch_led_debug(self, state):
+        _log.debug('_switch_led_debug()')
         # result = {}
         
-        if self._ledDebugState == state:
+        if self._led_debug_state == state:
             _log.info('same state, do nothing')
             return
             
-        # get schedule to switchLedDebug
+        # get schedule to _switch_led_debug
         task_id = str(randint(0, 99999999))
         # _log.debug('task_id: ' + task_id)
         result = get_task_schdl(self, task_id,'iiit/cbs/smartstrip')
@@ -732,7 +717,7 @@ class SmartStrip(Agent):
                         
                 self.updateLedDebugState(state)
             except gevent.Timeout:
-                _log.exception('gevent.Timeout in switchLedDebug()')
+                _log.exception('gevent.Timeout in _switch_led_debug()')
             except Exception as e:
                 _log.exception('setting ledDebug')
                 print(e)
@@ -744,7 +729,7 @@ class SmartStrip(Agent):
     def switchRelay(self, plugID, state, schdExist):
         # _log.debug('switchPlug1Relay()')
         
-        if self._plugRelayState[plugID] == state:
+        if self._plugs_relay_state[plugID] == state:
             _log.debug('same state, do nothing')
             return
             
@@ -812,7 +797,7 @@ class SmartStrip(Agent):
             ledDebug_status = E_UNKNOWN_STATE
             
         if state == int(ledDebug_status):
-            self._ledDebugState = state
+            self._led_debug_state = state
             
         if state == LED_ON:
             _log.info('Current State: LED Debug is ON!!!')
@@ -838,7 +823,7 @@ class SmartStrip(Agent):
             relay_status = E_UNKNOWN_STATE
             
         if state == int(relay_status):
-            self._plugRelayState[plugID] = state
+            self._plugs_relay_state[plugID] = state
             self.publishRelayState(plugID, state)
             
         if state == RELAY_ON:
@@ -877,7 +862,7 @@ class SmartStrip(Agent):
         publish_to_bus(self, pubTopic, pubMsg)
         return
         
-    def publishThresholdPP(self, plugID, thresholdPP):
+    def _publish_threshold_pp(self, plugID, thresholdPP):
         if not self._validPlugId(plugID):
             return
             
@@ -920,18 +905,18 @@ class SmartStrip(Agent):
     def _bid_ted(self):
         # _log.debug('_calculate_ted()')
         bid_ted = SMARTSTRIP_BASE_ENERGY
-        for idx in enumerate(self._plugRelayState):
+        for idx in enumerate(self._plugs_relay_state):
             if idx != self._sh_plug_id:
-                bid_ted = bid_ted + self._plugActivePwr[idx]
+                bid_ted = bid_ted + self._plugs_active_pwr[idx]
         return bid_ted
         
     # calculate the total energy demand (TED)
     def _calculate_ted(self):
         # _log.debug('_calculate_ted()')
         ted = SMARTSTRIP_BASE_ENERGY
-        for idx, plugState in enumerate(self._plugRelayState):
+        for idx, plugState in enumerate(self._plugs_relay_state):
             if plugState == RELAY_ON and idx != self._sh_plug_id:
-                ted = ted + self._plugActivePwr[idx]
+                ted = ted + self._plugs_active_pwr[idx]
         return ted
         
     def publish_ted(self):
