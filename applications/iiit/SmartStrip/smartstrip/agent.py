@@ -563,9 +563,9 @@ class SmartStrip(Agent):
             # no device connected condition, new tag id is DEFAULT_TAG_ID
             if self._plugs_connected[plug_id] == 0:
                 return
-            elif self._plugs_connected[plug_id] == 1 or
-                    new_tag_id != self._plugs_tag_id[plug_id] or
-                    self._plugs_relay_state[plug_id] == RELAY_ON:
+            elif (self._plugs_connected[plug_id] == 1
+                    or new_tag_id != self._plugs_tag_id[plug_id]
+                    or self._plugs_relay_state[plug_id] == RELAY_ON):
                 # update the tag id and change connected state
                 self._plugs_tag_id[plug_id] = new_tag_id
                 self._publish_tag_id(plug_id, new_tag_id)
@@ -613,7 +613,8 @@ class SmartStrip(Agent):
                                             , 'set_point'
                                             , self._agent_id
                                             , 'iiit/cbs/smartstrip/' + 'LEDDebug'
-                                            state).get(timeout=10)
+                                            , state
+                                            ).get(timeout=10)
                         
                 self._update_led_debug_state(state)
             except gevent.Timeout:
@@ -666,12 +667,12 @@ class SmartStrip(Agent):
         
         end_point = 'Plug' + str(plug_id + 1) + 'Relay'
         try:
-            result = self.vip.rpc.call(
-                    'platform.actuator', 
-                    'set_point',
-                    self._agent_id, 
-                    'iiit/cbs/smartstrip/' + end_point,
-                    state).get(timeout=10)
+            result = self.vip.rpc.call('platform.actuator'
+                                        , 'set_point'
+                                        , self._agent_id
+                                        , 'iiit/cbs/smartstrip/' + end_point
+                                        , state
+                                        ).get(timeout=10)
         except gevent.Timeout:
             _log.exception('gevent.Timeout in _rpcset_plug_relay_state()')
             # return E_UNKNOWN_STATE
@@ -688,9 +689,10 @@ class SmartStrip(Agent):
         
         end_point = 'Plug' + str(plug_id + 1) + 'Relay'
         try:
-            result = self.vip.rpc.call(
-                    'platform.actuator','get_point',
-                    'iiit/cbs/smartstrip/' + end_point).get(timeout=10)
+            result = self.vip.rpc.call('platform.actuator'
+                                        , 'get_point'
+                                        , 'iiit/cbs/smartstrip/' + end_point
+                                        ).get(timeout=10)
             relay_state = int(result)
         except gevent.Timeout:
             _log.exception('gevent.Timeout in _rpcget_plug_relay_state()')
@@ -705,9 +707,10 @@ class SmartStrip(Agent):
         _log.debug('_update_led_debug_state()')
         headers = { 'requesterID': self._agent_id, }
         try:
-            led_debug_state = self.vip.rpc.call(
-                    'platform.actuator','get_point',
-                    'iiit/cbs/smartstrip/LEDDebug').get(timeout=10)
+            led_debug_state = self.vip.rpc.call('platform.actuator'
+                                                , 'get_point'
+                                                , 'iiit/cbs/smartstrip/' + 'LEDDebug'
+                                                ).get(timeout=10)
         except gevent.Timeout:
             _log.exception('gevent.Timeout in _update_led_debug_state()')
             led_debug_state = E_UNKNOWN_STATE
