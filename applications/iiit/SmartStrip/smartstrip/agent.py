@@ -515,9 +515,6 @@ class SmartStrip(Agent):
         id_msb = bytearray(struct.pack('f', f2_tag_id))
         return (id_msb + id_lsb)
         
-    def _authorised_tag_id(self, tag_id):
-        return (True if tag_id in self._tag_ids else False)
-        
     def _switch_led_debug(self, state):
         _log.debug('_switch_led_debug()')
         # result = {}
@@ -615,11 +612,11 @@ class SmartStrip(Agent):
         
         end_point = 'Plug' + str(plug_id + 1) + 'Relay'
         try:
-            result = self.vip.rpc.call('platform.actuator'
+            state = self.vip.rpc.call('platform.actuator'
                                         , 'get_point'
                                         , 'iiit/cbs/smartstrip/' + end_point
                                         ).get(timeout=10)
-            relay_state = int(result)
+            relay_state = int(state)
         except gevent.Timeout:
             _log.exception('gevent.Timeout in _rpcget_plug_relay_state()')
             return E_UNKNOWN_STATE
@@ -636,7 +633,6 @@ class SmartStrip(Agent):
         point_voltage = 'Plug' + str(plug_id + 1) + 'Voltage'
         point_current = 'Plug' + str(plug_id + 1) + 'Current'
         point_active_power = 'Plug' + str(plug_id + 1) +'ActivePower'
-        pub_topic = self._root_topic + '/plug' + str(plug_id + 1) + '/meterdata/all'
         
         try:
             f_voltage = self.vip.rpc.call('platform.actuator'
@@ -659,7 +655,7 @@ class SmartStrip(Agent):
             self._plugs_active_pwr[plug_id] = f_active_power
             
             # publish data to volttron bus
-            self._publish_meter_data(pub_topic, f_voltage, f_current, f_active_power)
+            self._publish_meter_data(plug_id, f_voltage, f_current, f_active_power)
             
             _log.info(('Plug {:d}: '.format(plug_id + 1)
                     + 'voltage: {:.2f}'.format(f_voltage) 
@@ -668,11 +664,10 @@ class SmartStrip(Agent):
                     ))
         except gevent.Timeout:
             _log.exception('gevent.Timeout in _rpcget_meter_data()')
-            return
+            pass
         except Exception as e:
-            _log.exception('exception in _rpcget_meter_data()')
-            print(e)
-            return
+            _log.exception('Exception: reading meter data, message: {}'.format(e.message))
+            pass
         return
         
     def _rpcget_plug_tag_id(self, plug_id):
@@ -705,29 +700,27 @@ class SmartStrip(Agent):
         
     def _update_led_debug_state(self, state):
         _log.debug('_update_led_debug_state()')
-        headers = { 'requesterID': self._agent_id, }
+        end_point = 'LEDDebug'
         try:
-            led_debug_state = self.vip.rpc.call('platform.actuator'
-                                                , 'get_point'
-                                                , 'iiit/cbs/smartstrip/' + 'LEDDebug'
-                                                ).get(timeout=10)
+            state = self.vip.rpc.call('platform.actuator'
+                                        , 'get_point'
+                                        , 'iiit/cbs/smartstrip/' + end_point
+                                        ).get(timeout=10)
+            led_debug_state = int(state)
         except gevent.Timeout:
             _log.exception('gevent.Timeout in _update_led_debug_state()')
             led_debug_state = E_UNKNOWN_STATE
+            pass
         except Exception as e:
-            _log.exception('in _update_led_debug_state() Could not contact actuator. Is it running?')
-            print(e)
+            _log.exception('in _update_led_debug_state(), message: {}'.format(e.message))
             led_debug_state = E_UNKNOWN_STATE
+            pass
             
-        if state == int(led_debug_state):
-            self._led_debug_state = state
-            
-        if state == LED_ON:
-            _log.info('Current State: LED Debug is ON!!!')
-        elif state == LED_OFF:
-            _log.info('Current State: LED Debug is OFF!!!')
-        else:
-            _log.info('Current State: LED Debug STATE UNKNOWN!!!')
+        if state == led_debug_state: self._led_debug_state = state
+        
+        if state == LED_ON: _log.info('Current State: LED Debug is ON!!!')
+        elif state == LED_OFF: _log.info('Current State: LED Debug is OFF!!!')
+        else: _log.info('Current State: LED Debug STATE UNKNOWN!!!')
         return
         
     def _update_plug_relay_state(self, plug_id, state):
@@ -738,7 +731,7 @@ class SmartStrip(Agent):
             self._plugs_relay_state[plug_id] = state
             self._publish_plug_relay_state(plug_id, state)
             
-        if state == RELAY_ON:
+        if state == RELAY_ON: 
             _log.info('Current State: Plug ' + str(plug_id+1) + ' Relay Switched ON!!!')
         elif state == RELAY_OFF:
             _log.info('Current State: Plug ' + str(plug_id+1) + ' Relay Switched OFF!!!')
@@ -746,7 +739,8 @@ class SmartStrip(Agent):
             _log.info('Current State: Plug ' + str(plug_id+1) + ' Relay STATE UNKNOWN!!!')
         return
         
-    def _publish_meter_data(self, pub_topic, fVolatge, fCurrent, fActivePower):
+    def _publish_meter_data(self, plug_id, fVolatge, fCurrent, fActivePower):
+        pub_topic = self._root_topic + '/plug' + str(plug_id + 1) + '/meterdata/all'
         pub_msg = [{'voltage':fVolatge, 'current':fCurrent,
                     'active_power':fActivePower},
                     {'voltage':{'units': 'V', 'tz': 'UTC', 'type': 'float'},
@@ -757,8 +751,7 @@ class SmartStrip(Agent):
         return
         
     def _publish_tag_id(self, plug_id, new_tag_id):
-        if not self._valid_plug_id(plug_id):
-            return
+        if not self._valid_plug_id(plug_id): return
             
         pub_topic = self._root_topic + '/plug' + str(plug_id+1) + '/tagid'
         pub_msg = [new_tag_id,{'units': '', 'tz': 'UTC', 'type': 'string'}]
@@ -766,22 +759,23 @@ class SmartStrip(Agent):
         return
         
     def _publish_plug_relay_state(self, plug_id, state):
-        if not self._valid_plug_id(plug_id):
-            return
+        if not self._valid_plug_id(plug_id): return
             
         pub_topic = self._root_topic + '/plug' + str(plug_id+1) + '/relaystate'
-        pub_msg = [state,{'units': 'On/Off', 'tz': 'UTC', 'type': 'int'}]
+        pub_msg = [state, {'units': 'On/Off', 'tz': 'UTC', 'type': 'int'}]
         publish_to_bus(self, pub_topic, pub_msg)
         return
         
     def _publish_threshold_pp(self, plug_id, thresholdPP):
-        if not self._valid_plug_id(plug_id):
-            return
+        if not self._valid_plug_id(plug_id): return
             
         pub_topic = self._root_topic + '/plug' + str(plug_id+1) + '/threshold'
         pub_msg = [thresholdPP,{'units': 'cents', 'tz': 'UTC', 'type': 'float'}]
         publish_to_bus(self, pub_topic, pub_msg)
         return
+        
+    def _authorised_tag_id(self, tag_id):
+        return (True if tag_id in self._tag_ids else False)
         
     def _valid_plug_id(self, plug_id):
         return (True if plug_id < len(self._plugs_th_pp) else False)
