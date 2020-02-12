@@ -108,6 +108,8 @@ class SmartStrip(Agent):
     _led_debug_state = 0
     _plugs_relay_state = [0, 0, 0, 0]
     _plugs_connected = [ 0, 0, 0, 0]
+    _plugs_voltage = [0.0, 0.0, 0.0, 0.0]
+    _plugs_current = [0.0, 0.0, 0.0, 0.0]
     _plugs_active_pwr = [0.0, 0.0, 0.0, 0.0]
     _plugs_tag_id = [DEFAULT_TAG_ID, DEFAULT_TAG_ID, DEFAULT_TAG_ID, DEFAULT_TAG_ID]
     _plugs_th_pp = [0.35, 0.5, 0.75, 0.95]
@@ -165,14 +167,16 @@ class SmartStrip(Agent):
         # TODO: apply pricing policy for default values
         
         # publish initial data from hw to volttron bus
-        self.publish_hw_data()
+        #self.publish_hw_data()
         
         # perodically publish hw data to volttron bus. 
         # The data includes plug th_pp, meter data
         self.core.periodic(self._period_read_data, self.publish_hw_data, wait=None)
+        #time.sleep(5) #yeild
         
         # perodically process connected tag ids from h/w
-        self.core.periodic(self._period_read_data, self.process_plugs_tag_id, wait=None)
+        #self.core.periodic(self._period_read_data, self.process_plugs_tag_id, wait=None)
+        #time.sleep(5) #yeild
         
         # perodically publish total active power to volttron bus
         # active power is comupted at regular interval (_period_read_data default(30s))
@@ -180,6 +184,7 @@ class SmartStrip(Agent):
         # tap --> total active power (Wh)
         self.core.periodic(self._period_read_data, self.publish_opt_tap, wait=None)
         
+        #time.sleep(2) #yeild
         # perodically process new pricing point that keeps trying to apply the new pp till success
         self.core.periodic(self._period_process_pp, self.process_opt_pp, wait=None)
         
@@ -197,13 +202,15 @@ class SmartStrip(Agent):
     @Core.receiver('onstop')
     def onstop(self, sender, **kwargs):
         _log.debug('onstop()')
-        if self._volt_state != 0:
-            self._stop_volt()
-        
         unregister_with_bridge(self)
         
         _log.debug('un registering rpc routes')
         self.vip.rpc.call(MASTER_WEB, 'unregister_all_agent_routes').get(timeout=10)
+        
+        #switch-off h/w devices
+        if self._volt_state != 0:
+            self._stop_volt()
+            
         _log.debug('end onstop()')
         return
         
@@ -272,14 +279,14 @@ class SmartStrip(Agent):
     def _stop_volt(self):
         _log.debug('_stop_volt()')
         task_id = str(randint(0, 99999999))
-        success = get_task_schdl(self, task_id, 'iiit/cbs/smartstrip')
-        if not success:
-            self._volt_state = 0
-            return
-        for plug_id, state in enumerate(self._plugs_relay_state):
-            self._switch_relay(plug_id, RELAY_OFF, SCHEDULE_AVLB)
-        self._switch_led_debug(LED_OFF, SCHEDULE_AVLB)
-        cancel_task_schdl(self, task_id)
+        success = get_task_schdl(self, task_id, 'iiit/cbs/smartstrip', 4000)
+        if success:
+            for plug_id, state in enumerate(self._plugs_relay_state):
+                if plug_id == self._sh_plug_id: continue
+                self._rpcset_plug_relay_state(plug_id, RELAY_OFF)
+                
+            self._rpcset_led_debug_state(LED_OFF)
+            cancel_task_schdl(self, task_id)
         self._volt_state = 0
         _log.debug('end _stop_volt()')
         return
@@ -370,24 +377,49 @@ class SmartStrip(Agent):
     '''
     # perodic function to publish h/w data to msg bus
     def publish_hw_data(self):
+        
+        self.process_plugs_tag_id()
+        
         # publish plug threshold price point to msg bus
+        log_msg = '[LOG] plugs th_pp -'
         for plug_id, th_pp in enumerate(self._plugs_th_pp):
             self._publish_threshold_pp(plug_id, th_pp)
+            log_msg += ' Plug {:d}: {:0.2f}'.format(plug_id+1, th_pp)
+        _log.info(log_msg)
         
         # publish relay states to msg bus
+        log_msg = '[LOG] plugs state -'
         for plug_id, state in enumerate(self._plugs_relay_state):
             self._publish_plug_relay_state(plug_id, state)
+            s_state = ('ON' if state == RELAY_ON else 'OFF' if state == RELAY_OFF else 'UK')
+            log_msg += ' Plug {:d}: {}'.format(plug_id+1, s_state)
+        _log.info(log_msg)
         
         # read the meter data from h/w and publish to msg bus
         task_id = str(randint(0, 99999999))
-        success = get_task_schdl(self, task_id, 'iiit/cbs/smartstrip')
-        if not success:
-            _log.warning('no task schdl in publish_hw_data() to read meter data')
-            return
-        for plug_id, state in enumerate(self._plugs_relay_state):
-            if state == RELAY_ON: self._rpcget_meter_data(plug_id)
-        cancel_task_schdl(self, task_id)
+        success = get_task_schdl(self, task_id, 'iiit/cbs/smartstrip', 500)
+        if success:
+            for plug_id, state in enumerate(self._plugs_relay_state):
+                if state != RELAY_ON: continue
+                self._rpcget_meter_data(plug_id)
+            cancel_task_schdl(self, task_id)
+        else:
+            _log.warning('no task schdl in publish_hw_data() to read meter data'
+                                                + ', publishing last known data!!!')
         
+        # publish meter data to msg bus
+        for plug_id, state in enumerate(self._plugs_relay_state):
+            if state != RELAY_ON: continue
+            voltage = self._plugs_voltage[plug_id]
+            current = self._plugs_current[plug_id]
+            active_pwr = self._plugs_active_pwr[plug_id]
+            self._publish_meter_data(plug_id, voltage, current, active_pwr)
+            _log.info(('[LOG] Plug {:d}: '.format(plug_id + 1)
+                                + ' Voltage: {:.2f}'.format(voltage) 
+                                + ', Current: {:.2f}'.format(current)
+                                + ', ActivePower: {:.2f}'.format(active_pwr)
+                                ))
+                                
         return
         
     def process_plugs_tag_id(self):
@@ -395,9 +427,10 @@ class SmartStrip(Agent):
         
         # get schedule for to h/w latest data
         task_id = str(randint(0, 99999999))
-        success = get_task_schdl(self, task_id, 'iiit/cbs/smartstrip')
+        success = get_task_schdl(self, task_id, 'iiit/cbs/smartstrip', 500)
         if not success:
             _log.warning('no task schdl in process_plugs_tag_id() to read tag ids')
+            time.sleep(1) #yeild a sec
             return
         
         log_msg = '[LOG] tag_ids -'
@@ -515,7 +548,7 @@ class SmartStrip(Agent):
         return (id_msb + id_lsb)
         
     def _switch_led_debug(self, state, schdExist):
-        _log.debug('_switch_led_debug()')
+        #_log.debug('_switch_led_debug()')
         
         if self._led_debug_state == state:
             _log.info('same state, do nothing')
@@ -523,6 +556,7 @@ class SmartStrip(Agent):
             
         if schdExist == SCHEDULE_AVLB: 
             self._rpcset_led_debug_state(state)
+            self._update_led_debug_state(state)
         elif schdExist == SCHEDULE_NOT_AVLB:
             # get schedule to _switch_led_debug
             task_id = str(randint(0, 99999999))
@@ -531,9 +565,10 @@ class SmartStrip(Agent):
                 _log.warning('no task schdl for setting led debugb state')
                 return
             self._rpcset_led_debug_state(state)
+            self._update_led_debug_state(state)
             cancel_task_schdl(self, task_id)
         else:
-            # do notthing
+            # do nothing
             _log.warning('_switch_led_debug(), not a valid param schdExist: {}'.format(schdExist))
         return
         
@@ -546,6 +581,7 @@ class SmartStrip(Agent):
             
         if schdExist == SCHEDULE_AVLB: 
             self._rpcset_plug_relay_state(plug_id, state);
+            self._update_plug_relay_state(plug_id, state)
         elif schdExist == SCHEDULE_NOT_AVLB:
             # get schedule to _switch_relay
             task_id = str(randint(0, 99999999))
@@ -555,6 +591,7 @@ class SmartStrip(Agent):
                 _log.warning('no task schdl for setting relay state')
                 return
             self._rpcset_plug_relay_state(plug_id, state)
+            self._update_plug_relay_state(plug_id, state)
             cancel_task_schdl(self, task_id)
         else:
             # do notthing
@@ -572,7 +609,7 @@ class SmartStrip(Agent):
                                         , state
                                         ).get(timeout=10)
                     
-            self._update_led_debug_state(state)
+            #self._update_led_debug_state(state)
         except gevent.Timeout:
             _log.exception('gevent.Timeout in _rpcset_led_debug_state()')
             pass
@@ -602,7 +639,7 @@ class SmartStrip(Agent):
                                         + ' {}!!!'.format(e.message))
             pass
         # _log.debug('OK call updatePlug1RelayState()')
-        self._update_plug_relay_state(plug_id, state)
+        #self._update_plug_relay_state(plug_id, state)
         return
         
     def _rpcget_led_debug_state(self):
@@ -668,17 +705,11 @@ class SmartStrip(Agent):
                                             ).get(timeout=10)
             # _log.debug('active: {:.2f}'.format(f_active_power))
             
-            # keep track of plug active power
+            # keep track of plug meter data
+            self._plugs_voltage[plug_id] = f_voltage
+            self._plugs_current[plug_id] = f_current
             self._plugs_active_pwr[plug_id] = f_active_power
             
-            # publish data to volttron bus
-            self._publish_meter_data(plug_id, f_voltage, f_current, f_active_power)
-            
-            _log.info(('Plug {:d}: '.format(plug_id + 1)
-                    + 'voltage: {:.2f}'.format(f_voltage) 
-                    + ', Current: {:.2f}'.format(f_current)
-                    + ', ActivePower: {:.2f}'.format(f_active_power)
-                    ))
         except gevent.Timeout:
             _log.exception('gevent.Timeout in _rpcget_meter_data()')
             pass
@@ -716,7 +747,7 @@ class SmartStrip(Agent):
         return tag_id
         
     def _update_led_debug_state(self, state):
-        _log.debug('_update_led_debug_state()')
+        #_log.debug('_update_led_debug_state()')
         
         led_debug_state = self._rpcget_led_debug_state()
         if state == led_debug_state: self._led_debug_state = state
@@ -840,7 +871,7 @@ class SmartStrip(Agent):
         self._process_opt_pp_success = True
         
         task_id = str(randint(0, 99999999))
-        success = get_task_schdl(self, task_id, 'iiit/cbs/smartstrip')
+        success = get_task_schdl(self, task_id, 'iiit/cbs/smartstrip', 1000)
         if not success:
             _log.debug('unable to process_opt_pp()'
                             + ', will try again in {} sec'.format(self._period_process_pp))
@@ -857,7 +888,11 @@ class SmartStrip(Agent):
                 
         cancel_task_schdl(self, task_id)
         
-        _log.info('New Price Point processed.')
+        #_log.info('New Price Point processed.')
+        pp_msg = self._opt_pp_msg_latest
+        _log.debug('***** New opt price point from pca: {:0.2f}'.format(pp_msg.get_value())
+                                    + ' , price_id: {}'.format(pp_msg.get_price_id())
+                                    + ' - processed!!!')
         # on successful process of apply_pricing_policy with the latest opt pp, current = latest
         self._opt_pp_msg_current = copy(self._opt_pp_msg_latest)
         return
@@ -970,7 +1005,10 @@ class SmartStrip(Agent):
         _log.debug('local bus topic: {}'.format(pub_topic))
         _log. info('[LOG] Total Energy Demand(TED) bid, Msg: {}'.format(pub_msg))
         publish_to_bus(self, pub_topic, pub_msg)
-        _log.debug('Done!!!')
+        _log.debug('***** New bid price point from pca: {:0.2f}'.format(pp_msg.get_value())
+                                    + ' , price_id: {}'.format(pp_msg.get_price_id())
+                                    + ' - processed!!!')
+        #_log.debug('Done!!!')
         return
         
     # calculate the local energy demand for bid_pp
