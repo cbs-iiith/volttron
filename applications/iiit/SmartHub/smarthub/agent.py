@@ -1025,6 +1025,7 @@ class SmartHub(Agent):
         if not success:
             _log.debug('unable to process_opt_pp()'
                             + ', will try again in {} sec'.format(self._period_process_pp))
+            self._process_opt_pp_success = False
             return
             
         self._apply_pricing_policy(SH_DEVICE_LED, SCHEDULE_AVLB)
