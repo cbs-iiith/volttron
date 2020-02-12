@@ -74,7 +74,22 @@ def smartstrip(config_path, **kwargs):
 class SmartStrip(Agent):
     '''Smart Strip
     '''
-    _pp_failed = False
+    # initialized  during __init__ from config
+    _period_read_data = None
+    _period_process_pp = None
+    _price_point_latest = None
+    
+    _vb_vip_identity = None
+    _root_topic = None
+    _topic_energy_demand = None
+    _topic_price_point = None
+    
+    _device_id = None
+    _discovery_address = None
+    
+    # any process that failed to apply pp sets this flag False
+    _process_opt_pp_success = False
+    _process_opt_pp_success = False
     
     _taskID_LedDebug = 1
     _taskID_Plug1Relay = 2
@@ -525,14 +540,14 @@ class SmartStrip(Agent):
         if isclose(self._price_point_old, self._price_point_latest, EPSILON) and self._pp_id == self._pp_id_new:
             return
             
-        self._pp_failed = False     # any process that failed to apply pp, sets this flag True
+        self._process_opt_pp_success = True     # any process that failed to apply pp, sets this flag True
         # get schedule for testing relays
         task_id = str(randint(0, 99999999))
         # _log.debug('task_id: ' + task_id)
         result = get_task_schdl(self, task_id,'iiit/cbs/smartstrip')
         if result['result'] != 'SUCCESS':
             _log.debug('unable to process_opt_pp(), will try again in ' + str(self._period_process_pp))
-            self._pp_failed = True
+            self._process_opt_pp_success = False
             return
             
         self._apply_pricing_policy(PLUG_ID_1, SCHEDULE_AVLB)
@@ -542,7 +557,7 @@ class SmartStrip(Agent):
         # cancel the schedule
         cancel_task_schdl(self, task_id)
         
-        if self._pp_failed:
+        if self._process_opt_pp_success:
             _log.debug('unable to process_opt_pp(), will try again in ' + str(self._period_process_pp))
             return
             
@@ -562,7 +577,7 @@ class SmartStrip(Agent):
                             ))
                 self.switchRelay(plugID, RELAY_OFF, schdExist)
                 if not self._plugRelayState[plugID] == RELAY_OFF:
-                    self._pp_failed = True
+                    self._process_opt_pp_success = False
                     
             # else:
                 # do nothing
@@ -575,7 +590,7 @@ class SmartStrip(Agent):
                             ))
                 self.switchRelay(plugID, RELAY_ON, schdExist)
                 if not self._plugRelayState[plugID] == RELAY_ON:
-                    self._pp_failed = True
+                    self._process_opt_pp_success = False
             # else:
                 # do nothing
         return
