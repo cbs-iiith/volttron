@@ -388,38 +388,38 @@ class SmartStrip(Agent):
         if plug_id not in [PLUG_ID_1, PLUG_ID_2, PLUG_ID_3, PLUG_ID_4]:
             return
             
-        pointVolatge = 'Plug'+str(plug_id+1)+'Voltage'
-        pointCurrent = 'Plug'+str(plug_id+1)+'Current'
-        pointActivePower = 'Plug'+str(plug_id+1)+'ActivePower'
+        point_voltage = 'Plug' + str(plug_id+1) + 'Voltage'
+        point_current = 'Plug' + str(plug_id+1) + 'Current'
+        point_active_power = 'Plug' + str(plug_id+1) +'ActivePower'
         pub_topic = self._root_topic + '/plug' + str(plug_id+1) + '/meterdata/all'
         
         try:
-            fVolatge = self.vip.rpc.call('platform.actuator'
+            f_voltage = self.vip.rpc.call('platform.actuator'
                                             ,'get_point',
-                                            'iiit/cbs/smartstrip/' + pointVolatge
+                                            'iiit/cbs/smartstrip/' + point_voltage
                                             ).get(timeout=10)
-            # _log.debug('voltage: {:.2f}'.format(fVolatge))
-            fCurrent = self.vip.rpc.call('platform.actuator'
+            # _log.debug('voltage: {:.2f}'.format(f_voltage))
+            f_current = self.vip.rpc.call('platform.actuator'
                                             ,'get_point',
-                                            , 'iiit/cbs/smartstrip/' + pointCurrent
+                                            , 'iiit/cbs/smartstrip/' + point_current
                                             ).get(timeout=10)
-            # _log.debug('current: {:.2f}'.format(fCurrent))
-            fActivePower = self.vip.rpc.call('platform.actuator'
+            # _log.debug('current: {:.2f}'.format(f_current))
+            f_active_power = self.vip.rpc.call('platform.actuator'
                                             ,'get_point',
-                                            'iiit/cbs/smartstrip/' + pointActivePower
+                                            'iiit/cbs/smartstrip/' + point_active_power
                                             ).get(timeout=10)
-            # _log.debug('active: {:.2f}'.format(fActivePower))
+            # _log.debug('active: {:.2f}'.format(f_active_power))
             
             # keep track of plug active power
-            self._plugs_active_pwr[plug_id] = fActivePower
+            self._plugs_active_pwr[plug_id] = f_active_power
             
             # publish data to volttron bus
-            self._publish_meter_data(pub_topic, fVolatge, fCurrent, fActivePower)
+            self._publish_meter_data(pub_topic, f_voltage, f_current, f_active_power)
             
             _log.info(('Plug {:d}: '.format(plug_id + 1)
-                    + 'voltage: {:.2f}'.format(fVolatge) 
-                    + ', Current: {:.2f}'.format(fCurrent)
-                    + ', ActivePower: {:.2f}'.format(fActivePower)
+                    + 'voltage: {:.2f}'.format(f_voltage) 
+                    + ', Current: {:.2f}'.format(f_current)
+                    + ', ActivePower: {:.2f}'.format(f_active_power)
                     ))
         except gevent.Timeout:
             _log.exception('gevent.Timeout in _rpcget_meter_data()')
