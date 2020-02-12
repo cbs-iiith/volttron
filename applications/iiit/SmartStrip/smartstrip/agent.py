@@ -105,9 +105,6 @@ class SmartStrip(Agent):
     _plugs_tag_id = [DEFAULT_TAG_ID, DEFAULT_TAG_ID, DEFAULT_TAG_ID, DEFAULT_TAG_ID]
     _plugs_th_pp = [0.35, 0.5, 0.75, 0.95]
     
-    # smartstrip total energy demand
-    _ted = SMARTSTRIP_BASE_ENERGY
-    
     def __init__(self, config_path, **kwargs):
         super(SmartStrip, self).__init__(**kwargs)
         _log.debug('vip_identity: ' + self.core.identity)
@@ -835,33 +832,33 @@ class SmartStrip(Agent):
         
     # this is a perodic function that keeps trying to apply the new pp till success
     def process_opt_pp(self):
-        if isclose(self._price_point_old, self._price_point_latest, EPSILON) and self._pp_id == self._pp_id_new:
-            return
+        if self._process_opt_pp_success: return
             
-        self._process_opt_pp_success = True     # any process that failed to apply pp, sets this flag True
-        # get schedule for testing relays
+        # any process that failed to apply pp sets this flag False
+        self._process_opt_pp_success = True
         task_id = str(randint(0, 99999999))
-        # _log.debug('task_id: ' + task_id)
-        result = get_task_schdl(self, task_id, 'iiit/cbs/smartstrip')
-        if result['result'] != 'SUCCESS':
-            _log.debug('unable to process_opt_pp(), will try again in ' + str(self._period_process_pp))
+        success = get_task_schdl(self, task_id, 'iiit/cbs/smartstrip')
+        if not success:
+            _log.debug('unable to process_opt_pp()'
+                            + ', will try again in {} sec'.format(self._period_process_pp))
             self._process_opt_pp_success = False
             return
             
-        self._apply_pricing_policy(PLUG_ID_1, SCHEDULE_AVLB)
-        self._apply_pricing_policy(PLUG_ID_2, SCHEDULE_AVLB)
-        self._apply_pricing_policy(PLUG_ID_3, SCHEDULE_AVLB)
-        self._apply_pricing_policy(PLUG_ID_4, SCHEDULE_AVLB)
-        # cancel the schedule
+        for plug_id, th_pp in enumerate(self._plugs_th_pp):
+            self._apply_pricing_policy(plug_id, SCHEDULE_AVLB)
+            if self._process_opt_pp_success:
+                cancel_task_schdl(self, task_id)
+                _log.debug('unable to process_opt_pp()'
+                                + ', will try again in {} sec'.format(self._period_process_pp))
+                return
+                
         cancel_task_schdl(self, task_id)
         
-        if self._process_opt_pp_success:
-            _log.debug('unable to process_opt_pp(), will try again in ' + str(self._period_process_pp))
-            return
-            
         _log.info('New Price Point processed.')
-        self._price_point_old = self._price_point_latest
-        self._pp_id = self._pp_id_new
+        # on successful process of apply_pricing_policy with the latest opt pp, current = latest
+        self._opt_pp_msg_current = copy(self._opt_pp_msg_latest)
+        self._price_point_current = copy(self._price_point_latest)
+        self._process_opt_pp_success = True
         return
         
     def _apply_pricing_policy(self, plug_id, schdExist):
@@ -893,41 +890,108 @@ class SmartStrip(Agent):
                 # do nothing
         return
         
-    # calculate the bid total energy demand (TED)
-    def _bid_ted(self):
-        # _log.debug('_calculate_ted()')
-        bid_ted = SMARTSTRIP_BASE_ENERGY
-        for idx in enumerate(self._plugs_relay_state):
-            if idx != self._sh_plug_id:
-                bid_ted = bid_ted + self._plugs_active_pwr[idx]
-        return bid_ted
+    # perodic function to publish active power
+    def publish_opt_tap(self):
+        pp_msg = self._opt_pp_msg_current
+        price_id = pp_msg.get_price_id()
+        # compute total active power and publish to local/energydemand
+        # (vb RPCs this value to the next level)
+        opt_tap = self._calc_total_act_pwr()
         
-    # calculate the total energy demand (TED)
-    def _calculate_ted(self):
-        # _log.debug('_calculate_ted()')
-        ted = SMARTSTRIP_BASE_ENERGY
-        for idx, plugState in enumerate(self._plugs_relay_state):
-            if plugState == RELAY_ON and idx != self._sh_plug_id:
-                ted = ted + self._plugs_active_pwr[idx]
-        return ted
-        
-    def publish_ted(self):
-        self._ted = self._calculate_ted()
-        _log.info( 'New TED: {:.4f}, publishing to bus.'.format(self._ted))
+        # create a MessageType.active_power ISPACE_Msg
+        ap_msg = tap_helper(pp_msg
+                            , self._device_id
+                            , self._discovery_address
+                            , opt_tap
+                            , self._period_read_data
+                            )
+        _log. info('[LOG] Total Active Power(TAP) opt'
+                                    + ' for us opt pp_msg({})'.format(price_id)
+                                    + ': {:0.4f}'.format(opt_tap))
+        # publish the new price point to the local message bus
+        _log.debug('post to the local-bus...')
         pub_topic = self._topic_energy_demand
-        # _log.debug('TED pub_topic: ' + pub_topic)
-        pub_msg = [self._ted
-                    , {'units': 'W', 'tz': 'UTC', 'type': 'float'}
-                    , self._pp_id
-                    , True
-                    , None
-                    , None
-                    , None
-                    , self._period_read_data
-                    , datetime.datetime.utcnow().isoformat(' ') + 'Z'
-                    ]
+        pub_msg = ap_msg.get_json_message(self._agent_id, 'bus_topic')
+        _log.debug('local bus topic: {}'.format(pub_topic))
+        _log. info('[LOG] Total Active Power(TAP) opt, Msg: {}'.format(pub_msg))
         publish_to_bus(self, pub_topic, pub_msg)
         return
+        
+    # calculate total active power (tap)
+    def _calc_total_act_pwr(self):
+        # active pwr is measured in realtime from the connected plug
+        
+        #ss base energy demand
+        tap = SMARTSTRIP_BASE_ENERGY
+        
+        # connected plugs active power
+        for plug_id, state in enumerate(self._plugs_relay_state):
+            if (state == RELAY_ON
+                and plug_id != self._sh_plug_id
+                ):
+                tap += self._plugs_active_pwr[plug_id]
+                
+        return tap
+        
+    def _process_bid_pp(self, pp_msg):
+        self._bid_pp_msg_latest = copy(pp_msg)
+        self.process_bid_pp()
+        return
+        
+    # this is a perodic function that keeps trying to apply the new pp till success
+    def process_bid_pp(self):
+        self.publish_bid_ted()
+        return
+        
+    def publish_bid_ted(self):
+        pp_msg = self._bid_pp_msg_latest
+        price_id = pp_msg.get_price_id()
+        
+        # compute total bid energy demand and publish to local/energydemand
+        # (vb RPCs this value to the next level)
+        bid_ted = self._calc_total_energy_demand()
+        
+        # create a MessageType.energy ISPACE_Msg
+        ed_msg = ted_helper(pp_msg
+                            , self._device_id
+                            , self._discovery_address
+                            , bid_ted
+                            , self._period_read_data
+                            )
+        _log. info('[LOG] Total Energy Demand(TED) bid'
+                                    + ' for us bid pp_msg({})'.format(price_id)
+                                    + ': {:0.4f}'.format(bid_ted))
+                                    
+        # publish the new price point to the local message bus
+        _log.debug('post to the local-bus...')
+        pub_topic = self._topic_energy_demand
+        pub_msg = ed_msg.get_json_message(self._agent_id, 'bus_topic')
+        _log.debug('local bus topic: {}'.format(pub_topic))
+        _log. info('[LOG] Total Energy Demand(TED) bid, Msg: {}'.format(pub_msg))
+        publish_to_bus(self, pub_topic, pub_msg)
+        _log.debug('Done!!!')
+        return
+        
+    # calculate the local energy demand for bid_pp
+    # the bid energy is for self._bid_pp_duration (default 1hr)
+    # and this msg is valid for self._period_read_data (ttl - default 30s)
+    def _calc_total_energy_demand(self):
+        # TODO: ted should be computed based on some  predictive modeling
+        pp_msg = self._bid_pp_msg_latest
+        bid_pp = pp_msg.get_value()
+        duration = pp_msg.get_duration()
+        
+        #sh base energy demand
+        ted = calc_energy_wh(SMARTSTRIP_BASE_ENERGY, duration)
+        
+        # connected plugs active power
+        for plug_id, th_pp in enumerate(self._plugs_th_pp):
+            if (bid_pp > th_pp
+                or plug_id == self._sh_plug_id
+                ): pass
+            ted += calc_energy_wh(self._plugs_active_pwr[plug_id], duration)
+                
+        return ted
         
         
 def main(argv=sys.argv):
