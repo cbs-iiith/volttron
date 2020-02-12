@@ -258,7 +258,7 @@ class SmartStrip(Agent):
     @RPC.export
     def get_th_pp(self, plug_id):
         _log.debug('get_th_pp()')
-        return (self._plugs_th_pp[plug_id] if _valid_plug_id(plug_id) else 0)
+        return self._plugs_th_pp[plug_id]
         
     @RPC.export
     def set_th_pp(self, plug_id, new_th_pp):
@@ -267,6 +267,7 @@ class SmartStrip(Agent):
             _log.info(('Changing Threshold: Plug ',
                         str(plug_id+1), ': ', new_th_pp))
             self._plugs_th_pp[plug_id] = new_th_pp
+            self._apply_pricing_policy(plug_id, SCHEDULE_NOT_AVLB)
             self._publish_threshold_pp(plug_id, new_th_pp)
         return 'success'
         
