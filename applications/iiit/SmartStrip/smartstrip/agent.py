@@ -251,10 +251,10 @@ class SmartStrip(Agent):
             return
         try:
             self._switch_led_debug(LED_OFF)
-            self.switchRelay(PLUG_ID_1, RELAY_OFF, SCHEDULE_AVLB)
-            self.switchRelay(PLUG_ID_2, RELAY_OFF, SCHEDULE_AVLB)
-            self.switchRelay(PLUG_ID_3, RELAY_OFF, SCHEDULE_AVLB)
-            self.switchRelay(PLUG_ID_4, RELAY_OFF, SCHEDULE_AVLB)
+            self._switch_relay(PLUG_ID_1, RELAY_OFF, SCHEDULE_AVLB)
+            self._switch_relay(PLUG_ID_2, RELAY_OFF, SCHEDULE_AVLB)
+            self._switch_relay(PLUG_ID_3, RELAY_OFF, SCHEDULE_AVLB)
+            self._switch_relay(PLUG_ID_4, RELAY_OFF, SCHEDULE_AVLB)
         except Exception as e:
             _log.exception('Could not contact actuator. Is it running?')
         finally:
@@ -310,28 +310,28 @@ class SmartStrip(Agent):
         # test all four relays
         if result['result'] == 'SUCCESS':
             _log.debug('switch on relay 1')
-            self.switchRelay(PLUG_ID_1, RELAY_ON, True)
+            self._switch_relay(PLUG_ID_1, RELAY_ON, True)
             time.sleep(1)
             _log.debug('switch off relay 1')
-            self.switchRelay(PLUG_ID_1, RELAY_OFF, SCHEDULE_AVLB)
+            self._switch_relay(PLUG_ID_1, RELAY_OFF, SCHEDULE_AVLB)
             
             _log.debug('switch on relay 2')
-            self.switchRelay(PLUG_ID_2, RELAY_ON, SCHEDULE_AVLB)
+            self._switch_relay(PLUG_ID_2, RELAY_ON, SCHEDULE_AVLB)
             time.sleep(1)
             _log.debug('switch off relay 2')
-            self.switchRelay(PLUG_ID_2, RELAY_OFF, SCHEDULE_AVLB)
+            self._switch_relay(PLUG_ID_2, RELAY_OFF, SCHEDULE_AVLB)
             
             _log.debug('switch on relay 3')
-            self.switchRelay(PLUG_ID_3, RELAY_ON, SCHEDULE_AVLB)
+            self._switch_relay(PLUG_ID_3, RELAY_ON, SCHEDULE_AVLB)
             time.sleep(1)
             _log.debug('switch off relay 3')
-            self.switchRelay(PLUG_ID_3, RELAY_OFF, SCHEDULE_AVLB)
+            self._switch_relay(PLUG_ID_3, RELAY_OFF, SCHEDULE_AVLB)
             
             _log.debug('switch on relay 4')
-            self.switchRelay(PLUG_ID_4, RELAY_ON, SCHEDULE_AVLB)
+            self._switch_relay(PLUG_ID_4, RELAY_ON, SCHEDULE_AVLB)
             time.sleep(1)
             _log.debug('switch off relay 4')
-            self.switchRelay(PLUG_ID_4, RELAY_OFF, SCHEDULE_AVLB)
+            self._switch_relay(PLUG_ID_4, RELAY_OFF, SCHEDULE_AVLB)
             
             # cancel the schedule
             cancel_task_schdl(self, task_id)
@@ -518,14 +518,14 @@ class SmartStrip(Agent):
                 self._plugs_tag_id[plug_id] = newTagId
                 self._publish_tag_id(plug_id, newTagId)
                 self._plugs_connected[plug_id] = 1
-                if self.tagAuthorised(newTagId):
+                if self.is_tag_authorised(newTagId):
                     plug_pp_th = self._plugs_th_pp[plug_id]
                     if self._price_point_latest < plug_pp_th:
                         _log.info(('Plug {:d}: '.format(plug_id + 1),
                                 'Current price point < '
                                 'threshold {:.2f}, '.format(plug_pp_th),
                                 'Switching-on power'))
-                        self.switchRelay(plug_id, RELAY_ON, SCHEDULE_AVLB)
+                        self._switch_relay(plug_id, RELAY_ON, SCHEDULE_AVLB)
                     else:
                         _log.info(('Plug {:d}: '.format(plug_id + 1),
                                 'Current price point > threshold',
@@ -550,7 +550,7 @@ class SmartStrip(Agent):
                 self._plugs_tag_id[plug_id] = newTagId
                 self._publish_tag_id(plug_id, newTagId)
                 self._plugs_connected[plug_id] = 0
-                self.switchRelay(plug_id, RELAY_OFF, SCHEDULE_AVLB)
+                self._switch_relay(plug_id, RELAY_OFF, SCHEDULE_AVLB)
         return
         
     def on_new_price(self, peer, sender, bus,  topic, headers, message):
@@ -629,57 +629,53 @@ class SmartStrip(Agent):
                             , '({:.2f}), '.format(plug_pp_th)
                             , 'Switching-Off Power'
                             ))
-                self.switchRelay(plug_id, RELAY_OFF, schdExist)
+                self._switch_relay(plug_id, RELAY_OFF, schdExist)
                 if not self._plugs_relay_state[plug_id] == RELAY_OFF:
                     self._process_opt_pp_success = False
                     
             # else:
                 # do nothing
         else:
-            if self._plugs_connected[plug_id] == 1 and self.tagAuthorised(self._plugs_tag_id[plug_id]):
+            if self._plugs_connected[plug_id] == 1 and self.is_tag_authorised(self._plugs_tag_id[plug_id]):
                 _log.info(('Plug {:d}: '.format(plug_id + 1)
                             , 'Current price point < threshold'
                             , '({:.2f}), '.format(plug_pp_th)
                             , 'Switching-On Power'
                             ))
-                self.switchRelay(plug_id, RELAY_ON, schdExist)
+                self._switch_relay(plug_id, RELAY_ON, schdExist)
                 if not self._plugs_relay_state[plug_id] == RELAY_ON:
                     self._process_opt_pp_success = False
             # else:
                 # do nothing
         return
         
-    def _construct_tag_id(self, fTagIDPart1, fTagIDPart2):
-        buff = self.convertToByteArray(fTagIDPart1, fTagIDPart2)
+    def _construct_tag_id(self, f1_tag_id, f2_tag_id):
+        buff = self._convert_to_byte_array(f1_tag_id, f2_tag_id)
         tag = ''
         for i in reversed(buff):
             tag = tag + format(i, '02x')
         return tag.upper()
         
-    def convertToByteArray(self, fltVal1, fltVal2):
-        idLsb = bytearray(struct.pack('f', fltVal1))
-        # for id in idLsb:
+    def _convert_to_byte_array(self, f1_tag_id, f2_tag_id):
+        id_lsb = bytearray(struct.pack('f', f1_tag_id))
+        # for id in id_lsb:
         #    print 'id: {:02x}'.format(id)
-        idMsb = bytearray(struct.pack('f', fltVal2))
+        id_msb = bytearray(struct.pack('f', f2_tag_id))
         
-        idMsb = bytearray(struct.pack('f', fltVal2))
-        return (idMsb + idLsb)
+        id_msb = bytearray(struct.pack('f', f2_tag_id))
+        return (id_msb + id_lsb)
         
-    def tagAuthorised(self, tagID):
-        # return True
-        for authTagID in self._tag_ids:
-            if tagID == authTagID:
-                return True
-        return False
+    def is_tag_authorised(self, tag_id):
+        return (True if tag_id in self._tag_ids else False)
         
     @RPC.export
-    def setThresholdPP(self, plug_id, newThreshold):
-        _log.debug('setThresholdPP()')
-        if self._plugs_th_pp[plug_id] != newThreshold:
+    def set_th_pp(self, plug_id, new_th_pp):
+        _log.debug('set_th_pp()')
+        if self._plugs_th_pp[plug_id] != new_th_pp:
             _log.info(('Changing Threshold: Plug ',
-                        str(plug_id+1), ': ', newThreshold))
-            self._plugs_th_pp[plug_id] = newThreshold
-            self._publish_threshold_pp(plug_id, newThreshold)
+                        str(plug_id+1), ': ', new_th_pp))
+            self._plugs_th_pp[plug_id] = new_th_pp
+            self._publish_threshold_pp(plug_id, new_th_pp)
         return 'success'
         
     def _switch_led_debug(self, state):
@@ -717,7 +713,7 @@ class SmartStrip(Agent):
                 cancel_task_schdl(self, task_id)
         return
         
-    def switchRelay(self, plug_id, state, schdExist):
+    def _switch_relay(self, plug_id, state, schdExist):
         # _log.debug('switchPlug1Relay()')
         
         if self._plugs_relay_state[plug_id] == state:
@@ -725,19 +721,19 @@ class SmartStrip(Agent):
             return
             
         if schdExist == SCHEDULE_AVLB: 
-            self.rpc_switchRelay(plug_id, state);
+            self._rpcset_relay(plug_id, state);
         elif schdExist == SCHEDULE_NOT_AVLB:
-            # get schedule to switchRelay
+            # get schedule to _switch_relay
             task_id = str(randint(0, 99999999))
             # _log.debug('task_id: ' + task_id)
             result = get_task_schdl(self, task_id,'iiit/cbs/smartstrip')
             
             if result['result'] == 'SUCCESS':
                 try:
-                    self.rpc_switchRelay(plug_id, state)
+                    self._rpcset_relay(plug_id, state)
                     
                 except gevent.Timeout:
-                    _log.exception('gevent.Timeout in switchRelay()')
+                    _log.exception('gevent.Timeout in _switch_relay()')
                     return
                 except Exception as e:
                     _log.exception('setting plug' + str(plug_id) + ' relay')
@@ -752,7 +748,7 @@ class SmartStrip(Agent):
             return
         return
         
-    def rpc_switchRelay(self, plug_id, state):
+    def _rpcset_relay(self, plug_id, state):
         try:
             result = self.vip.rpc.call(
                     'platform.actuator', 
@@ -761,10 +757,10 @@ class SmartStrip(Agent):
                     'iiit/cbs/smartstrip/Plug' + str(plug_id+1) + 'Relay',
                     state).get(timeout=10)
         except gevent.Timeout:
-            _log.exception('gevent.Timeout in rpc_switchRelay()')
+            _log.exception('gevent.Timeout in _rpcset_relay()')
             # return E_UNKNOWN_STATE
         except Exception as e:
-            _log.exception('in rpc_switchRelay() Could not contact actuator. Is it running?')
+            _log.exception('in _rpcset_relay() Could not contact actuator. Is it running?')
             print(e)
             # return E_UNKNOWN_STATE
             
