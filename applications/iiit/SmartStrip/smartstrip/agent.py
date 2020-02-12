@@ -783,6 +783,9 @@ class SmartStrip(Agent):
         publish_to_bus(self, pub_topic, pub_msg)
         return
         
+    def _valid_plug_id(self, plug_id):
+        return (True if plug_id < len(self._plugs_th_pp) else False)
+        
     '''
         Functionality related to the market mechanisms
         
@@ -933,10 +936,7 @@ class SmartStrip(Agent):
         publish_to_bus(self, pub_topic, pub_msg)
         return
         
-    def _valid_plug_id(self, plug_id):
-        return (True if plug_id < len(self._plugs_th_pp) else False)
-            
-            
+        
 def main(argv=sys.argv):
     '''Main method called by the eggsecutable.'''
     try:
