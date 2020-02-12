@@ -105,10 +105,10 @@ class SmartStrip(Agent):
     _plugs_tag_id = ['7FC000007FC00000', '7FC000007FC00000', '7FC000007FC00000', '7FC000007FC00000']
     _plugs_th_pp = [0.35, 0.5, 0.75, 0.95]
     
-    _newTagId1 = ''
-    _newTagId2 = ''
-    _newTagId3 = ''
-    _newTagId4 = ''
+    _new_tag_id1 = ''
+    _new_tag_id2 = ''
+    _new_tag_id3 = ''
+    _new_tag_id4 = ''
     
     # smartstrip total energy demand
     _ted = SMARTSTRIP_BASE_ENERGY
@@ -369,14 +369,14 @@ class SmartStrip(Agent):
             if self._plugs_relay_state[PLUG_ID_4] == RELAY_ON:
                 self._rpcget_meter_data(PLUG_ID_4)
                 
-            # _log.debug('...readTagIDs()')
-            self.readTagIDs()
+            # _log.debug('..._rpcget_tag_ids()')
+            self._rpcget_tag_ids()
             
             # _log.debug('start processNewTagId()...')
-            self.processNewTagId(PLUG_ID_1, self._newTagId1)
-            self.processNewTagId(PLUG_ID_2, self._newTagId2)
-            self.processNewTagId(PLUG_ID_3, self._newTagId3)
-            self.processNewTagId(PLUG_ID_4, self._newTagId4)
+            self.processNewTagId(PLUG_ID_1, self._new_tag_id1)
+            self.processNewTagId(PLUG_ID_2, self._new_tag_id2)
+            self.processNewTagId(PLUG_ID_3, self._new_tag_id3)
+            self.processNewTagId(PLUG_ID_4, self._new_tag_id4)
             # _log.debug('...done processNewTagId()')
             
             # cancel the schedule
@@ -430,12 +430,12 @@ class SmartStrip(Agent):
             return
         return
         
-    def readTagIDs(self):
-        # _log.debug('readTagIDs()')
-        self._newTagId1 = ''
-        self._newTagId2 = ''
-        self._newTagId3 = ''
-        self._newTagId4 = ''
+    def _rpcget_tag_ids(self):
+        # _log.debug('_rpcget_tag_ids()')
+        self._new_tag_id1 = ''
+        self._new_tag_id2 = ''
+        self._new_tag_id3 = ''
+        self._new_tag_id4 = ''
         
         try:
             '''
@@ -444,66 +444,57 @@ class SmartStrip(Agent):
             Hence need to get both the points (floats value)
             and recover the actual tag id
             '''
-            newTagId1 = ''
-            newTagId2 = ''
-            newTagId3 = ''
-            newTagId4 = ''
-            
-            fTagID1_1 = self.vip.rpc.call('platform.actuator'
+            f1_tag_id_1 = self.vip.rpc.call('platform.actuator'
                                             ,'get_point',
                                             'iiit/cbs/smartstrip/TagID1_1'
                                             ).get(timeout=10)
                                             
-            fTagID1_2 = self.vip.rpc.call('platform.actuator'
+            f2_tag_id_1 = self.vip.rpc.call('platform.actuator'
                                             ,'get_point',
                                             , 'iiit/cbs/smartstrip/TagID1_2'
                                             ).get(timeout=10)
-            self._newTagId1 = self.recoveryTagID(fTagID1_1, fTagID1_2)
-            # _log.debug('Tag 1: ' + newTagId1)
+            self._new_tag_id1 = self._construct_tag_id(f1_tag_id_1, f2_tag_id_1)
             
             # get second tag id
-            fTagID2_1 = self.vip.rpc.call('platform.actuator'
+            f1_tag_id_2 = self.vip.rpc.call('platform.actuator'
                                             ,'get_point'
                                             , 'iiit/cbs/smartstrip/TagID2_1'
                                             ).get(timeout=10)
                     
-            fTagID2_2 = self.vip.rpc.call('platform.actuator'
+            f2_tag_id_2 = self.vip.rpc.call('platform.actuator'
                                             ,'get_point'
                                             , 'iiit/cbs/smartstrip/TagID2_2'
                                             ).get(timeout=10)
-            self._newTagId2 = self.recoveryTagID(fTagID2_1, fTagID2_2)
-            # _log.debug('Tag 2: ' + newTagId2)
+            self._new_tag_id2 = self._construct_tag_id(f1_tag_id_2, f2_tag_id_2)
             
             # get third tag id
-            fTagID3_1 = self.vip.rpc.call('platform.actuator'
+            f1_tag_id_3 = self.vip.rpc.call('platform.actuator'
                                             , 'get_point'
                                             , 'iiit/cbs/smartstrip/TagID3_1'
                                             ).get(timeout=10)
                     
-            fTagID3_2 = self.vip.rpc.call('platform.actuator'
+            f2_tag_id_3 = self.vip.rpc.call('platform.actuator'
                                             , 'get_point'
                                             , 'iiit/cbs/smartstrip/TagID3_2'
                                             ).get(timeout=10)
-            self._newTagId3 = self.recoveryTagID(fTagID3_1, fTagID3_2)
-            # _log.debug('Tag 3: ' + newTagId3)
+            self._new_tag_id3 = self._construct_tag_id(f1_tag_id_3, f2_tag_id_3)
             
             # get fourth tag id
-            fTagID4_1 = self.vip.rpc.call('platform.actuator'
+            f1_tag_id_4 = self.vip.rpc.call('platform.actuator'
                                             , 'get_point'
                                             , 'iiit/cbs/smartstrip/TagID4_1'
                                             ).get(timeout=10)
                     
-            fTagID4_2 = self.vip.rpc.call('platform.actuator'
+            f2_tag_id_4 = self.vip.rpc.call('platform.actuator'
                                             ,'get_point'
                                             , 'iiit/cbs/smartstrip/TagID4_2'
                                             ).get(timeout=10)
-            self._newTagId4 = self.recoveryTagID(fTagID4_1, fTagID4_2)
-            # _log.debug('Tag 4: ' + newTagId4)
+            self._new_tag_id4 = self._construct_tag_id(f1_tag_id_4, f2_tag_id_4)
             
-            _log.info('Tag 1: '+ self._newTagId1 +', Tag 2: ' + self._newTagId2 + ', Tag 3: '+ self._newTagId3 +', Tag 4: ' + self._newTagId4)
+            _log.info('Tag 1: '+ self._new_tag_id1 +', Tag 2: ' + self._new_tag_id2 + ', Tag 3: '+ self._new_tag_id3 +', Tag 4: ' + self._new_tag_id4)
             
         except gevent.Timeout:
-            _log.exception('gevent.Timeout in readTagIDs()')
+            _log.exception('gevent.Timeout in _rpcget_tag_ids()')
             return
         except Exception as e:
             _log.exception('Exception: reading tag ids')
@@ -658,7 +649,7 @@ class SmartStrip(Agent):
                 # do nothing
         return
         
-    def recoveryTagID(self, fTagIDPart1, fTagIDPart2):
+    def _construct_tag_id(self, fTagIDPart1, fTagIDPart2):
         buff = self.convertToByteArray(fTagIDPart1, fTagIDPart2)
         tag = ''
         for i in reversed(buff):
