@@ -689,11 +689,11 @@ class SmartHub(Agent):
         if not self._valid_device_action(lhw_device_id,AT_GET_STATE):
             _log.exception('not a valid device to get state, lhw_device_id: ' + str(lhw_device_id))
             return E_UNKNOWN_STATE
-        endPoint = self._get_lhw_end_point(lhw_device_id, AT_GET_STATE)
+        end_point = self._get_lhw_end_point(lhw_device_id, AT_GET_STATE)
         try:
             device_level = self.vip.rpc.call(
                     'platform.actuator','get_point',
-                    'iiit/cbs/smarthub/' + endPoint).get(timeout=10 )
+                    'iiit/cbs/smarthub/' + end_point).get(timeout=10 )
         except gevent.Timeout:
             _log.exception('gevent.Timeout in _rpcget_sh_device_state()')
             return E_UNKNOWN_STATE
@@ -710,13 +710,13 @@ class SmartHub(Agent):
         if not self._valid_device_action(lhw_device_id, AT_SET_STATE):
             _log.exception('not a valid device to change state, lhw_device_id: ' + str(lhw_device_id))
             return
-        endPoint = self._get_lhw_end_point(lhw_device_id, AT_SET_STATE)
+        end_point = self._get_lhw_end_point(lhw_device_id, AT_SET_STATE)
         try:
             result = self.vip.rpc.call(
                     'platform.actuator', 
                     'set_point',
                     self._agent_id, 
-                    'iiit/cbs/smarthub/' + endPoint,
+                    'iiit/cbs/smarthub/' + end_point,
                     state).get(timeout=10)
         except gevent.Timeout:
             _log.exception('gevent.Timeout in _rpcset_sh_device_state()')
@@ -725,7 +725,7 @@ class SmartHub(Agent):
             _log.exception('Could not contact actuator. Is it running?')
             # print(e)
             return
-        self._update_sh_device_state(lhw_device_id, endPoint,state)
+        self._update_sh_device_state(lhw_device_id, end_point,state)
         return
         
     def _rpcget_sh_device_level(self, lhw_device_id):
@@ -733,12 +733,12 @@ class SmartHub(Agent):
         if not self._valid_device_action(lhw_device_id, AT_GET_LEVEL):
             _log.exception('not a valid device to get level, lhw_device_id: ' + str(lhw_device_id))
             return E_UNKNOWN_LEVEL
-        endPoint = self._get_lhw_end_point(lhw_device_id, AT_GET_LEVEL)
-        # _log.debug('endPoint: ' + endPoint)
+        end_point = self._get_lhw_end_point(lhw_device_id, AT_GET_LEVEL)
+        # _log.debug('end_point: ' + end_point)
         try:
             device_level = self.vip.rpc.call(
                     'platform.actuator','get_point',
-                    'iiit/cbs/smarthub/' + endPoint).get(timeout=10)
+                    'iiit/cbs/smarthub/' + end_point).get(timeout=10)
             return device_level
         except gevent.Timeout:
             _log.exception('gevent.Timeout in _rpcget_sh_device_level()')
@@ -753,16 +753,16 @@ class SmartHub(Agent):
         if not self._valid_device_action(lhw_device_id, AT_SET_LEVEL):
             _log.exception('not a valid device to change level, lhw_device_id: ' + str(lhw_device_id))
             return
-        endPoint = self._get_lhw_end_point(lhw_device_id, AT_SET_LEVEL)
+        end_point = self._get_lhw_end_point(lhw_device_id, AT_SET_LEVEL)
         
         try:
             result = self.vip.rpc.call(
                     'platform.actuator', 
                     'set_point',
                     self._agent_id, 
-                    'iiit/cbs/smarthub/' + endPoint,
+                    'iiit/cbs/smarthub/' + end_point,
                     level).get(timeout=10)
-            self._updateShDeviceLevel(lhw_device_id, endPoint,level)
+            self._updateShDeviceLevel(lhw_device_id, end_point,level)
             return
         except gevent.Timeout:
             _log.exception('gevent.Timeout in _rpcset_sh_device_level()')
@@ -772,7 +772,7 @@ class SmartHub(Agent):
             # print(e)
             return
             
-    def _update_sh_device_state(self, lhw_device_id, endPoint, state):
+    def _update_sh_device_state(self, lhw_device_id, end_point, state):
         # _log.debug('_update_sh_device_state()')
         headers = { 'requesterID': self._agent_id, }
         
@@ -783,13 +783,13 @@ class SmartHub(Agent):
             self._publish_sh_device_state(lhw_device_id, state)
             
         if self._sh_devices_state[lhw_device_id] == SH_DEVICE_STATE_ON:
-            _log.debug('Current State: ' + endPoint + ' Switched ON!!!')
+            _log.debug('Current State: ' + end_point + ' Switched ON!!!')
         else:
-            _log.debug('Current State: ' + endPoint + ' Switched OFF!!!')
+            _log.debug('Current State: ' + end_point + ' Switched OFF!!!')
             
         return
         
-    def _updateShDeviceLevel(self, lhw_device_id, endPoint, level):
+    def _updateShDeviceLevel(self, lhw_device_id, end_point, level):
         # _log.debug('_updateShDeviceLevel()')
         
         _log.debug('level {0:0.4f}'.format( level))
@@ -800,7 +800,7 @@ class SmartHub(Agent):
             self._sh_devices_level[lhw_device_id] = level
             self._publish_sh_device_level(lhw_device_id, level)
             
-        _log.debug('Current level, ' + endPoint + ': ' + '{0:0.4f}'.format( device_level))
+        _log.debug('Current level, ' + end_point + ': ' + '{0:0.4f}'.format( device_level))
             
         return
         
@@ -896,7 +896,7 @@ class SmartHub(Agent):
             elif lhw_device_id == SH_DEVICE_FAN:
                 return 'Fan'
         
-        _log.exception('not a valid device-action type for endpoint')
+        _log.exception('not a valid device-action type for end_point')
         return ''
         
     def _valid_device_action(self, lhw_device_id, actionType):
