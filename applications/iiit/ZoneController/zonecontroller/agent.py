@@ -97,6 +97,9 @@ class ZoneController(Agent):
     _pf_zn_ac = None
     _pf_zn_light = None
     
+    _edf_zn_ac = None
+    _edf_zn_light = None
+    
     def __init__(self, config_path, **kwargs):
         super(ZoneController, self).__init__(**kwargs)
         _log.debug('vip_identity: ' + self.core.identity)
@@ -228,6 +231,9 @@ class ZoneController(Agent):
         
         self._pf_zn_ac = self.config.get('pf_zn_ac')
         self._pf_zn_light = self.config.get('pf_zn_light')
+        
+        self._edf_zn_ac = self.config.get('edf_zn_ac')
+        self._edf_zn_light = self.config.get('edf_zn_light')
         
         return
         
@@ -562,6 +568,34 @@ class ZoneController(Agent):
         lsp = a*pp**2 + b*pp + c
         return mround(lsp, roundup)
         
+    # compute ed ac from ed functions given tsp
+    def _compute_ed_ac(self, bid_tsp):
+        pp = 0 if pp < 0 else 1 if pp > 1 else pp
+        idx = self._edf_zn_light['idx']
+        roundup = self._edf_zn_light['roundup']
+        coefficients = self._edf_zn_light['coefficients']
+        
+        a = coefficients[idx]['a']
+        b = coefficients[idx]['b']
+        c = coefficients[idx]['c']
+        
+        ed_ac = a*bid_tsp**2 + b*bid_tsp + c
+        return mround(ed_ac, roundup)
+        
+    # compute ed lighting from ed functions given lsp
+    def _compute_ed_light(self, bid_lsp):
+        pp = 0 if pp < 0 else 1 if pp > 1 else pp
+        idx = self._edf_zn_light['idx']
+        roundup = self._edf_zn_light['roundup']
+        coefficients = self._edf_zn_light['coefficients']
+        
+        a = coefficients[idx]['a']
+        b = coefficients[idx]['b']
+        c = coefficients[idx]['c']
+        
+        ed_light = a*bid_lsp**2 + b*bid_lsp + c
+        return mround(ed_light, roundup)
+        
     # perodic function to publish active power
     def publish_opt_tap(self):
         pp_msg = self._opt_pp_msg_current
@@ -647,32 +681,13 @@ class ZoneController(Agent):
         bid_pp = pp_msg.get_value()
         duration = pp_msg.get_duration()
         
-        #bid_tsp = self._compute_new_tsp(bid_pp)
-        #bid_lsp = self._compute_new_lsp(bid_pp)
+        bid_tsp = self._compute_new_tsp(bid_pp)
+        bid_lsp = self._compute_new_lsp(bid_pp)
         
+        ed_ac = self._compute_ed_ac(bid_tsp)
+        ed_light = self._compute_ed_light(bid_lsp)
         
-        # TODO: Sam
-        # get actual tsp from energy functions
-        ted = 0
-        tsp = self._zone_tsp
-        if isclose(tsp, 22.0, EPSILON):
-            ted = 6500
-        elif isclose(tsp, 23.0, EPSILON):
-            ted = 6000
-        elif isclose(tsp, 24.0, EPSILON):
-            ted = 5500
-        elif isclose(tsp, 25.0, EPSILON):
-            ted = 5000
-        elif isclose(tsp, 26.0, EPSILON):
-            ted = 4500
-        elif isclose(tsp, 27.0, EPSILON):
-            ted = 4000
-        elif isclose(tsp, 28.0, EPSILON):
-            ted = 2000
-        elif isclose(tsp, 29.0, EPSILON):
-            ted = 1000
-        else :
-            ted = 500
+        ted = ed_ac + ed_light
         return ted
         
         
