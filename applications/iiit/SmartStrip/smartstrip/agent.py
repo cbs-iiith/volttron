@@ -105,11 +105,6 @@ class SmartStrip(Agent):
     _plugs_tag_id = ['7FC000007FC00000', '7FC000007FC00000', '7FC000007FC00000', '7FC000007FC00000']
     _plugs_th_pp = [0.35, 0.5, 0.75, 0.95]
     
-    _new_tag_id1 = ''
-    _new_tag_id2 = ''
-    _new_tag_id3 = ''
-    _new_tag_id4 = ''
-    
     # smartstrip total energy demand
     _ted = SMARTSTRIP_BASE_ENERGY
     
@@ -463,18 +458,18 @@ class SmartStrip(Agent):
         
         try:
             f_voltage = self.vip.rpc.call('platform.actuator'
-                                            ,'get_point',
-                                            'iiit/cbs/smartstrip/' + point_voltage
+                                            , 'get_point'
+                                            , 'iiit/cbs/smartstrip/' + point_voltage
                                             ).get(timeout=10)
             # _log.debug('voltage: {:.2f}'.format(f_voltage))
             f_current = self.vip.rpc.call('platform.actuator'
-                                            ,'get_point',
+                                            , 'get_point'
                                             , 'iiit/cbs/smartstrip/' + point_current
                                             ).get(timeout=10)
             # _log.debug('current: {:.2f}'.format(f_current))
             f_active_power = self.vip.rpc.call('platform.actuator'
-                                            ,'get_point',
-                                            'iiit/cbs/smartstrip/' + point_active_power
+                                            , 'get_point'
+                                            , 'iiit/cbs/smartstrip/' + point_active_power
                                             ).get(timeout=10)
             # _log.debug('active: {:.2f}'.format(f_active_power))
             
@@ -614,12 +609,11 @@ class SmartStrip(Agent):
             result = {}
             try:
                 # _log.debug('schl avlb')
-                result = self.vip.rpc.call(
-                        'platform.actuator', 
-                        'set_point',
-                        self._agent_id, 
-                        'iiit/cbs/smartstrip/LEDDebug',
-                        state).get(timeout=10)
+                result = self.vip.rpc.call('platform.actuator'
+                                            , 'set_point'
+                                            , self._agent_id
+                                            , 'iiit/cbs/smartstrip/' + 'LEDDebug'
+                                            state).get(timeout=10)
                         
                 self._update_led_debug_state(state)
             except gevent.Timeout:
@@ -937,10 +931,7 @@ class SmartStrip(Agent):
         return
         
     def _valid_plug_id(self, plug_id):
-        if plug_id == PLUG_ID_1 or plug_id == PLUG_ID_2 or plug_id == PLUG_ID_3 or plug_id == PLUG_ID_4:
-            return True
-        else:
-            return False
+        return (True if plug_id < len(self._plugs_th_pp) else False)
             
             
 def main(argv=sys.argv):
