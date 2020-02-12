@@ -61,9 +61,16 @@ PLUG_ID_1 = 0
 PLUG_ID_2 = 1
 PLUG_ID_3 = 2
 PLUG_ID_4 = 3
+
 DEFAULT_TAG_ID = '7FC000007FC00000'
+
 SCHEDULE_AVLB = 1
 SCHEDULE_NOT_AVLB = 0
+
+E_UNKNOWN_DEVICE = -1
+E_UNKNOWN_STATE = -2
+E_UNKNOWN_LEVEL = -3
+
 
 # smartstrip base peak energy (200mA * 12V)
 SMARTSTRIP_BASE_ENERGY = 2
@@ -182,7 +189,7 @@ class SmartStrip(Agent):
         self._volt_state = 1
         
         _log.debug('switch on debug led')
-        self._switch_led_debug(LED_ON)
+        self._switch_led_debug(LED_ON, SCHEDULE_NOT_AVLB)
         
         _log.debug('startup() - Done. Agent is ready')
         return
@@ -197,14 +204,12 @@ class SmartStrip(Agent):
         
         _log.debug('un registering rpc routes')
         self.vip.rpc.call(MASTER_WEB, 'unregister_all_agent_routes').get(timeout=10)
+        _log.debug('end onstop()')
         return
         
     @Core.receiver('onfinish')
     def onfinish(self, sender, **kwargs):
-        _log.debug('onfinish()')
-        _log.debug('onfinish()')
-        if self._volt_state != 0:
-            self._stop_volt()
+        _log.debug('onfinish() -  do nothing!!!')
         return
         
     @RPC.export
@@ -271,18 +276,12 @@ class SmartStrip(Agent):
         if not success:
             self._volt_state = 0
             return
-        try:
-            self._switch_led_debug(LED_OFF)
-            self._switch_relay(PLUG_ID_1, RELAY_OFF, SCHEDULE_AVLB)
-            self._switch_relay(PLUG_ID_2, RELAY_OFF, SCHEDULE_AVLB)
-            self._switch_relay(PLUG_ID_3, RELAY_OFF, SCHEDULE_AVLB)
-            self._switch_relay(PLUG_ID_4, RELAY_OFF, SCHEDULE_AVLB)
-        except Exception as e:
-            _log.exception('Could not contact actuator. Is it running?')
-        finally:
-            # cancel the schedule
-            cancel_task_schdl(self, task_id)
+        for plug_id, state in enumerate(self._plugs_relay_state):
+            self._switch_relay(plug_id, RELAY_OFF, SCHEDULE_AVLB)
+        self._switch_led_debug(LED_OFF, SCHEDULE_AVLB)
+        cancel_task_schdl(self, task_id)
         self._volt_state = 0
+        _log.debug('end _stop_volt()')
         return
         
     def _config_get_init_values(self):
@@ -304,20 +303,20 @@ class SmartStrip(Agent):
     def _run_smartstrip_test(self):
         _log.debug('Running: _run_smartstrip_test()...')
         _log.debug('switch on debug led')
-        self._switch_led_debug(LED_ON)
+        self._switch_led_debug(LED_ON, SCHEDULE_NOT_AVLB)
         time.sleep(1)
         
         _log.debug('switch off debug led')
-        self._switch_led_debug(LED_OFF)
+        self._switch_led_debug(LED_OFF, SCHEDULE_NOT_AVLB)
         time.sleep(1)
         
         _log.debug('switch on debug led')
-        self._switch_led_debug(LED_ON)
+        self._switch_led_debug(LED_ON, SCHEDULE_NOT_AVLB)
         
         self._test_relays()
         
         _log.debug('switch off debug led')
-        self._switch_led_debug(LED_OFF)
+        self._switch_led_debug(LED_OFF, SCHEDULE_NOT_AVLB)
         _log.debug('EOF Testing')
         
         return
@@ -382,7 +381,9 @@ class SmartStrip(Agent):
         # read the meter data from h/w and publish to msg bus
         task_id = str(randint(0, 99999999))
         success = get_task_schdl(self, task_id, 'iiit/cbs/smartstrip')
-        if not success: return
+        if not success:
+            _log.warning('no task schdl in publish_hw_data() to read meter data')
+            return
         for plug_id, state in enumerate(self._plugs_relay_state):
             if state == RELAY_ON: self._rpcget_meter_data(plug_id)
         cancel_task_schdl(self, task_id)
@@ -395,13 +396,15 @@ class SmartStrip(Agent):
         # get schedule for to h/w latest data
         task_id = str(randint(0, 99999999))
         success = get_task_schdl(self, task_id, 'iiit/cbs/smartstrip')
-        if not success: return
+        if not success:
+            _log.warning('no task schdl in process_plugs_tag_id() to read tag ids')
+            return
         
-        log_msg = '[LOG] tag_ids - '
+        log_msg = '[LOG] tag_ids -'
         for plug_id, plug_tag_id in enumerate(self._plugs_tag_id):
             plug_tag_id = self._rpcget_plug_tag_id(plug_id)
             self._process_new_tag_id(plug_id, plug_tag_id)
-            log_msg += 'Plug_{}: {}'.format(plug_id, plug_tag_id)
+            log_msg += ' Plug_{}: {}'.format(plug_id+1, plug_tag_id)
         # _log.debug('...done _process_new_tag_id()')
         
         # cancel the schedule
@@ -511,21 +514,27 @@ class SmartStrip(Agent):
         id_msb = bytearray(struct.pack('f', f2_tag_id))
         return (id_msb + id_lsb)
         
-    def _switch_led_debug(self, state):
+    def _switch_led_debug(self, state, schdExist):
         _log.debug('_switch_led_debug()')
         
         if self._led_debug_state == state:
             _log.info('same state, do nothing')
             return
             
-        # get schedule to _switch_led_debug
-        task_id = str(randint(0, 99999999))
-        success = get_task_schdl(self, task_id, 'iiit/cbs/smartstrip')
-        if not success: 
-            _log.warning('no task schdl for setting led debugb state')
-            return
-        self._rpcset_led_debug_state(state)
-        cancel_task_schdl(self, task_id)
+        if schdExist == SCHEDULE_AVLB: 
+            self._rpcset_led_debug_state(state)
+        elif schdExist == SCHEDULE_NOT_AVLB:
+            # get schedule to _switch_led_debug
+            task_id = str(randint(0, 99999999))
+            success = get_task_schdl(self, task_id, 'iiit/cbs/smartstrip')
+            if not success: 
+                _log.warning('no task schdl for setting led debugb state')
+                return
+            self._rpcset_led_debug_state(state)
+            cancel_task_schdl(self, task_id)
+        else:
+            # do notthing
+            _log.warning('_switch_led_debug(), not a valid param schdExist: {}'.format(schdExist))
         return
         
     def _switch_relay(self, plug_id, state, schdExist):
@@ -836,6 +845,7 @@ class SmartStrip(Agent):
             
         # any process that failed to apply pp sets this flag False
         self._process_opt_pp_success = True
+        
         task_id = str(randint(0, 99999999))
         success = get_task_schdl(self, task_id, 'iiit/cbs/smartstrip')
         if not success:
@@ -846,7 +856,7 @@ class SmartStrip(Agent):
             
         for plug_id, th_pp in enumerate(self._plugs_th_pp):
             self._apply_pricing_policy(plug_id, SCHEDULE_AVLB)
-            if self._process_opt_pp_success:
+            if not self._process_opt_pp_success:
                 cancel_task_schdl(self, task_id)
                 _log.debug('unable to process_opt_pp()'
                                 + ', will try again in {} sec'.format(self._period_process_pp))
@@ -858,7 +868,6 @@ class SmartStrip(Agent):
         # on successful process of apply_pricing_policy with the latest opt pp, current = latest
         self._opt_pp_msg_current = copy(self._opt_pp_msg_latest)
         self._price_point_current = copy(self._price_point_latest)
-        self._process_opt_pp_success = True
         return
         
     def _apply_pricing_policy(self, plug_id, schdExist):

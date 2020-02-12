@@ -303,7 +303,7 @@ class VolttronBridge(Agent):
     @RPC.export
     def get_ds_device_ids(self):
         # _log.debug('rpc get_ds_device_ids(): {}'.format(self._ds_device_ids))
-        return self._ds_device_ids
+        return (self._ds_device_ids if self._bridge_host != 'LEVEL_TAILEND' else [])
         
     @RPC.export
     def local_ed_agents(self):
@@ -318,7 +318,7 @@ class VolttronBridge(Agent):
     @RPC.export
     def count_ds_devices(self):
         # _log.debug('rpc count_ds_devices(): {}'.format(len(self._ds_device_ids)))
-        return len(self._ds_device_ids)
+        return (len(self._ds_device_ids) if self._bridge_host != 'LEVEL_TAILEND' else 0)
         
     @RPC.export
     def count_local_devices(self):
