@@ -226,6 +226,19 @@ class SmartStrip(Agent):
                         )
             if rpcdata.method == 'ping':
                 result = True
+            elif rpcdata.method == 'plug-th-pp' and header['REQUEST_METHOD'] == 'GET':
+                if not _validplug_id(rpcdata.params['plug_id']): 
+                    raise KeyError('invalid plug id')
+                args = {'plug_id': rpcdata.params['plug_id']
+                        }
+                result = self.get_th_pp(**args)
+            elif rpcdata.method == 'plug-th-pp' and header['REQUEST_METHOD'] == 'POST':
+                if not _validplug_id(rpcdata.params['plug_id']): 
+                    raise KeyError('invalid plug id')
+                args = {'plug_id': rpcdata.params['plug_id'],
+                        'new_th_pp': rpcdata.params['new_th_pp']
+                        }
+                result = self.set_th_pp(**args)
             else:
                 return jsonrpc.json_error(rpcdata.id, METHOD_NOT_FOUND,
                                             'Invalid method {}'.format(rpcdata.method))
@@ -241,6 +254,21 @@ class SmartStrip(Agent):
     @RPC.export
     def ping(self):
         return True
+        
+    @RPC.export
+    def get_th_pp(self, plug_id):
+        _log.debug('get_th_pp()')
+        return (self._plugs_th_pp[plug_id] if _validplug_id(plug_id) else 0)
+        
+    @RPC.export
+    def set_th_pp(self, plug_id, new_th_pp):
+        _log.debug('set_th_pp()')
+        if self._plugs_th_pp[plug_id] != new_th_pp:
+            _log.info(('Changing Threshold: Plug ',
+                        str(plug_id+1), ': ', new_th_pp))
+            self._plugs_th_pp[plug_id] = new_th_pp
+            self._publish_threshold_pp(plug_id, new_th_pp)
+        return 'success'
         
     def _stop_volt(self):
         _log.debug('_stop_volt()')
@@ -668,16 +696,6 @@ class SmartStrip(Agent):
     def is_tag_authorised(self, tag_id):
         return (True if tag_id in self._tag_ids else False)
         
-    @RPC.export
-    def set_th_pp(self, plug_id, new_th_pp):
-        _log.debug('set_th_pp()')
-        if self._plugs_th_pp[plug_id] != new_th_pp:
-            _log.info(('Changing Threshold: Plug ',
-                        str(plug_id+1), ': ', new_th_pp))
-            self._plugs_th_pp[plug_id] = new_th_pp
-            self._publish_threshold_pp(plug_id, new_th_pp)
-        return 'success'
-        
     def _switch_led_debug(self, state):
         _log.debug('_switch_led_debug()')
         # result = {}
@@ -858,36 +876,6 @@ class SmartStrip(Agent):
         publish_to_bus(self, pub_topic, pub_msg)
         return
         
-    @RPC.export
-    def rpc_from_net(self, header, message):
-        result = False
-        try:
-            rpcdata = jsonrpc.JsonRpcData.parse(message)
-            _log.debug('rpc_from_net()...'
-                        + 'header: {}'.format(header)
-                        + ', rpc method: {}'.format(rpcdata.method)
-                        + ', rpc params: {}'.format(rpcdata.params)
-                        )
-            if rpcdata.method == 'ping':
-                result = True
-            elif rpcdata.method == 'setPlugThPP':
-                result = self.setThresholdPP(message)
-            else:
-                return jsonrpc.json_error('NA', METHOD_NOT_FOUND,
-                    'Invalid method {}'.format(rpcdata.method))
-        except KeyError as ke:
-            print(ke)
-            return jsonrpc.json_error('NA', INVALID_PARAMS,
-                    'Invalid params {}'.format(rpcdata.params))
-        except AssertionError:
-            print('AssertionError')
-            return jsonrpc.json_error('NA', INVALID_REQUEST,
-                    'Invalid rpc data {}'.format(data))
-        except Exception as e:
-            print(e)
-            return jsonrpc.json_error('NA', UNHANDLED_EXCEPTION, e)
-        return jsonrpc.json_result(rpcdata.id, result)
-            
     # calculate the bid total energy demand (TED)
     def _bid_ted(self):
         # _log.debug('_calculate_ted()')
