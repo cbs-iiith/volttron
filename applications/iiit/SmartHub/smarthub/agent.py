@@ -217,7 +217,7 @@ class SmartHub(Agent):
     def onstop(self, sender, **kwargs):
         _log.debug('onstop()')
         if self._volt_state != 0:
-            self._stopVolt()
+            self._stop_volt()
         
         unregister_with_bridge(self)
         
@@ -229,7 +229,7 @@ class SmartHub(Agent):
     def onfinish(self, sender, **kwargs):
         _log.debug('onfinish()')
         if self._volt_state != 0:
-            self._stopVolt()
+            self._stop_volt()
         return 
         
     @RPC.export
@@ -278,8 +278,8 @@ class SmartHub(Agent):
     def ping(self):
         return True
         
-    def _stopVolt(self):
-        _log.debug('_stopVolt()')
+    def _stop_volt(self):
+        _log.debug('_stop_volt()')
         task_id = str(randint(0, 99999999))
         success = get_task_schdl(self, task_id,'iiit/cbs/smarthub')
         if not success:
