@@ -99,7 +99,7 @@ def get_default_ap_msg(discovery_address, device_id):
 #a default energy demand message
 def get_default_ed_msg(discovery_address, device_id):
     return ISPACE_Msg(MessageType.energy_demand, False, True
-                        , 0, 'float', 'kWh'
+                        , 0, 'float', 'Wh'
                         , None
                         , discovery_address, device_id
                         , None, None
