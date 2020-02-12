@@ -172,6 +172,9 @@ class SmartStrip(Agent):
         # The data includes plug th_pp, meter data, tag_ids
         self.core.periodic(self._period_read_data, self.publish_hw_data, wait=None)
         
+        # perodically read the meter data & connected tag ids from h/w
+        self.core.periodic(self._period_read_data, self.get_plug_data, wait=None)
+        
         # perodically publish total active power to volttron bus
         # active power is comupted at regular interval (_period_read_data default(30s))
         # this power corresponds to current opt pp
@@ -386,21 +389,24 @@ class SmartStrip(Agent):
         cancel_task_schdl(self, task_id)
         return
         
+    # perodic function to publish h/w data to msg bus
     def publish_hw_data(self):
-        # perodically read the meter data & connected tag ids from h/w
-        self.get_plugs_data()
+        # publish plug threshold price point to msg bus
+        for plug_id, th_pp in enumerate(self._plugs_th_pp):
+            self._publish_threshold_pp(plug_id, th_pp)
         
-        # perodically publish plug threshold price point to volttron bus
-        self.publish_plugs_th_pp()
-        
-        # TODO: do we need to publish relay states to volttron bus at regular interval?
-        #self.publish_plugs_relay_states()
-        
-        return
-        
-    def publish_plugs_relay_state(self):
+        # publish relay states to msg bus
         for plug_id, state in enumerate(self._plugs_relay_state):
             self._publish_plug_relay_state(plug_id, state)
+        
+        # read the meter data from h/w and publish to msg bus
+        task_id = str(randint(0, 99999999))
+        success = get_task_schdl(self, task_id,'iiit/cbs/smartstrip')
+        if not success: return
+        for plug_id, state in enumerate(self._plugs_relay_state):
+            if state == RELAY_ON: self._rpcget_meter_data(plug_id)
+        cancel_task_schdl(self, task_id)
+        
         return
         
     def _get_plug_relay_state(self, plug_id, schd_exist):
@@ -425,48 +431,24 @@ class SmartStrip(Agent):
             return E_UNKNOWN_STATE
         return state
         
-    def publish_plugs_th_pp(self):
-        for plug_id, th_pp in enumerate(self._plugs_th_pp):
-            self._publish_threshold_pp(plug_id, th_pp)
-        return
-        
     def get_plugs_data(self):
         # _log.debug('get_plug_data()...')
-        result = {}
         
         # get schedule for to h/w latest data
         task_id = str(randint(0, 99999999))
-        # _log.debug('task_id: ' + task_id)
-        result = get_task_schdl(self, task_id,'iiit/cbs/smartstrip')
+        success = get_task_schdl(self, task_id,'iiit/cbs/smartstrip')
+        if not success: return
+        self._rpcget_tag_ids()
         
-        # run the task
-        if result['result'] == 'SUCCESS':
+        # _log.debug('start _process_new_tag_id()...')
+        self._process_new_tag_id(PLUG_ID_1, self._new_tag_id1)
+        self._process_new_tag_id(PLUG_ID_2, self._new_tag_id2)
+        self._process_new_tag_id(PLUG_ID_3, self._new_tag_id3)
+        self._process_new_tag_id(PLUG_ID_4, self._new_tag_id4)
+        # _log.debug('...done _process_new_tag_id()')
         
-            # _log.debug('meterData()')
-            if self._plugs_relay_state[PLUG_ID_1] == RELAY_ON:
-                self._rpcget_meter_data(PLUG_ID_1)
-                
-            if self._plugs_relay_state[PLUG_ID_2] == RELAY_ON:
-                self._rpcget_meter_data(PLUG_ID_2)
-                
-            if self._plugs_relay_state[PLUG_ID_3] == RELAY_ON:
-                self._rpcget_meter_data(PLUG_ID_3)
-                
-            if self._plugs_relay_state[PLUG_ID_4] == RELAY_ON:
-                self._rpcget_meter_data(PLUG_ID_4)
-                
-            # _log.debug('..._rpcget_tag_ids()')
-            self._rpcget_tag_ids()
-            
-            # _log.debug('start _process_new_tag_id()...')
-            self._process_new_tag_id(PLUG_ID_1, self._new_tag_id1)
-            self._process_new_tag_id(PLUG_ID_2, self._new_tag_id2)
-            self._process_new_tag_id(PLUG_ID_3, self._new_tag_id3)
-            self._process_new_tag_id(PLUG_ID_4, self._new_tag_id4)
-            # _log.debug('...done _process_new_tag_id()')
-            
-            # cancel the schedule
-            cancel_task_schdl(self, task_id)
+        # cancel the schedule
+        cancel_task_schdl(self, task_id)
         return
         
     def _rpcget_meter_data(self, plug_id):
@@ -1003,6 +985,7 @@ class SmartStrip(Agent):
         else:
             return False
             
+            
 def main(argv=sys.argv):
     '''Main method called by the eggsecutable.'''
     try:
@@ -1011,10 +994,12 @@ def main(argv=sys.argv):
         print (e)
         _log.exception('unhandled exception')
         
+        
 if __name__ == '__main__':
     # Entry point for script
     try:
         sys.exit(main())
     except KeyboardInterrupt:
         pass
+        
         
