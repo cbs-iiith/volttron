@@ -169,7 +169,7 @@ class SmartStrip(Agent):
         self.publish_hw_data()
         
         # perodically publish hw data to volttron bus. 
-        # The data includes plug replay states, th_pp, meter data, tag_ids
+        # The data includes plug th_pp, meter data, tag_ids
         self.core.periodic(self._period_read_data, self.publish_hw_data, wait=None)
         
         # perodically publish total active power to volttron bus
@@ -393,7 +393,8 @@ class SmartStrip(Agent):
         # perodically publish plug threshold price point to volttron bus
         self.publish_plugs_th_pp()
         
-        self.publish_plugs_relay_states()
+        # TODO: do we need to publish relay states to volttron bus at regular interval?
+        #self.publish_plugs_relay_states()
         
         return
         
