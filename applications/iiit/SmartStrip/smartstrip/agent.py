@@ -517,7 +517,6 @@ class SmartStrip(Agent):
         
     def _switch_led_debug(self, state):
         _log.debug('_switch_led_debug()')
-        # result = {}
         
         if self._led_debug_state == state:
             _log.info('same state, do nothing')
@@ -525,29 +524,10 @@ class SmartStrip(Agent):
             
         # get schedule to _switch_led_debug
         task_id = str(randint(0, 99999999))
-        # _log.debug('task_id: ' + task_id)
-        result = get_task_schdl(self, task_id, 'iiit/cbs/smartstrip')
-        
-        if result['result'] == 'SUCCESS':
-            result = {}
-            try:
-                # _log.debug('schl avlb')
-                result = self.vip.rpc.call('platform.actuator'
-                                            , 'set_point'
-                                            , self._agent_id
-                                            , 'iiit/cbs/smartstrip/' + 'LEDDebug'
-                                            , state
-                                            ).get(timeout=10)
-                        
-                self._update_led_debug_state(state)
-            except gevent.Timeout:
-                _log.exception('gevent.Timeout in _switch_led_debug()')
-            except Exception as e:
-                _log.exception('setting ledDebug')
-                print(e)
-            finally:
-                # cancel the schedule
-                cancel_task_schdl(self, task_id)
+        success = get_task_schdl(self, task_id, 'iiit/cbs/smartstrip')
+        if not success: return
+        self._rpcset_led_debug_state(state)
+        cancel_task_schdl(self, task_id)
         return
         
     def _switch_relay(self, plug_id, state, schdExist):
@@ -563,26 +543,34 @@ class SmartStrip(Agent):
             # get schedule to _switch_relay
             task_id = str(randint(0, 99999999))
             # _log.debug('task_id: ' + task_id)
-            result = get_task_schdl(self, task_id, 'iiit/cbs/smartstrip')
-            
-            if result['result'] == 'SUCCESS':
-                try:
-                    self._rpcset_plug_relay_state(plug_id, state)
-                    
-                except gevent.Timeout:
-                    _log.exception('gevent.Timeout in _switch_relay()')
-                    return
-                except Exception as e:
-                    _log.exception('setting plug' + str(plug_id) + ' relay')
-                    print(e)
-                    return
-                finally:
-                    # cancel the schedule
-                    cancel_task_schdl(self, task_id)
-                    return
+            success = get_task_schdl(self, task_id, 'iiit/cbs/smartstrip')
+            if not success: return
+            self._rpcset_plug_relay_state(plug_id, state)
+            cancel_task_schdl(self, task_id)
         else:
             # do notthing
-            return
+            _log.warning('_switch_relay(), not a valid param schdExist: {}'.format(schdExist))
+        return
+        
+    def _rpcset_led_debug_state(self, state):
+        end_point = 'LEDDebug'
+        try:
+            # _log.debug('schl avlb')
+            result = self.vip.rpc.call('platform.actuator'
+                                        , 'set_point'
+                                        , self._agent_id
+                                        , 'iiit/cbs/smartstrip/' + end_point
+                                        , state
+                                        ).get(timeout=10)
+                    
+            self._update_led_debug_state(state)
+        except gevent.Timeout:
+            _log.exception('gevent.Timeout in _rpcset_led_debug_state()')
+            pass
+        except Exception as e:
+            _log.exception('in _rpcset_led_debug_state(), message: unhandled exception'
+                                        + ' {}!!!'.format(e.message))
+            pass
         return
         
     def _rpcset_plug_relay_state(self, plug_id, state):
@@ -599,18 +587,18 @@ class SmartStrip(Agent):
         except gevent.Timeout:
             _log.exception('gevent.Timeout in _rpcset_plug_relay_state()')
             # return E_UNKNOWN_STATE
+            pass
         except Exception as e:
             _log.exception('in _rpcset_plug_relay_state(), message: unhandled exception'
                                         + ' {}!!!'.format(e.message))
-            
+            pass
         # _log.debug('OK call updatePlug1RelayState()')
         self._update_plug_relay_state(plug_id, state)
         return
         
-    def _rpcget_plug_relay_state(self, plug_id):
-        if not self._valid_plug_id(plug_id): return E_UNKNOWN_STATE
-        
-        end_point = 'Plug' + str(plug_id + 1) + 'Relay'
+    def _rpcget_led_debug_state(self):
+        end_point = 'LEDDebug'
+        relay_state = E_UNKNOWN_STATE
         try:
             state = self.vip.rpc.call('platform.actuator'
                                         , 'get_point'
@@ -619,11 +607,31 @@ class SmartStrip(Agent):
             relay_state = int(state)
         except gevent.Timeout:
             _log.exception('gevent.Timeout in _rpcget_plug_relay_state()')
-            return E_UNKNOWN_STATE
+            pass
         except Exception as e:
             _log.exception('in _rpcget_plug_relay_state(), message: unhandled exception'
                                         + ' {}!!!'.format(e.message))
-            return E_UNKNOWN_STATE
+            pass
+        return relay_state
+        
+    def _rpcget_plug_relay_state(self, plug_id):
+        if not self._valid_plug_id(plug_id): return E_UNKNOWN_STATE
+        
+        end_point = 'Plug' + str(plug_id + 1) + 'Relay'
+        relay_state = E_UNKNOWN_STATE
+        try:
+            state = self.vip.rpc.call('platform.actuator'
+                                        , 'get_point'
+                                        , 'iiit/cbs/smartstrip/' + end_point
+                                        ).get(timeout=10)
+            relay_state = int(state)
+        except gevent.Timeout:
+            _log.exception('gevent.Timeout in _rpcget_plug_relay_state()')
+            pass
+        except Exception as e:
+            _log.exception('in _rpcget_plug_relay_state(), message: unhandled exception'
+                                        + ' {}!!!'.format(e.message))
+            pass
         return relay_state
         
     def _rpcget_meter_data(self, plug_id):
@@ -700,22 +708,8 @@ class SmartStrip(Agent):
         
     def _update_led_debug_state(self, state):
         _log.debug('_update_led_debug_state()')
-        end_point = 'LEDDebug'
-        try:
-            state = self.vip.rpc.call('platform.actuator'
-                                        , 'get_point'
-                                        , 'iiit/cbs/smartstrip/' + end_point
-                                        ).get(timeout=10)
-            led_debug_state = int(state)
-        except gevent.Timeout:
-            _log.exception('gevent.Timeout in _update_led_debug_state()')
-            led_debug_state = E_UNKNOWN_STATE
-            pass
-        except Exception as e:
-            _log.exception('in _update_led_debug_state(), message: {}'.format(e.message))
-            led_debug_state = E_UNKNOWN_STATE
-            pass
-            
+        
+        led_debug_state = self._rpcget_led_debug_state()
         if state == led_debug_state: self._led_debug_state = state
         
         if state == LED_ON: _log.info('Current State: LED Debug is ON!!!')
