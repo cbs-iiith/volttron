@@ -372,12 +372,12 @@ class SmartStrip(Agent):
             # _log.debug('..._rpcget_tag_ids()')
             self._rpcget_tag_ids()
             
-            # _log.debug('start processNewTagId()...')
-            self.processNewTagId(PLUG_ID_1, self._new_tag_id1)
-            self.processNewTagId(PLUG_ID_2, self._new_tag_id2)
-            self.processNewTagId(PLUG_ID_3, self._new_tag_id3)
-            self.processNewTagId(PLUG_ID_4, self._new_tag_id4)
-            # _log.debug('...done processNewTagId()')
+            # _log.debug('start _process_new_tag_id()...')
+            self._process_new_tag_id(PLUG_ID_1, self._new_tag_id1)
+            self._process_new_tag_id(PLUG_ID_2, self._new_tag_id2)
+            self._process_new_tag_id(PLUG_ID_3, self._new_tag_id3)
+            self._process_new_tag_id(PLUG_ID_4, self._new_tag_id4)
+            # _log.debug('...done _process_new_tag_id()')
             
             # cancel the schedule
             cancel_task_schdl(self, task_id)
@@ -391,7 +391,7 @@ class SmartStrip(Agent):
         pointVolatge = 'Plug'+str(plug_id+1)+'Voltage'
         pointCurrent = 'Plug'+str(plug_id+1)+'Current'
         pointActivePower = 'Plug'+str(plug_id+1)+'ActivePower'
-        pubTopic = self._root_topic + '/plug' + str(plug_id+1) + '/meterdata/all'
+        pub_topic = self._root_topic + '/plug' + str(plug_id+1) + '/meterdata/all'
         
         try:
             fVolatge = self.vip.rpc.call('platform.actuator'
@@ -414,7 +414,7 @@ class SmartStrip(Agent):
             self._plugs_active_pwr[plug_id] = fActivePower
             
             # publish data to volttron bus
-            self.publishMeterData(pubTopic, fVolatge, fCurrent, fActivePower)
+            self._publish_meter_data(pub_topic, fVolatge, fCurrent, fActivePower)
             
             _log.info(('Plug {:d}: '.format(plug_id + 1)
                     + 'voltage: {:.2f}'.format(fVolatge) 
@@ -502,7 +502,7 @@ class SmartStrip(Agent):
             return
         return
         
-    def processNewTagId(self, plug_id, newTagId):
+    def _process_new_tag_id(self, plug_id, newTagId):
         # empty string
         if not newTagId:
             # do nothing
@@ -516,7 +516,7 @@ class SmartStrip(Agent):
             else:
                 # update the tag id and change connected state
                 self._plugs_tag_id[plug_id] = newTagId
-                self.publishTagId(plug_id, newTagId)
+                self._publish_tag_id(plug_id, newTagId)
                 self._plugs_connected[plug_id] = 1
                 if self.tagAuthorised(newTagId):
                     plug_pp_th = self._plugs_th_pp[plug_id]
@@ -536,7 +536,7 @@ class SmartStrip(Agent):
                             'Unauthorised device connected',
                             '(tag id: ',
                             newTagId, ')'))
-                    self.publishTagId(plug_id, newTagId)
+                    self._publish_tag_id(plug_id, newTagId)
                     # TODO: bug with new unauthorised tag id, switch-off power if its already swithched-on
                     
         else:
@@ -548,7 +548,7 @@ class SmartStrip(Agent):
                     self._plugs_relay_state[plug_id] == RELAY_ON:
                 # update the tag id and change connected state
                 self._plugs_tag_id[plug_id] = newTagId
-                self.publishTagId(plug_id, newTagId)
+                self._publish_tag_id(plug_id, newTagId)
                 self._plugs_connected[plug_id] = 0
                 self.switchRelay(plug_id, RELAY_OFF, SCHEDULE_AVLB)
         return
@@ -825,41 +825,41 @@ class SmartStrip(Agent):
             _log.info('Current State: Plug ' + str(plug_id+1) + ' Relay STATE UNKNOWN!!!')
         return
         
-    def publishMeterData(self, pubTopic, fVolatge, fCurrent, fActivePower):
-        pubMsg = [{'voltage':fVolatge, 'current':fCurrent,
+    def _publish_meter_data(self, pub_topic, fVolatge, fCurrent, fActivePower):
+        pub_msg = [{'voltage':fVolatge, 'current':fCurrent,
                     'active_power':fActivePower},
                     {'voltage':{'units': 'V', 'tz': 'UTC', 'type': 'float'},
                     'current':{'units': 'A', 'tz': 'UTC', 'type': 'float'},
                     'active_power':{'units': 'W', 'tz': 'UTC', 'type': 'float'}
                     }]
-        publish_to_bus(self, pubTopic, pubMsg)
+        publish_to_bus(self, pub_topic, pub_msg)
         return
         
-    def publishTagId(self, plug_id, newTagId):
+    def _publish_tag_id(self, plug_id, newTagId):
         if not self._validplug_id(plug_id):
             return
             
-        pubTopic = self._root_topic + '/plug' + str(plug_id+1) + '/tagid'
-        pubMsg = [newTagId,{'units': '', 'tz': 'UTC', 'type': 'string'}]
-        publish_to_bus(self, pubTopic, pubMsg)
+        pub_topic = self._root_topic + '/plug' + str(plug_id+1) + '/tagid'
+        pub_msg = [newTagId,{'units': '', 'tz': 'UTC', 'type': 'string'}]
+        publish_to_bus(self, pub_topic, pub_msg)
         return
         
     def publishRelayState(self, plug_id, state):
         if not self._validplug_id(plug_id):
             return
             
-        pubTopic = self._root_topic + '/plug' + str(plug_id+1) + '/relaystate'
-        pubMsg = [state,{'units': 'On/Off', 'tz': 'UTC', 'type': 'int'}]
-        publish_to_bus(self, pubTopic, pubMsg)
+        pub_topic = self._root_topic + '/plug' + str(plug_id+1) + '/relaystate'
+        pub_msg = [state,{'units': 'On/Off', 'tz': 'UTC', 'type': 'int'}]
+        publish_to_bus(self, pub_topic, pub_msg)
         return
         
     def _publish_threshold_pp(self, plug_id, thresholdPP):
         if not self._validplug_id(plug_id):
             return
             
-        pubTopic = self._root_topic + '/plug' + str(plug_id+1) + '/threshold'
-        pubMsg = [thresholdPP,{'units': 'cents', 'tz': 'UTC', 'type': 'float'}]
-        publish_to_bus(self, pubTopic, pubMsg)
+        pub_topic = self._root_topic + '/plug' + str(plug_id+1) + '/threshold'
+        pub_msg = [thresholdPP,{'units': 'cents', 'tz': 'UTC', 'type': 'float'}]
+        publish_to_bus(self, pub_topic, pub_msg)
         return
         
     @RPC.export
@@ -913,9 +913,9 @@ class SmartStrip(Agent):
     def publish_ted(self):
         self._ted = self._calculate_ted()
         _log.info( 'New TED: {:.4f}, publishing to bus.'.format(self._ted))
-        pubTopic = self._topic_energy_demand
-        # _log.debug('TED pubTopic: ' + pubTopic)
-        pubMsg = [self._ted
+        pub_topic = self._topic_energy_demand
+        # _log.debug('TED pub_topic: ' + pub_topic)
+        pub_msg = [self._ted
                     , {'units': 'W', 'tz': 'UTC', 'type': 'float'}
                     , self._pp_id
                     , True
@@ -925,7 +925,7 @@ class SmartStrip(Agent):
                     , self._period_read_data
                     , datetime.datetime.utcnow().isoformat(' ') + 'Z'
                     ]
-        publish_to_bus(self, pubTopic, pubMsg)
+        publish_to_bus(self, pub_topic, pub_msg)
         return
         
     def _validplug_id(self, plug_id):
