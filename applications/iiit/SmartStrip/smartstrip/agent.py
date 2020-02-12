@@ -102,7 +102,7 @@ class SmartStrip(Agent):
     _plugs_relay_state = [0, 0, 0, 0]
     _plugs_connected = [ 0, 0, 0, 0]
     _plugs_active_pwr = [0.0, 0.0, 0.0, 0.0]
-    _plugs_tag_id = ['7FC000007FC00000', '7FC000007FC00000', '7FC000007FC00000', '7FC000007FC00000']
+    _plugs_tag_id = [DEFAULT_TAG_ID, DEFAULT_TAG_ID, DEFAULT_TAG_ID, DEFAULT_TAG_ID]
     _plugs_th_pp = [0.35, 0.5, 0.75, 0.95]
     
     # smartstrip total energy demand
@@ -417,7 +417,9 @@ class SmartStrip(Agent):
         # _log.debug('_get_initial_hw_state()')
         task_id = str(randint(0, 99999999))
         success = get_task_schdl(self, task_id, 'iiit/cbs/smartstrip')
-        if not success: return
+        if not success: 
+            _log.warning('no task schdl for getting initial h/w state')
+            return
         
         for plug_id, state in enumerate(self._plugs_relay_state):
             self._plugs_relay_state[plug_id] = self._get_plug_relay_state(plug_id, SCHEDULE_AVLB)
@@ -434,16 +436,13 @@ class SmartStrip(Agent):
         elif schd_exist == SCHEDULE_NOT_AVLB:
             task_id = str(randint(0, 99999999))
             success = get_task_schdl(self, task_id, 'iiit/cbs/smartstrip')
-            if not success: return E_UNKNOWN_STATE
-            try:
-                state = self._rpcget_plug_relay_state(plug_id);
-            except Exception as e:
-                _log.exception('no task schdl for getting device state')
-            finally:
-                # cancel the schedule
-                cancel_task_schdl(self, task_id)
+            if not success: 
+                _log.warning('no task schdl for getting plug relay state')
+                return E_UNKNOWN_STATE
+            state = self._rpcget_plug_relay_state(plug_id);
+            cancel_task_schdl(self, task_id)
         else:
-            _log.error('Error: not a valid param - schd_exist: {}'.format(schd_exist))
+            _log.warning('Error: not a valid param - schd_exist: {}'.format(schd_exist))
             return E_UNKNOWN_STATE
         return state
         
@@ -525,7 +524,9 @@ class SmartStrip(Agent):
         # get schedule to _switch_led_debug
         task_id = str(randint(0, 99999999))
         success = get_task_schdl(self, task_id, 'iiit/cbs/smartstrip')
-        if not success: return
+        if not success: 
+            _log.warning('no task schdl for setting led debugb state')
+            return
         self._rpcset_led_debug_state(state)
         cancel_task_schdl(self, task_id)
         return
@@ -544,7 +545,9 @@ class SmartStrip(Agent):
             task_id = str(randint(0, 99999999))
             # _log.debug('task_id: ' + task_id)
             success = get_task_schdl(self, task_id, 'iiit/cbs/smartstrip')
-            if not success: return
+            if not success: 
+                _log.warning('no task schdl for setting relay state')
+                return
             self._rpcset_plug_relay_state(plug_id, state)
             cancel_task_schdl(self, task_id)
         else:
@@ -726,14 +729,16 @@ class SmartStrip(Agent):
             self._publish_plug_relay_state(plug_id, state)
             
         if state == RELAY_ON: 
-            _log.info('Current State: Plug ' + str(plug_id+1) + ' Relay Switched ON!!!')
+            _log.info('Current State: Plug ' + str(plug_id + 1) + ' Relay Switched ON!!!')
         elif state == RELAY_OFF:
-            _log.info('Current State: Plug ' + str(plug_id+1) + ' Relay Switched OFF!!!')
+            _log.info('Current State: Plug ' + str(plug_id + 1) + ' Relay Switched OFF!!!')
         else:
-            _log.info('Current State: Plug ' + str(plug_id+1) + ' Relay STATE UNKNOWN!!!')
+            _log.info('Current State: Plug ' + str(plug_id + 1) + ' Relay STATE UNKNOWN!!!')
         return
         
     def _publish_meter_data(self, plug_id, fVolatge, fCurrent, fActivePower):
+        if not self._valid_plug_id(plug_id): return
+        
         pub_topic = self._root_topic + '/plug' + str(plug_id + 1) + '/meterdata/all'
         pub_msg = [{'voltage':fVolatge, 'current':fCurrent,
                     'active_power':fActivePower},
@@ -747,15 +752,15 @@ class SmartStrip(Agent):
     def _publish_tag_id(self, plug_id, new_tag_id):
         if not self._valid_plug_id(plug_id): return
             
-        pub_topic = self._root_topic + '/plug' + str(plug_id+1) + '/tagid'
+        pub_topic = self._root_topic + '/plug' + str(plug_id + 1) + '/tagid'
         pub_msg = [new_tag_id,{'units': '', 'tz': 'UTC', 'type': 'string'}]
         publish_to_bus(self, pub_topic, pub_msg)
         return
         
     def _publish_plug_relay_state(self, plug_id, state):
         if not self._valid_plug_id(plug_id): return
-            
-        pub_topic = self._root_topic + '/plug' + str(plug_id+1) + '/relaystate'
+        
+        pub_topic = self._root_topic + '/plug' + str(plug_id + 1) + '/relaystate'
         pub_msg = [state, {'units': 'On/Off', 'tz': 'UTC', 'type': 'int'}]
         publish_to_bus(self, pub_topic, pub_msg)
         return
@@ -763,7 +768,7 @@ class SmartStrip(Agent):
     def _publish_threshold_pp(self, plug_id, thresholdPP):
         if not self._valid_plug_id(plug_id): return
             
-        pub_topic = self._root_topic + '/plug' + str(plug_id+1) + '/threshold'
+        pub_topic = self._root_topic + '/plug' + str(plug_id + 1) + '/threshold'
         pub_msg = [thresholdPP,{'units': 'cents', 'tz': 'UTC', 'type': 'float'}]
         publish_to_bus(self, pub_topic, pub_msg)
         return
