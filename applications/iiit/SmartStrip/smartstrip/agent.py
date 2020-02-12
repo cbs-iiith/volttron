@@ -227,13 +227,13 @@ class SmartStrip(Agent):
             if rpcdata.method == 'ping':
                 result = True
             elif rpcdata.method == 'plug-th-pp' and header['REQUEST_METHOD'] == 'GET':
-                if not _validplug_id(rpcdata.params['plug_id']): 
+                if not _valid_plug_id(rpcdata.params['plug_id']):
                     raise KeyError('invalid plug id')
                 args = {'plug_id': rpcdata.params['plug_id']
                         }
                 result = self.get_th_pp(**args)
             elif rpcdata.method == 'plug-th-pp' and header['REQUEST_METHOD'] == 'POST':
-                if not _validplug_id(rpcdata.params['plug_id']): 
+                if not _valid_plug_id(rpcdata.params['plug_id']):
                     raise KeyError('invalid plug id')
                 args = {'plug_id': rpcdata.params['plug_id'],
                         'new_th_pp': rpcdata.params['new_th_pp']
@@ -258,7 +258,7 @@ class SmartStrip(Agent):
     @RPC.export
     def get_th_pp(self, plug_id):
         _log.debug('get_th_pp()')
-        return (self._plugs_th_pp[plug_id] if _validplug_id(plug_id) else 0)
+        return (self._plugs_th_pp[plug_id] if _valid_plug_id(plug_id) else 0)
         
     @RPC.export
     def set_th_pp(self, plug_id, new_th_pp):
@@ -546,7 +546,7 @@ class SmartStrip(Agent):
                 self._plugs_tag_id[plug_id] = new_tag_id
                 self._publish_tag_id(plug_id, new_tag_id)
                 self._plugs_connected[plug_id] = 1
-                if self.is_tag_authorised(new_tag_id):
+                if self._authorised_tag_id(new_tag_id):
                     plug_pp_th = self._plugs_th_pp[plug_id]
                     if self._price_point_latest < plug_pp_th:
                         _log.info(('Plug {:d}: '.format(plug_id + 1),
@@ -664,7 +664,7 @@ class SmartStrip(Agent):
             # else:
                 # do nothing
         else:
-            if self._plugs_connected[plug_id] == 1 and self.is_tag_authorised(self._plugs_tag_id[plug_id]):
+            if self._plugs_connected[plug_id] == 1 and self._authorised_tag_id(self._plugs_tag_id[plug_id]):
                 _log.info(('Plug {:d}: '.format(plug_id + 1)
                             , 'Current price point < threshold'
                             , '({:.2f}), '.format(plug_pp_th)
@@ -693,7 +693,7 @@ class SmartStrip(Agent):
         id_msb = bytearray(struct.pack('f', f2_tag_id))
         return (id_msb + id_lsb)
         
-    def is_tag_authorised(self, tag_id):
+    def _authorised_tag_id(self, tag_id):
         return (True if tag_id in self._tag_ids else False)
         
     def _switch_led_debug(self, state):
@@ -850,7 +850,7 @@ class SmartStrip(Agent):
         return
         
     def _publish_tag_id(self, plug_id, new_tag_id):
-        if not self._validplug_id(plug_id):
+        if not self._valid_plug_id(plug_id):
             return
             
         pub_topic = self._root_topic + '/plug' + str(plug_id+1) + '/tagid'
@@ -859,7 +859,7 @@ class SmartStrip(Agent):
         return
         
     def publishRelayState(self, plug_id, state):
-        if not self._validplug_id(plug_id):
+        if not self._valid_plug_id(plug_id):
             return
             
         pub_topic = self._root_topic + '/plug' + str(plug_id+1) + '/relaystate'
@@ -868,7 +868,7 @@ class SmartStrip(Agent):
         return
         
     def _publish_threshold_pp(self, plug_id, thresholdPP):
-        if not self._validplug_id(plug_id):
+        if not self._valid_plug_id(plug_id):
             return
             
         pub_topic = self._root_topic + '/plug' + str(plug_id+1) + '/threshold'
@@ -912,7 +912,7 @@ class SmartStrip(Agent):
         publish_to_bus(self, pub_topic, pub_msg)
         return
         
-    def _validplug_id(self, plug_id):
+    def _valid_plug_id(self, plug_id):
         if plug_id == PLUG_ID_1 or plug_id == PLUG_ID_2 or plug_id == PLUG_ID_3 or plug_id == PLUG_ID_4:
             return True
         else:
