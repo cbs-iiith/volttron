@@ -691,7 +691,7 @@ class SmartHub(Agent):
             return E_UNKNOWN_STATE
         end_point = self._get_lhw_end_point(lhw_device_id, AT_GET_STATE)
         try:
-            device_level = self.vip.rpc.call(
+            device_state = self.vip.rpc.call(
                     'platform.actuator','get_point',
                     'iiit/cbs/smarthub/' + end_point).get(timeout=10 )
         except gevent.Timeout:
@@ -704,7 +704,7 @@ class SmartHub(Agent):
             _log.exception('Could not contact actuator. Is it running?')
             # print(e)
             return E_UNKNOWN_STATE
-        return int(device_level)
+        return int(device_state)
         
     def _rpcset_sh_device_state(self, lhw_device_id, state):
         if not self._valid_device_action(lhw_device_id, AT_SET_STATE):
