@@ -265,12 +265,12 @@ class SmartStrip(Agent):
             self._plugs_th_pp[plug_id] = new_th_pp
             self._apply_pricing_policy(plug_id, SCHEDULE_NOT_AVLB)
             self._publish_threshold_pp(plug_id, new_th_pp)
-        return 'success'
+        return True
         
     def _stop_volt(self):
         _log.debug('_stop_volt()')
         task_id = str(randint(0, 99999999))
-        success = get_task_schdl(self, task_id,'iiit/cbs/zonecontroller')
+        success = get_task_schdl(self, task_id, 'iiit/cbs/smartstrip')
         if not success:
             self._volt_state = 0
             return
@@ -330,36 +330,36 @@ class SmartStrip(Agent):
         # get schedule for testing relays
         task_id = str(randint(0, 99999999))
         # _log.debug('task_id: ' + task_id)
-        result = get_task_schdl(self, task_id,'iiit/cbs/smartstrip')
+        success = get_task_schdl(self, task_id, 'iiit/cbs/smartstrip')
+        if not success: return
         
         # test all four relays
-        if result['result'] == 'SUCCESS':
-            _log.debug('switch on relay 1')
-            self._switch_relay(PLUG_ID_1, RELAY_ON, True)
-            time.sleep(1)
-            _log.debug('switch off relay 1')
-            self._switch_relay(PLUG_ID_1, RELAY_OFF, SCHEDULE_AVLB)
-            
-            _log.debug('switch on relay 2')
-            self._switch_relay(PLUG_ID_2, RELAY_ON, SCHEDULE_AVLB)
-            time.sleep(1)
-            _log.debug('switch off relay 2')
-            self._switch_relay(PLUG_ID_2, RELAY_OFF, SCHEDULE_AVLB)
-            
-            _log.debug('switch on relay 3')
-            self._switch_relay(PLUG_ID_3, RELAY_ON, SCHEDULE_AVLB)
-            time.sleep(1)
-            _log.debug('switch off relay 3')
-            self._switch_relay(PLUG_ID_3, RELAY_OFF, SCHEDULE_AVLB)
-            
-            _log.debug('switch on relay 4')
-            self._switch_relay(PLUG_ID_4, RELAY_ON, SCHEDULE_AVLB)
-            time.sleep(1)
-            _log.debug('switch off relay 4')
-            self._switch_relay(PLUG_ID_4, RELAY_OFF, SCHEDULE_AVLB)
-            
-            # cancel the schedule
-            cancel_task_schdl(self, task_id)
+        _log.debug('switch on relay 1')
+        self._switch_relay(PLUG_ID_1, RELAY_ON, SCHEDULE_AVLB)
+        time.sleep(1)
+        _log.debug('switch off relay 1')
+        self._switch_relay(PLUG_ID_1, RELAY_OFF, SCHEDULE_AVLB)
+        
+        _log.debug('switch on relay 2')
+        self._switch_relay(PLUG_ID_2, RELAY_ON, SCHEDULE_AVLB)
+        time.sleep(1)
+        _log.debug('switch off relay 2')
+        self._switch_relay(PLUG_ID_2, RELAY_OFF, SCHEDULE_AVLB)
+        
+        _log.debug('switch on relay 3')
+        self._switch_relay(PLUG_ID_3, RELAY_ON, SCHEDULE_AVLB)
+        time.sleep(1)
+        _log.debug('switch off relay 3')
+        self._switch_relay(PLUG_ID_3, RELAY_OFF, SCHEDULE_AVLB)
+        
+        _log.debug('switch on relay 4')
+        self._switch_relay(PLUG_ID_4, RELAY_ON, SCHEDULE_AVLB)
+        time.sleep(1)
+        _log.debug('switch off relay 4')
+        self._switch_relay(PLUG_ID_4, RELAY_OFF, SCHEDULE_AVLB)
+        
+        # cancel the schedule
+        cancel_task_schdl(self, task_id)
         return
         
     '''
@@ -384,7 +384,7 @@ class SmartStrip(Agent):
         
         # read the meter data from h/w and publish to msg bus
         task_id = str(randint(0, 99999999))
-        success = get_task_schdl(self, task_id,'iiit/cbs/smartstrip')
+        success = get_task_schdl(self, task_id, 'iiit/cbs/smartstrip')
         if not success: return
         for plug_id, state in enumerate(self._plugs_relay_state):
             if state == RELAY_ON: self._rpcget_meter_data(plug_id)
@@ -416,7 +416,7 @@ class SmartStrip(Agent):
     def _get_initial_hw_state(self):
         # _log.debug('_get_initial_hw_state()')
         task_id = str(randint(0, 99999999))
-        success = get_task_schdl(self, task_id, 'iiit/cbs/smarthub', 300)
+        success = get_task_schdl(self, task_id, 'iiit/cbs/smartstrip')
         if not success: return
         
         for plug_id, state in enumerate(self._plugs_relay_state):
@@ -433,7 +433,7 @@ class SmartStrip(Agent):
             state = self._rpcget_plug_relay_state(plug_id);
         elif schd_exist == SCHEDULE_NOT_AVLB:
             task_id = str(randint(0, 99999999))
-            success = get_task_schdl(self, task_id, 'iiit/cbs/smarthub')
+            success = get_task_schdl(self, task_id, 'iiit/cbs/smartstrip')
             if not success: return E_UNKNOWN_STATE
             try:
                 state = self._rpcget_plug_relay_state(plug_id);
@@ -526,7 +526,7 @@ class SmartStrip(Agent):
         # get schedule to _switch_led_debug
         task_id = str(randint(0, 99999999))
         # _log.debug('task_id: ' + task_id)
-        result = get_task_schdl(self, task_id,'iiit/cbs/smartstrip')
+        result = get_task_schdl(self, task_id, 'iiit/cbs/smartstrip')
         
         if result['result'] == 'SUCCESS':
             result = {}
@@ -563,7 +563,7 @@ class SmartStrip(Agent):
             # get schedule to _switch_relay
             task_id = str(randint(0, 99999999))
             # _log.debug('task_id: ' + task_id)
-            result = get_task_schdl(self, task_id,'iiit/cbs/smartstrip')
+            result = get_task_schdl(self, task_id, 'iiit/cbs/smartstrip')
             
             if result['result'] == 'SUCCESS':
                 try:
@@ -843,7 +843,7 @@ class SmartStrip(Agent):
         # get schedule for testing relays
         task_id = str(randint(0, 99999999))
         # _log.debug('task_id: ' + task_id)
-        result = get_task_schdl(self, task_id,'iiit/cbs/smartstrip')
+        result = get_task_schdl(self, task_id, 'iiit/cbs/smartstrip')
         if result['result'] != 'SUCCESS':
             _log.debug('unable to process_opt_pp(), will try again in ' + str(self._period_process_pp))
             self._process_opt_pp_success = False
