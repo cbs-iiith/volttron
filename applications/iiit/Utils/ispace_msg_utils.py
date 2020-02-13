@@ -43,13 +43,13 @@ def valid_bustopic_msg(sender, valid_senders_list, minimum_fields
     pp_msg = None
     
     if sender not in valid_senders_list:
-        _log.debug('sender: {}'.format(sender)
+        _log.warning('sender: {}'.format(sender)
                     + ' not in sender list: {}, do nothing!!!'.format(valid_senders_list))
         return (False, pp_msg)
         
         
     try:
-        _log.debug('message: {}'.format(message))
+        #_log.debug('message: {}'.format(message))
         minimum_fields = ['value', 'value_data_type', 'units', 'price_id']
         pp_msg = parse_bustopic_msg(message, minimum_fields)
         #_log.info('pp_msg: {}'.format(pp_msg))

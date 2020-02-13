@@ -377,7 +377,7 @@ class ISPACE_Msg:
         #process msg only if price_id corresponds to these ids
         #_log.debug('check if pp_id is valid...')
         if valid_price_ids != [] and self.price_id not in valid_price_ids:
-            _log.debug('pp_id: {}'.format(self.price_id)
+            _log.warning('pp_id: {}'.format(self.price_id)
                         + ' not in valid_price_ids: {}, do nothing!!!'.format(valid_price_ids))
             return False
         #_log.debug('done.')
@@ -478,7 +478,7 @@ class ISPACE_Msg:
         elif self.msg_type == MessageType.energy_demand:
             self.value = round(mround(value, ROUNDOFF_ENERGY_DEMAND), ED_DECIMAL_DIGITS)
         else:
-            _log.error('set_value(), unhandled message type')
+            _log.warning('set_value(), unhandled message type')
             self.value = value
         
     def set_value_data_type(self, value_data_type):

@@ -44,7 +44,7 @@ def ping_vb_failed(self):
             return False
     except Exception as e:
         #print(e)
-        _log.exception('Bridge Agent is not responding!!! Message: {}'.format(e.message))
+        _log.warning('Bridge Agent is not responding!!! Message: {}'.format(e.message))
         pass
     return True
     
@@ -60,15 +60,16 @@ def register_with_bridge(self, sleep_time=10):
                                         , self.core.identity
                                         , self._device_id
                                         ).get(timeout=10)
-            _log.debug ('self.vip.rpc.call() result: {}'.format(success))
+            #_log.debug ('self.vip.rpc.call() result: {}'.format(success))
             if success:
-                _log.debug('Done.')
+                _log.info('done.')
                 break
         except Exception as e:
             #print(e)
-            _log.exception('Maybe the Volttron Bridge Agent is not yet started!!!')
+            _log.warning('Maybe the Volttron Bridge Agent is not yet started!!!'
+                            + ' message: {}'.format(e.message))
             pass
-        _log.debug('will try again in {} sec'.format(sleep_time))
+        _log.warning('will try again in {} sec'.format(sleep_time))
         time.sleep(sleep_time)
     return
     
@@ -79,10 +80,10 @@ def unregister_with_bridge(self):
                                     , 'unregister_local_ed_agent'
                                     , self.core.identity
                                     ).get(timeout=10)
-        _log.debug ('self.vip.rpc.call() result: {}'.format(success))
+        #_log.debug ('self.vip.rpc.call() result: {}'.format(success))
     except Exception as e:
         #print(e)
-        _log.exception('Maybe the bridge agent had stopped already!!!')
+        _log.warning('Maybe the bridge agent had stopped already!!! message:{}'.format(e.message))
         pass
     return
     
@@ -96,15 +97,16 @@ def register_rpc_route(self, name, handle, sleep_time=10):
                                         , r'^/' + name
                                         , handle
                                         ).get(timeout=10)
-            _log.debug ('self.vip.rpc.call() result: {}'.format(success))
+            #_log.debug ('self.vip.rpc.call() result: {}'.format(success))
             if success is None:
-                _log.debug('Done.')
+                _log.info('done.')
                 break
         except Exception as e:
             #print(e)
-            _log.exception('Maybe the Volttron instance is not yet ready!!!')
+            _log.warning('Maybe the Volttron instance is not yet ready!!!'
+                            + ' message: {}'.format(e.message))
             pass
-        _log.debug('will try again in {} sec'.format(sleep_time))
+        _log.warning('will try again in {} sec'.format(sleep_time))
         time.sleep(sleep_time)
     return
     
@@ -112,7 +114,7 @@ def register_rpc_route(self, name, handle, sleep_time=10):
 def retrive_details_from_vb(self, sleep_time=10):
     while True:
         try:
-            _log.info('retrive details from vb...')
+            _log.info('Retrive details from vb...')
             if self._device_id is None:
                 self._device_id = self.vip.rpc.call(self._vb_vip_identity
                                                         , 'device_id').get(timeout=10)
@@ -122,13 +124,13 @@ def retrive_details_from_vb(self, sleep_time=10):
                                                         , 'discovery_address').get(timeout=10)
                 _log.debug('discovery_address as per vb: {}'.format(self._discovery_address))
             if self._device_id is not None and self._discovery_address is not None:
-                _log.debug('Done.')
+                _log.info('done.')
                 break
         except Exception as e:
-            _log.exception ('Expection in retrive_details_from_vb()'
+            _log.warning ('unable to retrive details from bridge'
                                                         + ', message: {}.'.format(e.message))
             pass
-        _log.debug('will try again in {} sec'.format(sleep_time))
+        _log.warning('will try again in {} sec'.format(sleep_time))
         time.sleep(sleep_time)
     return
     
@@ -147,7 +149,7 @@ def publish_to_bus(self, topic, msg):
         _log.warning('gevent.Timeout in publish_to_bus()')
         return
     except Exception as e:
-        _log.warning('Expection in publish_to_bus(), {}'.format(e.message))
+        _log.warning('unable to publish_to_bus(), message: {}'.format(e.message))
         return
     return
     
@@ -170,10 +172,10 @@ def get_task_schdl(self, task_id, device, time_ms=None):
         if result['result'] != 'SUCCESS':
             return False
     except gevent.Timeout:
-        _log.exception('gevent.Timeout for task_id: {}'.format(task_id))
+        _log.warning('gevent.Timeout for task_id: {}'.format(task_id))
         return False
     except Exception as e:
-        _log.exception ('Could not contact actuator for task_id: {}.'
+        _log.warning ('Could not contact actuator for task_id: {}.'
                                             + ' Is it running? {}'.format(task_id, e.message))
         return False
         #print(e)
@@ -187,7 +189,8 @@ def cancel_task_schdl(self, task_id):
                                     , self._agent_id, task_id
                                     ).get(timeout=10)
     except Exception as e:
-        _log.exception('cancel_task_schdl() for task_id: {}'.format(task_id))
+        _log.warning('cancel_task_schdl() for task_id ({}) failed.'.format(task_id)
+                        + ' message: {}'.format(e.message))
     return
     
 def mround(num, multipleOf):
@@ -248,14 +251,15 @@ def do_rpc(id, url_root, method, params=None, request_method='POST'):
                     _log.debug('respone - ok, {} result success: {}'.format(method, success))
             elif 'error' in response.json().keys():
                 error = response.json()['error']
-                _log.error('{} returned error, Error: {}'.format(method, error))
+                _log.warning('{} returned error, Error: {}'.format(method, error))
         else:
-            _log.error('no respone, url_root:{}'.format(url_root)
+            _log.warning('no respone, url_root:{}'.format(url_root)
                                     + ' method:{}'.format(method)
                                     + ' response: {}'.format(response))
     except Exception as e:
         #print(e)
-        _log.exception('do_rpc() unhandled exception, most likely dest is down')
+        _log.warning('do_rpc() unhandled exception, most likely dest is down'
+                        + ' message: {}'.format(e.message))
         pass
     return result
     
