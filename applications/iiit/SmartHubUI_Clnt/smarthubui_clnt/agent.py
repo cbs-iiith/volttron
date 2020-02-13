@@ -179,60 +179,49 @@ def smarthubui_clnt(config_path, **kwargs):
             if not success or pp_msg is None: return
             if not pp_msg.get_isoptimal(): return
 
-            pricePoint = pp_msg.get_value()
-            do_rpc('currentPricePoint', {'pricePoint': pricePoint})
+            current_pp = pp_msg.get_value()
+            do_rpc('current-price', {'value': current_pp})
             return
             
         def uiPostSensorData(self, headers, message):
             _log.debug('uiPostSensorData()')
-            luxLevel = message[0]['luxlevel']
-            rhLevel = message[0]['rhlevel']
-            tempLevel = message[0]['templevel']
-            co2Level = message[0]['co2level']
-            pirLevel = message[0]['pirlevel']
-            do_rpc('shSensorsData', {'luxLevel': luxLevel,
-                                            'rhLevel':  rhLevel,
-                                            'tempLevel': tempLevel,
-                                            'co2Level': co2Level,
-                                            'pirLevel': pirLevel
-                                            })
+            lux = message[0]['luxlevel']
+            rh = message[0]['rhlevel']
+            temp = message[0]['templevel']
+            co2 = message[0]['co2level']
+            pir = message[0]['pirlevel']
+            do_rpc('sensors', {'lux': lux, 'rh':  rh, 'temp': temp, 'co2': co2, 'pir': pir}, 'POST')
             return
             
         def uiPostLedState(self, headers, message):
             _log.debug('uiPostLedState()')
             state = message[0]
-            do_rpc('shDeviceState', {'deviceId': SH_DEVICE_LED,
-                                            'state': state})
+            do_rpc('state', {'id': SH_DEVICE_LED, 'value': state}, 'POST')
             return
         def uiPostFanState(self, headers, message):
             _log.debug('uiPostFanState()')
             state = message[0]
-            do_rpc('shDeviceState', {'deviceId': SH_DEVICE_FAN,
-                                            'state': state})
+            do_rpc('state', {'id': SH_DEVICE_FAN, 'value': state}, 'POST')
             return
         def uiPostLedLevel(self, headers, message):
             _log.debug('uiPostLedLevel()')
             level = message[0]
-            do_rpc('shDeviceLevel', {'deviceId': SH_DEVICE_LED,
-                                            'level': level})
+            do_rpc('level', {'id': SH_DEVICE_LED, 'value': level}, 'POST')
             return
         def uiPostFanLevel(self, headers, message):
             _log.debug('uiPostFanLevel()')
             level = message[0]
-            do_rpc('shDeviceLevel', {'deviceId': SH_DEVICE_FAN,
-                                            'level': level})
+            do_rpc('level', {'id': SH_DEVICE_FAN, 'value': level}, 'POST')
             return
         def uiPostLedThPP(self, headers, message):
             _log.debug('uiPostLedThPP()')
             thPP = message[0]
-            do_rpc('shDeviceThPP', {'deviceId': SH_DEVICE_LED,
-                                            'thPP': thPP})
+            do_rpc('threshold-price', {'id': SH_DEVICE_LED, 'value': thPP}, 'POST')
             return
         def uiPostFanThPP(self, headers, message):
             _log.debug('uiPostFanThPP()')
             thPP = message[0]
-            do_rpc('shDeviceThPP', {'deviceId': SH_DEVICE_FAN,
-                                            'thPP': thPP})
+            do_rpc('threshold-price', {'id': SH_DEVICE_FAN, 'value': thPP}, 'POST')
             return
             
             
