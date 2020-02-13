@@ -755,6 +755,7 @@ class PriceController(Agent):
                             + ', will try again in {} sec'.format(self._period_process_loop))
                 self._published_us_bid_ted = False
                 return
+            else: _log.warning('us bid pp timeout!!!')
                 
         # compute total energy demand (ted)
         bid_ted = self._calc_total(self._us_local_bid_ed, self._us_ds_bid_ed)
