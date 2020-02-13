@@ -277,18 +277,20 @@ class SmartStrip(Agent):
         return True
         
     def _stop_volt(self):
-        _log.debug('_stop_volt()')
+        #_log.debug('_stop_volt()')
         task_id = str(randint(0, 99999999))
-        success = get_task_schdl(self, task_id, 'iiit/cbs/smartstrip', 4000)
+        success = get_task_schdl(self, task_id, 'iiit/cbs/smartstrip')
         if success:
             for plug_id, state in enumerate(self._plugs_relay_state):
-                if plug_id == self._sh_plug_id: continue
+                if plug_id == self._sh_plug_id
+                    or state == RELAY_OFF
+                    : continue
                 self._rpcset_plug_relay_state(plug_id, RELAY_OFF)
                 
             self._rpcset_led_debug_state(LED_OFF)
             cancel_task_schdl(self, task_id)
         self._volt_state = 0
-        _log.debug('end _stop_volt()')
+        #_log.debug('end _stop_volt()')
         return
         
     def _config_get_init_values(self):
