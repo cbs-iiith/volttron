@@ -1202,7 +1202,7 @@ class SmartHub(Agent):
         ted = calc_energy_wh(SH_BASE_POWER, duration)
         
         #sh led energy demand
-        if bid_pp <= _sh_devices_th_pp[SH_DEVICE_LED]:
+        if bid_pp <= self._sh_devices_th_pp[SH_DEVICE_LED]:
             led_level = self._sh_devices_level[SH_DEVICE_LED]
             led_energy = calc_energy_wh(SH_LED_POWER, duration)
             ted += ((led_energy * SH_LED_THRESHOLD_PCT)
