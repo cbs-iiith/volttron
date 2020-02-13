@@ -550,6 +550,10 @@ class VolttronBridge(Agent):
                 self._ds_retrycount[index] = -1    # no need to retry on the next run
                 _log.debug('post to:' + discovery_address + ' sucess!!!')
             else:
+                _log_debug('************************ FAILED TO POST PP TO DS ****************')
+                _log.debug('failed to post pp to ds ({})'.format(self._ds_device_ids[index])
+                            + ', result: {}'.format(success))
+                _log_debug('************************ FAILED TO POST PP TO DS ****************')
                 # failed to post, increment retry count
                 self._ds_retrycount[index] = self._ds_retrycount[index]  + 1
                 _log.debug('post to:' + discovery_address +
