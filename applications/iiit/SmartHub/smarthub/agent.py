@@ -216,13 +216,14 @@ class SmartHub(Agent):
     @Core.receiver('onstop')
     def onstop(self, sender, **kwargs):
         _log.debug('onstop()')
-        if self._volt_state != 0:
-            self._stop_volt()
         
         unregister_with_bridge(self)
         
         _log.debug('un registering rpc routes')
         self.vip.rpc.call(MASTER_WEB, 'unregister_all_agent_routes').get(timeout=30)
+        
+        if self._volt_state != 0:
+            self._stop_volt()
         return
         
     @Core.receiver('onfinish')
