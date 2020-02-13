@@ -571,10 +571,9 @@ class ZoneController(Agent):
         
     # compute ed ac from ed functions given tsp
     def _compute_ed_ac(self, bid_tsp):
-        pp = 0 if pp < 0 else 1 if pp > 1 else pp
-        idx = self._edf_zn_light['idx']
-        roundup = self._edf_zn_light['roundup']
-        coefficients = self._edf_zn_light['coefficients']
+        idx = self._edf_zn_ac['idx']
+        roundup = self._edf_zn_ac['roundup']
+        coefficients = self._edf_zn_ac['coefficients']
         
         a = coefficients[idx]['a']
         b = coefficients[idx]['b']
@@ -585,7 +584,6 @@ class ZoneController(Agent):
         
     # compute ed lighting from ed functions given lsp
     def _compute_ed_light(self, bid_lsp):
-        pp = 0 if pp < 0 else 1 if pp > 1 else pp
         idx = self._edf_zn_light['idx']
         roundup = self._edf_zn_light['roundup']
         coefficients = self._edf_zn_light['coefficients']
