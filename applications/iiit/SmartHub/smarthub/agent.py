@@ -401,22 +401,22 @@ class SmartHub(Agent):
     def _test_sensors(self):
         _log.debug('test lux sensor')
         lux_level = self._get_sh_device_level(SH_DEVICE_S_LUX, SCHEDULE_NOT_AVLB)
-        _log.debug('lux Level: {:0.4f}'.format(lux_level))
+        _log.debug('lux Level: {:0.2f}'.format(lux_level))
         time.sleep(1)
         
         _log.debug('test rh sensor')
         rh_level = self._get_sh_device_level(SH_DEVICE_S_RH, SCHEDULE_NOT_AVLB)
-        _log.debug('rh Level: {:0.4f}'.format(rh_level))
+        _log.debug('rh Level: {:0.2f}'.format(rh_level))
         time.sleep(1)
         
         _log.debug('test temp sensor')
         temp_level = self._get_sh_device_level(SH_DEVICE_S_TEMP, SCHEDULE_NOT_AVLB)
-        _log.debug('temp Level: {:0.4f}'.format(temp_level))
+        _log.debug('temp Level: {:0.2f}'.format(temp_level))
         time.sleep(1)
         
         _log.debug('test co2 sensor')
         co2_level = self._get_sh_device_level(SH_DEVICE_S_CO2, SCHEDULE_NOT_AVLB)
-        _log.debug('co2 Level: {0:0.4f}'.format(co2_level))
+        _log.debug('co2 Level: {0:0.2f}'.format(co2_level))
         time.sleep(1)
         
         _log.debug('test PIR sensor')
@@ -432,19 +432,19 @@ class SmartHub(Agent):
         
         _log.debug('test lux sensor')
         lux_level = self._get_sh_device_level(SH_DEVICE_S_LUX, SCHEDULE_AVLB)
-        _log.debug('lux Level: {:0.4f}'.format(lux_level))
+        _log.debug('lux Level: {:0.2f}'.format(lux_level))
         
         _log.debug('test rh sensor')
         rh_level = self._get_sh_device_level(SH_DEVICE_S_RH, SCHEDULE_AVLB)
-        _log.debug('rh Level: {:0.4f}'.format(rh_level))
+        _log.debug('rh Level: {:0.2f}'.format(rh_level))
         
         _log.debug('test temp sensor')
         temp_level = self._get_sh_device_level(SH_DEVICE_S_TEMP, SCHEDULE_AVLB)
-        _log.debug('temp Level: {:0.4f}'.format(temp_level))
+        _log.debug('temp Level: {:0.2f}'.format(temp_level))
         
         _log.debug('test co2 sensor')
         co2_level = self._get_sh_device_level(SH_DEVICE_S_CO2, SCHEDULE_AVLB)
-        _log.debug('co2 Level: {:0.4f}'.format(co2_level))
+        _log.debug('co2 Level: {:0.2f}'.format(co2_level))
         
         _log.debug('test pir sensor')
         pir_level = self._get_sh_device_level(SH_DEVICE_S_PIR, SCHEDULE_AVLB)
@@ -635,10 +635,10 @@ class SmartHub(Agent):
         co2_level = self._get_sh_device_level(SH_DEVICE_S_CO2, SCHEDULE_AVLB)
         pir_level = self._get_sh_device_level(SH_DEVICE_S_PIR, SCHEDULE_AVLB)
         
-        _log.debug('lux Level: {:0.4f}'.format(lux_level)
-                    + ', rh Level: {:0.4f}'.format(rh_level)
-                    + ', temp Level: {:0.4f}'.format(temp_level)
-                    + ', co2 Level: {:0.4f}'.format(co2_level)
+        _log.debug('lux Level: {:0.2f}'.format(lux_level)
+                    + ', rh Level: {:0.2f}'.format(rh_level)
+                    + ', temp Level: {:0.2f}'.format(temp_level)
+                    + ', co2 Level: {:0.2f}'.format(co2_level)
                     + ', pir Level: {:d}'.format(int(pir_level))
                     )
         pub_msg = [{'luxlevel':lux_level,
@@ -664,8 +664,8 @@ class SmartHub(Agent):
         state_fan = self._sh_devices_state[SH_DEVICE_FAN]
         self._publish_sh_device_state(SH_DEVICE_LED, state_led)
         self._publish_sh_device_state(SH_DEVICE_FAN, state_fan)
-        _log.debug('led state: {:0.4f}'.format(float(state_led))
-                    + ', fan state: {:0.4f}'.format(float(state_fan)))
+        _log.debug('led state: {:d}'.format(state_led)
+                    + ', fan state: {:d}'.format(state_fan))
         return
         
     def _publish_device_level(self):
@@ -674,8 +674,8 @@ class SmartHub(Agent):
         level_fan = self._sh_devices_level[SH_DEVICE_FAN]
         self._publish_sh_device_level(SH_DEVICE_LED, level_led)
         self._publish_sh_device_level(SH_DEVICE_FAN, level_fan)
-        _log.debug('led level: {:0.4f}'.format(float(level_led))
-                    + ', fan level: {:0.4f}'.format(float(level_fan)))
+        _log.debug('led level: {:0.2f}'.format(level_led)
+                    + ', fan level: {:0.2f}'.format(level_fan))
         return
         
     def _publish_device_th_pp(self):
@@ -684,8 +684,8 @@ class SmartHub(Agent):
         thpp_fan = self._sh_devices_th_pp[SH_DEVICE_FAN]
         self._publish_sh_device_th_pp(SH_DEVICE_LED, thpp_led)
         self._publish_sh_device_th_pp(SH_DEVICE_FAN, thpp_fan)
-        _log.debug('led th pp: {:0.4f}'.format(float(thpp_led))
-                    + ', fan th pp: {0:0.4f}'.format(float(thpp_fan)))
+        _log.debug('led th pp: {:0.2f}'.format(thpp_led)
+                    + ', fan th pp: {0:0.2f}'.format(thpp_fan))
         return
         
     def _rpcget_sh_device_state(self, lhw_device_id):
@@ -780,7 +780,7 @@ class SmartHub(Agent):
     def _updateShDeviceLevel(self, lhw_device_id, end_point, level):
         # _log.debug('_updateShDeviceLevel()')
         
-        _log.debug('level {0:0.4f}'.format( level))
+        _log.debug('level {0:0.2f}'.format( level))
         device_level = self._rpcget_sh_device_level(lhw_device_id)
         # check if the level really updated at the h/w, only then proceed with new level
         if isclose(level, device_level, EPSILON):
@@ -788,7 +788,7 @@ class SmartHub(Agent):
             self._sh_devices_level[lhw_device_id] = level
             self._publish_sh_device_level(lhw_device_id, level)
             
-        _log.debug('Current level, ' + end_point + ': ' + '{0:0.4f}'.format( device_level))
+        _log.debug('Current level, ' + end_point + ': ' + '{:0.2f}'.format( device_level))
             
         return
         
