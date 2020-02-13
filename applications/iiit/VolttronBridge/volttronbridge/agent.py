@@ -387,11 +387,15 @@ class VolttronBridge(Agent):
         
         if pp_msg.get_isoptimal():
             _log.debug('***** New optimal price point from local:'
-                                                + ' {:0.2f}'.format(pp_msg.get_value()))
+                                            + ' {:0.2f}'.format(pp_msg.get_value())
+                                            + ' price_id: {}'.format(pp_msg.get_price_id())
+                                            )
             self.local_opt_pp_id = pp_msg.get_price_id()
         else :
             _log.debug('***** New bid price point from local:'
-                                                + ' {:0.2f}'.format(pp_msg.get_value()))
+                                            + ' {:0.2f}'.format(pp_msg.get_value())
+                                            + ' price_id: {}'.format(pp_msg.get_price_id())
+                                            )
             self.local_bid_pp_id = pp_msg.get_price_id()
                 
         # log this msg
@@ -405,6 +409,7 @@ class VolttronBridge(Agent):
         _log.debug('posting to ds...')
         self.tmp_bustopic_pp_msg = copy(pp_msg)
         self.post_ds_new_pp()
+        _log.debug('done.')
         return
         
     # energy demand on local bus published, post it to upstream bridge
@@ -443,8 +448,10 @@ class VolttronBridge(Agent):
         self._all_us_posts_success = False
         
         # initiate us post
+        _log.debug('posting to us...')
         self.tmp_bustopic_ed_msg = copy(ed_msg)
         self.post_us_new_ed()       # will run once, if failed perodically retries
+        _log.debug('done.')
         return
         
     # perodically keeps trying to post ed to us
@@ -696,7 +703,7 @@ class VolttronBridge(Agent):
         success_ed = False
         # handle only ap or ed type messages
         success_ap = check_msg_type(message, MessageType.active_power)
-        _log.debug('success_ap - {}'.format(success_ap))
+        #_log.debug('success_ap - {}'.format(success_ap))
         if not success_ap:
             success_ed = check_msg_type(message, MessageType.energy_demand)
             _log.debug('success_ed - {}'.format(success_ed))
@@ -715,7 +722,7 @@ class VolttronBridge(Agent):
             # print(e)
             return jsonrpc.json_error(rpcdata_id, UNHANDLED_EXCEPTION, e.message)
             
-        _log.debug('sanity checks....')
+        #_log.debug('sanity checks....')
         # validate various sanity measure like, valid fields, valid pp ids, ttl expiry, etc.,
         hint = 'New Active Power' if success_ap else 'New Energy Demand'
         validate_fields = ['value', 'units', 'price_id', 'isoptimal', 'duration', 'ttl']
@@ -726,10 +733,10 @@ class VolttronBridge(Agent):
         if not ed_msg.sanity_check_ok(hint, validate_fields, valid_price_ids):
             _log.warning('Msg sanity checks failed!!!')
             return jsonrpc.json_error(rpcdata_id, PARSE_ERROR, 'Msg sanity checks failed!!!')
-        _log.debug('done.')
+        #_log.debug('done.')
         
         # check if from registered ds
-        _log.debug('is msg from a registered ds?....')
+        #_log.debug('is msg from a registered ds?....')
         if not self._msg_from_registered_ds(ed_msg.get_src_ip(), ed_msg.get_src_device_id()):
             # either the post to ds failed in previous iteration, 
             # or unregistered or the msg is corrupted
@@ -737,7 +744,7 @@ class VolttronBridge(Agent):
             # indicates ds that it needs to retry after registering once again
             _log.warning('msg not from registered ds, do nothing!!!')
             return jsonrpc.json_error(rpcdata_id, PARSE_ERROR, 'Msg not from registered ds!!!')
-        _log.debug('yes.')
+        #_log.debug('yes.')
         
         # post to bus
         _log.debug('post to the local-ds-bus...')
@@ -746,14 +753,14 @@ class VolttronBridge(Agent):
         _log.debug('local bus topic: {}'.format(pub_topic))
         # log this msg
         if success_ap:
-            _log. info('[LOG] ap from ds, Msg: {}'.format(pub_msg))
+            _log.info('[LOG] ap from ds, Msg: {}'.format(pub_msg))
         else:
-            _log. info('[LOG] ed from ds, Msg: {}'.format(pub_msg))
+            _log.info('[LOG] ed from ds, Msg: {}'.format(pub_msg))
         publish_to_bus(self, pub_topic, pub_msg)
         
         # at this stage, ds is alive, reset the counter
         self._ds_retrycount[self._ds_register.index(ed_msg.get_src_ip())] = 0
-        _log.debug('Done!!!')
+        _log.debug('done!!!')
         return True
         
     def _msg_from_registered_ds(self, discovery_addr, device_id):
