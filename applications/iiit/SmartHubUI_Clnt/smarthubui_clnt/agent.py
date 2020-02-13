@@ -25,6 +25,10 @@ import time
 import json
 
 from ispace_utils import do_rpc
+from ispace_msg import MessageType
+from ispace_msg_utils import check_msg_type, valid_bustopic_msg
+
+
 
 utils.setup_logging()
 _log = logging.getLogger(__name__)
@@ -44,6 +48,7 @@ def smarthubui_clnt(config_path, **kwargs):
 
     config = utils.load_config(config_path)
     agent_id = config['agentid']
+    
     
     class SmartHubUI_Clnt(Agent):
         '''
@@ -65,9 +70,11 @@ def smarthubui_clnt(config_path, **kwargs):
             ble_ui_srv_port = config.get('ble_ui_server_port', 8081)
             self.url_root = 'http://' + ble_ui_srv_address + ':' + str(ble_ui_srv_port) + '/smarthub'
 
-        @Core.receiver('onstart')            
+        @Core.receiver('onstart')
         def startup(self, sender, **kwargs):
             _log.debug('startup()')
+            self._valid_senders_list_pp = ['iiit.pricecontroller']
+            
             self._subscribeTopics()
             return
 
@@ -117,6 +124,9 @@ def smarthubui_clnt(config_path, **kwargs):
         def on_match_currentPP(self, peer, sender, bus,
                 topic, headers, message):
             _log.debug('on_match_currentPP()')
+            if sender not in self._valid_senders_list_pp: return
+            # check message type before parsing
+            if not check_msg_type(message, MessageType.price_point): return False
             self.uiPostCurrentPricePoint(headers, message)
             
         def on_match_sensorData(self, peer, sender, bus,
@@ -157,9 +167,22 @@ def smarthubui_clnt(config_path, **kwargs):
         def uiPostCurrentPricePoint(self, headers, message):
             #json rpc to BLESmartHubSrv
             _log.debug('uiPostCurrentPricePoint()')
-            pricePoint = message[0]
-            self.do_rpc('currentPricePoint', {'pricePoint': pricePoint})
+            valid_senders_list = self._valid_senders_list_pp
+            minimum_fields = ['msg_type', 'value', 'value_data_type', 'units', 'price_id']
+            validate_fields = ['value', 'units', 'price_id', 'isoptimal', 'duration', 'ttl']
+            valid_price_ids = []
+            (success, pp_msg) = valid_bustopic_msg(sender, valid_senders_list
+                                                    , minimum_fields
+                                                    , validate_fields
+                                                    , valid_price_ids
+                                                    , message)
+            if not success or pp_msg is None: return
+            if not pp_msg.get_isoptimal(): return
 
+            pricePoint = pp_msg.get_value()
+            do_rpc('currentPricePoint', {'pricePoint': pricePoint})
+            return
+            
         def uiPostSensorData(self, headers, message):
             _log.debug('uiPostSensorData()')
             luxLevel = message[0]['luxlevel']
@@ -167,7 +190,7 @@ def smarthubui_clnt(config_path, **kwargs):
             tempLevel = message[0]['templevel']
             co2Level = message[0]['co2level']
             pirLevel = message[0]['pirlevel']
-            self.do_rpc('shSensorsData', {'luxLevel': luxLevel,
+            do_rpc('shSensorsData', {'luxLevel': luxLevel,
                                             'rhLevel':  rhLevel,
                                             'tempLevel': tempLevel,
                                             'co2Level': co2Level,
@@ -178,37 +201,37 @@ def smarthubui_clnt(config_path, **kwargs):
         def uiPostLedState(self, headers, message):
             _log.debug('uiPostLedState()')
             state = message[0]
-            self.do_rpc('shDeviceState', {'deviceId': SH_DEVICE_LED,
+            do_rpc('shDeviceState', {'deviceId': SH_DEVICE_LED,
                                             'state': state})
             return
         def uiPostFanState(self, headers, message):
             _log.debug('uiPostFanState()')
             state = message[0]
-            self.do_rpc('shDeviceState', {'deviceId': SH_DEVICE_FAN,
+            do_rpc('shDeviceState', {'deviceId': SH_DEVICE_FAN,
                                             'state': state})
             return
         def uiPostLedLevel(self, headers, message):
             _log.debug('uiPostLedLevel()')
             level = message[0]
-            self.do_rpc('shDeviceLevel', {'deviceId': SH_DEVICE_LED,
+            do_rpc('shDeviceLevel', {'deviceId': SH_DEVICE_LED,
                                             'level': level})
             return
         def uiPostFanLevel(self, headers, message):
             _log.debug('uiPostFanLevel()')
             level = message[0]
-            self.do_rpc('shDeviceLevel', {'deviceId': SH_DEVICE_FAN,
+            do_rpc('shDeviceLevel', {'deviceId': SH_DEVICE_FAN,
                                             'level': level})
             return
         def uiPostLedThPP(self, headers, message):
             _log.debug('uiPostLedThPP()')
             thPP = message[0]
-            self.do_rpc('shDeviceThPP', {'deviceId': SH_DEVICE_LED,
+            do_rpc('shDeviceThPP', {'deviceId': SH_DEVICE_LED,
                                             'thPP': thPP})
             return
         def uiPostFanThPP(self, headers, message):
             _log.debug('uiPostFanThPP()')
             thPP = message[0]
-            self.do_rpc('shDeviceThPP', {'deviceId': SH_DEVICE_FAN,
+            do_rpc('shDeviceThPP', {'deviceId': SH_DEVICE_FAN,
                                             'thPP': thPP})
             return
             
@@ -225,8 +248,10 @@ def main(argv=sys.argv):
         print (e)
         _log.exception('unhandled exception')
 
+
 if __name__ == '__main__':
     try:
         sys.exit(main(sys.argv))
     except KeyboardInterrupt:
         pass
+

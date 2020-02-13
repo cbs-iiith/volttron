@@ -246,21 +246,21 @@ class SmartHub(Agent):
             if rpcdata.method == 'ping':
                 result = True
             # TODO: rename methods and params in sync with BLESmartHubSrv/main.js
-            elif rpcdata.method == 'rpc_setShDeviceState' and header['REQUEST_METHOD'] == 'POST':
-                args = {'lhw_device_id': rpcdata.params['deviceId'],
-                        'state': rpcdata.params['newState'],
+            elif rpcdata.method == 'state' and header['REQUEST_METHOD'] == 'POST':
+                args = {'lhw_device_id': rpcdata.params['id'],
+                        'state': rpcdata.params['value'],
                         'schd_exist': SCHEDULE_NOT_AVLB
                         }
                 result = self._set_sh_device_state(**args)
-            elif rpcdata.method == 'rpc_setShDeviceLevel' and header['REQUEST_METHOD'] == 'POST':
-                args = {'lhw_device_id': rpcdata.params['deviceId'],
-                        'level': rpcdata.params['newLevel'],
+            elif rpcdata.method == 'level' and header['REQUEST_METHOD'] == 'POST':
+                args = {'lhw_device_id': rpcdata.params['id'],
+                        'level': rpcdata.params['value'],
                         'schd_exist': SCHEDULE_NOT_AVLB
                         }
                 result = self._set_sh_device_level(**args)
-            elif rpcdata.method == 'rpc_setShDeviceThPP' and header['REQUEST_METHOD'] == 'POST':
-                args = {'lhw_device_id': rpcdata.params['deviceId'],
-                        'thPP': rpcdata.params['newThPP']
+            elif rpcdata.method == 'threshold-price' and header['REQUEST_METHOD'] == 'POST':
+                args = {'lhw_device_id': rpcdata.params['id'],
+                        'thPP': rpcdata.params['value']
                         }
                 result = self._set_sh_device_th_pp(**args)
             else:
