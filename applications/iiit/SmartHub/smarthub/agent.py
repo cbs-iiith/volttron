@@ -524,20 +524,21 @@ class SmartHub(Agent):
             try:
                 level = self._rpcget_sh_device_level(lhw_device_id);
             except Exception as e:
-                _log.exception('no task schdl for getting device level')
+                _log.warning('no task schdl for getting device level.'
+                                        + ' message: {}'.format(e.message))
                 # print(e)
             finally:
                 # cancel the schedule
                 cancel_task_schdl(self, task_id)
         else:
-            _log.error('Error: not a valid param - schd_exist: {}'.format(schd_exist))
+            _log.warning('Error: not a valid param - schd_exist: {}'.format(schd_exist))
             return E_UNKNOWN_LEVEL
         return level
                 
     def _set_sh_device_state(self, lhw_device_id, state, schd_exist):
         # _log.debug('_set_sh_device_state()')
         if not self._valid_device_action(lhw_device_id, AT_SET_STATE):
-            _log.error('Error: not a valid device to change state, lhw_device_id:'
+            _log.warning('Error: not a valid device to change state, lhw_device_id:'
                                                             + ' {}.'.format(lhw_device_id))
             return
             
@@ -635,7 +636,7 @@ class SmartHub(Agent):
         co2_level = self._get_sh_device_level(SH_DEVICE_S_CO2, SCHEDULE_AVLB)
         pir_level = self._get_sh_device_level(SH_DEVICE_S_PIR, SCHEDULE_AVLB)
         
-        _log.debug('lux Level: {:0.2f}'.format(lux_level)
+        _log.info('[LOG] lux Level: {:0.2f}'.format(lux_level)
                     + ', rh Level: {:0.2f}'.format(rh_level)
                     + ', temp Level: {:0.2f}'.format(temp_level)
                     + ', co2 Level: {:0.2f}'.format(co2_level)
@@ -664,8 +665,8 @@ class SmartHub(Agent):
         state_fan = self._sh_devices_state[SH_DEVICE_FAN]
         self._publish_sh_device_state(SH_DEVICE_LED, state_led)
         self._publish_sh_device_state(SH_DEVICE_FAN, state_fan)
-        _log.debug('led state: {:d}'.format(state_led)
-                    + ', fan state: {:d}'.format(state_fan))
+        _log.info('[LOG] led state: {}'.format('ON' if state_led == SH_DEVICE_STATE_ON else 'OFF')
+                + ', fan state: {}'.format('ON' if state_fan == SH_DEVICE_STATE_ON else 'OFF'))
         return
         
     def _publish_device_level(self):
@@ -674,7 +675,7 @@ class SmartHub(Agent):
         level_fan = self._sh_devices_level[SH_DEVICE_FAN]
         self._publish_sh_device_level(SH_DEVICE_LED, level_led)
         self._publish_sh_device_level(SH_DEVICE_FAN, level_fan)
-        _log.debug('led level: {:0.2f}'.format(level_led)
+        _log.info('[LOG] led level: {:0.2f}'.format(level_led)
                     + ', fan level: {:0.2f}'.format(level_fan))
         return
         
@@ -684,7 +685,7 @@ class SmartHub(Agent):
         thpp_fan = self._sh_devices_th_pp[SH_DEVICE_FAN]
         self._publish_sh_device_th_pp(SH_DEVICE_LED, thpp_led)
         self._publish_sh_device_th_pp(SH_DEVICE_FAN, thpp_fan)
-        _log.debug('led th pp: {:0.2f}'.format(thpp_led)
+        _log.info('[LOG] led th pp: {:0.2f}'.format(thpp_led)
                     + ', fan th pp: {0:0.2f}'.format(thpp_fan))
         return
         
