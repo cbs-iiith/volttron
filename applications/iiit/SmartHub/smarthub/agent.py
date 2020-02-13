@@ -280,19 +280,13 @@ class SmartHub(Agent):
         return True
         
     def _stop_volt(self):
-        _log.debug('_stop_volt()')
+        #_log.debug('_stop_volt()')
         task_id = str(randint(0, 99999999))
         success = get_task_schdl(self, task_id,'iiit/cbs/smarthub')
-        if not success:
-            self._volt_state = 0
-            return
-        try:
-            self._set_sh_device_state(SH_DEVICE_LED_DEBUG, SH_DEVICE_STATE_OFF, SCHEDULE_AVLB)
-            self._set_sh_device_state(SH_DEVICE_LED, SH_DEVICE_STATE_OFF, SCHEDULE_AVLB)
-            self._set_sh_device_state(SH_DEVICE_FAN, SH_DEVICE_STATE_OFF, SCHEDULE_AVLB)
-        except Exception as e:
-            _log.exception('Could not contact actuator. Is it running?')
-        finally:
+        if success:
+            self._rpcset_sh_device_state(SH_DEVICE_LED_DEBUG, SH_DEVICE_STATE_OFF)
+            self._rpcset_sh_device_state(SH_DEVICE_LED, SH_DEVICE_STATE_OFF)
+            self._rpcset_sh_device_state(SH_DEVICE_FAN, SH_DEVICE_STATE_OFF)
             # cancel the schedule
             cancel_task_schdl(self, task_id)
         self._volt_state = 0
@@ -552,13 +546,17 @@ class SmartHub(Agent):
             return
             
         if schd_exist == SCHEDULE_AVLB: 
-            self._rpcset_sh_device_state(lhw_device_id, state);
+            self._rpcset_sh_device_state(lhw_device_id, state)
+            end_point = self._get_lhw_end_point(lhw_device_id, AT_SET_STATE)
+            self._update_sh_device_state(lhw_device_id, end_point,state)
         elif schd_exist == SCHEDULE_NOT_AVLB:
             task_id = str(randint(0, 99999999))
             success = get_task_schdl(self, task_id, 'iiit/cbs/smarthub')
             if not success: return
             try:
-                self._rpcset_sh_device_state(lhw_device_id, state);
+                self._rpcset_sh_device_state(lhw_device_id, state)
+                end_point = self._get_lhw_end_point(lhw_device_id, AT_SET_STATE)
+                self._update_sh_device_state(lhw_device_id, end_point,state)
             except Exception as e:
                 _log.exception('no task schdl for changing device state')
                 # print(e)
@@ -582,12 +580,16 @@ class SmartHub(Agent):
             
         if schd_exist == SCHEDULE_AVLB: 
             self._rpcset_sh_device_level(lhw_device_id, level);
+            end_point = self._get_lhw_end_point(lhw_device_id, AT_SET_LEVEL)
+            self._updateShDeviceLevel(lhw_device_id, end_point,level)
         elif schd_exist == SCHEDULE_NOT_AVLB:
             task_id = str(randint(0, 99999999))
             success = get_task_schdl(self, task_id, 'iiit/cbs/smarthub')
             if not success: return
             try:
                 self._rpcset_sh_device_level(lhw_device_id, level);
+                end_point = self._get_lhw_end_point(lhw_device_id, AT_SET_LEVEL)
+                self._updateShDeviceLevel(lhw_device_id, end_point,level)
             except Exception as e:
                 _log.exception('no task schdl for changing device level')
                 # print(e)
@@ -687,9 +689,6 @@ class SmartHub(Agent):
         return
         
     def _rpcget_sh_device_state(self, lhw_device_id):
-        if not self._valid_device_action(lhw_device_id,AT_GET_STATE):
-            _log.exception('not a valid device to get state, lhw_device_id: ' + str(lhw_device_id))
-            return E_UNKNOWN_STATE
         end_point = self._get_lhw_end_point(lhw_device_id, AT_GET_STATE)
         try:
             device_state = self.vip.rpc.call(
@@ -708,9 +707,6 @@ class SmartHub(Agent):
         return int(device_state)
         
     def _rpcset_sh_device_state(self, lhw_device_id, state):
-        if not self._valid_device_action(lhw_device_id, AT_SET_STATE):
-            _log.exception('not a valid device to change state, lhw_device_id: ' + str(lhw_device_id))
-            return
         end_point = self._get_lhw_end_point(lhw_device_id, AT_SET_STATE)
         try:
             result = self.vip.rpc.call(
@@ -726,14 +722,10 @@ class SmartHub(Agent):
             _log.exception('Could not contact actuator. Is it running?')
             # print(e)
             return
-        self._update_sh_device_state(lhw_device_id, end_point,state)
         return
         
     def _rpcget_sh_device_level(self, lhw_device_id):
         # _log.debug('_rpcget_sh_device_level()')
-        if not self._valid_device_action(lhw_device_id, AT_GET_LEVEL):
-            _log.exception('not a valid device to get level, lhw_device_id: ' + str(lhw_device_id))
-            return E_UNKNOWN_LEVEL
         end_point = self._get_lhw_end_point(lhw_device_id, AT_GET_LEVEL)
         # _log.debug('end_point: ' + end_point)
         try:
@@ -751,11 +743,7 @@ class SmartHub(Agent):
         return E_UNKNOWN_LEVEL
         
     def _rpcset_sh_device_level(self, lhw_device_id, level):
-        if not self._valid_device_action(lhw_device_id, AT_SET_LEVEL):
-            _log.exception('not a valid device to change level, lhw_device_id: ' + str(lhw_device_id))
-            return
         end_point = self._get_lhw_end_point(lhw_device_id, AT_SET_LEVEL)
-        
         try:
             result = self.vip.rpc.call(
                     'platform.actuator', 
@@ -763,7 +751,6 @@ class SmartHub(Agent):
                     self._agent_id, 
                     'iiit/cbs/smarthub/' + end_point,
                     level).get(timeout=10)
-            self._updateShDeviceLevel(lhw_device_id, end_point,level)
             return
         except gevent.Timeout:
             _log.exception('gevent.Timeout in _rpcset_sh_device_level()')
