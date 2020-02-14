@@ -530,57 +530,77 @@ class VolttronBridge(Agent):
         
         pp_msg = self.tmp_bustopic_pp_msg
         _log.info('[LOG] pp msg to ds: {}'.format(pp_msg))
+        
+        # before posting to ds, dcrement ttl and update ts
+        # decrement the ttl by time consumed to process till now + 1 sec
+        decrement_status = pp_msg.decrement_ttl()
+        if decrement_status and pp_msg.get_ttl() == 0:
+            _log.warning('msg ttl expired on decrement_ttl(), do nothing!!!')
+            return False
+        elif decrement_status:
+            _log.info('new ttl: {}.'.format(pp_msg.get_ttl()))
+        pp_msg.update_ts()
+        
         # case pp_msg one-to-many(i.e., one_to_one is not True)
+        # create list of ds devices to which pp_msg need to be posted
+        url_roots = []
+        main_idx = []
         for discovery_address in self._ds_register:
             index = self._ds_register.index(discovery_address)
-            if self._ds_retrycount[index] == -1:
-                # do nothing, already posted.
-                continue
-                
-            # before posting to ds, dcrement ttl and update ts
-            # decrement the ttl by time consumed to process till now + 1 sec
-            decrement_status = pp_msg.decrement_ttl()
-            if decrement_status and pp_msg.get_ttl() == 0:
-                _log.warning('msg ttl expired on decrement_ttl(), do nothing!!!')
-                return False
-            elif decrement_status:
-                _log.info('new ttl: {}.'.format(pp_msg.get_ttl()))
-            pp_msg.update_ts()
             
-            # rpc to ds
-            # TODO: do_rpc is synchrous, using requests which is a blocking operation
-            # need to convert to async operations, maybe can use gevent 
-            # (volttron inherently supports gevents)
-            # run tasks concurrently
-            url_root = 'http://' + discovery_address + '/bridge'
-            success = do_rpc(self._agent_id, url_root, 'pricepoint'
-                                            , pp_msg.get_json_params()
-                                            , 'POST')
+            # if already posted, do nothing
+            if self._ds_retrycount[index] == -1: continue
+            
+            url_roots.append('http://' + discovery_address + '/bridge')
+            #keep track of main index
+            main_idx.append(index)
+            
+        # use gevent for concurrent do_rpc requests for pp_msg post to ds devices
+        jobs = [gevent.spawn(do_rpc, self._agent_id
+                                , url_root
+                                , 'pricepoint'
+                                , pp_msg.get_json_params()
+                                , 'POST'
+                                ) for url_root in url_roots
+                                ]
+        gevent.joinall(jobs, timeout=2)
+        for idx, job in enumerate(jobs):
+            index = main_idx[idx]
+            success = job.value
+            discovery_address = self._ds_register[index]
             if success:
                 # success, reset retry count
                 self._ds_retrycount[index] = -1    # no need to retry on the next run
-                _log.debug('post to:' + discovery_address + ' sucess!!!')
+                _log.debug('post pp to ds ({})'.format(self._ds_device_ids[index])
+                            + ', result: success!!!')
             else:
+                # failed to post, increment retry count
+                self._ds_retrycount[index] = self._ds_retrycount[index] + 1
                 _log_debug('************************ FAILED TO POST PP TO DS ****************')
                 _log.debug('failed to post pp to ds ({})'.format(self._ds_device_ids[index])
+                            + ', failed count: {:d}'.format(self._ds_retrycount[index])
+                            + ', will try again in {} sec!!!'.format(self._period_process_pp)
                             + ', result: {}'.format(success))
                 _log_debug('************************ FAILED TO POST PP TO DS ****************')
-                # failed to post, increment retry count
-                self._ds_retrycount[index] = self._ds_retrycount[index]  + 1
-                _log.debug('post to:' + discovery_address +
-                            ' failed, count: {:d} !!!'.format(self._ds_retrycount[index]))
-                if self._ds_retrycount[index] >= MAX_RETRIES:
-                    # failed more than max retries, unregister the ds
-                    _log.debug('posts to: {}'.format(discovery_address)
-                                + ' failed more than MAX_RETRIES: {:d}'.format(MAX_RETRIES)
-                                + ' ds unregistering...'
-                                )
-                    self._ds_register.remove(discovery_address)
-                    del self._ds_device_ids[index]
-                    del self._ds_retrycount[index]
-                    _log.debug('unregistered!!!')
-                    continue
-                else: self._all_ds_posts_success  = False
+                
+        # check & cleanup the ds registery
+        for index, retry_count in enumerate(self._ds_retrycount):
+            if retry_count == -1: continue
+            if retry_count >= MAX_RETRIES:
+                # failed more than max retries, unregister the ds device
+                _log.debug('post pp to ds: {}'.format(self._ds_device_ids[index])
+                            + ' failed more than MAX_RETRIES: {:d}'.format(MAX_RETRIES)
+                            + ' ds unregistering...'
+                            )
+                del self._ds_register[index]
+                del self._ds_device_ids[index]
+                del self._ds_retrycount[index]
+                _log.debug('unregistered!!!')
+                continue
+            else: 
+                self._all_ds_posts_success  = False
+                # need not check of other failed cases
+                break
         return
         
     # check if the ds is registered with this bridge
