@@ -283,9 +283,9 @@ class SmartStrip(Agent):
         success = get_task_schdl(self, task_id, 'iiit/cbs/smartstrip')
         if success:
             for plug_id, state in enumerate(self._plugs_relay_state):
-                if plug_id == self._sh_plug_id
+                if (plug_id == self._sh_plug_id
                     or state == RELAY_OFF
-                    : continue
+                    ): continue
                 self._rpcset_plug_relay_state(plug_id, RELAY_OFF)
                 
             self._rpcset_led_debug_state(LED_OFF)
