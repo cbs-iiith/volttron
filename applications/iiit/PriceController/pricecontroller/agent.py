@@ -82,6 +82,13 @@ class PriceController(Agent):
     
     _published_us_bid_ted = None
     
+    # local ed agents vip_identities registered with the bridge
+    _local_ed_agents = None
+    # local device ids registered with the bridge
+    _local_device_ids = None
+    # ds device ids registered with the bridge
+    _ds_device_ids = None
+    
     # default 15 minutes
     _bids_timeout = 900
     
@@ -131,7 +138,8 @@ class PriceController(Agent):
     def startup(self, sender, **kwargs):
         _log.debug('startup()')
         
-        # retrive self._device_id and self._discovery_address from vb
+        # retrive self._device_id, self._ip_addr, self._discovery_address from the bridge
+        # retrive_details_from_vb is a blocking call
         retrive_details_from_vb(self, 5)
         
         # register rpc routes with MASTER_WEB
@@ -140,7 +148,12 @@ class PriceController(Agent):
         
         self._us_senders_list = ['iiit.volttronbridge', 'iiit.pricepoint']
         self._ds_senders_list = ['iiit.volttronbridge']
+        
+        # TODO: check if there is a need to retrive these details at a regular interval
+        #       currently the details are retrived on new ed msg (self._topic_energy_demand_ds)
         self._local_ed_agents = []
+        self._local_device_ids = []
+        self._ds_device_ids = []
         
         self.us_opt_pp_msg = get_default_pp_msg(self._discovery_address, self._device_id)
         self.us_bid_pp_msg = get_default_pp_msg(self._discovery_address, self._device_id)
@@ -506,9 +519,9 @@ class PriceController(Agent):
          
         # check if all the bids are received from both local & ds devices
         # rcvd_all_lc_bid_ed_lc --> local(lc) energy demand bids for local(lc) bid pricepoint
-        rcvd_all_lc_bid_ed_lc = self._rcvd_all_lc_bid_ed_lc(self._rpcget_local_device_ids())
+        rcvd_all_lc_bid_ed_lc = self._rcvd_all_lc_bid_ed_lc(self._local_device_ids)
         # rcvd_all_lc_bid_ed_ds --> downstream(ds) energy demand bids for upstream(us) bid pricepoint
-        rcvd_all_lc_bid_ed_ds = self._rcvd_all_lc_bid_ed_ds(self._rpcget_ds_device_ids())
+        rcvd_all_lc_bid_ed_ds = self._rcvd_all_lc_bid_ed_ds(self._ds_device_ids)
         
         # TODO: timeout check -- visit later
         # lc_bid_pp_timeout = self._lc_bid_pp_timeout()
@@ -594,9 +607,10 @@ class PriceController(Agent):
         #    _log.warning('!!! unable to contact bridge !!!')
         #    return
             
-        # local ed agents vip_identities
         self._local_ed_agents = self._rpcget_local_ed_agents()
-            
+        self._local_device_ids = self._rpcget_local_device_ids()
+        self._ds_device_ids = self._rpcget_ds_device_ids()
+        
         # unique senders list
         # valid_senders_list = list(set(self._ds_senders_list + self._local_ed_agents))
         valid_senders_list = self._ds_senders_list + self._local_ed_agents
@@ -636,7 +650,7 @@ class PriceController(Agent):
         # MessageType.active_power, aggregator publishes this data to local/energydemand
         if (success_ap and price_id == self.us_opt_pp_msg.get_price_id()):
             # put data to local_tap bucket
-            if device_id in self._rpcget_local_device_ids():
+            if device_id in self._local_device_ids:
                 opt_tap = ed_msg.get_value()
                 _log. info('[LOG] TAP opt from local_device ({})'.format(device_id)
                                             + ' for us opt pp_msg({})):'.format(price_id)
@@ -644,7 +658,7 @@ class PriceController(Agent):
                 self._us_local_opt_ap[device_id] = opt_tap
                 return
             # put data to ds_tap bucket
-            elif device_id in self._rpcget_ds_device_ids():
+            elif device_id in self._ds_device_ids:
                 opt_tap = ed_msg.get_value()
                 _log. info('[LOG] TAP opt from ds_device ({})'.format(device_id)
                                             + ' for us opt pp_msg({})):'.format(price_id)
@@ -654,7 +668,7 @@ class PriceController(Agent):
         # MessageType.energy_demand, aggregator publishes this data to local/energydemand
         elif (success_ed and price_id == self.us_bid_pp_msg.get_price_id()):
             # put data to ds_tap bucket
-            if device_id in self._rpcget_local_device_ids():
+            if device_id in self._local_device_ids:
                 bid_ted = ed_msg.get_value()
                 _log. info('[LOG] TED bid from local_device ({})'.format(device_id)
                                             + ' for us bid pp_msg({})):'.format(price_id)
@@ -662,7 +676,7 @@ class PriceController(Agent):
                 self._us_local_bid_ed[device_id] = bid_ted
                 return
             # put data to ds_tap bucket
-            elif device_id in self._rpcget_ds_device_ids():
+            elif device_id in self._ds_device_ids:
                 bid_ted = ed_msg.get_value()
                 _log. info('[LOG] TED bid from ds_device ({})'.format(device_id)
                                             + ' for us bid pp_msg({})):'.format(price_id)
@@ -672,7 +686,7 @@ class PriceController(Agent):
         # MessageType.energy_demand, process_loop() initiates _compute_new_price()
         elif (success_ed and price_id == self.local_bid_pp_msg.get_price_id()):
             # put data to local_tap bucket
-            if device_id in self._rpcget_local_device_ids():
+            if device_id in self._local_device_ids:
                 bid_ted = ed_msg.get_value()
                 _log. info('[LOG] TED bid from local_device ({})'.format(device_id)
                                             + ' for local bid pp_msg({})):'.format(price_id)
@@ -680,7 +694,7 @@ class PriceController(Agent):
                 self._local_bid_ed[device_id] = ed_msg.get_value()
                 return
             # put data to local_ted bucket
-            elif device_id in self._rpcget_ds_device_ids():
+            elif device_id in self._ds_device_ids:
                 bid_ted = ed_msg.get_value()
                 _log. info('[LOG] TED bid from ds_device ({})'.format(device_id)
                                             + ' for local bid pp_msg({})):'.format(price_id)
@@ -737,9 +751,9 @@ class PriceController(Agent):
             
         # check if all the bids are received from both local & ds devices
         # rcvd_all_us_bid_ed_lc --> local(lc) energy demand bids for upstream(us) bid pricepoint
-        rcvd_all_us_bid_ed_lc = self._rcvd_all_us_bid_ed_lc(self._rpcget_local_device_ids())
+        rcvd_all_us_bid_ed_lc = self._rcvd_all_us_bid_ed_lc(self._local_device_ids)
         # rcvd_all_us_bid_ed_ds --> downstream(ds) energy demand bids for upstream(us) bid pricepoint
-        rcvd_all_us_bid_ed_ds = self._rcvd_all_us_bid_ed_ds(self._rpcget_ds_device_ids())
+        rcvd_all_us_bid_ed_ds = self._rcvd_all_us_bid_ed_ds(self._ds_device_ids)
         
         # TODO: timeout check -- visit later
         us_bids_timeout = self._us_bids_timeout()
@@ -778,6 +792,7 @@ class PriceController(Agent):
         return
         
     def _rpcget_local_ed_agents(self):
+        #if rpc get failed, return the old copy
         result = self._local_ed_agents
         try:
             result = self.vip.rpc.call(self._vb_vip_identity
@@ -785,6 +800,7 @@ class PriceController(Agent):
                                         ).get(timeout=10)
         except gevent.Timeout:
             _log.warning('gevent.Timeout in _rpcget_local_ed_agents()!!!')
+            pass
         except Exception as e:
             _log.warning('unable to get local ed agents vip_identities from bridge.'
                             + ' message: {}'.format(e.message))
@@ -792,13 +808,15 @@ class PriceController(Agent):
         return result
         
     def _rpcget_local_device_ids(self):
-        result = []
+        #if rpc get failed, return the old copy
+        result = self._local_device_ids
         try:
             result = self.vip.rpc.call(self._vb_vip_identity
                                         , 'get_local_device_ids'
                                         ).get(timeout=10)
         except gevent.Timeout:
             _log.warning('gevent.Timeout in _rpcget_local_device_ids()!!!')
+            pass
         except Exception as e:
             #print(e)
             _log.warning('unable to get local devices ids from bridge.'
@@ -807,13 +825,15 @@ class PriceController(Agent):
         return result
         
     def _rpcget_ds_device_ids(self):
-        result = []
+        #if rpc get failed, return the old copy
+        result = self._ds_device_ids
         try:
             result = self.vip.rpc.call(self._vb_vip_identity
                                         , 'get_ds_device_ids'
                                         ).get(timeout=10)
         except gevent.Timeout:
             _log.warning('gevent.Timeout in _rpcget_ds_device_ids()!!!')
+            pass
         except Exception as e:
             #print(e)
             _log.warning('unable to get ds device ids from bridge.'
@@ -887,9 +907,9 @@ class PriceController(Agent):
         #      i.e., devices_count >= len(vb_devices_count)
         #       reconcile the device ids and match _ap[] with device_id
         new_local_device_ids = list(set(local_bucket.keys())
-                                            & set(self._rpcget_local_device_ids()))
+                                            & set(self._local_device_ids()))
         new_ds_device_ids = list(set(ds_bucket.keys())
-                                            & set(self._rpcget_ds_device_ids()))
+                                            & set(self._ds_device_ids()))
         # compute total
         total_value = 0.0
         for device_id in new_local_device_ids:
