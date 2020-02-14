@@ -46,7 +46,6 @@ SH_DEVICE_S_PIR = 8
 
 def smarthubui_clnt(config_path, **kwargs):
     config = utils.load_config(config_path)
-    agent_id = config['agentid']
     
     Agent.__name__ = 'SmartHubUI_Clnt_Agent'
     return SmartHubUI_Clnt(**kwargs)
@@ -61,15 +60,17 @@ class SmartHubUI_Clnt(Agent):
         _log.debug('__init__()')
         super(SmartHubUI_Clnt, self).__init__(**kwargs)
         
-        self._configGetPoints()
+        self.config = utils.load_config(config_path)
+        self._config_get_points()
+        return
         
     @Core.receiver('onsetup')
     def setup(self, sender, **kwargs):
         _log.debug('setup()')
-        _log.info(config['message'])
-        self._agent_id = config['agentid']
-        ble_ui_srv_address = config.get('ble_ui_server_address', '127.0.0.1')
-        ble_ui_srv_port = config.get('ble_ui_server_port', 8081)
+        _log.info(self.config['message'])
+        self._agent_id = self.config['agentid']
+        ble_ui_srv_address = self.config.get('ble_ui_server_address', '127.0.0.1')
+        ble_ui_srv_port = self.config.get('ble_ui_server_port', 8081)
         self.url_root = 'http://' + ble_ui_srv_address + ':' + str(ble_ui_srv_port) + '/smarthub'
 
     @Core.receiver('onstart')
@@ -77,7 +78,7 @@ class SmartHubUI_Clnt(Agent):
         _log.debug('startup()')
         self._valid_senders_list_pp = ['iiit.pricecontroller']
         
-        self._subscribeTopics()
+        self._subscribe_topics()
         return
 
     @Core.receiver('onstop')
@@ -85,47 +86,47 @@ class SmartHubUI_Clnt(Agent):
         _log.debug('onstop()')
         return
     
-    def _configGetPoints(self):
+    def _config_get_points(self):
         self.topic_price_point = config.get('topic_price_point',
                                                         'smarthub/pricepoint')
-        self.topic_sensorsLevelAll_point = config.get('sensorsLevelAll_point',
+        self.topic_sensors = config.get('sensorsLevelAll_point',
                                                         'smarthub/sensors/all')
-        self.topic_ledState_point = config.get('ledState_point',
+        self.topic_led_state = config.get('ledState_point',
                                                         'smarthub/ledstate')
-        self.topic_fanState_point = config.get('fanState_point',
+        self.topic_fan_state = config.get('fanState_point',
                                                         'smarthub/fanstate')
-        self.topic_ledLevel_point = config.get('ledLevel_point',
+        self.topic_led_level = config.get('ledLevel_point',
                                                         'smarthub/ledlevel')
-        self.topic_fanLevel_point = config.get('fanLevel_point',
+        self.topic_fan_level = config.get('fanLevel_point',
                                                         'smarthub/fanlevel')
-        self.topic_ledThPP_point = config.get('ledThPP_point',
+        self.topic_led_th_pp = config.get('ledThPP_point',
                                                         'smarthub/ledthpp')
-        self.topic_fanThPP_point = config.get('fanThPP_point',
+        self.topic_fan_th_pp = config.get('fanThPP_point',
                                                         'smarthub/fanthpp')
         return
         
-    def _subscribeTopics(self):
+    def _subscribe_topics(self):
         self.vip.pubsub.subscribe("pubsub", self.topic_price_point,\
-                                                self.on_match_currentPP)
-        self.vip.pubsub.subscribe("pubsub", self.topic_sensorsLevelAll_point,\
+                                                self.on_match_current_pp)
+        self.vip.pubsub.subscribe("pubsub", self.topic_sensors,\
                                                 self.on_match_sensorData)
-        self.vip.pubsub.subscribe("pubsub", self.topic_ledState_point,\
+        self.vip.pubsub.subscribe("pubsub", self.topic_led_state,\
                                                 self.on_match_ledState)
-        self.vip.pubsub.subscribe("pubsub", self.topic_fanState_point,\
+        self.vip.pubsub.subscribe("pubsub", self.topic_fan_state,\
                                                 self.on_match_fanState)
-        self.vip.pubsub.subscribe("pubsub", self.topic_ledLevel_point,\
+        self.vip.pubsub.subscribe("pubsub", self.topic_led_level,\
                                                 self.on_match_ledLevel)
-        self.vip.pubsub.subscribe("pubsub", self.topic_fanLevel_point,\
+        self.vip.pubsub.subscribe("pubsub", self.topic_fan_level,\
                                                 self.on_match_fanLevel)
-        self.vip.pubsub.subscribe("pubsub", self.topic_ledThPP_point,\
+        self.vip.pubsub.subscribe("pubsub", self.topic_led_th_pp,\
                                                 self.on_match_ledThPP)
-        self.vip.pubsub.subscribe("pubsub", self.topic_fanThPP_point,\
+        self.vip.pubsub.subscribe("pubsub", self.topic_fan_th_pp,\
                                                 self.on_match_fanThPP)
         return
         
-    def on_match_currentPP(self, peer, sender, bus,
+    def on_match_current_pp(self, peer, sender, bus,
             topic, headers, message):
-        _log.debug('on_match_currentPP()')
+        _log.debug('on_match_current_pp()')
         if sender not in self._valid_senders_list_pp: return
         # check message type before parsing
         if not check_msg_type(message, MessageType.price_point): return False
