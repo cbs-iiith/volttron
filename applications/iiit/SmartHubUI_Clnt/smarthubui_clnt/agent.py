@@ -115,44 +115,44 @@ class SmartHubUI_Clnt(Agent):
         if sender not in self._valid_senders_list_pp: return
         # check message type before parsing
         if not check_msg_type(message, MessageType.price_point): return False
-        self._rpc_current_pricepoint(headers, message)
+        self._rpc_current_pricepoint(sender, headers, message)
         
     def on_match_sensors_data(self, peer, sender, bus, topic, headers, message):
         _log.debug('on_match_sensors_data()')
-        self._rpc_sensors_data(headers, message)
+        self._rpc_sensors_data(sender, headers, message)
         return
         
     def on_match_led_state(self, peer, sender, bus, topic, headers, message):
         _log.debug('on_match_led_state()')
-        self._rpc_led_state(headers, message)
+        self._rpc_led_state(sender, headers, message)
         return
         
     def on_match_fan_state(self, peer, sender, bus, topic, headers, message):
         _log.debug('on_match_fan_state()')
-        self._rpc_fan_state(headers, message)
+        self._rpc_fan_state(sender, headers, message)
         return
         
     def on_match_led_level(self, peer, sender, bus, topic, headers, message):
         _log.debug('on_match_led_level()')
-        self._rpc_led_level(headers, message)
+        self._rpc_led_level(sender, headers, message)
         return
         
     def on_match_fan_level(self, peer, sender, bus, topic, headers, message):
         _log.debug('on_match_fan_level()')
-        self._rpc_fan_level(headers, message)
+        self._rpc_fan_level(sender, headers, message)
         return
         
     def on_match_led_th_pp(self, peer, sender, bus, topic, headers, message):
         _log.debug('on_match_led_th_pp()')
-        self._rpc_led_th_pp(headers, message)
+        self._rpc_led_th_pp(sender, headers, message)
         return
         
     def on_match_fan_th_pp(self, peer, sender, bus, topic, headers, message):
         _log.debug('on_match_fan_th_pp()')
-        self._rpc_fan_th_pp(headers, message)
+        self._rpc_fan_th_pp(sender, headers, message)
         return
         
-    def _rpc_current_pricepoint(self, headers, message):
+    def _rpc_current_pricepoint(self, sender, headers, message):
         #json rpc to BLESmartHubSrv
         _log.debug('_rpc_current_pricepoint()')
         valid_senders_list = self._valid_senders_list_pp
@@ -173,7 +173,7 @@ class SmartHubUI_Clnt(Agent):
                     , 'POST')
         return
         
-    def _rpc_sensors_data(self, headers, message):
+    def _rpc_sensors_data(self, sender, headers, message):
         _log.debug('_rpc_sensors_data()')
         lux = message[0]['luxlevel']
         rh = message[0]['rhlevel']
@@ -185,7 +185,7 @@ class SmartHubUI_Clnt(Agent):
                     , 'POST')
         return
         
-    def _rpc_led_state(self, headers, message):
+    def _rpc_led_state(self, sender, headers, message):
         _log.debug('_rpc_led_state()')
         state = message[0]
         do_rpc(self._agent_id, self._url_root
@@ -193,7 +193,7 @@ class SmartHubUI_Clnt(Agent):
                     , 'POST')
         return
         
-    def _rpc_fan_state(self, headers, message):
+    def _rpc_fan_state(self, sender, headers, message):
         _log.debug('_rpc_fan_state()')
         state = message[0]
         do_rpc(self._agent_id, self._url_root
@@ -201,7 +201,7 @@ class SmartHubUI_Clnt(Agent):
                     , 'POST')
         return
         
-    def _rpc_led_level(self, headers, message):
+    def _rpc_led_level(self, sender, headers, message):
         _log.debug('_rpc_led_level()')
         level = message[0]
         do_rpc(self._agent_id, self._url_root
@@ -209,7 +209,7 @@ class SmartHubUI_Clnt(Agent):
                     , 'POST')
         return
         
-    def _rpc_fan_level(self, headers, message):
+    def _rpc_fan_level(self, sender, headers, message):
         _log.debug('_rpc_fan_level()')
         level = message[0]
         do_rpc(self._agent_id, self._url_root
@@ -217,7 +217,7 @@ class SmartHubUI_Clnt(Agent):
                     , 'POST')
         return
         
-    def _rpc_led_th_pp(self, headers, message):
+    def _rpc_led_th_pp(self, sender, headers, message):
         _log.debug('_rpc_led_th_pp()')
         th_pp = message[0]
         do_rpc(self._agent_id, self._url_root
@@ -225,7 +225,7 @@ class SmartHubUI_Clnt(Agent):
                     , 'POST')
         return
         
-    def _rpc_fan_th_pp(self, headers, message):
+    def _rpc_fan_th_pp(self, sender, headers, message):
         _log.debug('_rpc_fan_th_pp()')
         th_pp = message[0]
         do_rpc(self._agent_id, self._url_root
