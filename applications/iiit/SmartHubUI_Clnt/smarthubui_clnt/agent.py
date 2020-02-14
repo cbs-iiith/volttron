@@ -48,14 +48,14 @@ def smarthubui_clnt(config_path, **kwargs):
     config = utils.load_config(config_path)
     
     Agent.__name__ = 'SmartHubUI_Clnt_Agent'
-    return SmartHubUI_Clnt(**kwargs)
+    return SmartHubUI_Clnt(config_path, **kwargs)
     
     
 class SmartHubUI_Clnt(Agent):
     '''
     retrive the data from volttron and post(jsonrpc) it to the BLE UI Server
     '''
-    def __init__(self, **kwargs):
+    def __init__(self, config_path, **kwargs):
         _log.debug('__init__()')
         super(SmartHubUI_Clnt, self).__init__(**kwargs)
         
