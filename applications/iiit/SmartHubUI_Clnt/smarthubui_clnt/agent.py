@@ -87,14 +87,14 @@ class SmartHubUI_Clnt(Agent):
         return
         
     def _config_get_points(self):
-        self.topic_price_point = config.get('topic_price_point', 'smarthub/pricepoint')
-        self.topic_sensors = config.get('sensorsLevelAll_point', 'smarthub/sensors/all')
-        self.topic_led_state = config.get('ledState_point', 'smarthub/ledstate')
-        self.topic_fan_state = config.get('fanState_point', 'smarthub/fanstate')
-        self.topic_led_level = config.get('ledLevel_point', 'smarthub/ledlevel')
-        self.topic_fan_level = config.get('fanLevel_point', 'smarthub/fanlevel')
-        self.topic_led_th_pp = config.get('ledThPP_point', 'smarthub/ledthpp')
-        self.topic_fan_th_pp = config.get('fanThPP_point', 'smarthub/fanthpp')
+        self.topic_price_point = self.config.get('topic_price_point', 'smarthub/pricepoint')
+        self.topic_sensors = self.config.get('sensorsLevelAll_point', 'smarthub/sensors/all')
+        self.topic_led_state = self.config.get('ledState_point', 'smarthub/ledstate')
+        self.topic_fan_state = self.config.get('fanState_point', 'smarthub/fanstate')
+        self.topic_led_level = self.config.get('ledLevel_point', 'smarthub/ledlevel')
+        self.topic_fan_level = self.config.get('fanLevel_point', 'smarthub/fanlevel')
+        self.topic_led_th_pp = self.config.get('ledThPP_point', 'smarthub/ledthpp')
+        self.topic_fan_th_pp = self.config.get('fanThPP_point', 'smarthub/fanthpp')
         return
         
     def _subscribe_topics(self):
