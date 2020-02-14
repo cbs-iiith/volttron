@@ -150,7 +150,8 @@ class PriceController(Agent):
         self._ds_senders_list = ['iiit.volttronbridge']
         
         # TODO: check if there is a need to retrive these details at a regular interval
-        #       currently the details are retrived on new ed msg (self._topic_energy_demand_ds)
+        #       currently the details are retrived on a new ed msg
+        #       i.e, on_ds_ed() self._topic_energy_demand_ds
         self._local_ed_agents = []
         self._local_device_ids = []
         self._ds_device_ids = []
