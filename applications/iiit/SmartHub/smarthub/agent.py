@@ -247,19 +247,20 @@ class SmartHub(Agent):
             if rpcdata.method == 'ping':
                 result = True
             # TODO: rename methods and params in sync with BLESmartHubSrv/main.js
-            elif rpcdata.method == 'state' and header['REQUEST_METHOD'] == 'POST':
+            elif rpcdata.method == 'state' and header['REQUEST_METHOD'].upper() == 'POST':
                 args = {'lhw_device_id': rpcdata.params['id'],
                         'state': rpcdata.params['value'],
                         'schd_exist': SCHEDULE_NOT_AVLB
                         }
                 result = self._set_sh_device_state(**args)
-            elif rpcdata.method == 'level' and header['REQUEST_METHOD'] == 'POST':
+            elif rpcdata.method == 'level' and header['REQUEST_METHOD'].upper() == 'POST':
                 args = {'lhw_device_id': rpcdata.params['id'],
                         'level': rpcdata.params['value'],
                         'schd_exist': SCHEDULE_NOT_AVLB
                         }
                 result = self._set_sh_device_level(**args)
-            elif rpcdata.method == 'threshold-price' and header['REQUEST_METHOD'] == 'POST':
+            elif (rpcdata.method == 'threshold-price'
+                                        and header['REQUEST_METHOD'].upper() == 'POST'):
                 args = {'lhw_device_id': rpcdata.params['id'],
                         'thPP': rpcdata.params['value']
                         }

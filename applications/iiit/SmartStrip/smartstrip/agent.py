@@ -232,13 +232,13 @@ class SmartStrip(Agent):
                         )
             if rpcdata.method == 'ping':
                 result = True
-            elif rpcdata.method == 'plug-th-pp' and header['REQUEST_METHOD'] == 'GET':
+            elif rpcdata.method == 'plug-th-pp' and header['REQUEST_METHOD'].upper() == 'GET':
                 if not self._valid_plug_id(rpcdata.params['plug_id']):
                     raise KeyError('invalid plug id')
                 args = {'plug_id': rpcdata.params['plug_id']
                         }
                 result = self.get_th_pp(**args)
-            elif rpcdata.method == 'plug-th-pp' and header['REQUEST_METHOD'] == 'POST':
+            elif rpcdata.method == 'plug-th-pp' and header['REQUEST_METHOD'].upper() == 'POST':
                 if not self._valid_plug_id(rpcdata.params['plug_id']):
                     raise KeyError('invalid plug id')
                 args = {'plug_id': rpcdata.params['plug_id'],

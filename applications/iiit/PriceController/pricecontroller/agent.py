@@ -228,11 +228,12 @@ class PriceController(Agent):
                         )
             if rpcdata.method == 'ping':
                 result = True
-            elif rpcdata.method == 'state' and header['REQUEST_METHOD'] == 'POST':
+            elif rpcdata.method == 'state' and header['REQUEST_METHOD'].upper() == 'POST':
                 result = self._pca_mode(rpcdata.id, message)
-            elif rpcdata.method == 'mode' and header['REQUEST_METHOD'] == 'POST':
+            elif rpcdata.method == 'mode' and header['REQUEST_METHOD'].upper() == 'POST':
                 result = self._pca_mode(rpcdata.id, message)
-            elif rpcdata.method == 'external-optimizer' and header['REQUEST_METHOD'] == 'POST':
+            elif (rpcdata.method == 'external-optimizer'
+                                        and header['REQUEST_METHOD'].upper() == 'POST'):
                 result = self._register_external_opt_agent(rpcdata.id, message)
             else:
                 return jsonrpc.json_error(rpcdata.id, METHOD_NOT_FOUND,
