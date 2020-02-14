@@ -918,9 +918,9 @@ class PriceController(Agent):
         #      i.e., devices_count >= len(vb_devices_count)
         #       reconcile the device ids and match _ap[] with device_id
         new_local_device_ids = list(set(local_bucket.keys())
-                                            & set(self._local_device_ids()))
+                                            & set(self._local_device_ids)
         new_ds_device_ids = list(set(ds_bucket.keys())
-                                            & set(self._ds_device_ids()))
+                                            & set(self._ds_device_ids))
         # compute total
         total_value = 0.0
         for device_id in new_local_device_ids:
