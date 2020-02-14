@@ -633,7 +633,7 @@ class PriceController(Agent):
         _log.debug('done.')
         return
         
-    def _sort_ed_msg(self, ed_msg)
+    def _sort_ed_msg(self, ed_msg):
         # success_ap and success_ep are mutually exclusive
         success_ap = True if ed_msg.get_msg_type() == MessageType.active_power else False
         success_ep = True if ed_msg.get_msg_type() == MessageType.energy_demand else False
