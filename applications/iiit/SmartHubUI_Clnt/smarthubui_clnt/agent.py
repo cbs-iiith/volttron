@@ -70,7 +70,9 @@ class SmartHubUI_Clnt(Agent):
         self._agent_id = self.config['agentid']
         ble_ui_srv_address = self.config.get('ble_ui_server_address', '127.0.0.1')
         ble_ui_srv_port = self.config.get('ble_ui_server_port', 8081)
-        self.url_root = 'http://' + ble_ui_srv_address + ':' + str(ble_ui_srv_port) + '/smarthub'
+        self._url_root = 'http://' + ble_ui_srv_address + ':' + str(ble_ui_srv_port) + '/smarthub'
+        _log.debug('ble server url root: {}'.format(self._url_root))
+        
         return
         
     @Core.receiver('onstart')
@@ -166,7 +168,9 @@ class SmartHubUI_Clnt(Agent):
         if not pp_msg.get_isoptimal(): return
 
         current_pp = pp_msg.get_value()
-        do_rpc('current-price', {'value': current_pp}, 'POST')
+        do_rpc(self._agent_id, self._url_root
+                    , 'current-price', {'value': current_pp}
+                    , 'POST')
         return
         
     def _rpc_sensors_data(self, headers, message):
@@ -176,43 +180,57 @@ class SmartHubUI_Clnt(Agent):
         temp = message[0]['templevel']
         co2 = message[0]['co2level']
         pir = message[0]['pirlevel']
-        do_rpc('sensors', {'lux': lux, 'rh':  rh, 'temp': temp, 'co2': co2, 'pir': pir}, 'POST')
+        do_rpc(self._agent_id, self._url_root
+                    , 'sensors', {'lux': lux, 'rh':  rh, 'temp': temp, 'co2': co2, 'pir': pir}
+                    , 'POST')
         return
         
     def _rpc_led_state(self, headers, message):
         _log.debug('_rpc_led_state()')
         state = message[0]
-        do_rpc('state', {'id': SH_DEVICE_LED, 'value': state}, 'POST')
+        do_rpc(self._agent_id, self._url_root
+                    , 'state', {'id': SH_DEVICE_LED, 'value': state}
+                    , 'POST')
         return
         
     def _rpc_fan_state(self, headers, message):
         _log.debug('_rpc_fan_state()')
         state = message[0]
-        do_rpc('state', {'id': SH_DEVICE_FAN, 'value': state}, 'POST')
+        do_rpc(self._agent_id, self._url_root
+                    , 'state', {'id': SH_DEVICE_FAN, 'value': state}
+                    , 'POST')
         return
         
     def _rpc_led_level(self, headers, message):
         _log.debug('_rpc_led_level()')
         level = message[0]
-        do_rpc('level', {'id': SH_DEVICE_LED, 'value': level}, 'POST')
+        do_rpc(self._agent_id, self._url_root
+                    , 'level', {'id': SH_DEVICE_LED, 'value': level}
+                    , 'POST')
         return
         
     def _rpc_fan_level(self, headers, message):
         _log.debug('_rpc_fan_level()')
         level = message[0]
-        do_rpc('level', {'id': SH_DEVICE_FAN, 'value': level}, 'POST')
+        do_rpc(self._agent_id, self._url_root
+                    , 'level', {'id': SH_DEVICE_FAN, 'value': level}
+                    , 'POST')
         return
         
     def _rpc_led_th_pp(self, headers, message):
         _log.debug('_rpc_led_th_pp()')
         th_pp = message[0]
-        do_rpc('threshold-price', {'id': SH_DEVICE_LED, 'value': th_pp}, 'POST')
+        do_rpc(self._agent_id, self._url_root
+                    , 'threshold-price', {'id': SH_DEVICE_LED, 'value': th_pp}
+                    , 'POST')
         return
         
     def _rpc_fan_th_pp(self, headers, message):
         _log.debug('_rpc_fan_th_pp()')
         th_pp = message[0]
-        do_rpc('threshold-price', {'id': SH_DEVICE_FAN, 'value': th_pp}, 'POST')
+        do_rpc(self._agent_id, self._url_root
+                    , 'threshold-price', {'id': SH_DEVICE_FAN, 'value': th_pp}
+                    , 'POST')
         return
         
         
