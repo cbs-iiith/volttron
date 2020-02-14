@@ -634,9 +634,9 @@ class PriceController(Agent):
         return
         
     def _sort_ed_msg(self, ed_msg):
-        # success_ap and success_ep are mutually exclusive
+        # success_ap and success_ed are mutually exclusive
         success_ap = True if ed_msg.get_msg_type() == MessageType.active_power else False
-        success_ep = True if ed_msg.get_msg_type() == MessageType.energy_demand else False
+        success_ed = True if ed_msg.get_msg_type() == MessageType.energy_demand else False
         
         price_id = ed_msg.get_price_id()
         device_id = ed_msg.get_src_device_id()
