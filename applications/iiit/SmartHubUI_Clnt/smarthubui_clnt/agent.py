@@ -65,14 +65,13 @@ class SmartHubUI_Clnt(Agent):
         
     @Core.receiver('onsetup')
     def setup(self, sender, **kwargs):
-        _log.debug('setup()')
         _log.info(self.config['message'])
         self._agent_id = self.config['agentid']
+        
         ble_ui_srv_address = self.config.get('ble_ui_server_address', '127.0.0.1')
         ble_ui_srv_port = self.config.get('ble_ui_server_port', 8081)
         self._url_root = 'http://' + ble_ui_srv_address + ':' + str(ble_ui_srv_port) + '/smarthub'
         _log.debug('ble server url root: {}'.format(self._url_root))
-        
         return
         
     @Core.receiver('onstart')
@@ -81,6 +80,7 @@ class SmartHubUI_Clnt(Agent):
         self._valid_senders_list_pp = ['iiit.pricecontroller']
         
         self._subscribe_topics()
+        _log.debug('startup() - Done. Agent is ready')
         return
         
     @Core.receiver('onstop')
