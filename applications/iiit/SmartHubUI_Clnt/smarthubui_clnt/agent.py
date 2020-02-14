@@ -53,9 +53,8 @@ def smarthubui_clnt(config_path, **kwargs):
     
 class SmartHubUI_Clnt(Agent):
     '''
-    retrive the data from volttron and pushes it to the BLE UI Server
+    retrive the data from volttron and post(jsonrpc) it to the BLE UI Server
     '''
-
     def __init__(self, **kwargs):
         _log.debug('__init__()')
         super(SmartHubUI_Clnt, self).__init__(**kwargs)
@@ -72,7 +71,8 @@ class SmartHubUI_Clnt(Agent):
         ble_ui_srv_address = self.config.get('ble_ui_server_address', '127.0.0.1')
         ble_ui_srv_port = self.config.get('ble_ui_server_port', 8081)
         self.url_root = 'http://' + ble_ui_srv_address + ':' + str(ble_ui_srv_port) + '/smarthub'
-
+        return
+        
     @Core.receiver('onstart')
     def startup(self, sender, **kwargs):
         _log.debug('startup()')
@@ -80,96 +80,79 @@ class SmartHubUI_Clnt(Agent):
         
         self._subscribe_topics()
         return
-
+        
     @Core.receiver('onstop')
     def onstop(self, sender, **kwargs):
         _log.debug('onstop()')
         return
-    
+        
     def _config_get_points(self):
-        self.topic_price_point = config.get('topic_price_point',
-                                                        'smarthub/pricepoint')
-        self.topic_sensors = config.get('sensorsLevelAll_point',
-                                                        'smarthub/sensors/all')
-        self.topic_led_state = config.get('ledState_point',
-                                                        'smarthub/ledstate')
-        self.topic_fan_state = config.get('fanState_point',
-                                                        'smarthub/fanstate')
-        self.topic_led_level = config.get('ledLevel_point',
-                                                        'smarthub/ledlevel')
-        self.topic_fan_level = config.get('fanLevel_point',
-                                                        'smarthub/fanlevel')
-        self.topic_led_th_pp = config.get('ledThPP_point',
-                                                        'smarthub/ledthpp')
-        self.topic_fan_th_pp = config.get('fanThPP_point',
-                                                        'smarthub/fanthpp')
+        self.topic_price_point = config.get('topic_price_point', 'smarthub/pricepoint')
+        self.topic_sensors = config.get('sensorsLevelAll_point', 'smarthub/sensors/all')
+        self.topic_led_state = config.get('ledState_point', 'smarthub/ledstate')
+        self.topic_fan_state = config.get('fanState_point', 'smarthub/fanstate')
+        self.topic_led_level = config.get('ledLevel_point', 'smarthub/ledlevel')
+        self.topic_fan_level = config.get('fanLevel_point', 'smarthub/fanlevel')
+        self.topic_led_th_pp = config.get('ledThPP_point', 'smarthub/ledthpp')
+        self.topic_fan_th_pp = config.get('fanThPP_point', 'smarthub/fanthpp')
         return
         
     def _subscribe_topics(self):
-        self.vip.pubsub.subscribe("pubsub", self.topic_price_point,\
-                                                self.on_match_current_pp)
-        self.vip.pubsub.subscribe("pubsub", self.topic_sensors,\
-                                                self.on_match_sensorData)
-        self.vip.pubsub.subscribe("pubsub", self.topic_led_state,\
-                                                self.on_match_ledState)
-        self.vip.pubsub.subscribe("pubsub", self.topic_fan_state,\
-                                                self.on_match_fanState)
-        self.vip.pubsub.subscribe("pubsub", self.topic_led_level,\
-                                                self.on_match_ledLevel)
-        self.vip.pubsub.subscribe("pubsub", self.topic_fan_level,\
-                                                self.on_match_fanLevel)
-        self.vip.pubsub.subscribe("pubsub", self.topic_led_th_pp,\
-                                                self.on_match_ledThPP)
-        self.vip.pubsub.subscribe("pubsub", self.topic_fan_th_pp,\
-                                                self.on_match_fanThPP)
+        self.vip.pubsub.subscribe("pubsub", self.topic_price_point, self.on_match_current_pp)
+        self.vip.pubsub.subscribe("pubsub", self.topic_sensors, self.on_match_sensors_data)
+        self.vip.pubsub.subscribe("pubsub", self.topic_led_state, self.on_match_led_state)
+        self.vip.pubsub.subscribe("pubsub", self.topic_fan_state, self.on_match_fan_state)
+        self.vip.pubsub.subscribe("pubsub", self.topic_led_level, self.on_match_led_level)
+        self.vip.pubsub.subscribe("pubsub", self.topic_fan_level, self.on_match_fan_level)
+        self.vip.pubsub.subscribe("pubsub", self.topic_led_th_pp, self.on_match_led_th_pp)
+        self.vip.pubsub.subscribe("pubsub", self.topic_fan_th_pp, self.on_match_fan_th_pp)
         return
         
-    def on_match_current_pp(self, peer, sender, bus,
-            topic, headers, message):
+    def on_match_current_pp(self, peer, sender, bus, topic, headers, message):
         _log.debug('on_match_current_pp()')
         if sender not in self._valid_senders_list_pp: return
         # check message type before parsing
         if not check_msg_type(message, MessageType.price_point): return False
-        self.uiPostCurrentPricePoint(headers, message)
+        self._rpc_current_pricepoint(headers, message)
         
-    def on_match_sensorData(self, peer, sender, bus,
-            topic, headers, message):
-        _log.debug('on_match_sensorData()')
-        self.uiPostSensorData(headers, message)
+    def on_match_sensors_data(self, peer, sender, bus, topic, headers, message):
+        _log.debug('on_match_sensors_data()')
+        self._rpc_sensors_data(headers, message)
+        return
         
-    def on_match_ledState(self, peer, sender, bus,
-            topic, headers, message):
-        _log.debug('on_match_ledState()')
-        self.uiPostLedState(headers, message)
+    def on_match_led_state(self, peer, sender, bus, topic, headers, message):
+        _log.debug('on_match_led_state()')
+        self._rpc_led_state(headers, message)
+        return
         
-    def on_match_fanState(self, peer, sender, bus,
-            topic, headers, message):
-        _log.debug('on_match_fanState()')
-        self.uiPostFanState(headers, message)
+    def on_match_fan_state(self, peer, sender, bus, topic, headers, message):
+        _log.debug('on_match_fan_state()')
+        self._rpc_fan_state(headers, message)
+        return
         
-    def on_match_ledLevel(self, peer, sender, bus,
-            topic, headers, message):
-        _log.debug('on_match_ledLevel()')
-        self.uiPostLedLevel(headers, message)
+    def on_match_led_level(self, peer, sender, bus, topic, headers, message):
+        _log.debug('on_match_led_level()')
+        self._rpc_led_level(headers, message)
+        return
         
-    def on_match_fanLevel(self, peer, sender, bus,
-            topic, headers, message):
-        _log.debug('on_match_fanLevel()')
-        self.uiPostFanLevel(headers, message)
+    def on_match_fan_level(self, peer, sender, bus, topic, headers, message):
+        _log.debug('on_match_fan_level()')
+        self._rpc_fan_level(headers, message)
+        return
         
-    def on_match_ledThPP(self, peer, sender, bus,
-            topic, headers, message):
-        _log.debug('on_match_ledThPP()')
-        self.uiPostLedThPP(headers, message)
+    def on_match_led_th_pp(self, peer, sender, bus, topic, headers, message):
+        _log.debug('on_match_led_th_pp()')
+        self._rpc_led_th_pp(headers, message)
+        return
         
-    def on_match_fanThPP(self, peer, sender, bus,
-            topic, headers, message):
-        _log.debug('on_match_fanThPP()')
-        self.uiPostFanThPP(headers, message)
-
-    def uiPostCurrentPricePoint(self, headers, message):
+    def on_match_fan_th_pp(self, peer, sender, bus, topic, headers, message):
+        _log.debug('on_match_fan_th_pp()')
+        self._rpc_fan_th_pp(headers, message)
+        return
+        
+    def _rpc_current_pricepoint(self, headers, message):
         #json rpc to BLESmartHubSrv
-        _log.debug('uiPostCurrentPricePoint()')
+        _log.debug('_rpc_current_pricepoint()')
         valid_senders_list = self._valid_senders_list_pp
         minimum_fields = ['msg_type', 'value', 'value_data_type', 'units', 'price_id']
         validate_fields = ['value', 'units', 'price_id', 'isoptimal', 'duration', 'ttl']
@@ -183,11 +166,11 @@ class SmartHubUI_Clnt(Agent):
         if not pp_msg.get_isoptimal(): return
 
         current_pp = pp_msg.get_value()
-        do_rpc('current-price', {'value': current_pp})
+        do_rpc('current-price', {'value': current_pp}, 'POST')
         return
         
-    def uiPostSensorData(self, headers, message):
-        _log.debug('uiPostSensorData()')
+    def _rpc_sensors_data(self, headers, message):
+        _log.debug('_rpc_sensors_data()')
         lux = message[0]['luxlevel']
         rh = message[0]['rhlevel']
         temp = message[0]['templevel']
@@ -196,35 +179,40 @@ class SmartHubUI_Clnt(Agent):
         do_rpc('sensors', {'lux': lux, 'rh':  rh, 'temp': temp, 'co2': co2, 'pir': pir}, 'POST')
         return
         
-    def uiPostLedState(self, headers, message):
-        _log.debug('uiPostLedState()')
+    def _rpc_led_state(self, headers, message):
+        _log.debug('_rpc_led_state()')
         state = message[0]
         do_rpc('state', {'id': SH_DEVICE_LED, 'value': state}, 'POST')
         return
-    def uiPostFanState(self, headers, message):
-        _log.debug('uiPostFanState()')
+        
+    def _rpc_fan_state(self, headers, message):
+        _log.debug('_rpc_fan_state()')
         state = message[0]
         do_rpc('state', {'id': SH_DEVICE_FAN, 'value': state}, 'POST')
         return
-    def uiPostLedLevel(self, headers, message):
-        _log.debug('uiPostLedLevel()')
+        
+    def _rpc_led_level(self, headers, message):
+        _log.debug('_rpc_led_level()')
         level = message[0]
         do_rpc('level', {'id': SH_DEVICE_LED, 'value': level}, 'POST')
         return
-    def uiPostFanLevel(self, headers, message):
-        _log.debug('uiPostFanLevel()')
+        
+    def _rpc_fan_level(self, headers, message):
+        _log.debug('_rpc_fan_level()')
         level = message[0]
         do_rpc('level', {'id': SH_DEVICE_FAN, 'value': level}, 'POST')
         return
-    def uiPostLedThPP(self, headers, message):
-        _log.debug('uiPostLedThPP()')
-        thPP = message[0]
-        do_rpc('threshold-price', {'id': SH_DEVICE_LED, 'value': thPP}, 'POST')
+        
+    def _rpc_led_th_pp(self, headers, message):
+        _log.debug('_rpc_led_th_pp()')
+        th_pp = message[0]
+        do_rpc('threshold-price', {'id': SH_DEVICE_LED, 'value': th_pp}, 'POST')
         return
-    def uiPostFanThPP(self, headers, message):
-        _log.debug('uiPostFanThPP()')
-        thPP = message[0]
-        do_rpc('threshold-price', {'id': SH_DEVICE_FAN, 'value': thPP}, 'POST')
+        
+    def _rpc_fan_th_pp(self, headers, message):
+        _log.debug('_rpc_fan_th_pp()')
+        th_pp = message[0]
+        do_rpc('threshold-price', {'id': SH_DEVICE_FAN, 'value': th_pp}, 'POST')
         return
         
         
