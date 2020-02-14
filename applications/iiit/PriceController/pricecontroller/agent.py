@@ -627,6 +627,16 @@ class PriceController(Agent):
         else: _log.debug('New' 
                         + (' energy demand bid (ed)' if success_ed else ' active power (ap)')
                         + ' msg on the local-bus, topic: {}'.format(topic))
+                        
+        _log.debug('Sorting the ed_msg...')
+        self._sort_ed_msg(ed_msg)
+        _log.debug('done.')
+        return
+        
+    def _sort_ed_msg(self, ed_msg)
+        # success_ap and success_ep are mutually exclusive
+        success_ap = True if ed_msg.get_msg_type() == MessageType.active_power else False
+        success_ep = True if ed_msg.get_msg_type() == MessageType.energy_demand else False
         
         price_id = ed_msg.get_price_id()
         device_id = ed_msg.get_src_device_id()
