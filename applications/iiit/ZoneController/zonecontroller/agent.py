@@ -518,7 +518,7 @@ class ZoneController(Agent):
         
         self._apply_pricing_policy()
         
-        if self._process_opt_pp_success:
+        if not self._process_opt_pp_success:
             _log.debug('unable to process_opt_pp()'
                                 + ', will try again in {} sec'.format(self._period_process_pp))
             return
