@@ -29,10 +29,10 @@ authentication=None
 #OPT_WAIT_TIME_SEC = 2             # 2 sec
 #OPT_WAIT_TIME_SEC = 10             # 10 sec
 #OPT_WAIT_TIME_SEC = 2 * 60         # 2 min
-OPT_WAIT_TIME_SEC = 5 * 60         # 5 min
+#OPT_WAIT_TIME_SEC = 5 * 60         # 5 min
 #OPT_WAIT_TIME_SEC = 15 * 60        # 15 min
 #OPT_WAIT_TIME_SEC = 30 * 60        # 30 min
-#OPT_WAIT_TIME_SEC = 1 * 60 * 60    # 1 hour
+OPT_WAIT_TIME_SEC = 1 * 60 * 60    # 1 hour
 
 #BID_WAIT_TIME_SEC = 2             # 2 sec
 #BID_WAIT_TIME_SEC = 10             # 10 sec
