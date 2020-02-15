@@ -786,10 +786,10 @@ class SmartStrip(Agent):
                     'current':{'units': 'A', 'tz': 'UTC', 'type': 'float'},
                     'active_power':{'units': 'W', 'tz': 'UTC', 'type': 'float'}
                     }]
-        _log.info('[LOG] SS plug meter data, Msg: {}'.format(pub_msg))
-        _log.debug('Publishing to local bus topic: {}'.format(pub_topic))
+        #_log.info('[LOG] SS plug meter data, Msg: {}'.format(pub_msg))
+        #_log.debug('Publishing to local bus topic: {}'.format(pub_topic))
         publish_to_bus(self, pub_topic, pub_msg)
-        _log.debug('done.')
+        #_log.debug('done.')
         return
         
     def _publish_tag_id(self, plug_id, new_tag_id):
@@ -797,10 +797,10 @@ class SmartStrip(Agent):
             
         pub_topic = self._root_topic + '/plug' + str(plug_id + 1) + '/tagid'
         pub_msg = [new_tag_id,{'units': '', 'tz': 'UTC', 'type': 'string'}]
-        _log.info('[LOG] SS plug tag id, Msg: {}'.format(pub_msg))
-        _log.debug('Publishing to local bus topic: {}'.format(pub_topic))
+        #_log.info('[LOG] SS plug tag id, Msg: {}'.format(pub_msg))
+        #_log.debug('Publishing to local bus topic: {}'.format(pub_topic))
         publish_to_bus(self, pub_topic, pub_msg)
-        _log.debug('done.')
+        #_log.debug('done.')
         return
         
     def _publish_plug_relay_state(self, plug_id, state):
@@ -808,10 +808,10 @@ class SmartStrip(Agent):
         
         pub_topic = self._root_topic + '/plug' + str(plug_id + 1) + '/relaystate'
         pub_msg = [state, {'units': 'On/Off', 'tz': 'UTC', 'type': 'int'}]
-        _log.info('[LOG] SS plug relay state, Msg: {}'.format(pub_msg))
-        _log.debug('Publishing to local bus topic: {}'.format(pub_topic))
+        #_log.info('[LOG] SS plug relay state, Msg: {}'.format(pub_msg))
+        #_log.debug('Publishing to local bus topic: {}'.format(pub_topic))
         publish_to_bus(self, pub_topic, pub_msg)
-        _log.debug('done.')
+        #_log.debug('done.')
         return
         
     def _publish_threshold_pp(self, plug_id, thresholdPP):
@@ -819,10 +819,10 @@ class SmartStrip(Agent):
             
         pub_topic = self._root_topic + '/plug' + str(plug_id + 1) + '/threshold'
         pub_msg = [thresholdPP,{'units': 'cents', 'tz': 'UTC', 'type': 'float'}]
-        _log.info('[LOG] SS plug threshold price, Msg: {}'.format(pub_msg))
-        _log.debug('Publishing to local bus topic: {}'.format(pub_topic))
+        #_log.info('[LOG] SS plug threshold price, Msg: {}'.format(pub_msg))
+        #_log.debug('Publishing to local bus topic: {}'.format(pub_topic))
         publish_to_bus(self, pub_topic, pub_msg)
-        _log.debug('done.')
+        #_log.debug('done.')
         return
         
     def _authorised_tag_id(self, tag_id):
