@@ -631,19 +631,20 @@ class SmartHub(Agent):
         success = get_task_schdl(self, task_id, 'iiit/cbs/smarthub', 300)
         if not success: return
         
-        pub_topic = self._root_topic + '/sensors/all'
         lux_level = self._get_sh_device_level(SH_DEVICE_S_LUX, SCHEDULE_AVLB)
         rh_level = self._get_sh_device_level(SH_DEVICE_S_RH, SCHEDULE_AVLB)
         temp_level = self._get_sh_device_level(SH_DEVICE_S_TEMP, SCHEDULE_AVLB)
         co2_level = self._get_sh_device_level(SH_DEVICE_S_CO2, SCHEDULE_AVLB)
         pir_level = self._get_sh_device_level(SH_DEVICE_S_PIR, SCHEDULE_AVLB)
-        
-        _log.info('[LOG] lux Level: {:0.2f}'.format(lux_level)
-                    + ', rh Level: {:0.2f}'.format(rh_level)
-                    + ', temp Level: {:0.2f}'.format(temp_level)
-                    + ', co2 Level: {:0.2f}'.format(co2_level)
-                    + ', pir Level: {:d}'.format(int(pir_level))
+        cancel_task_schdl(self, task_id)
+        _log.debug('Lux: {:0.2f}'.format(lux_level)
+                    + ', Rh: {:0.2f}'.format(rh_level)
+                    + ', Temp: {:0.2f}'.format(temp_level)
+                    + ', Co2: {:0.2f}'.format(co2_level)
+                    + ', PIR: {:d}'.format('OCCUPIED' if int(pir_level) == 1 else 'UNOCCUPIED')
                     )
+                    
+        pub_topic = self._root_topic + '/sensors/all'
         pub_msg = [{'luxlevel':lux_level,
                     'rhlevel':rh_level,
                     'templevel':temp_level,
@@ -657,8 +658,10 @@ class SmartHub(Agent):
                         'pirlevel':{'units': 'bool', 'tz': 'UTC', 'type': 'int'}
                     }
                     ]
+        _log.info('[LOG] Sensors Data, Msg: {}'.format(pub_msg))
+        _log.debug('Publishing to local bus topic: {}'.format(pub_topic))
         publish_to_bus(self, pub_topic, pub_msg)
-        cancel_task_schdl(self, task_id)
+        _log.debug('done.')
         return
         
     def _publish_device_state(self):
@@ -667,8 +670,8 @@ class SmartHub(Agent):
         state_fan = self._sh_devices_state[SH_DEVICE_FAN]
         self._publish_sh_device_state(SH_DEVICE_LED, state_led)
         self._publish_sh_device_state(SH_DEVICE_FAN, state_fan)
-        _log.info('[LOG] led state: {}'.format('ON' if state_led == SH_DEVICE_STATE_ON else 'OFF')
-                + ', fan state: {}'.format('ON' if state_fan == SH_DEVICE_STATE_ON else 'OFF'))
+        _log.debug'Led state: {}'.format('ON' if state_led == SH_DEVICE_STATE_ON else 'OFF')
+                + ', Fan state: {}'.format('ON' if state_fan == SH_DEVICE_STATE_ON else 'OFF'))
         return
         
     def _publish_device_level(self):
@@ -677,8 +680,8 @@ class SmartHub(Agent):
         level_fan = self._sh_devices_level[SH_DEVICE_FAN]
         self._publish_sh_device_level(SH_DEVICE_LED, level_led)
         self._publish_sh_device_level(SH_DEVICE_FAN, level_fan)
-        _log.info('[LOG] led level: {:0.2f}'.format(level_led)
-                    + ', fan level: {:0.2f}'.format(level_fan))
+        _log.debug('Led level: {:0.2f}'.format(level_led)
+                    + ', Fan level: {:0.2f}'.format(level_fan))
         return
         
     def _publish_device_th_pp(self):
@@ -687,8 +690,8 @@ class SmartHub(Agent):
         thpp_fan = self._sh_devices_th_pp[SH_DEVICE_FAN]
         self._publish_sh_device_th_pp(SH_DEVICE_LED, thpp_led)
         self._publish_sh_device_th_pp(SH_DEVICE_FAN, thpp_fan)
-        _log.info('[LOG] led th pp: {:0.2f}'.format(thpp_led)
-                    + ', fan th pp: {0:0.2f}'.format(thpp_fan))
+        _log.debug('Led threshold price: {:0.2f}'.format(thpp_led)
+                    + ', Fan threshold price: {0:0.2f}'.format(thpp_fan))
         return
         
     def _rpcget_sh_device_state(self, lhw_device_id):
@@ -800,9 +803,11 @@ class SmartHub(Agent):
             _log.exception('not a valid device to pub state, lhw_device_id: ' + str(lhw_device_id))
             return
         pub_topic = self._get_lhw_sub_topic(lhw_device_id, AT_PUB_STATE)
+        _log.info('[LOG] SH device state, Msg: {}'.format(pub_msg))
         pub_msg = [state, {'units': 'On/Off', 'tz': 'UTC', 'type': 'int'}]
+        _log.debug('Publishing to local bus topic: {}'.format(pub_topic))
         publish_to_bus(self, pub_topic, pub_msg)
-        
+        _log.debug('done.')
         return
         
     def _publish_sh_device_level(self, lhw_device_id, level):
@@ -812,8 +817,10 @@ class SmartHub(Agent):
             return
         pub_topic = self._get_lhw_sub_topic(lhw_device_id, AT_PUB_LEVEL)
         pub_msg = [level, {'units': 'duty', 'tz': 'UTC', 'type': 'float'}]
+        _log.info('[LOG] SH device level, Msg: {}'.format(pub_msg))
+        _log.debug('Publishing to local bus topic: {}'.format(pub_topic))
         publish_to_bus(self, pub_topic, pub_msg)
-        
+        _log.debug('done.')
         return
         
     def _publish_sh_device_th_pp(self, lhw_device_id, thPP):
@@ -822,8 +829,10 @@ class SmartHub(Agent):
             return
         pub_topic = self._get_lhw_sub_topic(lhw_device_id, AT_PUB_THPP)
         pub_msg = [thPP, {'units': 'cent', 'tz': 'UTC', 'type': 'float'}]
+        _log.info('[LOG] SH device threshold price, Msg: {}'.format(pub_msg))
+        _log.debug('Publishing to local bus topic: {}'.format(pub_topic))
         publish_to_bus(self, pub_topic, pub_msg)
-        
+        _log.debug('done.')
         return
         
     def _get_lhw_sub_topic(self, lhw_device_id, actionType):
@@ -1109,12 +1118,10 @@ class SmartHub(Agent):
                                     + ' for us opt pp_msg({})'.format(price_id)
                                     + ': {:0.4f}'.format(opt_tap))
         # publish the new price point to the local message bus
-        _log.debug('Post to the local-bus...')
         pub_topic = self._topic_energy_demand
         pub_msg = ap_msg.get_json_message(self._agent_id, 'bus_topic')
-        _log.debug('local bus topic: {}'.format(pub_topic))
-        # log this msg
         _log.info('[LOG] Total Active Power(TAP) opt, Msg: {}'.format(pub_msg))
+        _log.debug('Publishing to local bus topic: {}'.format(pub_topic))
         publish_to_bus(self, pub_topic, pub_msg)
         _log.debug('done.')
         return
@@ -1173,12 +1180,10 @@ class SmartHub(Agent):
                                     + ': {:0.4f}'.format(bid_ted))
                                     
         # publish the new price point to the local message bus
-        _log.debug('Post to the local-bus...')
         pub_topic = self._topic_energy_demand
         pub_msg = ed_msg.get_json_message(self._agent_id, 'bus_topic')
-        _log.debug('local bus topic: {}'.format(pub_topic))
-        # log this msg
         _log.info('[LOG] Total Energy Demand(TED) bid, Msg: {}'.format(pub_msg))
+        _log.debug('Publishing to local bus topic: {}'.format(pub_topic))
         publish_to_bus(self, pub_topic, pub_msg)
         _log.debug('done.')
         return

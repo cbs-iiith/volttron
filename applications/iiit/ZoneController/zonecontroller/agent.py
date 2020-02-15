@@ -446,14 +446,20 @@ class ZoneController(Agent):
         # _log.debug('_publish_zone_tsp()')
         pubTopic = self._root_topic + '/rm_tsp'
         pubMsg = [tsp, {'units': 'celcius', 'tz': 'UTC', 'type': 'float'}]
-        publish_to_bus(self, pubTopic, pubMsg)
+        _log.info('[LOG] Zone TSP, Msg: {}'.format(pub_msg))
+        _log.debug('Publishing to local bus topic: {}'.format(pub_topic))
+        publish_to_bus(self, pub_topic, pub_msg)
+        _log.debug('done.')
         return
         
     def _publish_zone_lsp(self, lsp):
         # _log.debug('_publish_zone_lsp()')
         pubTopic = self._root_topic + '/rm_lsp'
         pubMsg = [lsp, {'units': '%', 'tz': 'UTC', 'type': 'float'}]
-        publish_to_bus(self, pubTopic, pubMsg)
+        _log.info('[LOG] Zone LSP, Msg: {}'.format(pub_msg))
+        _log.debug('Publishing to local bus topic: {}'.format(pub_topic))
+        publish_to_bus(self, pub_topic, pub_msg)
+        _log.debug('done.')
         return
         
     '''
@@ -615,12 +621,10 @@ class ZoneController(Agent):
                                     + ' for us opt pp_msg({})'.format(price_id)
                                     + ': {:0.4f}'.format(opt_tap))
         # publish the new price point to the local message bus
-        _log.debug('Post to the local-bus...')
         pub_topic = self._topic_energy_demand
         pub_msg = ap_msg.get_json_message(self._agent_id, 'bus_topic')
-        _log.debug('local bus topic: {}'.format(pub_topic))
-        # log this msg
         _log.info('[LOG] Total Active Power(TAP) opt, Msg: {}'.format(pub_msg))
+        _log.debug('Publishing to local bus topic: {}'.format(pub_topic))
         publish_to_bus(self, pub_topic, pub_msg)
         _log.debug('done.')
         return
@@ -665,12 +669,10 @@ class ZoneController(Agent):
                                     + ': {:0.4f}'.format(bid_ted))
                                     
         # publish the new price point to the local message bus
-        _log.debug('Post to the local-bus...')
         pub_topic = self._topic_energy_demand
         pub_msg = ed_msg.get_json_message(self._agent_id, 'bus_topic')
-        _log.debug('local bus topic: {}'.format(pub_topic))
-        # log this msg
         _log.info('[LOG] Total Energy Demand(TED) bid, Msg: {}'.format(pub_msg))
+        _log.debug('Publishing to local bus topic: {}'.format(pub_topic))
         publish_to_bus(self, pub_topic, pub_msg)
         _log.debug('done.')
         return

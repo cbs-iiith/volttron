@@ -529,7 +529,7 @@ class VolttronBridge(Agent):
                 #   remove msg from msg_que
         
         pp_msg = self.tmp_bustopic_pp_msg
-        _log.info('[LOG] pp msg to ds: {}'.format(pp_msg))
+        #_log.info('[LOG] pp msg to ds: {}'.format(pp_msg))
         
         # before posting to ds, dcrement ttl and update ts
         # decrement the ttl by time consumed to process till now + 1 sec
@@ -704,9 +704,8 @@ class VolttronBridge(Agent):
         # publish the new price point to the local us message bus
         pub_topic = self._topic_price_point_us
         pub_msg = pp_msg.get_json_message(self._agent_id, 'bus_topic')
-        _log.debug('Publishing to local bus topic: {}'.format(pub_topic))
-        # log this msg
         _log.info('[LOG] Price Point from us, Msg: {}'.format(pub_msg))
+        _log.debug('Publishing to local bus topic: {}'.format(pub_topic))
         publish_to_bus(self, pub_topic, pub_msg)
         _log.debug('done.')
         return True
@@ -768,17 +767,15 @@ class VolttronBridge(Agent):
         # post to bus
         pub_topic = self._topic_energy_demand_ds
         pub_msg = ed_msg.get_json_message(self._agent_id, 'bus_topic')
-        _log.debug('Publishing to local bus topic: {}'.format(pub_topic))
-        # log this msg
         if success_ap:
-            _log.info('[LOG] Active Power from ds, Msg: {}'.format(pub_msg))
-        else:
-            _log.info('[LOG] Energy Demand from ds, Msg: {}'.format(pub_msg))
+        _log.info('[LOG] {} from ds'.format('Active Power' if success_ap else 'Energy Demand')
+                            + ', Msg: {}'.format(pub_msg))
+        _log.debug('Publishing to local bus topic: {}'.format(pub_topic))
         publish_to_bus(self, pub_topic, pub_msg)
+        _log.debug('done.')
         
         # at this stage, ds is alive, reset the counter
         self._ds_retrycount[self._ds_register.index(ed_msg.get_src_ip())] = 0
-        _log.debug('done!!!')
         return True
         
     def _msg_from_registered_ds(self, discovery_addr, device_id):

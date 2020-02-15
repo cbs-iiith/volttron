@@ -786,7 +786,10 @@ class SmartStrip(Agent):
                     'current':{'units': 'A', 'tz': 'UTC', 'type': 'float'},
                     'active_power':{'units': 'W', 'tz': 'UTC', 'type': 'float'}
                     }]
+        _log.info('[LOG] SS plug meter data, Msg: {}'.format(pub_msg))
+        _log.debug('Publishing to local bus topic: {}'.format(pub_topic))
         publish_to_bus(self, pub_topic, pub_msg)
+        _log.debug('done.')
         return
         
     def _publish_tag_id(self, plug_id, new_tag_id):
@@ -794,7 +797,10 @@ class SmartStrip(Agent):
             
         pub_topic = self._root_topic + '/plug' + str(plug_id + 1) + '/tagid'
         pub_msg = [new_tag_id,{'units': '', 'tz': 'UTC', 'type': 'string'}]
+        _log.info('[LOG] SS plug tag id, Msg: {}'.format(pub_msg))
+        _log.debug('Publishing to local bus topic: {}'.format(pub_topic))
         publish_to_bus(self, pub_topic, pub_msg)
+        _log.debug('done.')
         return
         
     def _publish_plug_relay_state(self, plug_id, state):
@@ -802,7 +808,10 @@ class SmartStrip(Agent):
         
         pub_topic = self._root_topic + '/plug' + str(plug_id + 1) + '/relaystate'
         pub_msg = [state, {'units': 'On/Off', 'tz': 'UTC', 'type': 'int'}]
+        _log.info('[LOG] SS plug relay state, Msg: {}'.format(pub_msg))
+        _log.debug('Publishing to local bus topic: {}'.format(pub_topic))
         publish_to_bus(self, pub_topic, pub_msg)
+        _log.debug('done.')
         return
         
     def _publish_threshold_pp(self, plug_id, thresholdPP):
@@ -810,7 +819,10 @@ class SmartStrip(Agent):
             
         pub_topic = self._root_topic + '/plug' + str(plug_id + 1) + '/threshold'
         pub_msg = [thresholdPP,{'units': 'cents', 'tz': 'UTC', 'type': 'float'}]
+        _log.info('[LOG] SS plug threshold price, Msg: {}'.format(pub_msg))
+        _log.debug('Publishing to local bus topic: {}'.format(pub_topic))
         publish_to_bus(self, pub_topic, pub_msg)
+        _log.debug('done.')
         return
         
     def _authorised_tag_id(self, tag_id):
@@ -948,12 +960,10 @@ class SmartStrip(Agent):
                                     + ' for us opt pp_msg({})'.format(price_id)
                                     + ': {:0.4f}'.format(opt_tap))
         # publish the new price point to the local message bus
-        _log.debug('Post to the local-bus...')
         pub_topic = self._topic_energy_demand
         pub_msg = ap_msg.get_json_message(self._agent_id, 'bus_topic')
-        _log.debug('local bus topic: {}'.format(pub_topic))
-        # log this msg
         _log.info('[LOG] Total Active Power(TAP) opt, Msg: {}'.format(pub_msg))
+        _log.debug('Publishing to local bus topic: {}'.format(pub_topic))
         publish_to_bus(self, pub_topic, pub_msg)
         _log.debug('done.')
         return
@@ -1004,16 +1014,11 @@ class SmartStrip(Agent):
                                     + ': {:0.4f}'.format(bid_ted))
                                     
         # publish the new price point to the local message bus
-        _log.debug('Post to the local-bus...')
         pub_topic = self._topic_energy_demand
         pub_msg = ed_msg.get_json_message(self._agent_id, 'bus_topic')
-        _log.debug('local bus topic: {}'.format(pub_topic))
-        # log this msg
         _log.info('[LOG] Total Energy Demand(TED) bid, Msg: {}'.format(pub_msg))
+        _log.debug('Publishing to local bus topic: {}'.format(pub_topic))
         publish_to_bus(self, pub_topic, pub_msg)
-        #_log.debug('***** New bid price point from pca: {:0.2f}'.format(pp_msg.get_value())
-        #                            + ' , price_id: {}'.format(pp_msg.get_price_id())
-        #                            + ' - processed!!!')
         _log.debug('done.')
         return
         

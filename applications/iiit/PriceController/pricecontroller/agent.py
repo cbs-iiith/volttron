@@ -340,9 +340,8 @@ class PriceController(Agent):
         
             pub_topic =  self._topic_price_point
             pub_msg = pp_msg.get_json_message(self._agent_id, 'bus_topic')
-            _log.debug('Publishing to local bus topic: {}'.format(pub_topic))
-            # log this msg
             _log.info('[LOG] Price Point, Msg: {}'.format(pub_msg))
+            _log.debug('Publishing to local bus topic: {}'.format(pub_topic))
             publish_to_bus(self, pub_topic, pub_msg)
             _log.debug('done.')
             return True
@@ -393,9 +392,8 @@ class PriceController(Agent):
             _log.info('[LOG] PCA mode: PASS_ON_PP')
             pub_topic =  self._topic_price_point
             pub_msg = pp_msg.get_json_message(self._agent_id, 'bus_topic')
-            _log.debug('Publishing to local bus topic: {}'.format(pub_topic))
-            # log this msg
             _log.info('[LOG] Price Point for local/ds devices, Msg: {}'.format(pub_msg))
+            _log.debug('Publishing to local bus topic: {}'.format(pub_topic))
             publish_to_bus(self, pub_topic, pub_msg)
             _log.debug('done.')
             return
@@ -413,12 +411,11 @@ class PriceController(Agent):
                 #_log.info('new msg: {}'.format(msg))
                 pub_topic =  self._topic_price_point
                 pub_msg = new_pp_msg.get_json_message(self._agent_id, 'bus_topic')
-                _log.debug('Publishing to local bus topic: {}'.format(pub_topic))
-                # log this msg
                 _log.info('[LOG] Price Point for {}'.format(new_pp_msg.get_dst_device_id()
                                             if new_pp_msg.get_one_to_one() 
                                             else 'local/ds devices')
                             + ', Msg: {}'.format( pub_msg))
+                _log.debug('Publishing to local bus topic: {}'.format(pub_topic))
                 publish_to_bus(self, pub_topic, pub_msg)
                 _log.debug('done.')
             return
@@ -681,7 +678,7 @@ class PriceController(Agent):
             # put data to local_tap bucket
             if device_id in self._local_device_ids:
                 opt_tap = ed_msg.get_value()
-                _log. info('[LOG] TAP opt from local_device ({})'.format(device_id)
+                _log.info('[LOG] TAP opt from local_device ({})'.format(device_id)
                                             + ' for us opt pp_msg({})):'.format(price_id)
                                             + ' {:0.4f}'.format(opt_tap))
                 self._us_local_opt_ap[device_id] = opt_tap
@@ -689,7 +686,7 @@ class PriceController(Agent):
             # put data to ds_tap bucket
             elif device_id in self._ds_device_ids:
                 opt_tap = ed_msg.get_value()
-                _log. info('[LOG] TAP opt from ds_device ({})'.format(device_id)
+                _log.info('[LOG] TAP opt from ds_device ({})'.format(device_id)
                                             + ' for us opt pp_msg({})):'.format(price_id)
                                             + ' {:0.4f}'.format(opt_tap))
                 self._us_ds_opt_ap[device_id] = opt_tap
@@ -699,7 +696,7 @@ class PriceController(Agent):
             # put data to ds_tap bucket
             if device_id in self._local_device_ids:
                 bid_ted = ed_msg.get_value()
-                _log. info('[LOG] TED bid from local_device ({})'.format(device_id)
+                _log.info('[LOG] TED bid from local_device ({})'.format(device_id)
                                             + ' for us bid pp_msg({})):'.format(price_id)
                                             + ' {:0.4f}'.format(bid_ted))
                 self._us_local_bid_ed[device_id] = bid_ted
@@ -707,7 +704,7 @@ class PriceController(Agent):
             # put data to ds_tap bucket
             elif device_id in self._ds_device_ids:
                 bid_ted = ed_msg.get_value()
-                _log. info('[LOG] TED bid from ds_device ({})'.format(device_id)
+                _log.info('[LOG] TED bid from ds_device ({})'.format(device_id)
                                             + ' for us bid pp_msg({})):'.format(price_id)
                                             + ' {:0.4f}'.format(bid_ted))
                 self._us_ds_bid_ed[device_id] = ed_msg.get_value()
@@ -717,7 +714,7 @@ class PriceController(Agent):
             # put data to local_tap bucket
             if device_id in self._local_device_ids:
                 bid_ted = ed_msg.get_value()
-                _log. info('[LOG] TED bid from local_device ({})'.format(device_id)
+                _log.info('[LOG] TED bid from local_device ({})'.format(device_id)
                                             + ' for local bid pp_msg({})):'.format(price_id)
                                             + ' {:0.4f}'.format(bid_ted))
                 self._local_bid_ed[device_id] = ed_msg.get_value()
@@ -725,7 +722,7 @@ class PriceController(Agent):
             # put data to local_ted bucket
             elif device_id in self._ds_device_ids:
                 bid_ted = ed_msg.get_value()
-                _log. info('[LOG] TED bid from ds_device ({})'.format(device_id)
+                _log.info('[LOG] TED bid from ds_device ({})'.format(device_id)
                                             + ' for local bid pp_msg({})):'.format(price_id)
                                             + ' {:0.4f}'.format(bid_ted))
                 self._ds_bid_ed[device_id] = ed_msg.get_value()
@@ -895,12 +892,10 @@ class PriceController(Agent):
                                     + ' {:0.4f}'.format(opt_tap))
         # publish the total active power to the local message bus
         # volttron bridge pushes(RPC) this value to the next level
-        _log.debug('Post to the local-bus...')
         pub_topic = self._topic_energy_demand
         pub_msg = tap_msg.get_json_message(self._agent_id, 'bus_topic')
-        _log.debug('local bus topic: {}'.format(pub_topic))
-        # log this msg
         _log.info('[LOG] Total Active Power(TAP) opt, Msg: {}'.format(pub_msg))
+        _log.debug('Publishing to local bus topic: {}'.format(pub_topic))
         publish_to_bus(self, pub_topic, pub_msg)
         _log.debug('done.')
         return
@@ -922,12 +917,10 @@ class PriceController(Agent):
                                     + ' {:0.4f}'.format(bid_ted))
         # publish the total energy demand to the local message bus
         # volttron bridge pushes(RPC) this value to the next level
-        _log.debug('Post to the local-bus...')
         pub_topic = self._topic_energy_demand
         pub_msg = ted_msg.get_json_message(self._agent_id, 'bus_topic')
-        _log.debug('local bus topic: {}'.format(pub_topic))
-        # log this msg
         _log.info('[LOG] Total Energy Demand(TED) bid, Msg: {}'.format(pub_msg))
+        _log.debug('Publishing to local bus topic: {}'.format(pub_topic))
         publish_to_bus(self, pub_topic, pub_msg)
         _log.debug('done.')
         return

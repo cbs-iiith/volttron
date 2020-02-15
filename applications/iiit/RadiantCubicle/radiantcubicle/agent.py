@@ -424,13 +424,19 @@ class RadiantCubicle(Agent):
         # _log.debug('_publish_rc_tsp()')
         pub_topic = self.root_topic+'/rc_tsp_level'
         pub_msg = [level, {'units': 'celcius', 'tz': 'UTC', 'type': 'float'}]
+        _log.info('[LOG] RC TSP, Msg: {}'.format(pub_msg))
+        _log.debug('Publishing to local bus topic: {}'.format(pub_topic))
         publish_to_bus(self, pub_topic, pub_msg)
+        _log.debug('done.')
         return
         
     def _publish_rc_auto_cntrl_state(self, state):
         pub_topic = self.root_topic+'/rc_auto_cntrl_state'
         pub_msg = [state, {'units': 'On/Off', 'tz': 'UTC', 'type': 'int'}]
+        _log.info('[LOG] RC auto control state, Msg: {}'.format(pub_msg))
+        _log.debug('Publishing to local bus topic: {}'.format(pub_topic))
         publish_to_bus(self, pub_topic, pub_msg)
+        _log.debug('done.')
         return
         
     '''
@@ -541,12 +547,10 @@ class RadiantCubicle(Agent):
                                     + ' for us opt pp_msg({})'.format(price_id)
                                     + ': {:0.4f}'.format(opt_tap))
         # publish the new price point to the local message bus
-        _log.debug('Post to the local-bus...')
         pub_topic = self._topic_energy_demand
         pub_msg = ap_msg.get_json_message(self._agent_id, 'bus_topic')
-        _log.debug('local bus topic: {}'.format(pub_topic))
-        # log this msg
         _log.info('[LOG] Total Active Power(TAP) opt, Msg: {}'.format(pub_msg))
+        _log.debug('Publishing to local bus topic: {}'.format(pub_topic))
         publish_to_bus(self, pub_topic, pub_msg)
         _log.debug('done.')
         return
@@ -589,11 +593,10 @@ class RadiantCubicle(Agent):
                                     + ': {:0.4f}'.format(bid_ted))
                                     
         # publish the new price point to the local message bus
-        _log.debug('Post to the local-bus...')
         pub_topic = self._topic_energy_demand
         pub_msg = ed_msg.get_json_message(self._agent_id, 'bus_topic')
-        _log.debug('local bus topic: {}'.format(pub_topic))
         _log.info('[LOG] Total Energy Demand(TED) bid, Msg: {}'.format(pub_msg))
+        _log.debug('Publishing to local bus topic: {}'.format(pub_topic))
         publish_to_bus(self, pub_topic, pub_msg)
         _log.debug('done.')
         return

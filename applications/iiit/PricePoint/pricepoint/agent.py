@@ -201,9 +201,8 @@ class PricePoint(Agent):
         # publish the new price point to the local message bus
         pub_topic = self._topic_price_point
         pub_msg = pp_msg.get_json_message(self._agent_id, 'bus_topic')
-        _log.debug('Publishing to local bus topic: {}'.format(pub_topic))
-        # log this msg
         _log.info('[LOG] Price Point from remote, Msg: {}'.format(pub_msg))
+        _log.debug('Publishing to local bus topic: {}'.format(pub_topic))
         publish_to_bus(self, pub_topic, pub_msg)
         _log.debug('done.')
         return True
