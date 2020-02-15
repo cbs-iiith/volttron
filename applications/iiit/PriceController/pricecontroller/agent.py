@@ -307,15 +307,16 @@ class PriceController(Agent):
     #    return
         
     def on_new_extrn_pp(self, peer, sender, bus,  topic, headers, message):
+        _log.debug('on_new_us_pp()')
         if self._pp_optimize_option != 'EXTERN_OPT':
             return
         # check if this agent is not diabled
         if self._pca_standby:
-            _log.info('self.pca_standby: ' + str(self._pca_standby) + ', do nothing!!!')
+            _log.debug('[LOG] PCA mode: STANDBY, do nothing')
             return
             
         # check message type before parsing
-        if not check_msg_type(message, MessageType.price_point): return False
+        if not check_msg_type(message, MessageType.price_point): return
         
         valid_senders_list = [self.external_vip_identity]
         minimum_fields = ['msg_type', 'value', 'value_data_type', 'units', 'price_id']
@@ -344,7 +345,7 @@ class PriceController(Agent):
             _log.debug('Publishing to local bus topic: {}'.format(pub_topic))
             publish_to_bus(self, pub_topic, pub_msg)
             _log.debug('done.')
-            return True
+            return
             
         return
         
@@ -355,10 +356,10 @@ class PriceController(Agent):
         # check if this agent is not diabled
         if self._pca_standby:
             _log.debug('[LOG] PCA mode: STANDBY, do nothing')
-            return False
+            return
             
         # check message type before parsing
-        if not check_msg_type(message, MessageType.price_point): return False
+        if not check_msg_type(message, MessageType.price_point): return
         
         valid_senders_list = self._us_senders_list
         minimum_fields = ['msg_type', 'value', 'value_data_type', 'units', 'price_id']
@@ -404,7 +405,7 @@ class PriceController(Agent):
             _log.debug('Compute new price points...')
             new_pp_msg_list = self._computeNewPrice()
             self.local_bid_pp_msg_list = copy(new_pp_msg_list)
-            _log.info('new bid pp_msg_list: {}'.format(new_pp_msg_list))
+            #_log.info('new bid pp_msg_list: {}'.format(new_pp_msg_list))
             
             # TODO: maybe publish a list of the pp messages and let the bridge do_rpc concurrently
             for msg in new_pp_msg_list:
@@ -585,10 +586,12 @@ class PriceController(Agent):
         return (True if len(self._ds_bid_ed) >= len(vb_ds_device_ids) else False)
         
     def on_ds_ed(self, peer, sender, bus,  topic, headers, message):
+        _log.debug('on_ds_ed()')
         # check if this agent is not diabled
         if self._pca_standby:
-            _log.info('self.pca_standby: ' + str(self._pca_standby) + ', do nothing!!!')
-            return False
+            _log.debug('[LOG] PCA mode: STANDBY, do nothing')
+            return
+            
         # 1. validate message
         # 2. check againt valid pp ids
         # 3. if (src_id_add == self._ip_addr) and opt_pp:
@@ -603,15 +606,11 @@ class PriceController(Agent):
         # post ed to us only if pp_id corresponds to these ids 
         #      (i.e., ed for either us opt_pp_id or bid_pp_id)
         
-        success_ap = False
-        success_ed = False
         # handle only ap or ed type messages
-        success_ap = check_msg_type(message, MessageType.active_power)
-        if not success_ap:
-            success_ed = check_msg_type(message, MessageType.energy_demand)
-            if not success_ed:
-                return
-                
+        if check_msg_type(message, MessageType.active_power): pass
+        elif check_msg_type(message, MessageType.energy_demand): pass
+        else: return
+        
         # add the message to ds_ed_msgs to be processed by process_ds_ed_msg_que()
         #msg_id = randint(0, 99999999)
         #ds_ed_msgs[msg_id] = {'msg_type': (MessageType.active_power
@@ -640,7 +639,9 @@ class PriceController(Agent):
                                                 , message)
         if not success or ed_msg is None: return
         else: _log.debug('New' 
-                        + (' energy demand bid (ed)' if success_ed else ' active power (ap)')
+                        + (' energy demand bid (ed)' 
+                                if ed_msg.get_msg_type() == MessageType.energy_demand
+                                else ' active power (ap)')
                         + ' msg on the local-bus, topic: {}'.format(topic))
                         
         _log.debug('Sorting the ed_msg...')
