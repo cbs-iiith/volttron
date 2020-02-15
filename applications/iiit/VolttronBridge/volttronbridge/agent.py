@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*- {{{
 # vim: set fenc=utf-8 ft=python sw=4 ts=4 sts=4 et:
-# 
+#
 # Copyright (c) 2020, Sam Babu, Godithi.
 # All rights reserved.
-# 
-# 
+#
+#
 # IIIT Hyderabad
 
 # }}}
@@ -28,7 +28,7 @@ from volttron.platform.jsonrpc import (
         UNABLE_TO_REGISTER_INSTANCE, DISCOVERY_ERROR,
         UNABLE_TO_UNREGISTER_INSTANCE, UNAVAILABLE_PLATFORM, INVALID_PARAMS,
         UNAVAILABLE_AGENT)
-        
+
 from random import randint
 from copy import copy
 
@@ -38,9 +38,10 @@ import gevent.event
 
 from ispace_utils import do_rpc, register_rpc_route, publish_to_bus
 from ispace_msg import ISPACE_Msg, MessageType
-from ispace_msg_utils import ( parse_bustopic_msg, check_msg_type,
-        parse_jsonrpc_msg, get_default_pp_msg, get_default_ed_msg,
-        valid_bustopic_msg)
+from ispace_msg_utils import (
+        parse_bustopic_msg, check_msg_type,
+        parse_jsonrpc_msg, get_default_pp_msg,
+        get_default_ed_msg, valid_bustopic_msg)
 
 utils.setup_logging()
 _log = logging.getLogger(__name__)
@@ -63,7 +64,7 @@ MAX_RETRIES = 5
 def volttronbridge(config_path, **kwargs):
     config = utils.load_config(config_path)
     vip_identity = config.get('vip_identity', 'iiit.volttronbridge')
-    # This agent needs to be named iiit.volttronbridge. 
+    # This agent needs to be named iiit.volttronbridge.
     # Pop the uuid id off the kwargs
     kwargs.pop('identity', None)
 
@@ -71,30 +72,28 @@ def volttronbridge(config_path, **kwargs):
     return VolttronBridge(config_path, identity=vip_identity, **kwargs)
 
 
-'''
-Retrive the data from volttron bus and publish it to upstream or downstream
-volttron instance. If posting to downstream, then the data is pricepoint
-and if posting to upstream then the data is energy demand or active power
-
-The assumption is that for up stream (us), the bridge communicates with only one
-instance and for the down stream (ds), the bridge would be posting to multiple
-devices. 
-        price point one-to-many communication
-        energy demand one-to-one communication
-        active power one-to-one communication
-
-The ds devices on their start up would register with upstream bridge
-
-The bridge is aware of the upstream devices and registers to it.
-Also, as and when there is a change in energy demand, the same is posted to the
-upstream bridges. 
-
-Whereas the the bridge does not know the downstream devices upfront. 
-As and when the downstram bridges register to the bridge, the bridge
-starts posting the messages (pricepoint) to them.
-'''
 class VolttronBridge(Agent):
-    '''Voltron Bridge
+    ''' Voltron Bridge
+    Retrive the data from volttron bus and publish it to upstream or downstream
+    volttron instance. If posting to downstream, then the data is pricepoint
+    and if posting to upstream then the data is energy demand or active power
+
+    The assumption is that for up stream (us), the bridge communicates with
+    only one instance and for the down stream (ds), the bridge would be posting
+    to multiple devices.
+            price point one-to-many communication
+            energy demand one-to-one communication
+            active power one-to-one communication
+
+    The ds devices on their start up would register with upstream bridge
+
+    The bridge is aware of the upstream devices and registers to it.
+    Also, as and when there is a change in energy demand, the same is posted to
+    the upstream bridges.
+
+    Whereas the the bridge does not know the downstream devices upfront.
+    As and when the downstram bridges register to the bridge, the bridge starts
+    posting the messages (pricepoint) to them.
     '''
     # initialized  during __init__ from config
     _topic_energy_demand = None
@@ -144,15 +143,11 @@ class VolttronBridge(Agent):
             # upstream volttron instance
             self._us_ip_addr = self.config.get('us_ip_addr', '192.168.1.51')
             self._us_port = int(self.config.get('us_port', 8082))
-            _log.debug('self._us_ip_addr: '
-                        + self._us_ip_addr 
-                        + ' self._us_port: '
-                        str(self._us_port)
-                        )
+            _log.debug('self._us_ip_addr: {}'.format(self._us_ip_addr) +
+                ' self._us_port: '.format(self._us_port))
 
-        self._discovery_address = self._this_ip_addr
-                                + ':'
-                                + str(self._this_port)
+        self._discovery_address = '{}'.format(self._this_ip_addr)
+                                + ':{}'.format(self._this_port)
         _log.debug('self._discovery_address:'
                                 + ' {}'.format(self._discovery_address))
         return
