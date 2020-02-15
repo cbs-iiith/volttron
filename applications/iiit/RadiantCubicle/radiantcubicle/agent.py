@@ -417,7 +417,7 @@ class RadiantCubicle(Agent):
         
     def _publish_rc_tsp(self, level):
         # _log.debug('_publish_rc_tsp()')
-        pub_topic = self.root_topic+'/rc_tsp_level'
+        pub_topic = self._root_topic + '/rc_tsp_level'
         pub_msg = [level, {'units': 'celcius', 'tz': 'UTC', 'type': 'float'}]
         _log.info('[LOG] RC TSP, Msg: {}'.format(pub_msg))
         _log.debug('Publishing to local bus topic: {}'.format(pub_topic))
@@ -426,7 +426,7 @@ class RadiantCubicle(Agent):
         return
         
     def _publish_rc_auto_cntrl_state(self, state):
-        pub_topic = self.root_topic+'/rc_auto_cntrl_state'
+        pub_topic = self._root_topic + '/rc_auto_cntrl_state'
         pub_msg = [state, {'units': 'On/Off', 'tz': 'UTC', 'type': 'int'}]
         _log.info('[LOG] RC auto control state, Msg: {}'.format(pub_msg))
         _log.debug('Publishing to local bus topic: {}'.format(pub_topic))

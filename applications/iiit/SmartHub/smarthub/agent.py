@@ -803,8 +803,8 @@ class SmartHub(Agent):
             _log.exception('not a valid device to pub state, lhw_device_id: ' + str(lhw_device_id))
             return
         pub_topic = self._get_lhw_sub_topic(lhw_device_id, AT_PUB_STATE)
-        _log.info('[LOG] SH device state, Msg: {}'.format(pub_msg))
         pub_msg = [state, {'units': 'On/Off', 'tz': 'UTC', 'type': 'int'}]
+        _log.info('[LOG] SH device state, Msg: {}'.format(pub_msg))
         _log.debug('Publishing to local bus topic: {}'.format(pub_topic))
         publish_to_bus(self, pub_topic, pub_msg)
         _log.debug('done.')
