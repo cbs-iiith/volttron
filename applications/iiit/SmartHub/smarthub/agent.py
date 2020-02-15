@@ -658,10 +658,10 @@ class SmartHub(Agent):
                         'pirlevel':{'units': 'bool', 'tz': 'UTC', 'type': 'int'}
                     }
                     ]
-        _log.info('[LOG] Sensors Data, Msg: {}'.format(pub_msg))
-        _log.debug('Publishing to local bus topic: {}'.format(pub_topic))
+        #_log.info('[LOG] Sensors Data, Msg: {}'.format(pub_msg))
+        #_log.debug('Publishing to local bus topic: {}'.format(pub_topic))
         publish_to_bus(self, pub_topic, pub_msg)
-        _log.debug('done.')
+        #_log.debug('done.')
         return
         
     def _publish_device_state(self):
@@ -804,10 +804,10 @@ class SmartHub(Agent):
             return
         pub_topic = self._get_lhw_sub_topic(lhw_device_id, AT_PUB_STATE)
         pub_msg = [state, {'units': 'On/Off', 'tz': 'UTC', 'type': 'int'}]
-        _log.info('[LOG] SH device state, Msg: {}'.format(pub_msg))
-        _log.debug('Publishing to local bus topic: {}'.format(pub_topic))
+        #_log.info('[LOG] SH device state, Msg: {}'.format(pub_msg))
+        #_log.debug('Publishing to local bus topic: {}'.format(pub_topic))
         publish_to_bus(self, pub_topic, pub_msg)
-        _log.debug('done.')
+        #_log.debug('done.')
         return
         
     def _publish_sh_device_level(self, lhw_device_id, level):
@@ -817,10 +817,10 @@ class SmartHub(Agent):
             return
         pub_topic = self._get_lhw_sub_topic(lhw_device_id, AT_PUB_LEVEL)
         pub_msg = [level, {'units': 'duty', 'tz': 'UTC', 'type': 'float'}]
-        _log.info('[LOG] SH device level, Msg: {}'.format(pub_msg))
-        _log.debug('Publishing to local bus topic: {}'.format(pub_topic))
+        #_log.info('[LOG] SH device level, Msg: {}'.format(pub_msg))
+        #_log.debug('Publishing to local bus topic: {}'.format(pub_topic))
         publish_to_bus(self, pub_topic, pub_msg)
-        _log.debug('done.')
+        #_log.debug('done.')
         return
         
     def _publish_sh_device_th_pp(self, lhw_device_id, thPP):
@@ -829,10 +829,10 @@ class SmartHub(Agent):
             return
         pub_topic = self._get_lhw_sub_topic(lhw_device_id, AT_PUB_THPP)
         pub_msg = [thPP, {'units': 'cent', 'tz': 'UTC', 'type': 'float'}]
-        _log.info('[LOG] SH device threshold price, Msg: {}'.format(pub_msg))
-        _log.debug('Publishing to local bus topic: {}'.format(pub_topic))
+        #_log.info('[LOG] SH device threshold price, Msg: {}'.format(pub_msg))
+        #_log.debug('Publishing to local bus topic: {}'.format(pub_topic))
         publish_to_bus(self, pub_topic, pub_msg)
-        _log.debug('done.')
+        #_log.debug('done.')
         return
         
     def _get_lhw_sub_topic(self, lhw_device_id, actionType):
