@@ -683,7 +683,7 @@ class VolttronBridge(Agent):
             return jsonrpc.json_error(rpcdata_id, UNHANDLED_EXCEPTION, e)
             
         # validate various sanity measure like, valid fields, valid pp ids, ttl expiry, etc.,
-        hint = 'New Price Point'
+        hint = 'Price Point'
         validate_fields = ['value', 'units', 'price_id', 'isoptimal', 'duration', 'ttl']
         valid_price_ids = []        # accept all pp_ids from us
         if not pp_msg.sanity_check_ok(hint, validate_fields, valid_price_ids):
@@ -742,7 +742,7 @@ class VolttronBridge(Agent):
             
         #_log.debug('sanity checks....')
         # validate various sanity measure like, valid fields, valid pp ids, ttl expiry, etc.,
-        hint = 'New Active Power' if success_ap else 'New Energy Demand'
+        hint = 'Active Power' if success_ap else 'New Energy Demand'
         validate_fields = ['value', 'units', 'price_id', 'isoptimal', 'duration', 'ttl']
         valid_price_ids = ([self.us_opt_pp_id, self.us_bid_pp_id
                             , self.local_opt_pp_id, self.local_bid_pp_id]
