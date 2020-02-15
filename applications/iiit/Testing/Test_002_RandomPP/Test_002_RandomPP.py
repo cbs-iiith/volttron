@@ -89,8 +89,8 @@ def do_rpc(method, params=None ):
 def post_random_price(isoptimal = True, duration = 3600, ttl = 10):
     #random price between 0-1
     no_digit = 2
-    pp = math.floor(random()*10**no_digit)/10**no_digit
-    pp = .94 if pp>.94 else pp
+    pp = math.floor(random() * 10**no_digit) / 10**no_digit
+    pp = 0.94 if pp > 0.94 else pp
 
     if isoptimal:
         print get_timestamp() + ' OPT PricePoint: ' + str(pp) + ',',
