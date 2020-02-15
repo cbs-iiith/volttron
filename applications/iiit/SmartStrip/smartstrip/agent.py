@@ -1039,7 +1039,7 @@ class SmartStrip(Agent):
             if (bid_pp > th_pp
                 or plug_id == self._sh_plug_id
                 ): pass
-            ted += calc_energy_wh(self._plugs_active_pwr[plug_id], duration)
+            else: ted += calc_energy_wh(self._plugs_active_pwr[plug_id], duration)
                 
         return ted
         
