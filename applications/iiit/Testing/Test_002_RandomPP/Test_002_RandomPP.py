@@ -165,20 +165,16 @@ if __name__ == '__main__':
     #job to post opt prices at regular interval
     job_opt = Job(interval = datetime.timedelta(seconds = OPT_WAIT_TIME_SEC)
                     , execute = post_random_price
-                    , kwargs = dict(isoptimal = True
-                                    , duration = OPT_DUR_TIME_SEC
-                                    , ttl = 30
-                                    )
-                    )
+                    ,, kwargs = {'isoptimal': True
+                                , 'duration': OPT_DUR_TIME_SEC
+                                , 'ttl': 30 })
 
     #job to post bid prices at regular interval
     job_bid = Job(interval = datetime.timedelta(seconds = BID_WAIT_TIME_SEC)
                     , execute = post_random_price
-                    , dict(isoptimal = False
-                            , duration = BID_DUR_TIME_SEC
-                            , ttl = 30
-                            )
-                    )
+                    ,, kwargs = {'isoptimal': False
+                                , 'duration': BID_DUR_TIME_SEC
+                                , 'ttl': 30 })
 
     print get_timestamp() + ' ROOT_URL: ' + str(ROOT_URL),
     print ', OPT_WAIT_TIME_SEC: ' + str(OPT_WAIT_TIME_SEC),
