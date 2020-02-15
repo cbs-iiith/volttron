@@ -641,7 +641,7 @@ class SmartHub(Agent):
                     + ', Rh: {:0.2f}'.format(rh_level)
                     + ', Temp: {:0.2f}'.format(temp_level)
                     + ', Co2: {:0.2f}'.format(co2_level)
-                    + ', PIR: {:d}'.format('OCCUPIED' if int(pir_level) == 1 else 'UNOCCUPIED')
+                    + ', PIR: {}'.format('OCCUPIED' if int(pir_level) == 1 else 'UNOCCUPIED')
                     )
                     
         pub_topic = self._root_topic + '/sensors/all'
