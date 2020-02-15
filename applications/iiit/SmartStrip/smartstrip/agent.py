@@ -194,10 +194,10 @@ class SmartStrip(Agent):
         
         self._volt_state = 1
         
-        _log.debug('switch on debug led')
+        _log.info('switch on debug led')
         self._switch_led_debug(LED_ON, SCHEDULE_NOT_AVLB)
         
-        _log.debug('startup() - Done. Agent is ready')
+        _log.info('startup() - Done. Agent is ready')
         return
         
     @Core.receiver('onstop')

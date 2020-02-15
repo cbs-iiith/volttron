@@ -136,7 +136,7 @@ class PriceController(Agent):
         
     @Core.receiver('onstart')
     def startup(self, sender, **kwargs):
-        _log.debug('startup()')
+        _log.info('Starting PriceController...')
         
         # retrive self._device_id, self._ip_addr, self._discovery_address from the bridge
         # retrive_details_from_vb is a blocking call
@@ -192,7 +192,7 @@ class PriceController(Agent):
         # the next iterations gets delayed.
         # self.core.periodic(self._period_process_loop, self.process_loop, wait=None)
         
-        _log.debug('startup() - Done. Agent is ready')
+        _log.info('startup() - Done. Agent is ready')
         return
         
     @Core.receiver('onstop')

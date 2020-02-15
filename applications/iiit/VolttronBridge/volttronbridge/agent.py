@@ -145,7 +145,7 @@ class VolttronBridge(Agent):
         
     @Core.receiver('onstart')
     def startup(self, sender, **kwargs):
-        _log.debug('startup()')
+        _log.info('Starting Bridge...')
         _log.debug(self._bridge_host)
         
         # register rpc routes with MASTER_WEB
@@ -207,7 +207,7 @@ class VolttronBridge(Agent):
         if self._bridge_host != 'LEVEL_TAILEND':
             self.core.periodic(self._period_process_pp, self.post_ds_new_pp, wait=None)
             
-        _log.debug('startup() - Done. Agent is ready')
+        _log.info('startup() - Done. Agent is ready')
         return
         
     @Core.receiver('onstop')
@@ -538,7 +538,7 @@ class VolttronBridge(Agent):
             _log.warning('msg ttl expired on decrement_ttl(), do nothing!!!')
             return False
         elif decrement_status:
-            _log.info('new ttl: {}.'.format(pp_msg.get_ttl()))
+            _log.debug('new ttl: {}.'.format(pp_msg.get_ttl()))
         pp_msg.update_ts()
         
         # case pp_msg one-to-many(i.e., one_to_one is not True)
@@ -693,11 +693,11 @@ class VolttronBridge(Agent):
         # keep a track of us pp_ids
         if pp_msg.get_src_device_id() != self._device_id:
             if pp_msg.get_isoptimal():
-                _log.info('***** New optimal price point from us:'
+                _log.debug('***** New optimal price point from us:'
                                     + ' {:0.2f}'.format(pp_msg.get_value()))
                 self.us_opt_pp_id = pp_msg.get_price_id()
             else :
-                _log.info('***** New bid price point from us:'
+                _log.debug('***** New bid price point from us:'
                                     + ' {:0.2f}'.format(pp_msg.get_value()))
                 self.us_bid_pp_id = pp_msg.get_price_id()
             

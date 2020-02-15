@@ -172,7 +172,7 @@ class ZoneController(Agent):
         # subscribing to topic_price_point
         self.vip.pubsub.subscribe('pubsub', self._topic_price_point, self.on_new_price)
         
-        _log.debug('startup() - Done. Agent is ready')
+        _log.info('startup() - Done. Agent is ready')
         return
         
     @Core.receiver('onstop')

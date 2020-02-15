@@ -208,10 +208,10 @@ class SmartHub(Agent):
         
         self._volt_state = 1
         
-        _log.debug('switch on debug led')
+        _log.info('switch on debug led')
         self._set_sh_device_state(SH_DEVICE_LED_DEBUG, SH_DEVICE_STATE_ON, SCHEDULE_NOT_AVLB)
         
-        _log.debug('startup() - Done. Agent is ready')
+        _log.info('startup() - Done. Agent is ready')
         return
         
     @Core.receiver('onstop')
@@ -1055,8 +1055,8 @@ class SmartHub(Agent):
         threshold_pp = self._sh_devices_th_pp[lhw_device_id]
         if self._price_point_latest > threshold_pp: 
             if self._sh_devices_state[lhw_device_id] == SH_DEVICE_STATE_ON:
-                _log.info(self._get_lhw_end_point(lhw_device_id, AT_GET_STATE)
-                            + 'Current price point > threshold'
+                _log.debug(self._get_lhw_end_point(lhw_device_id, AT_GET_STATE)
+                            + ' Current price point > threshold'
                             + '({0:.2f}), '.format(threshold_pp)
                             + 'Switching-Off Power'
                             )
@@ -1066,8 +1066,8 @@ class SmartHub(Agent):
             # else:
                 # do nothing
         else:
-            _log.info(self._get_lhw_end_point(lhw_device_id, AT_GET_STATE)
-                        + 'Current price point <= threshold'
+            _log.debug(self._get_lhw_end_point(lhw_device_id, AT_GET_STATE)
+                        + ' Current price point <= threshold'
                         + '({0:.2f}), '.format(threshold_pp)
                         + 'Switching-On Power'
                         )
@@ -1077,7 +1077,7 @@ class SmartHub(Agent):
                 
             if lhw_device_id == SH_DEVICE_FAN:
                 fan_speed = self._compute_new_fan_speed(self._price_point_latest) / 100
-                _log.info ( 'New Fan Speed: {0:.4f}'.format(fan_speed))
+                _log.debug( 'New Fan Speed: {0:.4f}'.format(fan_speed))
                 self._set_sh_device_level(SH_DEVICE_FAN, fan_speed, schd_exist)
                 if not isclose(fan_speed, self._sh_devices_level[lhw_device_id], EPSILON):
                     self._process_opt_pp_success = False

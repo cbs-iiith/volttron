@@ -54,7 +54,7 @@ def ping_vb_failed(self):
 def register_with_bridge(self, sleep_time=10):
     while True:
         try:
-            _log.info('registering with the Volttron Bridge...')
+            _log.info('Registering with the Volttron Bridge...')
             success = self.vip.rpc.call(self._vb_vip_identity
                                         , 'register_local_ed_agent'
                                         , self.core.identity
@@ -66,7 +66,7 @@ def register_with_bridge(self, sleep_time=10):
                 break
         except Exception as e:
             # print(e)
-            _log.warning('Maybe the Volttron Bridge Agent is not yet started!!!'
+            _log.warning('maybe the Volttron Bridge Agent is not yet started!!!'
                             + ' message: {}'.format(e.message))
             pass
         _log.warning('will try again in {} sec'.format(sleep_time))
@@ -75,7 +75,7 @@ def register_with_bridge(self, sleep_time=10):
     
 def unregister_with_bridge(self):
     try:
-        _log.info('unregistering with the bridge...')
+        _log.info('Unregistering with the bridge...')
         success = self.vip.rpc.call(self._vb_vip_identity
                                     , 'unregister_local_ed_agent'
                                     , self.core.identity
@@ -91,7 +91,7 @@ def unregister_with_bridge(self):
 def register_rpc_route(self, name, handle, sleep_time=10):
     while True:
         try:
-            _log.info('registering agent route...')
+            _log.info('Registering agent route...')
             success = self.vip.rpc.call(MASTER_WEB
                                         , 'register_agent_route'
                                         , r'^/' + name
@@ -103,7 +103,7 @@ def register_rpc_route(self, name, handle, sleep_time=10):
                 break
         except Exception as e:
             # print(e)
-            _log.warning('Maybe the Volttron instance is not yet ready!!!'
+            _log.warning('maybe the Volttron instance is not yet ready!!!'
                             + ' message: {}'.format(e.message))
             pass
         _log.warning('will try again in {} sec'.format(sleep_time))

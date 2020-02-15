@@ -76,11 +76,11 @@ class SmartHubUI_Clnt(Agent):
         
     @Core.receiver('onstart')
     def startup(self, sender, **kwargs):
-        _log.debug('startup()')
+        _log.info('Starting SmartHub UI Client...')
         self._valid_senders_list_pp = ['iiit.pricecontroller']
         
         self._subscribe_topics()
-        _log.debug('startup() - Done. Agent is ready')
+        _log.info('startup() - Done. Agent is ready')
         return
         
     @Core.receiver('onstop')

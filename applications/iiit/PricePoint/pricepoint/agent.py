@@ -91,6 +91,8 @@ class PricePoint(Agent):
         
     @Core.receiver('onstart')
     def startup(self, sender, **kwargs):
+        _log.info('Starting Price Point...')
+        
         # retrive self._device_id, self._ip_addr, self._discovery_address from the bridge
         # retrive_details_from_vb is a blocking call
         retrive_details_from_vb(self, 5)
@@ -99,7 +101,7 @@ class PricePoint(Agent):
         # register_rpc_route is a blocking call
         register_rpc_route(self, 'pricepoint', 'rpc_from_net', 5)
         
-        _log.debug('startup() - Done. Agent is ready')
+        _log.info('startup() - Done. Agent is ready')
         return
         
     @Core.receiver('onstop')

@@ -169,10 +169,10 @@ class RadiantCubicle(Agent):
         # subscribing to topic_price_point
         self.vip.pubsub.subscribe('pubsub', self._topic_price_point, self.on_new_price)
         
-        _log.debug('switch ON RC_AUTO_CNTRL')
+        _log.info('switch ON RC_AUTO_CNTRL')
         self._rpcset_rc_auto_cntrl(RC_AUTO_CNTRL_ON)
         
-        _log.debug('startup() - Done. Agent is ready')
+        _log.info('startup() - Done. Agent is ready')
         return
         
     @Core.receiver('onstop')
@@ -310,7 +310,7 @@ class RadiantCubicle(Agent):
         #_log.debug('_rpcset_rc_auto_cntrl()')
         
         if self._rc_auto_cntrl_state == state:
-            _log.info('same state, do nothing')
+            _log.debug('same state, do nothing')
             return
             
         # get schedule to _rpcset_rc_auto_cntrl
@@ -348,23 +348,18 @@ class RadiantCubicle(Agent):
             self._rc_tsp = new_tsp
             self._publish_rc_tsp(new_tsp)
             
-        _log.debug('Current tsp: ' + '{:0.1f}'.format( rc_tsp))
+        _log.debug('Current tsp: ' + '{:0.1f}'.format(rc_tsp))
         return
         
     def _update_rc_auto_cntrl(self, new_state):
-        #_log.debug('_update_rc_auto_cntrl()')
-        
         rc_auto_cntrl_state = self._rpcget_rc_auto_cntrl_state()
         
-        if new_state == int(rc_auto_cntrl_state):
+        if new_state == rc_auto_cntrl_state:
             self._rc_auto_cntrl_state = new_state
             self._publish_rc_auto_cntrl_state(new_state)
-            
-        if self._rc_auto_cntrl_state == RC_AUTO_CNTRL_ON:
-            _log.info('Current State: RC Auto Cntrl is ON!!!')
-        else:
-            _log.info('Current State: RC Auto Cntrl OFF!!!')
-            
+        _log.debug('Current State: RC Auto Cntrl is {}!!!'.format('ON' 
+                                                            if new_state == RC_AUTO_CNTRL_ON 
+                                                            else 'OFF'))
         return
         
     def _rpcget_rc_active_power(self):
@@ -410,7 +405,7 @@ class RadiantCubicle(Agent):
                                         ,'get_point'
                                         , 'iiit/cbs/radiantcubicle/RC_AUTO_CNTRL'
                                         ).get(timeout=10)
-            return state
+            return int(state)
         except gevent.Timeout:
             _log.exception('gevent.Timeout in rpc_getShDeviceLevel()')
             return E_UNKNOWN_STATE
