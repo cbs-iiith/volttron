@@ -605,91 +605,101 @@ class VolttronBridge(Agent):
         
     # check if the ds is registered with this bridge
     def _get_ds_bridge_status(self, rpcdata_id, message):
-        result = False
         # TODO: catch jsonrpc parse exception
-        discovery_address = jsonrpc.JsonRpcData.parse(message).params['discovery_address']
-        device_id = jsonrpc.JsonRpcData.parse(message).params['device_id']
+        params = jsonrpc.JsonRpcData.parse(message).params
+        discovery_address = params['discovery_address']
+        device_id = params['device_id']
         if discovery_address in self._ds_register:
             index = self._ds_register.index(discovery_address)
             if device_id == self._ds_device_ids[index]:
                 result = True
-        return result 
-        
+        return False
+
     def _register_ds_bridge(self, rpcdata_id, message):
         # TODO: catch jsonrpc parse exception
-        discovery_address = jsonrpc.JsonRpcData.parse(message).params['discovery_address']
-        device_id = jsonrpc.JsonRpcData.parse(message).params['device_id']
-        _log.debug('_register_ds_bridge(), discovery_address: ' + discovery_address 
-                                    + ' device_id: ' + device_id)
+        params = jsonrpc.JsonRpcData.parse(message).params
+        discovery_address = params['discovery_address']
+        device_id = params['device_id']
+        _log.debug('_register_ds_bridge()'
+                    + ', discovery_address: {}'.format(discovery_address)
+                    + ', device_id: {}'.format( device_id))
+
         if discovery_address in self._ds_register:
             index = self._ds_register.index(discovery_address)
-            self._ds_retrycount[index] = 0  # the ds is alive now, reset retry counter
+            # the ds is alive, reset retry counter if any
+            self._ds_retrycount[index] = 0
             _log.debug('already registered!!!')
             return True
-            
+
         self._ds_register.append(discovery_address)
         index = self._ds_register.index(discovery_address)
         self._ds_device_ids.insert(index, device_id)
         self._ds_retrycount.insert(index, 0)
         _log.debug('registered!!!')
         return True
-        
+
     def _unregister_ds_bridge(self, rpcdata_id, message):
-        discovery_address = jsonrpc.JsonRpcData.parse(message).params['discovery_address']
-        device_id = jsonrpc.JsonRpcData.parse(message).params['device_id']
-        _log.debug('_unregister_ds_bridge(), discovery_address: '+ discovery_address 
-                                        + ' device_id: ' + device_id)
+        params = jsonrpc.JsonRpcData.parse(message).params
+        discovery_address = params['discovery_address']
+        device_id = params['device_id']
+        _log.debug('_unregister_ds_bridge()'
+                    + ', discovery_address: {}'.format(discovery_address)
+                    + ', device_id: {}'.format( device_id))
+
         if discovery_address not in self._ds_register:
             _log.debug('already unregistered')
             return True
-            
+
         index = self._ds_register.index(discovery_address)
         self._ds_register.remove(discovery_address)
         del self._ds_device_ids[index]
         del self._ds_retrycount[index]
         _log.debug('unregistered!!!')
         return True
-        
+
     def _reset_ds_retrycount(self):
         for discovery_address in self._ds_register:
             index = self._ds_register.index(discovery_address)
             self._ds_retrycount[index] = 0
         return
-        
+
     # post the new price point from us to the local-us-bus
     def _post_pp(self, rpcdata_id, message):
         _log.debug('New pp msg from us...')
         pp_msg = None
         rpcdata = jsonrpc.JsonRpcData.parse(message)
+
         # Note: this is on a rpc message do the check here ONLY
         # check message for MessageType.price_point
-        if not check_msg_type(message, MessageType.price_point):
-            return jsonrpc.json_error(rpcdata_id, INVALID_PARAMS
-                                            , 'Invalid params {}'.format(rpcdata.params))
+        if check_msg_type(message, MessageType.price_point): pass
+        else:
+            msg = 'Invalid params {}'.format(rpcdata.params)
+            error = jsonrpc.json_error(rpcdata_id, INVALID_PARAMS, msg)
+            return error
+
         try:
-            minimum_fields = ['value', 'value_data_type', 'units', 'price_id']
+            minimum_fields = ['value', 'price_id']
             pp_msg = parse_jsonrpc_msg(message, minimum_fields)
-            # _log.info('pp_msg: {}'.format(pp_msg))
         except KeyError as ke:
-            # print(ke)
-            _log.error('id: {}, message: invalid params {}'
-                                                + '!!!'.format(rpcdata_id, 'rpcdata.params'))
-            return jsonrpc.json_error(rpcdata_id, INVALID_PARAMS,
-                    'Invalid params {}'.format(rpcdata.params))
+            msg = 'Invalid params {}'.format(rpcdata.params)
+            error = jsonrpc.json_error(rpcdata_id, INVALID_PARAMS, msg)
+            return error
         except Exception as e:
-            # print(e)
-            _log.exception('id: {}, message: unhandled exception {}'
-                                                        + '!!!'.format(rpcdata_id, e.message))
-            return jsonrpc.json_error(rpcdata_id, UNHANDLED_EXCEPTION, e)
-            
-        # validate various sanity measure like, valid fields, valid pp ids, ttl expiry, etc.,
+            msg = e.message
+            error = jsonrpc.json_error(rpcdata_id, UNHANDLED_EXCEPTION, msg)
+            return error
+
+        # sanity measure like, valid fields, valid pp ids, ttl expiry, etc.,
         hint = 'Price Point'
-        validate_fields = ['value', 'units', 'price_id', 'isoptimal', 'duration', 'ttl']
+        validate_fields = ['value', 'price_id', 'isoptimal', 'ttl']
         valid_price_ids = []        # accept all pp_ids from us
-        if not pp_msg.sanity_check_ok(hint, validate_fields, valid_price_ids):
+        if pp_msg.sanity_check_ok(hint, validate_fields, valid_price_ids): pass
+        else:
             _log.warning('Msg sanity checks failed!!!')
-            return jsonrpc.json_error(rpcdata_id, PARSE_ERROR, 'Msg sanity checks failed!!!')
-            
+            msg = 'Msg sanity checks failed!!!'
+            error = jsonrpc.json_error(rpcdata_id, PARSE_ERROR, msg)
+            return error
+
         # keep a track of us pp_ids
         if pp_msg.get_src_device_id() != self._device_id:
             if pp_msg.get_isoptimal():
@@ -700,7 +710,7 @@ class VolttronBridge(Agent):
                 _log.debug('***** New bid price point from us:'
                                     + ' {:0.2f}'.format(pp_msg.get_value()))
                 self.us_bid_pp_id = pp_msg.get_price_id()
-            
+
         # publish the new price point to the local us message bus
         pub_topic = self._topic_price_point_us
         pub_msg = pp_msg.get_json_message(self._agent_id, 'bus_topic')
@@ -709,81 +719,92 @@ class VolttronBridge(Agent):
         publish_to_bus(self, pub_topic, pub_msg)
         _log.debug('done.')
         return True
-        
+
     # post the new energy demand from ds to the local-ds-bus
     def _post_ed(self, rpcdata_id, message):
         ed_msg = None
         _log.debug('New ap/ed msg from ds...')
         rpcdata = jsonrpc.JsonRpcData.parse(message)
+
         # Note: this is on a rpc message do the check here ONLY
         # check message for MessageType.price_point
-        success_ap = False
-        success_ed = False
         # handle only ap or ed type messages
-        success_ap = check_msg_type(message, MessageType.active_power)
-        #_log.debug('success_ap - {}'.format(success_ap))
-        if not success_ap:
-            success_ed = check_msg_type(message, MessageType.energy_demand)
-            _log.debug('success_ed - {}'.format(success_ed))
-            if not success_ed:
-                return jsonrpc.json_error(rpcdata_id, INVALID_PARAMS
-                                                , 'Invalid params {}'.format(rpcdata.params))
+        if check_msg_type(message, MessageType.active_power): pass
+        elif check_msg_type(message, MessageType.energy_demand): pass
+        else:
+            msg = 'Invalid params {}'.format(rpcdata.params)
+            error = jsonrpc.json_error(rpcdata_id, INVALID_PARAMS, msg)
+            return error
+
         try:
-            minimum_fields = ['value', 'value_data_type', 'units', 'price_id']
+            minimum_fields = ['value', 'price_id']
             ed_msg = parse_jsonrpc_msg(message, minimum_fields)
-            # _log.info('ed_msg: {}'.format(ed_msg))
         except KeyError as ke:
-            # print(ke)
-            return jsonrpc.json_error(rpcdata_id, INVALID_PARAMS,
-                    'Invalid params {}'.format(rpcdata.params))
+            msg = 'Invalid params {}'.format(rpcdata.params)
+            error = jsonrpc.json_error(rpcdata_id, INVALID_PARAMS, msg)
+            return error
         except Exception as e:
-            # print(e)
-            return jsonrpc.json_error(rpcdata_id, UNHANDLED_EXCEPTION, e.message)
-            
+            msg = e.message
+            error = jsonrpc.json_error(rpcdata_id, UNHANDLED_EXCEPTION, msg)
+            return error
+
         #_log.debug('sanity checks....')
-        # validate various sanity measure like, valid fields, valid pp ids, ttl expiry, etc.,
-        hint = 'Active Power' if success_ap else 'New Energy Demand'
-        validate_fields = ['value', 'units', 'price_id', 'isoptimal', 'duration', 'ttl']
-        valid_price_ids = ([self.us_opt_pp_id, self.us_bid_pp_id
+        # sanity measure like, valid fields, valid pp ids, ttl expiry, etc.,
+        hint = ('Active Power'
+                if ed_msg.get_msg_type() == MessageType.active_power
+                else 'Energy Demand')
+        validate_fields = ['value', 'price_id', 'isoptimal', 'ttl']
+        valid_price_ids = ([self.us_opt_pp_id
+                            , self.us_bid_pp_id
                             , self.local_opt_pp_id, self.local_bid_pp_id]
                                 if self._bridge_host != 'LEVEL_HEAD' 
-                                else [self.local_opt_pp_id, self.local_bid_pp_id])
-        if not ed_msg.sanity_check_ok(hint, validate_fields, valid_price_ids):
+                                else [self.local_opt_pp_id
+                                        , self.local_bid_pp_id])
+        if ed_msg.sanity_check_ok(hint, validate_fields, valid_price_ids): pass
+        else:
             _log.warning('Msg sanity checks failed!!!')
-            return jsonrpc.json_error(rpcdata_id, PARSE_ERROR, 'Msg sanity checks failed!!!')
+            msg = 'Msg sanity checks failed!!!'
+            error = jsonrpc.json_error(rpcdata_id, PARSE_ERROR, msg)
+            return error
         #_log.debug('done.')
-        
+
         # check if from registered ds
         #_log.debug('is msg from a registered ds?....')
-        if not self._msg_from_registered_ds(ed_msg.get_src_ip(), ed_msg.get_src_device_id()):
-            # either the post to ds failed in previous iteration, 
-            # or unregistered or the msg is corrupted
-            # if the ds is unregistered by the bridge in the previous iteration, this return msg
-            # indicates ds that it needs to retry after registering once again
-            _log.warning('msg not from registered ds, do nothing!!!')
-            return jsonrpc.json_error(rpcdata_id, PARSE_ERROR, 'Msg not from registered ds!!!')
+        if self._msg_from_registered_ds(ed_msg.get_src_ip()
+                                            , ed_msg.get_src_device_id()
+                                            ): pass
+        else:
+            # either the post to ds failed in previous iteration
+            #                                   or unregistered
+            #                                   or msg is corrupted
+            # if the ds is unregistered by the bridge in previous iteration,
+            # this return msg indicates ds that it needs to retry
+            # after registering once again
+            _log.warning('Msg not from registered ds!!!')
+            msg = 'Msg not from registered ds!!!'
+            error = jsonrpc.json_error(rpcdata_id, PARSE_ERROR, msg)
+            return error
         #_log.debug('yes.')
-        
+
         # post to bus
         pub_topic = self._topic_energy_demand_ds
         pub_msg = ed_msg.get_json_message(self._agent_id, 'bus_topic')
-        if success_ap:
-        _log.info('[LOG] {} from ds'.format('Active Power' if success_ap else 'Energy Demand')
-                            + ', Msg: {}'.format(pub_msg))
+        _log.info('[LOG] {} from ds, Msg: {}'.format(hint, pub_msg))
         _log.debug('Publishing to local bus topic: {}'.format(pub_topic))
         publish_to_bus(self, pub_topic, pub_msg)
         _log.debug('done.')
-        
+
         # at this stage, ds is alive, reset the counter
         self._ds_retrycount[self._ds_register.index(ed_msg.get_src_ip())] = 0
         return True
-        
+
     def _msg_from_registered_ds(self, discovery_addr, device_id):
+        index = self._ds_register.index(discovery_addr)
         return (True if discovery_addr in self._ds_register
-                     and device_id == self._ds_device_ids[self._ds_register.index(discovery_addr)]
+                     and device_id == self._ds_device_ids[index]
                     else False)
-                     
-                     
+
+
 def main(argv=sys.argv):
     '''Main method called by the eggsecutable.'''
     try:
@@ -791,12 +812,11 @@ def main(argv=sys.argv):
     except Exception as e:
         print (e)
         _log.exception('unhandled exception')
-        
-        
+
+
 if __name__ == '__main__':
     try:
         sys.exit(main(sys.argv))
     except KeyboardInterrupt:
         pass
-        
-        
+
