@@ -39,7 +39,7 @@ ROUNDOFF_ENERGY = 0.0001
 # validate incomming bus topic message
 def valid_bustopic_msg(sender, valid_senders_list, minimum_fields
                         , validate_fields, valid_price_ids, message):
-    # _log.debug('validate_bustopic_msg()')
+    _log.debug('validate_bustopic_msg()')
     pp_msg = None
     
     if sender not in valid_senders_list:
@@ -50,7 +50,7 @@ def valid_bustopic_msg(sender, valid_senders_list, minimum_fields
         
     try:
         # _log.debug('message: {}'.format(message))
-        minimum_fields = ['value', 'value_data_type', 'units', 'price_id']
+        #minimum_fields = ['value', 'value_data_type', 'units', 'price_id']
         pp_msg = parse_bustopic_msg(message, minimum_fields)
         # _log.info('pp_msg: {}'.format(pp_msg))
     except KeyError as ke:
@@ -68,8 +68,8 @@ def valid_bustopic_msg(sender, valid_senders_list, minimum_fields
             else 'Energy Demand' if pp_msg.get_msg_type() == MessageType.energy_demand
             else 'Unknown Msg Type')
 
-    validate_fields = ['value', 'units', 'price_id', 'isoptimal', 'duration', 'ttl']
-    valid_price_ids = []
+    #validate_fields = ['value', 'units', 'price_id', 'isoptimal', 'duration', 'ttl']
+    #valid_price_ids = []
     # validate various sanity measure like, valid fields, valid pp ids, ttl expiry, etc.,
     if not pp_msg.sanity_check_ok(hint, validate_fields, valid_price_ids):
         _log.warning('Msg sanity checks failed!!!')

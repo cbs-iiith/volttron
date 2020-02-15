@@ -609,7 +609,9 @@ class PriceController(Agent):
         # handle only ap or ed type messages
         if check_msg_type(message, MessageType.active_power): pass
         elif check_msg_type(message, MessageType.energy_demand): pass
-        else: return
+        else: 
+            _log.warning('Not a ap nor ed msg!!!')
+            return
         
         # add the message to ds_ed_msgs to be processed by process_ds_ed_msg_que()
         #msg_id = randint(0, 99999999)
@@ -627,17 +629,19 @@ class PriceController(Agent):
         self._ds_device_ids = self._rpcget_ds_device_ids()
         
         # unique senders list
-        # valid_senders_list = list(set(self._ds_senders_list + self._local_ed_agents))
         valid_senders_list = self._ds_senders_list + self._local_ed_agents
-        minimum_fields = ['msg_type', 'value', 'value_data_type', 'units', 'price_id']
-        validate_fields = ['value', 'units', 'price_id', 'isoptimal', 'duration', 'ttl']
+        minimum_fields = ['value', 'price_id']
+        validate_fields = ['value', 'price_id', 'isoptimal']
         valid_price_ids = self._get_valid_price_ids()
         (success, ed_msg) = valid_bustopic_msg(sender, valid_senders_list
                                                 , minimum_fields
                                                 , validate_fields
                                                 , valid_price_ids
                                                 , message)
-        if not success or ed_msg is None: return
+        if not success or ed_msg is None:
+            _log.warning('valid_bustopic_msg success: {}'.format(success)
+                        + ', is ed_msg None? ed_msg: {}'.format(ed_msg))
+            return
         else: _log.debug('New' 
                         + (' energy demand bid (ed)' 
                                 if ed_msg.get_msg_type() == MessageType.energy_demand

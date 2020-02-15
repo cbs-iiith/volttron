@@ -466,7 +466,10 @@ class VolttronBridge(Agent):
                                                 , validate_fields
                                                 , valid_price_ids
                                                 , message)
-        if not success or ed_msg is None: return
+        if not success or ed_msg is None: 
+            _log.warning('valid_bustopic_msg success: {}'.format(success)
+                        + ', is ed_msg None? ed_msg: {}'.format(ed_msg))
+            return
         else:
             hint = ('New active power (ap)'
                     if ed_msg.get_msg_type() == MessageType.active_power
