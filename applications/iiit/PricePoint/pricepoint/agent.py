@@ -140,7 +140,7 @@ class PricePoint(Agent):
             if rpcdata.method == 'ping':
                 result = True
             elif rpcdata.method == 'new-pp':
-                result = self.update_price_point(rpcdata.id, message)
+                result = self.update_price_point(rpcdata.id, header, message)
             else:
                 _log.error('method not found!!!')
                 return jsonrpc.json_error(rpcdata.id, METHOD_NOT_FOUND,
@@ -157,7 +157,7 @@ class PricePoint(Agent):
             return jsonrpc.json_error(rpcdata.id, UNHANDLED_EXCEPTION, e)
         return (jsonrpc.json_result(rpcdata.id, result) if result else result)
         
-    def update_price_point(self, rpcdata_id, message):
+    def update_price_point(self, rpcdata_id, header, message):
         pp_msg = None
         rpcdata = jsonrpc.JsonRpcData.parse(message)
         # Note: this is on a rpc message do the check here ONLY
@@ -189,26 +189,23 @@ class PricePoint(Agent):
             _log.warning('id: {}, Msg sanity checks failed, parse error!!!'.format(rpcdata_id))
             return jsonrpc.json_error(rpcdata_id, PARSE_ERROR, 'Msg sanity checks failed!!!')
             
+        _log.debug('***** Price Point ({})'.format('OPT' if pp_msg.get_isoptimal() else 'BID')
+                            + ' from remote ({})'.format(header['REMOTE_ADDR'])
+                            + ': {:0.2f}'.format(pp_msg.get_value())
+                            + ' price_id: {}'.format(pp_msg.get_price_id())
+                            )
+                            
         pp_msg.set_src_device_id(self._device_id)
         pp_msg.set_src_ip(self._discovery_address)
         
         # publish the new price point to the local message bus
-        _log.debug('post to the local-us-bus')
         pub_topic = self._topic_price_point
         pub_msg = pp_msg.get_json_message(self._agent_id, 'bus_topic')
-        # keep a track of us pp_msg
-        if pp_msg.get_isoptimal():
-            _log.info('***** New optimal price point from rpc: {:0.2f}'.format(pp_msg.get_value())
-                                + ' price_id: {}'.format(pp_msg.get_price_id()))
-        else:
-            _log.info('***** New bid price point from rpc: {:0.2f}'.format(pp_msg.get_value())
-                                + ' price_id: {}'.format(pp_msg.get_price_id()))
-                                
-        _log.debug('publishing to local bus topic: {}'.format(pub_topic))
+        _log.debug('Publishing to local bus topic: {}'.format(pub_topic))
         # log this msg
-        _log.info('[LOG] pp from us, Msg: {}'.format(pub_msg))
+        _log.info('[LOG] Price Point from remote, Msg: {}'.format(pub_msg))
         publish_to_bus(self, pub_topic, pub_msg)
-        _log.debug('Done!!!')
+        _log.debug('done.')
         return True
         
         

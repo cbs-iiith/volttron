@@ -399,7 +399,7 @@ class VolttronBridge(Agent):
             self.local_bid_pp_id = pp_msg.get_price_id()
                 
         # log this msg
-        _log.info('[LOG] pp msg: {}'.format(pp_msg))
+        #_log.info('[LOG] pp msg: {}'.format(pp_msg))
         
         # reset counters & flags
         self._reset_ds_retrycount()
@@ -702,14 +702,13 @@ class VolttronBridge(Agent):
                 self.us_bid_pp_id = pp_msg.get_price_id()
             
         # publish the new price point to the local us message bus
-        _log.debug('post to the local-us-bus')
         pub_topic = self._topic_price_point_us
         pub_msg = pp_msg.get_json_message(self._agent_id, 'bus_topic')
-        _log.debug('publishing to local bus topic: {}'.format(pub_topic))
+        _log.debug('Publishing to local bus topic: {}'.format(pub_topic))
         # log this msg
-        _log.info('[LOG] pp from us, Msg: {}'.format(pub_msg))
+        _log.info('[LOG] Price Point from us, Msg: {}'.format(pub_msg))
         publish_to_bus(self, pub_topic, pub_msg)
-        _log.debug('Done!!!')
+        _log.debug('done.')
         return True
         
     # post the new energy demand from ds to the local-ds-bus
@@ -767,15 +766,14 @@ class VolttronBridge(Agent):
         #_log.debug('yes.')
         
         # post to bus
-        _log.debug('post to the local-ds-bus...')
         pub_topic = self._topic_energy_demand_ds
         pub_msg = ed_msg.get_json_message(self._agent_id, 'bus_topic')
-        _log.debug('local bus topic: {}'.format(pub_topic))
+        _log.debug('Publishing to local bus topic: {}'.format(pub_topic))
         # log this msg
         if success_ap:
-            _log.info('[LOG] ap from ds, Msg: {}'.format(pub_msg))
+            _log.info('[LOG] Active Power from ds, Msg: {}'.format(pub_msg))
         else:
-            _log.info('[LOG] ed from ds, Msg: {}'.format(pub_msg))
+            _log.info('[LOG] Energy Demand from ds, Msg: {}'.format(pub_msg))
         publish_to_bus(self, pub_topic, pub_msg)
         
         # at this stage, ds is alive, reset the counter

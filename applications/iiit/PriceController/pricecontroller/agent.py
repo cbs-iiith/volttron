@@ -332,25 +332,30 @@ class PriceController(Agent):
         self.act_pp_msg = copy(pp_msg)
         
         if pp_msg.get_isoptimal():
-            self.local_opt_pp_msg = copy(pp_msg)
+            # TODO: relook at this scenario
+            #self.local_opt_pp_msg = copy(pp_msg)
+            pass
         else:
             self.local_bid_pp_msg = copy(pp_msg)
         
             pub_topic =  self._topic_price_point
             pub_msg = pp_msg.get_json_message(self._agent_id, 'bus_topic')
-            _log.debug('publishing to local bus topic: {}'.format(pub_topic))
-            _log.debug('Msg: {}'.format(pub_msg))
+            _log.debug('Publishing to local bus topic: {}'.format(pub_topic))
+            # log this msg
+            _log.info('[LOG] Price Point, Msg: {}'.format(pub_msg))
             publish_to_bus(self, pub_topic, pub_msg)
+            _log.debug('done.')
             return True
             
         return
         
     def on_new_us_pp(self, peer, sender, bus,  topic, headers, message):
+        _log.debug('on_new_us_pp()')
         if self._pca_mode not in ['PASS_ON_PP', 'DEFAULT_OPT']:
             return
         # check if this agent is not diabled
         if self._pca_standby:
-            _log.info('self.pca_standby: ' + str(self._pca_standby) + ', do nothing!!!')
+            _log.debug('[LOG] PCA mode: STANDBY, do nothing')
             return False
             
         # check message type before parsing
@@ -371,14 +376,14 @@ class PriceController(Agent):
         # keep a track of us pp_msg
         if pp_msg.get_isoptimal():
             self.us_opt_pp_msg = copy(pp_msg)
-            _log.debug('***** New optimal price point from us:'
-                                                + ' {:0.2f}'.format(pp_msg.get_value()))
+            _log.debug('***** New optimal price point from us: {:0.2f}'.format(pp_msg.get_value())
+                                        + ' , price_id: {}'.format(pp_msg.get_price_id()))
         else:
             self.us_bid_pp_msg = copy(pp_msg)
-            _log.debug('***** New bid price point from us:'
-                                                + ' {:0.2f}'.format(pp_msg.get_value()))
+            _log.debug('***** New bid price point from us: {:0.2f}'.format(pp_msg.get_value())
+                                        + ' , price_id: {}'.format(pp_msg.get_price_id()))
         # log this msg
-        _log.info('[LOG] pp msg from us: {}'.format(pp_msg))
+        #_log.info('[LOG] pp msg from us: {}'.format(pp_msg))
         
         # re-initialize aggregator_us_bid_ted
         if not pp_msg.get_isoptimal():
@@ -386,29 +391,41 @@ class PriceController(Agent):
             
         if self._pca_mode == 'PASS_ON_PP':
             _log.info('[LOG] PCA mode: PASS_ON_PP')
-            _log.debug('post to the local-bus...')
             pub_topic =  self._topic_price_point
             pub_msg = pp_msg.get_json_message(self._agent_id, 'bus_topic')
-            _log.debug('local bus topic: {}'.format(pub_topic))
+            _log.debug('Publishing to local bus topic: {}'.format(pub_topic))
+            # log this msg
+            _log.info('[LOG] Price Point for local/ds devices, Msg: {}'.format(pub_msg))
             publish_to_bus(self, pub_topic, pub_msg)
-            _log.debug('Done!!!')
+            _log.debug('done.')
             return
             
         if self._pca_mode == 'DEFAULT_OPT':
+            _log.info('[LOG] PCA mode: DEFAULT_OPT')
             # list for pp_msg
+            _log.debug('Compute new price points...')
             new_pp_msg_list = self._computeNewPrice()
             self.local_bid_pp_msg_list = copy(new_pp_msg_list)
             _log.info('new bid pp_msg_list: {}'.format(new_pp_msg_list))
             
+            # TODO: maybe publish a list of the pp messages and let the bridge do_rpc concurrently
             for msg in new_pp_msg_list:
-                _log.info('new msg: {}'.format(msg))
+                #_log.info('new msg: {}'.format(msg))
                 pub_topic =  self._topic_price_point
                 pub_msg = new_pp_msg.get_json_message(self._agent_id, 'bus_topic')
-                _log.debug('publishing to local bus topic: {}'.format(pub_topic))
-                _log.debug('Msg: {}'.format(pub_msg))
+                _log.debug('Publishing to local bus topic: {}'.format(pub_topic))
+                # log this msg
+                _log.info('[LOG] Price Point for {}'.format(new_pp_msg.get_dst_device_id()
+                                            if new_pp_msg.get_one_to_one() 
+                                            else 'local/ds devices')
+                            + ', Msg: {}'.format( pub_msg))
                 publish_to_bus(self, pub_topic, pub_msg)
-                # _log.debug('yield a moment (50ms)')
-                # time.sleep(50/1000)            # yield a moment (50ms)
+                _log.debug('done.')
+            return
+            
+        if self._pca_mode == 'EXTERN_OPT':
+            _log.info('[LOG] PCA mode: DEFAULT_OPT')
+            _log.warning('not yet implemented!!!')
             return
         return
         
@@ -873,18 +890,19 @@ class PriceController(Agent):
                             , self._period_read_data
                             )
                             
-        _log. info('[LOG] Total Active Power(TAP) opt'
+        _log.debug('***** Total Active Power(TAP) opt'
                                     + ' (for us pp_msg ({})):'.format(tap_msg.get_price_id())
                                     + ' {:0.4f}'.format(opt_tap))
         # publish the total active power to the local message bus
         # volttron bridge pushes(RPC) this value to the next level
-        _log.debug('post to the local-bus...')
+        _log.debug('Post to the local-bus...')
         pub_topic = self._topic_energy_demand
         pub_msg = tap_msg.get_json_message(self._agent_id, 'bus_topic')
         _log.debug('local bus topic: {}'.format(pub_topic))
-        _log. info('[LOG] Total Active Power(TAP) opt, Msg: {}'.format(pub_msg))
+        # log this msg
+        _log.info('[LOG] Total Active Power(TAP) opt, Msg: {}'.format(pub_msg))
         publish_to_bus(self, pub_topic, pub_msg)
-        _log.debug('Done!!!')
+        _log.debug('done.')
         return
         
     def _publish_bid_ted(self, pp_msg, bid_ted):
@@ -899,18 +917,19 @@ class PriceController(Agent):
                             
         # compute total energy demand (ted)
         bid_ted = self._calc_total(self._us_local_bid_ed, self._us_ds_bid_ed)
-        _log. info('[LOG] Total Energy Demand(TED) bid'
+        _log.debug('***** Total Energy Demand(TED) bid'
                                     + ' (for us pp_msg ({})):'.format(ted_msg.get_price_id())
                                     + ' {:0.4f}'.format(bid_ted))
         # publish the total energy demand to the local message bus
         # volttron bridge pushes(RPC) this value to the next level
-        _log.debug('post to the local-bus...')
+        _log.debug('Post to the local-bus...')
         pub_topic = self._topic_energy_demand
         pub_msg = ted_msg.get_json_message(self._agent_id, 'bus_topic')
         _log.debug('local bus topic: {}'.format(pub_topic))
-        _log. info('[LOG] Total Energy Demand(TED) bid, Msg: {}'.format(pub_msg))
+        # log this msg
+        _log.info('[LOG] Total Energy Demand(TED) bid, Msg: {}'.format(pub_msg))
         publish_to_bus(self, pub_topic, pub_msg)
-        _log.debug('Done!!!')
+        _log.debug('done.')
         return
         
     def _calc_total(self, local_bucket, ds_bucket):

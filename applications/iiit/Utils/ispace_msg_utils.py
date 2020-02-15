@@ -63,9 +63,9 @@ def valid_bustopic_msg(sender, valid_senders_list, minimum_fields
         _log.exception(jsonrpc.json_error('NA', UNHANDLED_EXCEPTION, e))
         return (False, pp_msg)
         
-    hint = ('New Price Point' if check_msg_type(message, MessageType.price_point)
-           else 'New Active Power' if check_msg_type(message, MessageType.active_power)
-           else 'New Energy Demand' if check_msg_type(message, MessageType.energy_demand)
+    hint = ('Price Point' if check_msg_type(message, MessageType.price_point)
+           else 'Active Power' if check_msg_type(message, MessageType.active_power)
+           else 'Energy Demand' if check_msg_type(message, MessageType.energy_demand)
            else 'Unknown Msg Type')
 
     validate_fields = ['value', 'units', 'price_id', 'isoptimal', 'duration', 'ttl']

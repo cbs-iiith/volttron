@@ -373,7 +373,7 @@ class ISPACE_Msg:
             return False
             
         # log the received msg
-        # _log.info('{} Msg: {}'.format(hint, self))
+        _log.info('[LOG] {}, Msg: {}'.format(hint, self))
         
         # process msg only if price_id corresponds to these ids
         # _log.debug('check if pp_id is valid...')
