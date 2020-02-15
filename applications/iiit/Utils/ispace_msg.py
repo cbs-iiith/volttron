@@ -299,6 +299,9 @@ class ISPACE_Msg:
             _log.warning('ttl_timeout(), unknown tz: {}'.format(self.tz))
             return False
             
+    # ttl <= -1 --> live forever
+    # ttl == 0 --> ttl timed out
+    # decrement_status == False, if ttl <= -1 or unknown tz
     def decrement_ttl(self):
         # live for ever
         if self.ttl <= -1:
