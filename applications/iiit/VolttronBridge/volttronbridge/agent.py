@@ -433,7 +433,7 @@ class VolttronBridge(Agent):
             self.local_bid_pp_id = pp_msg.get_price_id()
 
         # reset counters & flags
-        #self._reset_ds_retrycount()
+        self._reset_ds_retrycount()
         self._all_ds_posts_success = False
 
         # initiate ds post
