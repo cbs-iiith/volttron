@@ -487,10 +487,10 @@ class VolttronBridge(Agent):
             self._all_us_posts_success  = True
         else:
             _log.debug('Failed!!!')
-            _log_debug('************************ FAILED TO POST ED TO US ****************')
+            _log.debug('************************ FAILED TO POST ED TO US ****************')
             _log.debug('failed to post pp to us, url_root:{}'.format(url_root)
                         + ', result: {}'.format(success))
-            _log_debug('************************ FAILED TO POST ED TO US ****************')
+            _log.debug('************************ FAILED TO POST ED TO US ****************')
             self._us_retrycount = self._us_retrycount + 1
             if self._us_retrycount > MAX_RETRIES:
                 _log.debug('failed too many times to post ed'
