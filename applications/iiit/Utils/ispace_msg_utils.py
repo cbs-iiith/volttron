@@ -1,15 +1,15 @@
 # -*- coding: utf-8 -*- {{{
 # vim: set fenc=utf-8 ft=python sw=4 ts=4 sts=4 et:
-#
+# 
 # Copyright (c) 2020, Sam Babu, Godithi.
 # All rights reserved.
-#
-#
+# 
+# 
 # IIIT Hyderabad
 
-#}}}
+# }}}
 
-#Sam
+# Sam
 
 import datetime
 import dateutil
@@ -36,10 +36,10 @@ ROUNDOFF_ACTIVE_POWER = 0.0001
 ROUNDOFF_ENERGY = 0.0001
 
 
-#validate incomming bus topic message
+# validate incomming bus topic message
 def valid_bustopic_msg(sender, valid_senders_list, minimum_fields
                         , validate_fields, valid_price_ids, message):
-    #_log.debug('validate_bustopic_msg()')
+    # _log.debug('validate_bustopic_msg()')
     pp_msg = None
     
     if sender not in valid_senders_list:
@@ -49,10 +49,10 @@ def valid_bustopic_msg(sender, valid_senders_list, minimum_fields
         
         
     try:
-        #_log.debug('message: {}'.format(message))
+        # _log.debug('message: {}'.format(message))
         minimum_fields = ['value', 'value_data_type', 'units', 'price_id']
         pp_msg = parse_bustopic_msg(message, minimum_fields)
-        #_log.info('pp_msg: {}'.format(pp_msg))
+        # _log.info('pp_msg: {}'.format(pp_msg))
     except KeyError as ke:
         _log.exception(ke.message)
         _log.exception(jsonrpc.json_error('NA', INVALID_PARAMS,
@@ -70,33 +70,33 @@ def valid_bustopic_msg(sender, valid_senders_list, minimum_fields
 
     validate_fields = ['value', 'units', 'price_id', 'isoptimal', 'duration', 'ttl']
     valid_price_ids = []
-    #validate various sanity measure like, valid fields, valid pp ids, ttl expiry, etc.,
+    # validate various sanity measure like, valid fields, valid pp ids, ttl expiry, etc.,
     if not pp_msg.sanity_check_ok(hint, validate_fields, valid_price_ids):
         _log.warning('Msg sanity checks failed!!!')
         return (False, pp_msg)
     return (True, pp_msg)
 
-#a default pricepoint message
+# a default pricepoint message
 def get_default_pp_msg(discovery_address, device_id):
     return ISPACE_Msg(MessageType.price_point, False, True
-                        , 0, 'float', 'cents'
+                        , 0, 'float', '%'
                         , None
                         , discovery_address, device_id
                         , None, None
                         , 3600, 3600, 60, 'UTC'
                         )
                         
-#a default active power message
+# a default active power message
 def get_default_ap_msg(discovery_address, device_id):
     return ISPACE_Msg(MessageType.active_power, False, True
-                        , 0, 'float', 'Wh'
+                        , 0, 'float', 'W'
                         , None
                         , discovery_address, device_id
                         , None, None
                         , 3600, 3600, 60, 'UTC'
                         )
                         
-#a default energy demand message
+# a default energy demand message
 def get_default_ed_msg(discovery_address, device_id):
     return ISPACE_Msg(MessageType.energy_demand, False, True
                         , 0, 'float', 'Wh'
@@ -106,15 +106,15 @@ def get_default_ed_msg(discovery_address, device_id):
                         , 3600, 3600, 60, 'UTC'
                         )
                         
-#create a MessageType.energy ISPACE_Msg
+# create a MessageType.energy ISPACE_Msg
 def ted_helper(pp_msg, device_id, discovery_address, ted, new_ttl=60):
-    #print(MessageType.energy_demand)
+    # print(MessageType.energy_demand)
     msg_type = MessageType.energy_demand
     one_to_one = copy(pp_msg.get_one_to_one())
     isoptimal = copy(pp_msg.get_isoptimal())
     value = ted
     value_data_type = 'float'
-    units = 'kWh'
+    units = 'Wh'
     price_id = copy(pp_msg.get_price_id())
     src_ip = discovery_address
     src_device_id = device_id
@@ -129,15 +129,15 @@ def ted_helper(pp_msg, device_id, discovery_address, ted, new_ttl=60):
                         , src_ip, src_device_id, dst_ip, dst_device_id
                         , duration, ttl, ts, tz)
                         
-#create a MessageType.active_power ISPACE_Msg
+# create a MessageType.active_power ISPACE_Msg
 def tap_helper(pp_msg, device_id, discovery_address, tap, new_ttl=60):
-    #print(MessageType.active_power)
+    # print(MessageType.active_power)
     msg_type = MessageType.active_power
     one_to_one = copy(pp_msg.get_one_to_one())
     isoptimal = copy(pp_msg.get_isoptimal())
     value = tap
     value_data_type = 'float'
-    units = 'Wh'
+    units = 'W'
     price_id = copy(pp_msg.get_price_id())
     src_ip = discovery_address
     src_device_id = device_id
@@ -163,13 +163,13 @@ def check_msg_type(message, msg_type):
         pass
     return False
     
-#converts bus message into an ispace_msg
+# converts bus message into an ispace_msg
 def parse_bustopic_msg(message, minimum_fields = []):
     rpcdata = jsonrpc.JsonRpcData.parse(message)
     data = json.loads(rpcdata.params) if isinstance(rpcdata.params, str) else rpcdata.params
     return _parse_data(data, minimum_fields)
     
-#converts jsonrpc_msg into an ispace_msg
+# converts jsonrpc_msg into an ispace_msg
 def parse_jsonrpc_msg(message, minimum_fields = []):
     rpcdata = jsonrpc.JsonRpcData.parse(message)
     data = json.loads(rpcdata.params) if isinstance(rpcdata.params, str) else rpcdata.params
@@ -210,33 +210,33 @@ def _update_value(new_msg, attrib, new_value):
     return
     
 def _parse_data(data, minimum_fields = []):
-    #_log.debug('_parse_data()')
-    #_log.debug('data: [{}]'.format(data))
-    #_log.debug('datatype: {}'.format(type(data)))
+    # _log.debug('_parse_data()')
+    # _log.debug('data: [{}]'.format(data))
+    # _log.debug('datatype: {}'.format(type(data)))
     
-    #ensure msg_type attrib is set first
+    # ensure msg_type attrib is set first
     msg_type =  data['msg_type']
         
-    #TODO: select class msg_type based on msg_type, instead of base class
+    # TODO: select class msg_type based on msg_type, instead of base class
     new_msg = ISPACE_Msg(msg_type)
     _update_value(new_msg, 'msg_type', msg_type)
     
-    #if list is empty, parse for all attributes, if any attrib not found throw keynot found error
+    # if list is empty, parse for all attributes, if any attrib not found throw keynot found error
     if minimum_fields == []:
-        #if the attrib is not found in the data, throws a keyerror exception
+        # if the attrib is not found in the data, throws a keyerror exception
         _log.warning('minimum_fields to check against is empty!!!')
         for attrib in ISPACE_MSG_ATTRIB_LIST:
             _update_value(new_msg, attrib, data[attrib])
     else:
-        #first pass for minimum_fields
-        #if the field is not found in the data, throws a keyerror exception
+        # first pass for minimum_fields
+        # if the field is not found in the data, throws a keyerror exception
         for attrib in minimum_fields:
             _update_value(new_msg, attrib, data[attrib])
             
-        #do a second pass to also get attribs not in the minimum_fields
-        #if attrib not found, catch the exception(pass) and continue with next attrib
+        # do a second pass to also get attribs not in the minimum_fields
+        # if attrib not found, catch the exception(pass) and continue with next attrib
         for attrib in ISPACE_MSG_ATTRIB_LIST:
-            if attrib not in minimum_fields:        #data parsed in first pass
+            if attrib not in minimum_fields:        # data parsed in first pass
                 try:
                     _update_value(new_msg, attrib, data[attrib])
                 except KeyError:
@@ -244,4 +244,5 @@ def _parse_data(data, minimum_fields = []):
                     pass
                 
     return new_msg
-        
+    
+    

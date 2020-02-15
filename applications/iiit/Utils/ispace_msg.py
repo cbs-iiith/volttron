@@ -1,15 +1,15 @@
 # -*- coding: utf-8 -*- {{{
 # vim: set fenc=utf-8 ft=python sw=4 ts=4 sts=4 et:
-#
+# 
 # Copyright (c) 2020, Sam Babu, Godithi.
 # All rights reserved.
-#
-#
+# 
+# 
 # IIIT Hyderabad
 
-#}}}
+# }}}
 
-#Sam
+# Sam
 
 import datetime
 import dateutil
@@ -50,8 +50,8 @@ ISPACE_MSG_ATTRIB_LIST = ['msg_type', 'one_to_one', 'isoptimal'
                             
                             
 '''
-#https://www.oreilly.com/library/view/python-cookbook/0596001673/ch05s12.html
-#Making a Fast Copy of an Object. Credit: Alex Martelli
+# https://www.oreilly.com/library/view/python-cookbook/0596001673/ch05s12.html
+# Making a Fast Copy of an Object. Credit: Alex Martelli
 def empty_copy(obj):
     class Empty(obj._ _class_ _):
         def _ _init_ _(self): pass
@@ -60,18 +60,19 @@ def empty_copy(obj):
     return newcopy
 '''
     
-#avaliable in ispace_utils, copied here to remove dependecny on ispace_utils
+# avaliable in ispace_utils, copied here to remove dependecny on ispace_utils
 def mround(num, multipleOf):
-    #_log.debug('mround()')
+    # _log.debug('mround()')
     return (math.floor((num + multipleOf / 2) / multipleOf) * multipleOf)
     
-#refer to https://bit.ly/3beuacI 
-#(stackoverflow What is the best way to compare floats for almost-equality in Python?)
-#comparing floats is mess
+# refer to https://bit.ly/3beuacI 
+# (stackoverflow What is the best way to compare floats for almost-equality in Python?)
+# comparing floats is mess
 def isclose(a, b, rel_tol=1e-09, abs_tol=0.0):
-    #_log.debug('isclose()')
+    # _log.debug('isclose()')
     return (abs(a-b) <= max(rel_tol * max(abs(a), abs(b)), abs_tol))
-#checking if a floating point value is “numerically zero” by checking if it is lower than epsilon
+    
+# checking if a floating point value is “numerically zero” by checking if it is lower than epsilon
 EPSILON = 1e-04
     
     
@@ -86,7 +87,7 @@ class MessageType(IntEnum):
 class ISPACE_Msg:
     ''' iSPACE Message base class
     '''
-    #TODO: enchancement - need to add a msg uuid, also convert price_id to use uuid instead for radint
+    # TODO: enchancement - need to add a msg uuid, also convert price_id to use uuid instead for radint
     msg_type = None
     one_to_one = None
     isoptimal = None
@@ -94,13 +95,13 @@ class ISPACE_Msg:
     value_data_type = None
     units = None
     price_id = None
-    #msg_from_remote_device = True if src_ip == local_ip else False
+    # msg_from_remote_device = True if src_ip == local_ip else False
     src_ip = None
     src_device_id = None
     dst_ip = None
     dst_device_id = None
     duration = None
-    #TODO: currelty ttl is in seconds, maybe changed to milliseconds for better performance
+    # TODO: currelty ttl is in seconds, maybe changed to milliseconds for better performance
     ttl = None
     ts = None
     tz  = None
@@ -134,7 +135,7 @@ class ISPACE_Msg:
     ''' str overload to return class attributes as json params
     '''
     def __str__(self):
-        #_log.debug('__str__()')
+        # _log.debug('__str__()')
         params = self._get_params_dict()
         return json.dumps(params)
         
@@ -280,11 +281,11 @@ class ISPACE_Msg:
         self._params['ttl'] = self.ttl
         self._params['ts'] = self.ts
         self._params['tz'] = self.tz
-        #_log.debug('params: {}'.format(params))
+        # _log.debug('params: {}'.format(params))
         return self._params
 
     def ttl_timeout(self):
-        #live for ever
+        # live for ever
         if self.ttl < 0:
             _log.warning('ttl: {} < 0, do nothing!!!'.format(self.ttl))
             return False
@@ -299,7 +300,7 @@ class ISPACE_Msg:
             return False
             
     def decrement_ttl(self):
-        #live for ever
+        # live for ever
         if self.ttl <= -1:
             _log.warning('ttl: {} < 0, do nothing!!!'.format(self.ttl))
             return False
@@ -314,17 +315,17 @@ class ISPACE_Msg:
             _log.warning('decrement_ttl(), unknown tz: {}'.format(self.tz))
             return False
             
-    #check for mandatory fields in the message
+    # check for mandatory fields in the message
     def valid_msg(self, validate_fields = []):
-        #_log.debug('valid_msg(): {}'.format(validate_fields))
+        # _log.debug('valid_msg(): {}'.format(validate_fields))
         for attrib in validate_fields:
-            #_log.debug('checking attrib: {}'.format(attrib))
-            #null value check
+            # _log.debug('checking attrib: {}'.format(attrib))
+            # null value check
             if self._is_attrib_null(attrib):
-                #_log.debug('....is null...')
+                # _log.debug('....is null...')
                 return False
-            #TODO: data validations checks based on message type and field type
-        #_log.debug('...........valid_msg()')
+            # TODO: data validations checks based on message type and field type
+        # _log.debug('...........valid_msg()')
         return True
     
     def _cp_attrib(self, attrib, value):
@@ -346,7 +347,7 @@ class ISPACE_Msg:
         return
         
     def _is_attrib_null(self, attrib):
-        #_log.debug('_is_attrib_null()')
+        # _log.debug('_is_attrib_null()')
         if attrib == 'msg_type' and self.msg_type is None: return True
         elif attrib == 'one_to_one' and self.one_to_one is None: return True
         elif attrib == 'value' and self.value is None: return True
@@ -364,30 +365,30 @@ class ISPACE_Msg:
         elif attrib == 'tz' and self.tz is None: return True
         else: return False
         
-    #validate various sanity measure like, valid fields, valid pp ids, ttl expire, etc.,
+    # validate various sanity measure like, valid fields, valid pp ids, ttl expire, etc.,
     def sanity_check_ok(self, hint = None, validate_fields = [], valid_price_ids = []):
-        #_log.debug('sanity_check_ok()')
+        # _log.debug('sanity_check_ok()')
         if not self.valid_msg(validate_fields):
             _log.warning('rcvd a invalid msg, message: {}, do nothing!!!'.format(message))
             return False
             
-        #log the received msg
-        #_log.info('{} Msg: {}'.format(hint, self))
+        # log the received msg
+        # _log.info('{} Msg: {}'.format(hint, self))
         
-        #process msg only if price_id corresponds to these ids
-        #_log.debug('check if pp_id is valid...')
+        # process msg only if price_id corresponds to these ids
+        # _log.debug('check if pp_id is valid...')
         if valid_price_ids != [] and self.price_id not in valid_price_ids:
             _log.warning('pp_id: {}'.format(self.price_id)
                         + ' not in valid_price_ids: {}, do nothing!!!'.format(valid_price_ids))
             return False
-        #_log.debug('done.')
+        # _log.debug('done.')
         
-        #_log.debug('check if ttl timeout...')
-        #process msg only if msg is alive (didnot timeout)
+        # _log.debug('check if ttl timeout...')
+        # process msg only if msg is alive (didnot timeout)
         if self.ttl_timeout():
             _log.warning('msg ttl expired, do nothing!!!')
             return False
-        #_log.debug('done.')
+        # _log.debug('done.')
         
         return True
         
@@ -396,9 +397,9 @@ class ISPACE_Msg:
                             (device_id != self.dst_device_id or ip_addr != self.dst_ip)
                             else True)
                             
-    #return class attributes as json params that can be passed to do_rpc()
+    # return class attributes as json params that can be passed to do_rpc()
     def get_json_params(self):
-        #return json.dumps(self._get_params_dict())
+        # return json.dumps(self._get_params_dict())
         return self._get_params_dict()
     
     def get_json_message(self, id=randint(0, 99999999), method='bus_topic'):
@@ -411,7 +412,7 @@ class ISPACE_Msg:
         data = json.dumps(json_package)
         return data
         
-    #getters
+    # getters
     def get_msg_type(self):
         return self.msg_type
         
@@ -457,17 +458,17 @@ class ISPACE_Msg:
     def get_tz(self):
         return self.tz
         
-    #setters
+    # setters
     def set_msg_type(self, msg_type):
-        #_log.debug('set_msg_type({})'.format(msg_type))
+        # _log.debug('set_msg_type({})'.format(msg_type))
         self.msg_type = int(msg_type)
         
     def set_one_to_one(self, one_to_one):
         self.one_to_one = one_to_one
         
     def set_value(self, value):
-        #_log.debug('set_value()')
-        #_log.debug('self.msg_type: {}, MessageType.price_point: {}'.format(self.msg_type, MessageType.price_point))
+        # _log.debug('set_value()')
+        # _log.debug('self.msg_type: {}, MessageType.price_point: {}'.format(self.msg_type, MessageType.price_point))
         if self.msg_type == MessageType.price_point:
             tmp_value = round(mround(value, ROUNDOFF_PRICE_POINT), PP_DECIMAL_DIGITS)
             self.value = 0 if tmp_value <= 0 else 1 if tmp_value >= 1 else tmp_value
@@ -609,7 +610,7 @@ class ISPACE_Msg_ActivePower(ISPACE_Msg):
     def get_energy_category(self):
         return self.energy_category
         
-    #setters
+    # setters
     def set_energy_category(self, energy_category):
         self.energy_category = energy_category
         
