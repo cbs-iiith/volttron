@@ -92,9 +92,10 @@ def post_random_price(isoptimal = True, duration = 3600, ttl = 10):
     pp = math.floor(random()*10**no_digit)/10**no_digit
     pp = .94 if pp>.94 else pp
 
-    print get_timestamp() + ' PricePoint: ' + str(pp) + ',',
-    if isoptimal: print ' OPT'',',
-    else: print ' BID'',',
+    if isoptimal:
+        print get_timestamp() + ' OPT PricePoint: ' + str(pp) + ',',
+    else:
+        print get_timestamp() + ' BID PricePoint: ' + str(pp) + ',',
 
     now = datetime.datetime.utcnow().isoformat(' ') + 'Z'
     try:
