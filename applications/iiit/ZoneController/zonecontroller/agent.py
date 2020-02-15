@@ -444,8 +444,8 @@ class ZoneController(Agent):
         
     def _publish_zone_tsp(self, tsp):
         # _log.debug('_publish_zone_tsp()')
-        pubTopic = self._root_topic + '/rm_tsp'
-        pubMsg = [tsp, {'units': 'celcius', 'tz': 'UTC', 'type': 'float'}]
+        pub_topic = self._root_topic + '/rm_tsp'
+        pub_msg = [tsp, {'units': 'celcius', 'tz': 'UTC', 'type': 'float'}]
         _log.info('[LOG] Zone TSP, Msg: {}'.format(pub_msg))
         _log.debug('Publishing to local bus topic: {}'.format(pub_topic))
         publish_to_bus(self, pub_topic, pub_msg)
@@ -454,8 +454,8 @@ class ZoneController(Agent):
         
     def _publish_zone_lsp(self, lsp):
         # _log.debug('_publish_zone_lsp()')
-        pubTopic = self._root_topic + '/rm_lsp'
-        pubMsg = [lsp, {'units': '%', 'tz': 'UTC', 'type': 'float'}]
+        pub_topic = self._root_topic + '/rm_lsp'
+        pub_msg = [lsp, {'units': '%', 'tz': 'UTC', 'type': 'float'}]
         _log.info('[LOG] Zone LSP, Msg: {}'.format(pub_msg))
         _log.debug('Publishing to local bus topic: {}'.format(pub_topic))
         publish_to_bus(self, pub_topic, pub_msg)
