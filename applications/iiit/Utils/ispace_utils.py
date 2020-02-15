@@ -261,12 +261,12 @@ def do_rpc(id, url_root, method, params=None, request_method='POST'):
                                     + ' method:{}'.format(method)
                                     + ' response: {}'.format(response))
     except requests.exceptions.HTTPError as rhe:
-        _log.warning('do_rpc() requests http error occurred.
+        _log.warning('do_rpc() requests http error occurred.'
                         + ' Check the url'
                         + ', message: {}'.format(rhe.message))
         pass
     except requests.exceptions.ConnectionError as rce:
-        _log.warning('do_rpc() requests connection error.
+        _log.warning('do_rpc() requests connection error.'
                         + ' Most likely dest is down'
                         + ', message: {}'.format(rce.message))
         pass
@@ -286,7 +286,7 @@ def do_rpc(id, url_root, method, params=None, request_method='POST'):
                         + ', message: {}'.format(rte.message))
         pass
     except requests.exceptions.TooManyRedirects as rre:
-        _log.warning('do_rpc() too many redirects exception.
+        _log.warning('do_rpc() too many redirects exception.'
                         + ' Most likely URL was bad'
                         + ', message: {}'.format(rre.message))
         pass
