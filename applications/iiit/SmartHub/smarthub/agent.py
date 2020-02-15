@@ -670,7 +670,7 @@ class SmartHub(Agent):
         state_fan = self._sh_devices_state[SH_DEVICE_FAN]
         self._publish_sh_device_state(SH_DEVICE_LED, state_led)
         self._publish_sh_device_state(SH_DEVICE_FAN, state_fan)
-        _log.debug'Led state: {}'.format('ON' if state_led == SH_DEVICE_STATE_ON else 'OFF')
+        _log.debug('Led state: {}'.format('ON' if state_led == SH_DEVICE_STATE_ON else 'OFF')
                 + ', Fan state: {}'.format('ON' if state_fan == SH_DEVICE_STATE_ON else 'OFF'))
         return
         
