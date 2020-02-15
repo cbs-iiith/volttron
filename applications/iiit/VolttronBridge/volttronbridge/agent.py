@@ -314,15 +314,15 @@ class VolttronBridge(Agent):
                 result = self._post_pp(rpcdata.id, message)
             else:
                 msg = 'Invalid params {}'.format(rpcdata.method)
-                error = jsonrpc.json_error(rpcdata_id, METHOD_NOT_FOUND, msg)
+                error = jsonrpc.json_error(rpcdata.id, METHOD_NOT_FOUND, msg)
                 return error
         except KeyError as ke:
             msg = 'Invalid params {}'.format(rpcdata.params)
-            error = jsonrpc.json_error(rpcdata_id, INVALID_PARAMS, msg)
+            error = jsonrpc.json_error(rpcdata.id, INVALID_PARAMS, msg)
             return error
         except Exception as e:
             msg = 'Oops!!! Unhandled exception {}'.format(e.message)
-            error = jsonrpc.json_error(rpcdata_id, UNHANDLED_EXCEPTION, msg)
+            error = jsonrpc.json_error(rpcdata.id, UNHANDLED_EXCEPTION, msg)
             return error
         return (jsonrpc.json_result(rpcdata.id, result) if result else result)
 
