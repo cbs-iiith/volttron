@@ -174,10 +174,10 @@ if __name__ == '__main__':
     #job to post bid prices at regular interval
     job_bid = Job(interval = datetime.timedelta(seconds = BID_WAIT_TIME_SEC)
                     , execute = post_random_price
-                    , kwargs = dict(isoptimal = False
-                                    , duration = BID_DUR_TIME_SEC
-                                    , ttl = 30
-                                    )
+                    , dict(isoptimal = False
+                            , duration = BID_DUR_TIME_SEC
+                            , ttl = 30
+                            )
                     )
 
     print get_timestamp() + ' ROOT_URL: ' + str(ROOT_URL),
@@ -194,7 +194,8 @@ if __name__ == '__main__':
               time.sleep(1)
           except ProgramKilled:
               print '\n' + get_timestamp() + ' Program killed: cleanup'
-              job.stop()
+              job_opt.stop()
+              job_bid.stop()
               print get_timestamp() + ' End of Program.'
               break
 
