@@ -146,8 +146,8 @@ class VolttronBridge(Agent):
             _log.debug('self._us_ip_addr: {}'.format(self._us_ip_addr) +
                 ' self._us_port: '.format(self._us_port))
 
-        self._discovery_address = '{}'.format(self._this_ip_addr)
-                                + ':{}'.format(self._this_port)
+        self._discovery_address = '{}:{}'.format(self._this_ip_addr
+                                                , self._this_port)
         _log.debug('self._discovery_address:'
                                 + ' {}'.format(self._discovery_address))
         return
@@ -295,21 +295,21 @@ class VolttronBridge(Agent):
                         )
             if rpcdata.method == 'ping':
                 result = True
-            elif rpcdata.method == 'dsbridge'
-                    and header['REQUEST_METHOD'].upper() == 'GET':
+            elif (rpcdata.method == 'dsbridge'
+                    and header['REQUEST_METHOD'].upper() == 'GET'):
                 result = self._get_ds_bridge_status(rpcdata.id, message)
-            elif rpcdata.method == 'dsbridge'
-                    and header['REQUEST_METHOD'].upper() == 'POST':
+            elif (rpcdata.method == 'dsbridge'
+                    and header['REQUEST_METHOD'].upper() == 'POST'):
                 result = self._register_ds_bridge(rpcdata.id, message)
-            elif rpcdata.method == 'dsbridge'
-                    and header['REQUEST_METHOD'].upper() == 'DELETE':
+            elif (rpcdata.method == 'dsbridge'
+                    and header['REQUEST_METHOD'].upper() == 'DELETE'):
                 result = self._unregister_ds_bridge(rpcdata.id, message)
-            elif rpcdata.method == 'energy'
-                    and header['REQUEST_METHOD'].upper() == 'POST':
+            elif (rpcdata.method == 'energy'
+                    and header['REQUEST_METHOD'].upper() == 'POST'):
                 # post the new energy demand from ds to the local bus
                 result = self._post_ed(rpcdata.id, message)
-            elif rpcdata.method == 'pricepoint'
-                    and header['REQUEST_METHOD'].upper() == 'POST':
+            elif (rpcdata.method == 'pricepoint'
+                    and header['REQUEST_METHOD'].upper() == 'POST'):
                 # post the new new price point from us to the local-us-bus
                 result = self._post_pp(rpcdata.id, message)
             else:
