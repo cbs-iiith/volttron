@@ -29,10 +29,10 @@ authentication=None
 #OPT_WAIT_TIME_SEC = 2             # 2 sec
 #OPT_WAIT_TIME_SEC = 10             # 10 sec
 #OPT_WAIT_TIME_SEC = 2 * 60         # 2 min
-OPT_WAIT_TIME_SEC = 5 * 60         # 5 min
+#OPT_WAIT_TIME_SEC = 5 * 60         # 5 min
 #OPT_WAIT_TIME_SEC = 15 * 60        # 15 min
 #OPT_WAIT_TIME_SEC = 30 * 60        # 30 min
-#OPT_WAIT_TIME_SEC = 1 * 60 * 60    # 1 hour
+OPT_WAIT_TIME_SEC = 1 * 60 * 60    # 1 hour
 
 #BID_WAIT_TIME_SEC = 2             # 2 sec
 #BID_WAIT_TIME_SEC = 10             # 10 sec
@@ -136,7 +136,7 @@ def post_random_price(isoptimal = True, duration = 3600, ttl = 10):
 
 
 class Job(threading.Thread):
-    def __init__(self, interval, execute, *args, **kwargs):
+    def __init__(self, interval, execute, args, **kwargs):
         threading.Thread.__init__(self)
         self.daemon = False
         self.stopped = threading.Event()
@@ -165,16 +165,12 @@ if __name__ == '__main__':
     #job to post opt prices at regular interval
     job_opt = Job(interval = datetime.timedelta(seconds = OPT_WAIT_TIME_SEC)
                     , execute = post_random_price
-                    ,, kwargs = {'isoptimal': True
-                                , 'duration': OPT_DUR_TIME_SEC
-                                , 'ttl': 30 })
+                    , args = (True, OPT_DUR_TIME_SEC, 30,))
 
     #job to post bid prices at regular interval
     job_bid = Job(interval = datetime.timedelta(seconds = BID_WAIT_TIME_SEC)
                     , execute = post_random_price
-                    ,, kwargs = {'isoptimal': False
-                                , 'duration': BID_DUR_TIME_SEC
-                                , 'ttl': 30 })
+                    , args = (False, BID_DUR_TIME_SEC, 30,))
 
     print get_timestamp() + ' ROOT_URL: ' + str(ROOT_URL),
     print ', OPT_WAIT_TIME_SEC: ' + str(OPT_WAIT_TIME_SEC),
@@ -183,6 +179,7 @@ if __name__ == '__main__':
 
     print get_timestamp() + ' Starting a repetitive jobs (opt & bid prices)...'
     job_opt.start()
+    time.sleep(2)
     job_bid.start()
 
     while True:
