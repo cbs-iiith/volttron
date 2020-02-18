@@ -456,8 +456,8 @@ class VolttronBridge(Agent):
         #self.post_ds_new_pp()
         #_log.debug('done.')
         # schedule the task
-        nxt_schdl = datetime.datetime.now()
-                        + datetime.timedelta(milliseconds=10)
+        nxt_schdl = (datetime.datetime.now()
+                        + datetime.timedelta(milliseconds=10))
         self._post_ds_new_pp_event = self.core.schedule(
             nxt_schdl, self.post_ds_new_pp)
         return
@@ -508,8 +508,8 @@ class VolttronBridge(Agent):
         #self.post_us_new_ed()
         #_log.debug('done.')
         # schedule the task
-        nxt_schdl = datetime.datetime.now()
-                        + datetime.timedelta(milliseconds=10)
+        nxt_schdl = (datetime.datetime.now()
+                        + datetime.timedelta(milliseconds=10))
         self._post_us_new_ed_event = self.core.schedule(
             nxt_schdl, self.post_us_new_ed)
         return
