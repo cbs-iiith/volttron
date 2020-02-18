@@ -533,7 +533,7 @@ class VolttronBridge(Agent):
         msg_count = len(self._ds_ed_messages)
         _log.debug('ds ed messages count: {:d}...'.format(msg_count))
         for idx, pp_msg in enumerate(self._ds_ed_messages):
-            _log.debug('processing ed msg {:d}/{:d}'.format(idx, msg_count)
+            _log.debug('processing ed msg {:d}/{:d}'.format(idx+1, msg_count)
                         + ', price id: {}'.format(pp_msg.get_price_id()))
 
             _log.debug('posting energy demand to upstream...')
@@ -582,7 +582,7 @@ class VolttronBridge(Agent):
         msg_count = len(self._us_pp_messages)
         _log.debug('us pp messages count: {:d}...'.format(msg_count))
         for idx, pp_msg in enumerate(self._us_pp_messages):
-            _log.debug('processing pp msg {:d}/{:d}'.format(idx, msg_count)
+            _log.debug('processing pp msg {:d}/{:d}'.format(idx+1, msg_count)
                         + ', price id: {}'.format(pp_msg.get_price_id()))
             # ttl <= -1 --> live forever
             # ttl == 0 --> ttl timed out
@@ -607,7 +607,7 @@ class VolttronBridge(Agent):
             if self._all_ds_posts_success:
                 #remove msg from the queue
                 _log.debug('msg successfully posted to'
-                            + 'ds' if msg_1_to_1 else 'all ds'
+                            + ('ds' if msg_1_to_1 else 'all ds')
                             + ', removing it from the queue')
                 del self._us_pp_messages[idx]
 
