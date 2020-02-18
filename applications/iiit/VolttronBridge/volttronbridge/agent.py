@@ -531,7 +531,7 @@ class VolttronBridge(Agent):
 
         msg_count = self._ds_ed_messages.count()
         for idx, pp_msg in enumerate(self._ds_ed_messages):
-            _log.debug('processing ed msg {:d}/{:d}'.(format(idx, msg_count))
+            _log.debug('processing ed msg {:d}/{:d}'.format(idx, msg_count)
                         + ', price id: {}'.format(pp_msg.get_price_id()))
 
             _log.debug('posting energy demand to upstream...')
@@ -560,7 +560,7 @@ class VolttronBridge(Agent):
                             + ', result: {}'.format(success))
                 if self._us_retrycount > MAX_RETRIES:
                     _log.debug('Failed too many times to post ed to up stream'
-                                + ', reset counters and yeild till next ed msg.')
+                            + ', reset counters and yeild till next ed msg.')
                     self._all_us_posts_success  = True
                     self._usConnected = False
                     self._us_retrycount = 0
@@ -579,7 +579,7 @@ class VolttronBridge(Agent):
         msg_count = self._us_pp_messages.count()
         _log.debug('self._us_pp_messages.count(): {:d}...'.format(msg_count))
         for idx, pp_msg in enumerate(self._us_pp_messages):
-            _log.debug('processing pp msg {:d}/{:d}'.(format(idx, msg_count))
+            _log.debug('processing pp msg {:d}/{:d}'.format(idx, msg_count)
                         + ', price id: {}'.format(pp_msg.get_price_id()))
             # ttl <= -1 --> live forever
             # ttl == 0 --> ttl timed out
@@ -713,7 +713,7 @@ class VolttronBridge(Agent):
             del self._ds_device_ids[index]
             del self._ds_retrycount[index]
             _log.debug('unregistered!!!')
-    return
+        return
 
     # check if the ds is registered with this bridge
     def _get_ds_bridge_status(self, rpcdata_id, message):
