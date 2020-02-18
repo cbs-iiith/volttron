@@ -529,7 +529,8 @@ class VolttronBridge(Agent):
                 return
         _log.debug('_usConnected: {}'.format(self._usConnected))
 
-        msg_count = self._ds_ed_messages.count()
+        msg_count = len(self._ds_ed_messages)
+        _log.debug('ds ed messages count: {:d}...'.format(msg_count))
         for idx, pp_msg in enumerate(self._ds_ed_messages):
             _log.debug('processing ed msg {:d}/{:d}'.format(idx, msg_count)
                         + ', price id: {}'.format(pp_msg.get_price_id()))
@@ -576,8 +577,8 @@ class VolttronBridge(Agent):
         # assume all ds post success, if any failed set to False
         self._all_ds_posts_success  = True
 
-        msg_count = self._us_pp_messages.count()
-        _log.debug('self._us_pp_messages.count(): {:d}...'.format(msg_count))
+        msg_count = len(self._us_pp_messages)
+        _log.debug('us pp messages count: {:d}...'.format(msg_count))
         for idx, pp_msg in enumerate(self._us_pp_messages):
             _log.debug('processing pp msg {:d}/{:d}'.format(idx, msg_count)
                         + ', price id: {}'.format(pp_msg.get_price_id()))
