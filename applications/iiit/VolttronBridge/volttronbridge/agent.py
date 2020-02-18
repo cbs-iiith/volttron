@@ -559,7 +559,11 @@ class VolttronBridge(Agent):
         # assume all ds post success, if any failed set to False
         self._all_ds_posts_success  = True
 
+        msg_count = self._us_pp_messages.count()
+        _log.debug('self._us_pp_messages.count(): {:d}...'.format(msg_count))
         for idx, pp_msg in enumerate(self._us_pp_messages):
+            _log.debug('processing msg {:d}/{:d}'.(format(idx, msg_count))
+                        + ', price id: {}'.format(pp_msg.get_price_id()))
             # ttl <= -1 --> live forever
             # ttl == 0 --> ttl timed out
             # decrement_status == False, if ttl <= -1 or unknown tz
@@ -604,15 +608,18 @@ class VolttronBridge(Agent):
         return
 
     def _ds_rpc_1_to_1(self, pp_msg):
+        _log.debug('_ds_rpc_1_to_1()...')
         discovery_address = pp_msg.get_dst_ip()
         url_root = 'http://' + discovery_address + '/bridge'
         result = do_rpc(self._agent_id, url_root, 'pricepoint'
                                 , pp_msg.get_json_params()
                                 , 'POST')
         self._all_ds_posts_success  = result
+        _log.debug('_ds_rpc_1_to_1()...done')
         return
 
     def _ds_rpc_1_to_m(self, pp_msg):
+        _log.debug('_ds_rpc_1_to_m()...')
         # case pp_msg one-to-many(i.e., one_to_one is not True)
         # create list of ds devices to which pp_msg need to be posted
         url_roots = []
@@ -658,7 +665,8 @@ class VolttronBridge(Agent):
                             + ', will try again in'
                             + ' {} sec!!!'.format(self._period_process_pp)
                             + ', result: {}'.format(success))
-    return
+        _log.debug('_ds_rpc_1_to_m()...done.')
+        return
 
     def _clean_ds_registry(self):
         # check & cleanup the ds registery
