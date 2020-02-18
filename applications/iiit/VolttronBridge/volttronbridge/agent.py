@@ -631,15 +631,16 @@ class VolttronBridge(Agent):
 
                 #reset the retry counter for success ds msg
                 if not pp_msg.get_one_to_one():
-                    for index in self._ds_retrycount:
-                        if self._ds_retrycount[index] == -1:
+                    _log.debug('reset the retry counter for success ds msg')
+                    for index, retry_count in enumerate(self._ds_retrycount):
+                        if retry_count == -1:
                             self._ds_retrycount[index] = 0
             else:
                 self._all_ds_posts_success  = False
 
             self._clean_ds_registry()
 
-            # try continue with other messages
+            # continue with other messages
             continue
 
         _log.debug('post_ds_new_pp()...done')
@@ -721,19 +722,20 @@ class VolttronBridge(Agent):
     def _clean_ds_registry(self):
         # check & cleanup the ds registery
         for index, retry_count in enumerate(self._ds_retrycount):
-            if retry_count < MAX_RETRIES: continue
+            if retry_count < MAX_RETRIES: 
+                continue
             #else failed too many times, unregister the ds device
             device_id = self._ds_device_ids[index]
             # failed more than max retries, unregister the ds device
             _log.debug('post pp to ds: {}'.format(device_id)
                         + ' failed more than MAX_RETRIES:'
                         + ' {:d}'.format(MAX_RETRIES)
-                        + ', ds unregistering...'
+                        + ', unregistering...'
                         )
             del self._ds_register[index]
             del self._ds_device_ids[index]
             del self._ds_retrycount[index]
-            _log.debug('unregistered!!!')
+            _log.debug('{} unregistered!!!'.format(device_id))
         return
 
     # check if the ds is registered with this bridge
