@@ -30,7 +30,7 @@ from volttron.platform.jsonrpc import (
         UNAVAILABLE_AGENT)
 
 from random import random, randint
-from copy import copy
+from copy import deepcopy
 
 import settings
 import time
@@ -303,7 +303,7 @@ class BuildingController(Agent):
             _log.warning('_publish_bms_pp() - self._opt_pp_msg_latest is None')
             return
             
-        pp_msg = copy(self._opt_pp_msg_latest)
+        pp_msg = deepcopy(self._opt_pp_msg_latest)
         
         # NOTE: not to be confused by "pricePoint_topic": "building/pricepoint" used by bridge
         # publish the new price point to the local message bus
@@ -353,7 +353,7 @@ class BuildingController(Agent):
         return
         
     def _process_opt_pp(self, pp_msg):
-        self._opt_pp_msg_latest = copy(pp_msg)
+        self._opt_pp_msg_latest = deepcopy(pp_msg)
         self._price_point_latest = pp_msg.get_value()
         
         # any process that failed to apply pp sets this flag False
@@ -377,7 +377,7 @@ class BuildingController(Agent):
             
         _log.info('New Price Point processed.')
         # on successful process of apply_pricing_policy with the latest opt pp, current = latest
-        self._opt_pp_msg_current = copy(self._opt_pp_msg_latest)
+        self._opt_pp_msg_current = deepcopy(self._opt_pp_msg_latest)
         return
         
     def _apply_pricing_policy(self):
@@ -428,7 +428,7 @@ class BuildingController(Agent):
         return tap
         
     def _process_bid_pp(self, pp_msg):
-        self._bid_pp_msg_latest = copy(pp_msg)
+        self._bid_pp_msg_latest = deepcopy(pp_msg)
         self.process_bid_pp()
         return
         
