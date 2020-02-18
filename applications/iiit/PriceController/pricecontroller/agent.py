@@ -828,7 +828,7 @@ class PriceController(Agent):
         try:
             result = self.vip.rpc.call(self._vb_vip_identity
                                         , 'local_ed_agents'
-                                        ).get(timeout=10)
+                                        ).get(timeout=1)
         except gevent.Timeout:
             _log.warning('gevent.Timeout in _rpcget_local_ed_agents()!!!')
             pass
@@ -844,7 +844,7 @@ class PriceController(Agent):
         try:
             result = self.vip.rpc.call(self._vb_vip_identity
                                         , 'get_local_device_ids'
-                                        ).get(timeout=10)
+                                        ).get(timeout=1)
         except gevent.Timeout:
             _log.warning('gevent.Timeout in _rpcget_local_device_ids()!!!')
             pass
@@ -861,7 +861,7 @@ class PriceController(Agent):
         try:
             result = self.vip.rpc.call(self._vb_vip_identity
                                         , 'get_ds_device_ids'
-                                        ).get(timeout=10)
+                                        ).get(timeout=1)
         except gevent.Timeout:
             _log.warning('gevent.Timeout in _rpcget_ds_device_ids()!!!')
             pass
