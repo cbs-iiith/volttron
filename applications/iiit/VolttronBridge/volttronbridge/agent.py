@@ -505,6 +505,7 @@ class VolttronBridge(Agent):
     # perodically keeps trying to post ed to us
     def post_us_new_ed(self):
         if self._all_us_posts_success: return
+        _log.debug('post_us_new_ed()...')
 
         # assume all us post success, if any failed set to False
         self._all_us_posts_success  = True
@@ -566,13 +567,14 @@ class VolttronBridge(Agent):
                     self._usConnected = False
                     self._us_retrycount = 0
                 break
+        _log.debug('post_us_new_ed()...done')
         return
 
     # perodically keeps trying to post pp to ds
     # ensure that only failed in previous iterations and the new msg are sent
     def post_ds_new_pp(self):
-        _log.debug('post_ds_new_pp()...')
         if self._all_ds_posts_success: return
+        _log.debug('post_ds_new_pp()...')
 
         # assume all ds post success, if any failed set to False
         self._all_ds_posts_success  = True
@@ -604,7 +606,7 @@ class VolttronBridge(Agent):
 
             if self._all_ds_posts_success:
                 #remove msg from the queue
-                log.debug('msg successfully posted to'
+                _log.debug('msg successfully posted to'
                             + 'ds' if msg_1_to_1 else 'all ds'
                             + ', removing it from the queue')
                 del self._us_pp_messages[idx]
