@@ -623,7 +623,7 @@ class VolttronBridge(Agent):
             if self._all_ds_posts_success:
                 #remove msg from the queue
                 _log.debug('msg successfully posted to'
-                            + ('ds' if msg_1_to_1 else 'all ds')
+                            + (' ds' if msg_1_to_1 else ' all ds')
                             + ', removing it from the queue')
                 del self._us_pp_messages[idx]
 
