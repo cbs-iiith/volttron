@@ -544,7 +544,7 @@ class VolttronBridge(Agent):
             # _log.debug('success: ' + str(success))
             if success:
                 #remove msg from the queue
-                log.debug('msg successfully posted to us'
+                _log.debug('msg successfully posted to us'
                             + ', removing it from the queue')
                 del self._ds_ed_messages[idx]
                 _log.debug('Success!!!')
