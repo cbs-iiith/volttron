@@ -128,6 +128,10 @@ class VolttronBridge(Agent):
         self._local_devices_register = []   # vip_identities
         self._local_device_ids = []         # device_ids
 
+        #queues to store us price and ds energy messages
+        self._us_pp_messages = []
+        self._ds_ed_messages = []
+
         if self._bridge_host != 'LEVEL_TAILEND':
             _log.debug(self._bridge_host)
 
@@ -432,7 +436,8 @@ class VolttronBridge(Agent):
                         )
             self.local_bid_pp_id = pp_msg.get_price_id()
 
-        self.tmp_bustopic_pp_msg = copy(pp_msg)
+        #self.tmp_bustopic_pp_msg = copy(pp_msg)
+        self._us_pp_messages.append(copy(pp_msg))
 
         # reset counters & flags
         self._reset_ds_retrycount()
@@ -546,62 +551,78 @@ class VolttronBridge(Agent):
         return
 
     # perodically keeps trying to post pp to ds
+    # ensure that only failed in previous iterations and the new msg are sent
     def post_ds_new_pp(self):
+        _log.debug('post_ds_new_pp()...')
         if self._all_ds_posts_success: return
+
         # assume all ds post success, if any failed set to False
         self._all_ds_posts_success  = True
-        
-        # for msg in msg_queue:
-        # if one_to_one:
-        # post only to matching dst_ip_addr
-        # if success:
-        # remove msg from queue
-        # else:
-        # _all_ds_posts_success = False
-        # continue
-        # with next msg in the queue
-        # try to post all ds device (same as old concept)
-        # else:
-        # all_success = True
-        # for ((discovery_address in self._ds_register)
-        # and (discovery_address not in (msg_que_idx_success[que_idx]
-        # .[list of success discovery_address]))):
-        # post msg
-        # if success:
-        # (msg_que_idx_success[que_idx].[list of success discovery_address]
-        # .append(discovery_address))
-        # else:
-        # _all_ds_posts_success = False
-        # all_success = False
-        # if all_success:
-        # remove msg from msg_que
 
-        pp_msg = self.tmp_bustopic_pp_msg
-        #_log.info('[LOG] pp msg to ds: {}'.format(pp_msg))
+        for idx, pp_msg in enumerate(self._us_pp_messages):
+            # ttl <= -1 --> live forever
+            # ttl == 0 --> ttl timed out
+            # decrement_status == False, if ttl <= -1 or unknown tz
+            # before posting to ds, dcrement ttl and update ts
+            # decrement the ttl by time consumed to process till now + 1 sec
+            decrement_status = pp_msg.decrement_ttl()
+            if decrement_status and pp_msg.get_ttl() == 0:
+                _log.warning('msg ttl expired on decrement_ttl()'
+                                + ', droping the message!!!')
+                #remove msg from the queue
+                del self._us_pp_messages[idx]
+                continue
+            elif decrement_status:
+                _log.debug('new ttl: {}.'.format(pp_msg.get_ttl()))
+                pp_msg.update_ts()
 
-        # ttl <= -1 --> live forever
-        # ttl == 0 --> ttl timed out
-        # decrement_status == False, if ttl <= -1 or unknown tz
-        # before posting to ds, dcrement ttl and update ts
-        # decrement the ttl by time consumed to process till now + 1 sec
-        decrement_status = pp_msg.decrement_ttl()
-        if decrement_status and pp_msg.get_ttl() == 0:
-            _log.warning('msg ttl expired on decrement_ttl(), do nothing!!!')
-            return False
-        elif decrement_status:
-            _log.debug('new ttl: {}.'.format(pp_msg.get_ttl()))
-        pp_msg.update_ts()
+            msg_1_to_1 = pp_msg.get_one_to_one()
+            if msg_1_to_1: self._ds_rpc_1_to_1(pp_msg)
+            else: self._ds_rpc_1_to_m(pp_msg)
 
+            if self._all_ds_posts_success:
+                #remove msg from the queue
+                log.debug('msg successfully posted to'
+                            + 'ds' if msg_1_to_1 else 'all ds'
+                            + ', removing it from the queue')
+                del self._us_pp_messages[idx]
+
+                #reset the retry counter for success ds msg
+                if not pp_msg.get_one_to_one():
+                    for index in self._ds_retrycount:
+                        if self._ds_retrycount[index] == -1:
+                            self._ds_retrycount[index] = 0
+            else:
+                self._all_ds_posts_success  = False
+
+            self._clean_ds_registry()
+            
+            # try continue with other messages
+            continue
+
+        _log.debug('post_ds_new_pp()...done')
+        return
+
+    def _ds_rpc_1_to_1(self, pp_msg):
+        discovery_address = pp_msg.get_dst_ip()
+        url_root = 'http://' + discovery_address + '/bridge'
+        result = do_rpc(self._agent_id, url_root, 'pricepoint'
+                                , pp_msg.get_json_params()
+                                , 'POST')
+        self._all_ds_posts_success  = result
+        return
+
+    def _ds_rpc_1_to_m(self, pp_msg):
         # case pp_msg one-to-many(i.e., one_to_one is not True)
         # create list of ds devices to which pp_msg need to be posted
         url_roots = []
         main_idx = []
         for discovery_address in self._ds_register:
             index = self._ds_register.index(discovery_address)
-            
+
             # if already posted, do nothing
             if self._ds_retrycount[index] == -1: continue
-            
+
             url_roots.append('http://' + discovery_address + '/bridge')
             #keep track of main index
             main_idx.append(index)
@@ -613,7 +634,8 @@ class VolttronBridge(Agent):
                                 , 'POST'
                                 ) for url_root in url_roots
                                 ]
-        gevent.joinall(jobs, timeout=10)
+        gevent.joinall(jobs, timeout=11)
+
         for idx, job in enumerate(jobs):
             index = main_idx[idx]
             success = job.value
@@ -626,7 +648,9 @@ class VolttronBridge(Agent):
                 _log.debug('post pp to ds ({})'.format(device_id)
                             + ', result: success!!!')
             else:
-                # failed to post, increment retry count
+                # failed to post
+                # set the failed flag and also increment retry count
+                self._all_ds_posts_success  = False
                 self._ds_retrycount[index] = self._ds_retrycount[index] + 1
                 _log.debug('failed to post pp to ds ({})'.format(device_id)
                             + ', failed count:'
@@ -634,28 +658,25 @@ class VolttronBridge(Agent):
                             + ', will try again in'
                             + ' {} sec!!!'.format(self._period_process_pp)
                             + ', result: {}'.format(success))
+    return
 
+    def _clean_ds_registry(self):
         # check & cleanup the ds registery
         for index, retry_count in enumerate(self._ds_retrycount):
-            if retry_count == -1: continue
-            if retry_count >= MAX_RETRIES:
-                device_id = self._ds_device_ids[index]
-                # failed more than max retries, unregister the ds device
-                _log.debug('post pp to ds: {}'.format(device_id)
-                            + ' failed more than MAX_RETRIES:'
-                            + ' {:d}'.format(MAX_RETRIES)
-                            + ', ds unregistering...'
-                            )
-                del self._ds_register[index]
-                del self._ds_device_ids[index]
-                del self._ds_retrycount[index]
-                _log.debug('unregistered!!!')
-                continue
-            else:
-                self._all_ds_posts_success  = False
-                # need not check of other failed cases
-                break
-        return
+            if retry_count < MAX_RETRIES: continue
+            #else failed too many times, unregister the ds device
+            device_id = self._ds_device_ids[index]
+            # failed more than max retries, unregister the ds device
+            _log.debug('post pp to ds: {}'.format(device_id)
+                        + ' failed more than MAX_RETRIES:'
+                        + ' {:d}'.format(MAX_RETRIES)
+                        + ', ds unregistering...'
+                        )
+            del self._ds_register[index]
+            del self._ds_device_ids[index]
+            del self._ds_retrycount[index]
+            _log.debug('unregistered!!!')
+    return
 
     # check if the ds is registered with this bridge
     def _get_ds_bridge_status(self, rpcdata_id, message):
