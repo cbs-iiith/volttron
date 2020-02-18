@@ -432,15 +432,22 @@ class VolttronBridge(Agent):
                         )
             self.local_bid_pp_id = pp_msg.get_price_id()
 
+        self.tmp_bustopic_pp_msg = copy(pp_msg)
+
         # reset counters & flags
         self._reset_ds_retrycount()
+        #this flag activates post_ds_new_pp()
         self._all_ds_posts_success = False
 
+        '''
+            DONT call post_ds_new_pp() directly at this stage.
+            It is blocking us do_rpc connection that in turn is timed out
+            '''
         # initiate ds post
-        _log.debug('posting to ds...')
-        self.tmp_bustopic_pp_msg = copy(pp_msg)
-        self.post_ds_new_pp()
-        _log.debug('done.')
+        #_log.debug('posting to ds...')
+        #self.tmp_bustopic_pp_msg = copy(pp_msg)
+        #self.post_ds_new_pp()
+        #_log.debug('done.')
         return
 
     # energy demand on local bus published, post it to upstream bridge
@@ -477,16 +484,19 @@ class VolttronBridge(Agent):
             _log.debug('{} msg on the local-bus'.format(hint)
                         + ', topic: {} ...'.format(topic))
 
+        self.tmp_bustopic_ed_msg = copy(ed_msg)
+
         # reset counters & flags
         self._us_retrycount = 0
+        #this flag activates post_us_new_ed()
         self._all_us_posts_success = False
 
         # initiate us post
-        _log.debug('posting to us...')
-        self.tmp_bustopic_ed_msg = copy(ed_msg)
+        #_log.debug('posting to us...')
+        #self.tmp_bustopic_ed_msg = copy(ed_msg)
         # will run once, if failed perodically retries
-        self.post_us_new_ed()
-        _log.debug('done.')
+        #self.post_us_new_ed()
+        #_log.debug('done.')
         return
 
     # perodically keeps trying to post ed to us
@@ -603,7 +613,7 @@ class VolttronBridge(Agent):
                                 , 'POST'
                                 ) for url_root in url_roots
                                 ]
-        gevent.joinall(jobs, timeout=2)
+        gevent.joinall(jobs, timeout=10)
         for idx, job in enumerate(jobs):
             index = main_idx[idx]
             success = job.value
