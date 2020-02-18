@@ -131,6 +131,8 @@ class VolttronBridge(Agent):
         #queues to store us price and ds energy messages
         self._us_pp_messages = []
         self._ds_ed_messages = []
+        self._post_ds_new_pp_event = None
+        self._post_us_new_ed_event = None
 
         if self._bridge_host != 'LEVEL_TAILEND':
             _log.debug(self._bridge_host)
@@ -453,6 +455,11 @@ class VolttronBridge(Agent):
         #self.tmp_bustopic_pp_msg = copy(pp_msg)
         #self.post_ds_new_pp()
         #_log.debug('done.')
+        # schedule the task
+        nxt_schdl = str(datetime.datetime.now() 
+                        + datetime.timedelta(milliseconds=10))
+        self._post_ds_new_pp_event = self.core.schedule(
+            nxt_schdl, self.post_ds_new_pp)
         return
 
     # energy demand on local bus published, post it to upstream bridge
@@ -500,12 +507,19 @@ class VolttronBridge(Agent):
         # will run once, if failed perodically retries
         #self.post_us_new_ed()
         #_log.debug('done.')
+        # schedule the task
+        nxt_schdl = str(datetime.datetime.now() 
+                        + datetime.timedelta(milliseconds=10))
+        self._post_us_new_ed_event = self.core.schedule(
+            nxt_schdl, self.post_us_new_ed)
         return
 
     # perodically keeps trying to post ed to us
     def post_us_new_ed(self):
         if self._all_us_posts_success: return
         _log.debug('post_us_new_ed()...')
+        if self._post_us_new_ed_event is not None:
+            self._post_us_new_ed_event.cancel()
 
         # assume all us post success, if any failed set to False
         self._all_us_posts_success  = True
@@ -575,6 +589,8 @@ class VolttronBridge(Agent):
     def post_ds_new_pp(self):
         if self._all_ds_posts_success: return
         _log.debug('post_ds_new_pp()...')
+        if self._post_ds_new_pp_event is not None:
+            self._post_ds_new_pp_event.cancel()
 
         # assume all ds post success, if any failed set to False
         self._all_ds_posts_success  = True
