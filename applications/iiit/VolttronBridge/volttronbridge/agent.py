@@ -546,7 +546,8 @@ class VolttronBridge(Agent):
 
         msg_count = len(self._ds_ed_messages)
         _log.debug('ds ed messages count: {:d}...'.format(msg_count))
-        for idx, pp_msg in enumerate(self._ds_ed_messages):
+        messages = copy(self._ds_ed_messages)
+        for idx, pp_msg in enumerate(messages):
             _log.debug('processing ed msg {:d}/{:d}'.format(idx+1, msg_count)
                         + ', price id: {}'.format(pp_msg.get_price_id()))
 
@@ -577,10 +578,10 @@ class VolttronBridge(Agent):
                 if self._us_retrycount > MAX_RETRIES:
                     _log.debug('Failed too many times to post ed to up stream'
                             + ', reset counters and yeild till next ed msg.')
-                    self._all_us_posts_success  = True
+                    self._all_us_posts_success  = True  #yeild
                     self._usConnected = False
                     self._us_retrycount = 0
-                break
+                    break
         _log.debug('post_us_new_ed()...done')
         return
 
@@ -597,7 +598,8 @@ class VolttronBridge(Agent):
 
         msg_count = len(self._us_pp_messages)
         _log.debug('us pp messages count: {:d}...'.format(msg_count))
-        for idx, pp_msg in enumerate(self._us_pp_messages):
+        messages = copy(self._us_pp_messages)
+        for idx, pp_msg in enumerate(messages):
             _log.debug('processing pp msg {:d}/{:d}'.format(idx+1, msg_count)
                         + ', price id: {}'.format(pp_msg.get_price_id()))
             # ttl <= -1 --> live forever
@@ -636,7 +638,7 @@ class VolttronBridge(Agent):
                 self._all_ds_posts_success  = False
 
             self._clean_ds_registry()
-            
+
             # try continue with other messages
             continue
 
