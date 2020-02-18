@@ -13,5 +13,5 @@
     "energyDemand_topic_ds": "ds/energydemand",
     "pricePoint_topic_us": "us/pricepoint",
     "pricePoint_topic": "smarthub/pricepoint",
-    "period_process_pp": 10
+    "period_process_pp": 1
 }
