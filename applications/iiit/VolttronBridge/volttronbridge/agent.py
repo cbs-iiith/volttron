@@ -459,8 +459,6 @@ class VolttronBridge(Agent):
     def on_new_ed(self, peer, sender, bus,  topic, headers, message):
         if self._bridge_host == 'LEVEL_HEAD': return
 
-        self.tmp_bustopic_pp_msg = None
-
         # handle only ap or ed type messages
         if check_msg_type(message, MessageType.active_power): pass
         elif check_msg_type(message, MessageType.energy_demand): pass
@@ -489,7 +487,7 @@ class VolttronBridge(Agent):
             _log.debug('{} msg on the local-bus'.format(hint)
                         + ', topic: {} ...'.format(topic))
 
-        self.tmp_bustopic_ed_msg = copy(ed_msg)
+        self._ds_ed_messages.append(copy(ed_msg))
 
         # reset counters & flags
         self._us_retrycount = 0
@@ -508,6 +506,9 @@ class VolttronBridge(Agent):
     def post_us_new_ed(self):
         if self._all_us_posts_success: return
 
+        # assume all us post success, if any failed set to False
+        self._all_us_posts_success  = True
+        
         url_root = 'http://{}:{}/bridge'.format(self._us_ip_addr
                                                 , self._us_port)
         # check for upstream connection, if not retry once
@@ -528,26 +529,42 @@ class VolttronBridge(Agent):
                 return
         _log.debug('_usConnected: {}'.format(self._usConnected))
 
-        _log.debug('posting energy demand to upstream...')
-        args = self.tmp_bustopic_ed_msg.get_json_params()
-        success = do_rpc(self._agent_id, url_root, 'energy'
-                                                , args
-                                                , 'POST')
-        # _log.debug('success: ' + str(success))
-        if success:
-            _log.debug('Success!!!')
-            self._us_retrycount = 0
-            self._all_us_posts_success  = True
-        else:
-            _log.debug('Failed to post pp to us'
-                        + ', url_root: {}'.format(url_root)
-                        + ', result: {}'.format(success))
-            self._us_retrycount = self._us_retrycount + 1
-            if self._us_retrycount > MAX_RETRIES:
-                _log.debug('Failed too many times to post ed to up stream'
-                            + ', reset counters and yeild till next ed msg.')
-                self._usConnected = False
+        msg_count = self._ds_ed_messages.count()
+        for idx, pp_msg in enumerate(self._ds_ed_messages):
+            _log.debug('processing ed msg {:d}/{:d}'.(format(idx, msg_count))
+                        + ', price id: {}'.format(pp_msg.get_price_id()))
+
+            _log.debug('posting energy demand to upstream...')
+            args = pp_msg.get_json_params()
+            success = do_rpc(self._agent_id, url_root, 'energy'
+                                                    , args
+                                                    , 'POST')
+            # _log.debug('success: ' + str(success))
+            if success:
+                #remove msg from the queue
+                log.debug('msg successfully posted to us'
+                            + ', removing it from the queue')
+                del self._ds_ed_messages[idx]
+                _log.debug('Success!!!')
                 self._us_retrycount = 0
+                continue    #with next msg if any
+            else:
+                self._all_us_posts_success  = False
+                self._us_retrycount = self._us_retrycount + 1
+                _log.debug('Failed to post ed to us'
+                            + ', url_root: {}'.format(url_root)
+                            + ', failed count:'
+                            + ' {:d}'.format(self._us_retrycount)
+                            + ', will try again in'
+                            + ' {} sec!!!'.format(self._period_process_pp)
+                            + ', result: {}'.format(success))
+                if self._us_retrycount > MAX_RETRIES:
+                    _log.debug('Failed too many times to post ed to up stream'
+                                + ', reset counters and yeild till next ed msg.')
+                    self._all_us_posts_success  = True
+                    self._usConnected = False
+                    self._us_retrycount = 0
+                break
         return
 
     # perodically keeps trying to post pp to ds
@@ -562,7 +579,7 @@ class VolttronBridge(Agent):
         msg_count = self._us_pp_messages.count()
         _log.debug('self._us_pp_messages.count(): {:d}...'.format(msg_count))
         for idx, pp_msg in enumerate(self._us_pp_messages):
-            _log.debug('processing msg {:d}/{:d}'.(format(idx, msg_count))
+            _log.debug('processing pp msg {:d}/{:d}'.(format(idx, msg_count))
                         + ', price id: {}'.format(pp_msg.get_price_id()))
             # ttl <= -1 --> live forever
             # ttl == 0 --> ttl timed out
@@ -611,9 +628,21 @@ class VolttronBridge(Agent):
         _log.debug('_ds_rpc_1_to_1()...')
         discovery_address = pp_msg.get_dst_ip()
         url_root = 'http://' + discovery_address + '/bridge'
+        args = pp_msg.get_json_params()
         result = do_rpc(self._agent_id, url_root, 'pricepoint'
-                                , pp_msg.get_json_params()
-                                , 'POST')
+                                                    , args
+                                                    , 'POST')
+
+        if not success:
+            index = self._ds_register.index(discovery_address)
+            device_id = self._ds_device_ids[index]
+            _log.debug('failed to post pp to ds ({})'.format(device_id)
+                        + ', failed count:'
+                        + ' {:d}'.format(self._ds_retrycount[index])
+                        + ', will try again in'
+                        + ' {} sec!!!'.format(self._period_process_pp)
+                        + ', result: {}'.format(success))
+
         self._all_ds_posts_success  = result
         _log.debug('_ds_rpc_1_to_1()...done')
         return
@@ -665,7 +694,7 @@ class VolttronBridge(Agent):
                             + ', will try again in'
                             + ' {} sec!!!'.format(self._period_process_pp)
                             + ', result: {}'.format(success))
-        _log.debug('_ds_rpc_1_to_m()...done.')
+        _log.debug('_ds_rpc_1_to_m()...done')
         return
 
     def _clean_ds_registry(self):
