@@ -19,6 +19,7 @@ import logging
 from random import randint
 import json
 import decimal
+from copy import copy
 
 
 from volttron.platform.agent import utils
@@ -49,16 +50,14 @@ ISPACE_MSG_ATTRIB_LIST = ['msg_type', 'one_to_one', 'isoptimal'
                             ]
                             
                             
-'''
 # https://www.oreilly.com/library/view/python-cookbook/0596001673/ch05s12.html
 # Making a Fast Copy of an Object. Credit: Alex Martelli
 def empty_copy(obj):
-    class Empty(obj._ _class_ _):
-        def _ _init_ _(self): pass
-    newcopy = Empty(  )
-    newcopy._ _class_ _ = obj._ _class_ _
+    class Empty(obj.__class__):
+        def __init__(self): pass
+    newcopy = Empty()
+    newcopy.__class__ = obj.__class__
     return newcopy
-'''
     
 # avaliable in ispace_utils, copied here to remove dependecny on ispace_utils
 def mround(num, multipleOf):
@@ -101,7 +100,7 @@ class ISPACE_Msg:
     dst_ip = None
     dst_device_id = None
     duration = None
-    # TODO: currelty ttl is in seconds, maybe changed to milliseconds for better performance
+    # TODO: currently ttl is in seconds, maybe changed to milliseconds for better performance
     ttl = None
     ts = None
     tz  = None
@@ -139,14 +138,26 @@ class ISPACE_Msg:
         params = self._get_params_dict()
         return json.dumps(params)
         
-    '''hold-on
-    def _ _copy_ _(self):
+    def __copy__(self):
         newcopy = empty_copy(self)
-        print "now copy some relevant subset of self's attributes to newcopy"
-        for attrib in ISPACE_MSG_ATTRIB_LIST:
-            
+
+        newcopy.msg_type = copy(self.msg_type)
+        newcopy.one_to_one = copy(self.one_to_one)
+        newcopy.value = copy(self.value)
+        newcopy.value_data_type = copy(self.value_data_type)
+        newcopy.units = copy(self.units)
+        newcopy.price_id = copy(self.price_id)
+        newcopy.isoptimal = copy(self.isoptimal)
+        newcopy.src_ip = copy(self.src_ip)
+        newcopy.src_device_id = copy(self.src_device_id)
+        newcopy.dst_ip = copy(self.dst_ip)
+        newcopy.dst_device_id = copy(self.dst_device_id)
+        newcopy.duration = copy(self.duration)
+        newcopy.ttl = copy(self.ttl)
+        newcopy.ts = copy(self.ts)
+        newcopy.tz = copy(self.tz)
+
         return newcopy
-    '''
     
     ''' overload methods for self and other
     '''
@@ -593,6 +604,11 @@ class ISPACE_Msg_ActivePower(ISPACE_Msg):
                         )
         if energy_category is not None: self.set_energy_category(energy_category)
         return
+        
+    def __copy__(self):
+        newcopy = super().__copy__(self)
+        newcopy.energy_category = self.energy_category
+        return newcopy
         
     def _get_params_dict(self):
         self._params['energy_category'] = self.energy_category
