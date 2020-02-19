@@ -225,6 +225,7 @@ def do_rpc(id, url_root, method, params=None, request_method='POST'):
         'method':method,
     }
     
+    # refer to examples\WebRPC\volttronwebrpc\volttronwebrpc.py
     # if authentication is not None:
     #    json_package['authorization'] = authentication
         
