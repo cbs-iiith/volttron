@@ -547,6 +547,7 @@ class VolttronBridge(Agent):
         msg_count = len(self._ds_ed_messages)
         _log.debug('ds ed messages count: {:d}...'.format(msg_count))
         messages = copy(self._ds_ed_messages)
+        del_count = 0
         for idx, pp_msg in enumerate(messages):
             _log.debug('processing ed msg {:d}/{:d}'.format(idx+1, msg_count)
                         + ', price id: {}'.format(pp_msg.get_price_id()))
@@ -561,7 +562,8 @@ class VolttronBridge(Agent):
                 #remove msg from the queue
                 _log.debug('msg successfully posted to us'
                             + ', removing it from the queue')
-                del self._ds_ed_messages[idx]
+                del self._ds_ed_messages[idx - del_count]
+                del_count += 1
                 _log.debug('Success!!!')
                 self._us_retrycount = 0
                 continue    #with next msg if any
@@ -599,6 +601,7 @@ class VolttronBridge(Agent):
         msg_count = len(self._us_pp_messages)
         _log.debug('us pp messages count: {:d}...'.format(msg_count))
         messages = copy(self._us_pp_messages)
+        del_count = 0
         for idx, pp_msg in enumerate(messages):
             _log.debug('processing pp msg {:d}/{:d}'.format(idx+1, msg_count)
                         + ', price id: {}'.format(pp_msg.get_price_id()))
@@ -612,7 +615,8 @@ class VolttronBridge(Agent):
                 _log.warning('msg ttl expired on decrement_ttl()'
                                 + ', droping the message!!!')
                 #remove msg from the queue
-                del self._us_pp_messages[idx]
+                del self._us_pp_messages[idx - del_count]
+                del_count += 1
                 continue
             elif decrement_status:
                 _log.debug('new ttl: {}.'.format(pp_msg.get_ttl()))
