@@ -17,7 +17,7 @@ import logging
 import sys
 import uuid
 from random import random, randint
-from copy import deepcopy
+from copy import copy
 
 from volttron.platform.vip.agent import Agent, Core, PubSub, compat, RPC
 from volttron.platform.agent import utils
@@ -330,14 +330,14 @@ class PriceController(Agent):
         if not success or pp_msg is None: return
         else: _log.debug('New pp msg on the local-bus, topic: {}'.format(topic))
         
-        self.act_pp_msg = deepcopy(pp_msg)
+        self.act_pp_msg = copy(pp_msg)
         
         if pp_msg.get_isoptimal():
             # TODO: relook at this scenario
-            #self.local_opt_pp_msg = deepcopy(pp_msg)
+            #self.local_opt_pp_msg = copy(pp_msg)
             pass
         else:
-            self.local_bid_pp_msg = deepcopy(pp_msg)
+            self.local_bid_pp_msg = copy(pp_msg)
         
             pub_topic =  self._topic_price_point
             pub_msg = pp_msg.get_json_message(self._agent_id, 'bus_topic')
@@ -375,11 +375,11 @@ class PriceController(Agent):
         
         # keep a track of us pp_msg
         if pp_msg.get_isoptimal():
-            self.us_opt_pp_msg = deepcopy(pp_msg)
+            self.us_opt_pp_msg = copy(pp_msg)
             _log.debug('***** New optimal price point from us: {:0.2f}'.format(pp_msg.get_value())
                                         + ' , price_id: {}'.format(pp_msg.get_price_id()))
         else:
-            self.us_bid_pp_msg = deepcopy(pp_msg)
+            self.us_bid_pp_msg = copy(pp_msg)
             _log.debug('***** New bid price point from us: {:0.2f}'.format(pp_msg.get_value())
                                         + ' , price_id: {}'.format(pp_msg.get_price_id()))
         # log this msg
@@ -404,7 +404,7 @@ class PriceController(Agent):
             # list for pp_msg
             _log.debug('Compute new price points...')
             new_pp_msg_list = self._computeNewPrice()
-            self.local_bid_pp_msg_list = deepcopy(new_pp_msg_list)
+            self.local_bid_pp_msg_list = copy(new_pp_msg_list)
             #_log.info('new bid pp_msg_list: {}'.format(new_pp_msg_list))
             
             # TODO: maybe publish a list of the pp messages and let the bridge do_rpc concurrently
@@ -824,7 +824,7 @@ class PriceController(Agent):
         
     def _rpcget_local_ed_agents(self):
         #if rpc get failed, return the old copy
-        result = deepcopy(self._local_ed_agents)
+        result = self._local_ed_agents
         try:
             result = self.vip.rpc.call(self._vb_vip_identity
                                         , 'local_ed_agents'
@@ -840,7 +840,7 @@ class PriceController(Agent):
         
     def _rpcget_local_device_ids(self):
         #if rpc get failed, return the old copy
-        result = deepcopy(self._local_device_ids)
+        result = self._local_device_ids
         try:
             result = self.vip.rpc.call(self._vb_vip_identity
                                         , 'get_local_device_ids'
@@ -857,7 +857,7 @@ class PriceController(Agent):
         
     def _rpcget_ds_device_ids(self):
         #if rpc get failed, return the old copy
-        result = deepcopy(self._ds_device_ids)
+        result = self._ds_device_ids
         try:
             result = self.vip.rpc.call(self._vb_vip_identity
                                         , 'get_ds_device_ids'

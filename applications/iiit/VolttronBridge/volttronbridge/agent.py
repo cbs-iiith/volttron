@@ -30,7 +30,7 @@ from volttron.platform.jsonrpc import (
         UNAVAILABLE_AGENT)
 
 from random import randint
-from copy import deepcopy
+from copy import copy
 
 import time
 import gevent
@@ -438,8 +438,8 @@ class VolttronBridge(Agent):
                         )
             self.local_bid_pp_id = pp_msg.get_price_id()
 
-        #self.tmp_bustopic_pp_msg = deepcopy(pp_msg)
-        self._us_pp_messages.append(deepcopy(pp_msg))
+        #self.tmp_bustopic_pp_msg = copy(pp_msg)
+        self._us_pp_messages.append(copy(pp_msg))
 
         # reset counters & flags
         self._reset_ds_retrycount()
@@ -452,7 +452,7 @@ class VolttronBridge(Agent):
             '''
         # initiate ds post
         #_log.debug('posting to ds...')
-        #self.tmp_bustopic_pp_msg = deepcopy(pp_msg)
+        #self.tmp_bustopic_pp_msg = copy(pp_msg)
         #self.post_ds_new_pp()
         #_log.debug('done.')
         # schedule the task
@@ -494,7 +494,7 @@ class VolttronBridge(Agent):
             _log.debug('{} msg on the local-bus'.format(hint)
                         + ', topic: {} ...'.format(topic))
 
-        self._ds_ed_messages.append(deepcopy(ed_msg))
+        self._ds_ed_messages.append(copy(ed_msg))
 
         # reset counters & flags
         self._us_retrycount = 0
@@ -503,7 +503,7 @@ class VolttronBridge(Agent):
 
         # initiate us post
         #_log.debug('posting to us...')
-        #self.tmp_bustopic_ed_msg = deepcopy(ed_msg)
+        #self.tmp_bustopic_ed_msg = copy(ed_msg)
         # will run once, if failed perodically retries
         #self.post_us_new_ed()
         #_log.debug('done.')
@@ -546,7 +546,7 @@ class VolttronBridge(Agent):
 
         msg_count = len(self._ds_ed_messages)
         _log.debug('ds ed messages count: {:d}...'.format(msg_count))
-        messages = deepcopy(self._ds_ed_messages)
+        messages = copy(self._ds_ed_messages)
         for idx, pp_msg in enumerate(messages):
             _log.debug('processing ed msg {:d}/{:d}'.format(idx+1, msg_count)
                         + ', price id: {}'.format(pp_msg.get_price_id()))
@@ -598,7 +598,7 @@ class VolttronBridge(Agent):
 
         msg_count = len(self._us_pp_messages)
         _log.debug('us pp messages count: {:d}...'.format(msg_count))
-        messages = deepcopy(self._us_pp_messages)
+        messages = copy(self._us_pp_messages)
         for idx, pp_msg in enumerate(messages):
             _log.debug('processing pp msg {:d}/{:d}'.format(idx+1, msg_count)
                         + ', price id: {}'.format(pp_msg.get_price_id()))
