@@ -17,9 +17,10 @@ import math
 import time
 import gevent
 import gevent.event
-#from gevent import monkey
-#monkey.patch_all()
-import grequests
+from gevent import monkey
+monkey.patch_all(thread=False, select=False)
+# if using grequests, comment the above two (i.e., monkey.patch_all())
+#import grequests
 import requests
 
 from enum import IntEnum

@@ -37,7 +37,7 @@ import gevent
 import gevent.event
 #from gevent import monkey
 #monkey.patch_all() #not required grequests does it for us
-import grequests
+#import grequests
 
 from ispace_utils import do_rpc, register_rpc_route, publish_to_bus
 from ispace_msg import ISPACE_Msg, MessageType
