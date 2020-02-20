@@ -17,7 +17,11 @@ import math
 import time
 import gevent
 import gevent.event
+from gevent import monkey
+monkey.patch_all()
+import grequests
 import requests
+
 from enum import IntEnum
 import json
 
@@ -222,7 +226,7 @@ def do_rpc(id, url_root, method, params=None, request_method='POST'):
     json_package = {
         'jsonrpc': '2.0',
         'id': id,
-        'method':method,
+        'method': method,
     }
     
     # refer to examples\WebRPC\volttronwebrpc\volttronwebrpc.py
@@ -234,14 +238,15 @@ def do_rpc(id, url_root, method, params=None, request_method='POST'):
         
     try:
         if request_method.upper() == 'POST':
-            response = requests.post(url_root, data=json.dumps(json_package), timeout=10)
+            #https://2.python-requests.org/en/v3.0.0/user/advanced/#timeouts
+            response = requests.post(url_root, data=json.dumps(json_package), timeout=(3.05, 1))
         elif request_method.upper() == 'DELETE':
-            response = requests.delete(url_root, data=json.dumps(json_package), timeout=10)
+            response = requests.delete(url_root, data=json.dumps(json_package), timeout=(3.05, 1))
         else:
             if request_method.upper() != 'GET':
                 _log.warning('unimplemented request_method: {}'.format(request_method)
                                 + ', trying "GET"!!!')
-            response = requests.get(url_root, data=json.dumps(json_package), timeout=10)
+            response = requests.get(url_root, data=json.dumps(json_package), timeout=(3.05, 1))
             
         if response.ok:
             if 'result' in response.json().keys():
@@ -303,4 +308,44 @@ def do_rpc(id, url_root, method, params=None, request_method='POST'):
         pass
     return result
     
+    # https://bit.ly/37OaR7i
+    # async_do_rpc
+    def async_do_rpc(url, method='GET', params=None, 
+        headers=None,
+        encode=False,
+        verify=None,
+        use_verify=False,
+        callback=None):
+        # make a string with the request type in it:
+        response = None
+        request = None
+        try:
+            if 'POST' == method:
+                if use_verify:
+                    request = grequests.post(
+                        url,
+                        data=params,
+                        headers=headers,
+                        verify=verify,
+                        callback=callback)
+                else:
+                    request = grequests.post(
+                        url,
+                        data=params,
+                        headers=headers,
+                        callback=callback)
+            else:
+                request = requests.get(
+                    url,
+                    data=params,
+                    headers=headers,
+                    callback=callback)
+
+            if request:
+                response = grequests.send(request, grequests.Pool(1))
+                return response
+            else:
+                return response
+        except:
+            return response
     
