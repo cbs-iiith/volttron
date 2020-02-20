@@ -377,6 +377,7 @@ def do_rpc(id, url_root, method, params=None, request_method='POST'):
         pass
     return result
 
+'''
     # https://bit.ly/37OaR7i
     # async_do_rpc
     def async_do_rpc(url, method='GET', params=None,
@@ -422,3 +423,4 @@ def do_rpc(id, url_root, method, params=None, request_method='POST'):
                 return response
         except:
             return response
+'''
