@@ -5,9 +5,10 @@
     "period_read_data": 30,
     "period_process_pp": 10,
     #period_process_loop is not same as period_process_pp
-    #period_process_loop: is used for optimization routines like aggregator & iterator functions
-    #                     these need to completed as soon as possible
-    #period_process_pp: is at what interval apply_pricing_policy should retry if failed previously
+    #period_process_loop: is used for optimization routines like aggregator
+    #   & iterator functions. These fns need to be completed as soon as possible
+    #period_process_pp: is at what interval apply_pricing_policy should retry
+    #   if failed previously
     "period_process_loop": 1,
     "energyDemand_topic": "smarthub/energydemand",
     "energyDemand_topic_ds": "ds/energydemand",
@@ -15,15 +16,19 @@
     "pricePoint_topic": "smarthub/pricepoint",
     "vb_vip_identity": "iiit.volttronbridge",
 
-    # valid pca modes -->  ONLINE, STANDALONE, STANDBY
-    #                        ONLINE --> actively receive pp_msg from us and submit bids
-    #                        STANDALONE --> move to this conditon if pp_msg_opt_durations elapsed 
-    #                                        and no further commuication from us
-    #                                        (valid opt_options --> DEFAULT_OPT, EXTERN_OPT)
-    #                        STANDBY --> no optimization, but report active power at regular interval
+    # pca state -->  ONLINE, STANDALONE, STANDBY
+    #   ONLINE --> actively receive pp_msg from us and submit bids
+    #   STANDALONE --> move to this conditon if pp_msg_opt_durations elapsed 
+    #       and no further commuication from us
+    #       Also, publish opt_pp so as to bring the device to a predefined state
+    #       (valid pca_mode --> DEFAULT_OPT, EXTERN_OPT)
+    #   STANDBY --> no optimization, but report active power at regular interval
     "pca_state": "ONLINE",
-    "_comment": "valid options - PASS_ON_PP, DEFAULT_OPT, EXTERN_OPT",
+
+    # pca opt mode --> PASS_ON_PP, DEFAULT_OPT, EXTERN_OPT
     "pca_mode": "PASS_ON_PP",
+
+    # the following params are used if pca_mode = DEFAULT_OPT
     "opt_params": {
         # time to wait for devices to submit their bids.
         # 0 --> wait-for-ever, default 900s (15min)
@@ -42,6 +47,8 @@
         # weight factors >= 0 that may be different for each energy category
         "weight_factors": [0.3, 0.3, 0.3]
     },
+
+    # the following params are used if pca_mode = EXTERN_OPT
     "external-optimizer": "iiit.external_optimizer",
     "extrn_optimize_pp_topic": "pca/pricepoint",
     "extrn_optimize_ed_topic": "pca/energydemand"
