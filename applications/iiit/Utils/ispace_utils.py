@@ -197,7 +197,7 @@ def get_task_schdl(self, task_id, device, time_ms=None):
             + datetime.timedelta(milliseconds=self.time_ms)
             )
 
-        msg = [[device,start,end]]
+        msg = [[device, start, end]]
         result = self.vip.rpc.call(
             'platform.actuator',
             'request_new_schedule',
@@ -243,15 +243,15 @@ def mround(num, multipleOf):
 # comparing floats is mess
 def isclose(a, b, rel_tol=1e-09, abs_tol=0.0):
     # _log.debug('isclose()')
-    return (abs(a-b) <= max(rel_tol * max(abs(a), abs(b)), abs_tol))
+    return (abs(a - b) <= max(rel_tol * max(abs(a), abs(b)), abs_tol))
 
 # return energy in kWh for the given duration
 def calc_energy_kwh(pwr_wh, duration_sec):
-    return ((pwr_wh * duration_sec)/3600000)
+    return ((pwr_wh * duration_sec) / 3600000)
 
 # return energy in Wh for the given duration
 def calc_energy_wh(pwr_wh, duration_sec):
-    return ((pwr_wh * duration_sec)/3600)
+    return ((pwr_wh * duration_sec) / 3600)
 
 # TODO: do_rpc is synchrous, using requests which is a blocking operation
 # need to convert to async operations, maybe can use gevent 
@@ -275,7 +275,7 @@ def do_rpc(id, url_root, method, params=None, request_method='POST'):
 
     try:
         if request_method.upper() == 'POST':
-            #https://2.python-requests.org/en/v3.0.0/user/advanced/#timeouts
+            # https://2.python-requests.org/en/v3.0.0/user/advanced/#timeouts
             response = requests.post(
                 url_root,
                 data=json.dumps(json_package),
@@ -305,9 +305,9 @@ def do_rpc(id, url_root, method, params=None, request_method='POST'):
                 if request_method.upper() not in ['POST', 'DELETE']:
                     result = success
                 elif success:
-                    #_log.debug('response - ok'
+                    # _log.debug('response - ok'
                     #    + ', {} result success: {}'.format(method, success)
-                    #)
+                    # )
                     result = True
                 else:
                     _log.debug('respone - ok'
