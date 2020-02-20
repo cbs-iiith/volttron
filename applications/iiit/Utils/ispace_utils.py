@@ -17,8 +17,8 @@ import math
 import time
 import gevent
 import gevent.event
-from gevent import monkey
-monkey.patch_all()
+#from gevent import monkey
+#monkey.patch_all()
 import grequests
 import requests
 
@@ -145,12 +145,14 @@ def retrive_details_from_vb(self, sleep_time=10):
                     vb_vip_identity,
                     'device_id'
                 ).get(timeout=10)
+                self._device_id = device_id
                 _log.debug('device id as per vb: {}'.format(device_id))
             if discovery_address is None:
                 discovery_address = self.vip.rpc.call(
                     vb_vip_identity,
                     'discovery_address'
                 ).get(timeout=10)
+                self._discovery_address = discovery_address
                 _log.debug('discovery_address as per vb'
                     + ' : {}'.format(discovery_address)
                 )
