@@ -279,7 +279,7 @@ def do_rpc(id, url_root, method, params=None, request_method='POST'):
             response = requests.post(
                 url_root,
                 data=json.dumps(json_package),
-                timeout=(3.05, 1)
+                timeout=(1, 1)
             )
         elif request_method.upper() == 'DELETE':
             response = requests.delete(
