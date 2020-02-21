@@ -282,13 +282,13 @@ def do_rpc(id, url_root, method, params=None, request_method='POST'):
             response = requests.post(
                 url_root,
                 data=json.dumps(json_package),
-                timeout=(1, 1)
+                timeout=(1, 2)
             )
         elif request_method.upper() == 'DELETE':
             response = requests.delete(
                 url_root,
                 data=json.dumps(json_package),
-                timeout=(3.05, 1)
+                timeout=(3.05, 3.05)
             )
         else:
             if request_method.upper() != 'GET':
@@ -299,7 +299,7 @@ def do_rpc(id, url_root, method, params=None, request_method='POST'):
             response = requests.get(
                 url_root,
                 data=json.dumps(json_package),
-                timeout=(3.05, 1)
+                timeout=(3.05, 3.05)
             )
 
         if response.ok:

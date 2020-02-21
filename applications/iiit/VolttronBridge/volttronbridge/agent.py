@@ -520,13 +520,14 @@ class VolttronBridge(Agent):
     # perodically keeps trying to post ed to us
     def post_us_new_ed(self):
         if self._all_us_posts_success: return
+
+        # assume all us post success, if any failed set to False
+        self._all_us_posts_success  = True
+
         _log.debug('post_us_new_ed()...')
         if self._post_us_new_ed_event is not None:
             self._post_us_new_ed_event.cancel()
 
-        # assume all us post success, if any failed set to False
-        self._all_us_posts_success  = True
-        
         url_root = 'http://{}:{}/bridge'.format(self._us_ip_addr
                                                 , self._us_port)
         # check for upstream connection, if not retry once
@@ -594,12 +595,13 @@ class VolttronBridge(Agent):
     # ensure that only failed in previous iterations and the new msg are sent
     def post_ds_new_pp(self):
         if self._all_ds_posts_success: return
-        _log.debug('post_ds_new_pp()...')
-        if self._post_ds_new_pp_event is not None:
-            self._post_ds_new_pp_event.cancel()
 
         # assume all ds post success, if any failed set to False
         self._all_ds_posts_success  = True
+
+        _log.debug('post_ds_new_pp()...')
+        if self._post_ds_new_pp_event is not None:
+            self._post_ds_new_pp_event.cancel()
 
         msg_count = len(self._us_pp_messages)
         _log.debug('us pp messages count: {:d}...'.format(msg_count))
@@ -700,7 +702,7 @@ class VolttronBridge(Agent):
                                 , 'POST'
                                 ) for url_root in url_roots
                                 ]
-        gevent.joinall(jobs, timeout=11)
+        gevent.joinall(jobs, timeout=5)
 
         for idx, job in enumerate(jobs):
             index = main_idx[idx]
