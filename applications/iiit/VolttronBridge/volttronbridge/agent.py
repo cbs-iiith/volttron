@@ -542,7 +542,7 @@ class VolttronBridge(Agent):
                                                             , 'POST')
             if not self._usConnected:
                 _log.debug('Is us connected?'
-                            + 'do_rpc result: {}'.format(self._usConnected)
+                            + ' do_rpc result: {}'.format(self._usConnected)
                             + ', Failed to register'
                             + ', may be upstream bridge is not running!!!')
                 return
