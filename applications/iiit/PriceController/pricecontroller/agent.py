@@ -238,10 +238,11 @@ class PriceController(Agent):
             )
 
         # subscribing to topic_price_point_extr
-        self.vip.pubsub.subscribe('pubsub',
-            self._topic_extrn_pp,
-            self.on_new_extrn_pp
-            )
+        if self._pca_state == 'EXTERN_OPT':
+            self.vip.pubsub.subscribe('pubsub',
+                self._mode_extrn_opt_params['pp_topic'],
+                self.on_new_extrn_pp
+                )
 
         self._published_us_bid_ted = True
         # at regular interval check if all bid ds ed received, 
