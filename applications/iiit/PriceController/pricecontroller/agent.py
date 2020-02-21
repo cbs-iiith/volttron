@@ -89,8 +89,13 @@ class PriceController(Agent):
     # ds device ids registered with the bridge
     _ds_device_ids = None
     
-    # default 15 minutes
-    _bids_timeout = 900
+    _opt_params = None
+    _bids_timeout = None
+    _max_iters = None
+    _epsilon = None
+    _gamma = None
+    _alpha = None
+    _wt_factors = None
     
     def __init__(self, config_path, **kwargs):
         super(PriceController, self).__init__(**kwargs)
@@ -106,15 +111,42 @@ class PriceController(Agent):
         
         self._period_read_data = self.config.get('period_read_data', 30)
         self._period_process_loop = self.config.get('period_process_loop', 1)
-        # time to wait for devices to submit their bids. (0 --> wait-for-ever, default 900s (15min))
-        self._bids_timeout = self.config.get('bids_timeout', 900)
+        
+        self._opt_params = self.config.get(
+            'opt_params',
+            {
+                # time to wait for devices to submit their bids.
+                # 0 --> wait-for-ever, default 900s (15min)
+                "bids_timeout": 120,
+                "max_iterations": 5,
+                #deadband (Wh)
+                "epsilon": 100,
+                # step size, gamma = (pp_max - pp_min) / (ed_max - ed_min)
+                # assume pp_max = 1, pp_min = 0, ed_max = 10000, ed_min = 1000
+                # Google Drive IIIT\FDD_LAB_VOLT_LOGS\Analysis\Book2.xlsx
+                # sheet "both rms random pp"
+                # https://drive.google.com/open?id=1KdbZ0ZLO7jDwyRhpAlOMzddSiJOYtL-6
+                "gamma": 0.0001,
+                # momentum factor
+                "alpha": 0.0035,
+                # weight factors >= 0 that may be different for each zone
+                "weight_factors": [0.5, 0.5]
+            }
+        )
+        self._alpha = self._opt_params['alpha']
+        self._gamma = self._opt_params['gamma']
+        self._epsilon = self._opt_params['epsilon']
+        self._max_iters = self._opt_params['max_iterations']
+        self._bids_timeout = self._opt_params['bids_timeout']
+        self._wt_factors = self._opt_params['weight_factors']
         
         # local device_ids
         self._us_local_opt_ap = {}
         self._us_local_bid_ed = {}
         self._local_bid_ed = {}
         
-        # ds device ids, opt_ap --> act_pwr@opt_pp, bid_ed --> bid_energy_demand@bid_pp
+        # ds device ids
+        #   opt_ap --> act_pwr@opt_pp, bid_ed --> bid_energy_demand@bid_pp
         self._us_ds_opt_ap = {}
         self._us_ds_bid_ed = {}
         self._ds_bid_ed = {}
