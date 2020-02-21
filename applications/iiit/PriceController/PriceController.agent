@@ -28,8 +28,13 @@
     # pca opt mode --> PASS_ON_PP, DEFAULT_OPT, EXTERN_OPT
     "pca_mode": "PASS_ON_PP",
 
+    # the following params are used if pca_mode = PASS_ON_PP
+    "mode_pass_on_params": {
+        "bids_timeout": 120
+    },
+
     # the following params are used if pca_mode = DEFAULT_OPT
-    "opt_params": {
+    "mode_default_opt_params": {
         # time to wait for devices to submit their bids.
         # 0 --> wait-for-ever, default 900s (15min)
         "bids_timeout": 120,
@@ -49,7 +54,9 @@
     },
 
     # the following params are used if pca_mode = EXTERN_OPT
-    "external-optimizer": "iiit.external_optimizer",
-    "extrn_optimize_pp_topic": "pca/pricepoint",
-    "extrn_optimize_ed_topic": "pca/energydemand"
+    "mode_extrn_opt_params": {
+        "vip_identity": "iiit.external_optimizer",
+        "pp_topic": "pca/pricepoint",
+        "ed_topic": "pca/energydemand"
+    }
 }
