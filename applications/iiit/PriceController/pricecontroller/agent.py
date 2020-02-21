@@ -71,11 +71,10 @@ class PriceController(Agent):
     _topic_energy_demand_ds = None
     _topic_energy_demand = None
 
-    _topic_extrn_pp = None
     _pca_state = None       # ['ONLINE', 'STANDALONE', 'STANDBY']
     _pca_standby = False
     _pca_standalone = False
-    _pca_standalone = True
+    _pca_online = True
     _pca_mode = None        # ['PASS_ON_PP', 'DEFAULT_OPT', 'EXTERN_OPT']
 
     _device_id = None
@@ -90,13 +89,9 @@ class PriceController(Agent):
     # ds device ids registered with the bridge
     _ds_device_ids = None
 
-    _opt_params = None
-    _bids_timeout = None
-    _max_iters = None
-    _epsilon = None
-    _gamma = None
-    _alpha = None
-    _wt_factors = None
+    _mode_pass_on_params = None
+    _mode_default_opt_params = None
+    _mode_extrn_opt_params = None
 
     def __init__(self, config_path, **kwargs):
         super(PriceController, self).__init__(**kwargs)
@@ -113,8 +108,17 @@ class PriceController(Agent):
         self._period_read_data = self.config.get('period_read_data', 30)
         self._period_process_loop = self.config.get('period_process_loop', 1)
 
-        self._opt_params = self.config.get(
-            'opt_params', {
+        self._pca_state = self.config.get('pca_state', 'ONLINE')
+        self._pca_mode = self.config.get('pca_mode', 'PASS_ON_PP')
+
+        self._mode_pass_on_params = self.config.get(
+            'mode_pass_on_params', {
+                "bids_timeout": 120
+                }
+        )
+
+        self._mode_default_opt_params = self.config.get(
+            'mode_default_opt_params', {
                 "bids_timeout": 120,
                 "max_iterations": 5,
                 "epsilon": 100,
@@ -124,28 +128,36 @@ class PriceController(Agent):
                 }
         )
 
-        self._alpha = self._opt_params['alpha']
-        self._gamma = self._opt_params['gamma']
-        self._epsilon = self._opt_params['epsilon']
-        self._max_iters = self._opt_params['max_iterations']
-        self._bids_timeout = self._opt_params['bids_timeout']
-        self._wt_factors = self._opt_params['weight_factors']
-        
+        self._mode_extrn_opt_params = self.config.get(
+            'mode_extrn_opt_params', {
+                "vip_identity": "iiit.external_optimizer",
+                "pp_topic": "pca/pricepoint",
+                "ed_topic": "pca/energydemand"
+                }
+        )
+
+        if self._pca_state == 'ONLINE':
+            self._bids_timeout = self._mode_pass_on_params['bids_timeout']
+        elif self._pca_state == 'DEFAULT_OPT':
+            self._bids_timeout = self._mode_default_opt_params['bids_timeout']
+        else:
+            self._bids_timeout = 900
+
         # local device_ids
         self._us_local_opt_ap = {}
         self._us_local_bid_ed = {}
         self._local_bid_ed = {}
-        
+
         # ds device ids
         #   opt_ap --> act_pwr@opt_pp, bid_ed --> bid_energy_demand@bid_pp
         self._us_ds_opt_ap = {}
         self._us_ds_bid_ed = {}
         self._ds_bid_ed = {}
-        
+
         self._device_id = None
         self._ip_addr = None
         self._discovery_address = None
-        
+
         self._vb_vip_identity = self.config.get(
             'vb_vip_identity',
             'iiit.volttronbridge'
@@ -166,21 +178,14 @@ class PriceController(Agent):
             'energyDemand_topic',
             'building/energydemand'
             )
-        
-        self._pca_state = self.config.get('pca_state', 'ONLINE')
-        self._pca_mode = self.config.get('pca_mode', 'PASS_ON_PP')
-        self._topic_extrn_pp = self.config.get(
-            'extrn_optimize_pp_topic',
-            'pca/pricepoint'
-            )
         return
 
     @Core.receiver('onstart')
     def startup(self, sender, **kwargs):
         _log.info('Starting PriceController...')
 
-        # retrive self._device_id, self._ip_addr, self._discovery_address from the bridge
-        # retrive_details_from_vb is a blocking call
+        # retrive self._device_id, self._ip_addr, self._discovery_address
+        # from the bridge. this fn is a blocking call
         retrive_details_from_vb(self, 5)
 
         # register rpc routes with MASTER_WEB
@@ -190,9 +195,9 @@ class PriceController(Agent):
         self._us_senders_list = ['iiit.volttronbridge', 'iiit.pricepoint']
         self._ds_senders_list = ['iiit.volttronbridge']
 
-        # TODO: check if there is a need to retrive these details at a regular interval
-        #       currently the details are retrived on a new ed msg
-        #       i.e, on_ds_ed() self._topic_energy_demand_ds
+        # TODO: check if there is a need to retrive these details at a 
+        # regular interval. currently the details are retrived on a new ed msg
+        # i.e, on_ds_ed() self._topic_energy_demand_ds
         self._local_ed_agents = []
         self._local_device_ids = []
         self._ds_device_ids = []
@@ -278,12 +283,12 @@ class PriceController(Agent):
             'unregister_all_agent_routes'
             ).get(timeout=10)
         return
-        
+
     @Core.receiver('onfinish')
     def onfinish(self, sender, **kwargs):
         _log.debug('onfinish()')
         return
-        
+
     @RPC.export
     def rpc_from_net(self, header, message):
         result = False
@@ -335,7 +340,7 @@ class PriceController(Agent):
             if result
             else result
             )
-        
+
     def _pca_state(self, rpcdata_id, message):
         state = jsonrpc.JsonRpcData.parse(message).params['state']
         if state not in [
@@ -600,6 +605,13 @@ class PriceController(Agent):
         old_ted = []
         target = 0
 
+        alpha = self._mode_default_opt_params['alpha']
+        gamma = self._mode_default_opt_params['gamma']
+        epsilon = self._mode_default_opt_params['epsilon']
+        max_iters = self._mode_default_opt_params['max_iterations']
+        bids_timeout = self._mode_default_opt_params['bids_timeout']
+        wt_factors = self._mode_default_opt_params['weight_factors']
+
         self._target_acheived = False
         new_pricepoint = self._some_cost_fn(old_pricepoint, old_ted, target)
 
@@ -666,8 +678,9 @@ class PriceController(Agent):
 
     def _us_bids_timeout(self):
         if self._bids_timeout == 0: return False
+        s_now = datetime.datetime.utcnow().isoformat(' ') + 'Z'
+        now = dateutil.parser.parse(s_now)
         ts  = dateutil.parser.parse(self.us_bid_pp_msg.get_ts())
-        now = dateutil.parser.parse(datetime.datetime.utcnow().isoformat(' ') + 'Z')
         return (True
             if (now - ts).total_seconds() > self._bids_timeout
             else False
@@ -676,7 +689,10 @@ class PriceController(Agent):
     def _rcvd_all_us_bid_ed_lc(self, vb_local_device_ids):
         # may be some devices may have disconnected
         #      i.e., devices_count >= len(vb_devices_count)
-        return (True if len(self._us_local_bid_ed) >= len(vb_local_device_ids) else False)
+        return (True
+            if len(self._us_local_bid_ed) >= len(vb_local_device_ids)
+            else False
+            )
 
     def _rcvd_all_us_bid_ed_ds(self, vb_ds_device_ids):
         # may be some devices may have disconnected
@@ -919,11 +935,11 @@ class PriceController(Agent):
         # nothing to do, wait for new bid pp from us
         if self._published_us_bid_ted: return
 
-        if self._pca_state in
+        if (self._pca_state in
             [
                 'STANDALONE',
                 'STANDBY'
-            ]:
+            ]):
             return
 
         if (
@@ -955,7 +971,7 @@ class PriceController(Agent):
         if (not (rcvd_all_lc and rcvd_all_ds)):
             price_id = self.us_bid_pp_msg.get_price_id()
             if not us_bids_timeout:
-                retry_time = self._period_process_loop)
+                retry_time = self._period_process_loop
                 _log.debug('not all bids received and not yet timeout'
                     + ', bid price_id: {}!!!'.format(price_id)
                     + ' rcvd all us bid ed lc: {}'.format(rcvd_all_lc)
