@@ -327,20 +327,14 @@ class PriceController(Agent):
                     'Invalid method {}'.format(rpcdata.method)
                     )
         except KeyError as ke:
-            # print(ke)
-            return jsonrpc.json_error(
-                rpcdata.id,
-                INVALID_PARAMS,
-                'Invalid params {}'.format(rpcdata.params)
-                )
+            msg = 'Invalid params {}'.format(rpcdata.params)
+            error = jsonrpc.json_error(rpcdata.id, INVALID_PARAMS, msg)
+            return error
         except Exception as e:
-            # print(e)
-            return jsonrpc.json_error(rpcdata.id, UNHANDLED_EXCEPTION, e)
-
-        return (jsonrpc.json_result(rpcdata.id, result)
-            if result
-            else result
-            )
+            msg = 'Oops!!! Unhandled exception {}'.format(e.message)
+            error = jsonrpc.json_error(rpcdata.id, UNHANDLED_EXCEPTION, msg)
+            return error
+        return (jsonrpc.json_result(rpcdata.id, result) if result else result)
 
     def _pca_state(self, rpcdata_id, message):
         state = jsonrpc.JsonRpcData.parse(message).params['state']
