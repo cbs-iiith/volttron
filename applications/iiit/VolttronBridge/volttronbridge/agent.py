@@ -124,7 +124,10 @@ class VolttronBridge(Agent):
         self._this_ip_addr = self.config.get('ip_addr', '192.168.1.51')
         self._this_port = int(self.config.get('port', 8082))
 
-        self._period_process_pp = int(self.config.get('period_process_pp', 10))
+        self._period_process_pp = int(
+            self.config.get('period_process_pp', 10))
+        self._period_process_ed = int(
+            self.config.get('period_process_ed', 10))
 
         # register to keep track of local agents
         # posting active power or energy demand
@@ -194,24 +197,31 @@ class VolttronBridge(Agent):
 
         # subscribe to energy demand so that it can be posted to upstream
         if self._bridge_host != 'LEVEL_HEAD':
-            _log.debug('subscribing to _topic_energy_demand:'
-                        + ' {}'.format(self._topic_energy_demand))
-            self.vip.pubsub.subscribe('pubsub'
-                                        , self._topic_energy_demand
-                                        , self.on_new_ed
-                                        )
+            _log.debug(
+                'subscribing to _topic_energy_demand:'
+                + ' {}'.format(self._topic_energy_demand)
+                )
+            self.vip.pubsub.subscribe(
+                'pubsub',
+                self._topic_energy_demand,
+                self.on_new_ed
+                )
 
         # register to upstream
         if self._bridge_host != 'LEVEL_HEAD':
-            url_root = 'http://{}:{}/bridge'.format(self._us_ip_addr
-                                                    , self._us_port)
+            url_root = 'http://{}:{}/bridge'.format(
+                self._us_ip_addr,
+                self._us_port
+                )
             _log.debug('registering with upstream: ' + url_root)
-            args = {'discovery_address': self._discovery_address
-                    , 'device_id': self._device_id
-                    }
-            self._usConnected = do_rpc(self._agent_id, url_root, 'dsbridge'
-                                                            , args
-                                                            , 'POST')
+            args = {
+                'discovery_address': self._discovery_address,
+                'device_id': self._device_id
+                }
+            self._usConnected = do_rpc(self._agent_id, url_root, 'dsbridge',
+                args,
+                'POST'
+                )
         # keep track of us opt_pp_id & bid_pp_id
         if self._bridge_host != 'LEVEL_HEAD':
             self.us_opt_pp_id = randint(0, 99999999)
@@ -256,9 +266,10 @@ class VolttronBridge(Agent):
                     args = {'discovery_address': self._discovery_address
                             , 'device_id': self._device_id
                             }
-                    result = do_rpc(self._agent_id, url_root, 'dsbridge'
-                                                            , args
-                                                            , 'DELETE')
+                    result = do_rpc(self._agent_id, url_root, 'dsbridge',
+                        args,
+                        'DELETE'
+                        )
                 except Exception as e:
                     _log.exception('Failed to unregister with upstream'
                                     + ', message: {}'.format(e.message))
@@ -446,10 +457,7 @@ class VolttronBridge(Agent):
             '''
         # initiate ds post
         # schedule the task
-        nxt_schdl = (datetime.datetime.now()
-                        + datetime.timedelta(milliseconds=10))
-        self._post_ds_new_pp_event = self.core.schedule(
-            nxt_schdl, self.post_ds_new_pp)
+        self._schdl_post_ds_new_pp(10)
         return
 
     # energy demand on local bus published, post it to upstream bridge
@@ -492,10 +500,7 @@ class VolttronBridge(Agent):
         self._all_us_posts_success = False
 
         # schedule the task
-        nxt_schdl = (datetime.datetime.now()
-                        + datetime.timedelta(milliseconds=10))
-        self._post_us_new_ed_event = self.core.schedule(
-            nxt_schdl, self.post_us_new_ed)
+        self._schdl_post_us_new_ed(10)
         return
 
     # perodically keeps trying to post ed to us
@@ -515,17 +520,23 @@ class VolttronBridge(Agent):
         _log.debug('check us connection...')
         if not self._usConnected:
             _log.debug('not connected, Trying to register once...')
-            args = {'discovery_address': self._discovery_address
-                    , 'device_id': self._device_id
-                    }
-            self._usConnected = do_rpc(self._agent_id, url_root, 'dsbridge'
-                                                            , args
-                                                            , 'POST')
+            args = {
+                'discovery_address': self._discovery_address,
+                'device_id': self._device_id
+                }
+            self._usConnected = do_rpc(self._agent_id, url_root, 'dsbridge',
+                args,
+                'POST'
+                )
             if not self._usConnected:
-                _log.debug('Is us connected?'
-                            + ' do_rpc result: {}'.format(self._usConnected)
-                            + ', Failed to register'
-                            + ', may be upstream bridge is not running!!!')
+                _log.debug(
+                    'Is us connected?'
+                    + ' do_rpc result: {}'.format(self._usConnected)
+                    + ', Failed to register'
+                    + ', may be upstream bridge is not running!!!'
+                    )
+                self._all_us_posts_success  = False
+                self._schdl_post_us_new_ed(self._period_process_ed * 1000)
                 return
         _log.debug('_usConnected: {}'.format(self._usConnected))
 
@@ -539,9 +550,10 @@ class VolttronBridge(Agent):
 
             _log.debug('posting energy demand to upstream...')
             args = pp_msg.get_json_params()
-            success = do_rpc(self._agent_id, url_root, 'energy'
-                                                    , args
-                                                    , 'POST')
+            success = do_rpc(self._agent_id, url_root, 'energy',
+                args,
+                'POST'
+                )
             # _log.debug('success: ' + str(success))
             if success:
                 #remove msg from the queue
@@ -569,6 +581,11 @@ class VolttronBridge(Agent):
                     self._usConnected = False
                     self._us_retrycount = 0
                     break
+
+        if not self._all_us_posts_success:
+            #schedule the next run
+            self._schdl_post_us_new_ed(self._period_process_ed * 1000)
+
         _log.debug('post_us_new_ed()...done')
         return
 
@@ -634,6 +651,10 @@ class VolttronBridge(Agent):
             # continue with other messages
             continue
 
+        if not self._all_us_posts_success:
+            #schedule the next run
+            self._schdl_post_ds_new_pp(self._period_process_pp * 1000)
+
         _log.debug('post_ds_new_pp()...done')
         return
 
@@ -642,9 +663,10 @@ class VolttronBridge(Agent):
         discovery_address = pp_msg.get_dst_ip()
         url_root = 'http://' + discovery_address + '/bridge'
         args = pp_msg.get_json_params()
-        result = do_rpc(self._agent_id, url_root, 'pricepoint'
-                                                    , args
-                                                    , 'POST')
+        result = do_rpc(self._agent_id, url_root, 'pricepoint',
+            args,
+            'POST'
+            )
 
         if not success:
             index = self._ds_register.index(discovery_address)
@@ -678,11 +700,10 @@ class VolttronBridge(Agent):
 
         # use gevent for concurrent do rpc requests for posting pp msg to the
         # ds devices
-        jobs = [gevent.spawn(do_rpc, self._agent_id, url_root, 'pricepoint'
-                                , pp_msg.get_json_params()
-                                , 'POST'
-                                ) for url_root in url_roots
-                                ]
+        jobs = [gevent.spawn(do_rpc, self._agent_id, url_root, 'pricepoint',
+            pp_msg.get_json_params(),
+            'POST') for url_root in url_roots
+            ]
         gevent.joinall(jobs, timeout=5)
 
         for idx, job in enumerate(jobs):
@@ -925,6 +946,35 @@ class VolttronBridge(Agent):
         return (True if discovery_addr in self._ds_register
                      and device_id == self._ds_device_ids[index]
                     else False)
+
+    def _schdl_post_ds_new_pp(self, delta_in_ms):
+        try:
+            nxt_schdl = (datetime.datetime.now()
+                + datetime.timedelta(milliseconds=delta_in_ms))
+            self._post_ds_new_pp_event = self.core.schedule(
+                nxt_schdl, self.post_ds_new_pp)
+        except Exception as e:
+            _log.warning(
+                'unhandled exception in _schdl_post_ds_new_pp'
+                + ', message: '.format(e.message)
+                )
+            pass
+        return
+
+    def _schdl_post_us_new_ed(self, delta_in_ms):
+        try:
+            nxt_schdl = (datetime.datetime.now()
+                + datetime.timedelta(milliseconds=delta_in_ms))
+            self._post_us_new_ed_event = self.core.schedule(
+                nxt_schdl, self.post_us_new_ed)
+        except Exception as e:
+            _log.warning(
+                'unhandled exception in _schdl_post_us_new_ed'
+                + ', message: '.format(e.message)
+                )
+            pass
+        return
+
 
 
 def main(argv=sys.argv):
