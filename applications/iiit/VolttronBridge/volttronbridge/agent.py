@@ -173,14 +173,6 @@ class VolttronBridge(Agent):
         # price point
         self._valid_senders_list_pp = ['iiit.pricecontroller']
 
-        # TODO: relook -- impl queues?
-        # can expect multiple pp_msgs on the bus before previous successfully
-        # posted to ds
-        self.tmp_bustopic_pp_msg = get_default_pp_msg(self._discovery_address
-                                                    , self._device_id)
-        self.tmp_bustopic_ed_msg = get_default_ed_msg(self._discovery_address
-                                                    , self._device_id)
-
         self._all_ds_posts_success = True
         self._all_us_posts_success = True
         self._us_retrycount = 0
@@ -441,7 +433,6 @@ class VolttronBridge(Agent):
                         )
             self.local_bid_pp_id = pp_msg.get_price_id()
 
-        #self.tmp_bustopic_pp_msg = copy(pp_msg)
         self._us_pp_messages.append(copy(pp_msg))
 
         # reset counters & flags
@@ -454,10 +445,6 @@ class VolttronBridge(Agent):
             It is blocking us do_rpc connection that in turn is timed out
             '''
         # initiate ds post
-        #_log.debug('posting to ds...')
-        #self.tmp_bustopic_pp_msg = copy(pp_msg)
-        #self.post_ds_new_pp()
-        #_log.debug('done.')
         # schedule the task
         nxt_schdl = (datetime.datetime.now()
                         + datetime.timedelta(milliseconds=10))
@@ -504,12 +491,6 @@ class VolttronBridge(Agent):
         #this flag activates post_us_new_ed()
         self._all_us_posts_success = False
 
-        # initiate us post
-        #_log.debug('posting to us...')
-        #self.tmp_bustopic_ed_msg = copy(ed_msg)
-        # will run once, if failed perodically retries
-        #self.post_us_new_ed()
-        #_log.debug('done.')
         # schedule the task
         nxt_schdl = (datetime.datetime.now()
                         + datetime.timedelta(milliseconds=10))
