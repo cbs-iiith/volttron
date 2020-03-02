@@ -91,11 +91,12 @@ def post_random_price(isoptimal = True, duration = 3600, ttl = 10):
     no_digit = 2
     pp = math.floor(random() * 10**no_digit) / 10**no_digit
     pp = 0.94 if pp > 0.94 else pp
+    price_id = randint(0, 99999999)
 
     if isoptimal:
-        print get_timestamp() + ' OPT PricePoint: ' + str(pp) + ',',
+        print get_timestamp() + ' OPT PricePoint: ' + str(pp) + ', price_id: ' + str(price_id),
     else:
-        print get_timestamp() + ' BID PricePoint: ' + str(pp) + ',',
+        print get_timestamp() + ' BID PricePoint: ' + str(pp) + ', price_id: ' + str(price_id),
 
     now = datetime.datetime.utcnow().isoformat(' ') + 'Z'
     try:
@@ -104,7 +105,7 @@ def post_random_price(isoptimal = True, duration = 3600, ttl = 10):
                                     , 'value': pp
                                     , 'value_data_type': 'float'
                                     , 'units': 'cents'
-                                    , 'price_id': randint(0, 99999999)
+                                    , 'price_id': price_id
                                     , 'isoptimal': isoptimal
                                     , 'src_ip': None
                                     , 'src_device_id': None
