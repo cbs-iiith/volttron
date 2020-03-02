@@ -83,6 +83,13 @@ class MessageType(IntEnum):
     pass
     
     
+class EnergyCategory(IntEnum):
+    thermal = 0
+    lighting = 1
+    plug_load = 2
+    pass
+
+
 class ISPACE_Msg:
     ''' iSPACE Message base class
     '''
