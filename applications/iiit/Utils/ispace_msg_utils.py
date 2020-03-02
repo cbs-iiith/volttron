@@ -196,6 +196,7 @@ def check_msg_type(message, msg_type):
         else rpcdata.params
         )
     try:
+        #if 'msg_type' in data.keys() and
         if data['msg_type'] == msg_type:
             return True
     except Exception:
