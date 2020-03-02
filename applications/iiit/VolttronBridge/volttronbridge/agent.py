@@ -643,8 +643,6 @@ class VolttronBridge(Agent):
                     for index, retry_count in enumerate(self._ds_retrycount):
                         if retry_count == -1:
                             self._ds_retrycount[index] = 0
-            else:
-                self._all_ds_posts_success  = False
 
             self._clean_ds_registry()
 
