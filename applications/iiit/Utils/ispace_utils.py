@@ -241,7 +241,7 @@ def mround(num, multipleOf):
     # _log.debug('mround()')
     return (math.floor((num + multipleOf / 2) / multipleOf) * multipleOf)
 
-# refer to https://bit.ly/3beuacI 
+# refer to https://bit.ly/3beuacI
 # What is the best way to compare floats for almost-equality in Python?
 # comparing floats is mess
 def isclose(a, b, rel_tol=1e-09, abs_tol=0.0):
@@ -257,7 +257,7 @@ def calc_energy_wh(pwr_wh, duration_sec):
     return ((pwr_wh * duration_sec) / 3600)
 
 # TODO: do_rpc is synchrous, using requests which is a blocking operation
-# need to convert to async operations, maybe can use gevent 
+# need to convert to async operations, maybe can use gevent
 # (volttron inherently supports gevents)
 def do_rpc(id, url_root, method, params=None, request_method='POST'):
     # global authentication

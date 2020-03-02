@@ -64,14 +64,15 @@ def mround(num, multipleOf):
     # _log.debug('mround()')
     return (math.floor((num + multipleOf / 2) / multipleOf) * multipleOf)
     
-# refer to https://bit.ly/3beuacI 
-# (stackoverflow What is the best way to compare floats for almost-equality in Python?)
+# refer to https://bit.ly/3beuacI
+# What is the best way to compare floats for almost-equality in Python?
 # comparing floats is mess
 def isclose(a, b, rel_tol=1e-09, abs_tol=0.0):
     # _log.debug('isclose()')
     return (abs(a-b) <= max(rel_tol * max(abs(a), abs(b)), abs_tol))
     
-# checking if a floating point value is “numerically zero” by checking if it is lower than epsilon
+# checking if a floating point value is 'numerically zero'
+# by checking if it is lower than epsilon
 EPSILON = 1e-04
     
     
@@ -93,7 +94,8 @@ class EnergyCategory(IntEnum):
 class ISPACE_Msg:
     ''' iSPACE Message base class
     '''
-    # TODO: enchancement - need to add a msg uuid, also convert price_id to use uuid instead for radint
+    # TODO: enchancement - need to add a msg uuid,
+    # also convert price_id to use uuid instead for radint
     msg_type = None
     one_to_one = None
     isoptimal = None
@@ -136,7 +138,7 @@ class ISPACE_Msg:
         if ttl is not None: self.set_ttl(ttl)
         if ts is not None: self.set_ts(ts)
         if tz is not None: self.set_tz(tz)
-        return
+        pass
         
     ''' str overload to return class attributes as json params
     '''
@@ -547,83 +549,106 @@ class ISPACE_Msg:
     
     
 class ISPACE_Msg_PricePoint(ISPACE_Msg):
-    def __init__(self):
-        super().__init__(self, MessageType.price_point, False, True)
-        return
+    def __init__(self,
+        msg_type, one_to_one = False, isoptimal = True,
+        value = None, value_data_type = None, units = None,
+        price_id = None,
+        src_ip = None, src_device_id = None,
+        dst_ip = None, dst_device_id = None,
+        duration = None, ttl = None, ts = None, tz = None
+        ):
+        ISPACE_Msg.__init__(self,
+            MessageType.price_point, one_to_one, isoptimal,
+            value, value_data_type, units,
+            price_id,
+            src_ip, src_device_id,
+            dst_ip, dst_device_id,
+            duration, ttl, ts, tz
+            )
+        pass
     pass
     
     
 class ISPACE_Msg_OptPricePoint(ISPACE_Msg_PricePoint):
-    def __init__(self, msg_type, one_to_one = None, isoptimal = True
-                    , value = None, value_data_type = None, units = None
-                    , price_id = None
-                    , src_ip = None, src_device_id = None
-                    , dst_ip = None, dst_device_id = None
-                    , duration = None, ttl = None, ts = None, tz = None
-                    ):
-        super().__init__(self, MessageType.active_power, one_to_one, isoptimal
-                        , value, value_data_type, units
-                        , price_id
-                        , src_ip, src_device_id
-                        , dst_ip, dst_device_id
-                        , duration, ttl, ts, tz
-                        )
-        if energy_category is not None: self.set_energy_category(energy_category)
-        return
+    def __init__(self,
+        msg_type, one_to_one = False, isoptimal = True,
+        value = None, value_data_type = None, units = None,
+        price_id = None,
+        src_ip = None, src_device_id = None,
+        dst_ip = None, dst_device_id = None,
+        duration = None, ttl = None, ts = None, tz = None
+        ):
+        ISPACE_Msg_PricePoint.__init__(self,
+            MessageType.active_power, one_to_one, isoptimal,
+            value, value_data_type, units,
+            price_id,
+            src_ip, src_device_id,
+            dst_ip, dst_device_id,
+            duration, ttl, ts, tz
+            )
+        pass
     pass
     
     
 class ISPACE_Msg_BidPricePoint(ISPACE_Msg_PricePoint):
-    def __init__(self, msg_type, one_to_one = None, isoptimal = False
-                    , value = None, value_data_type = None, units = None
-                    , price_id = None
-                    , src_ip = None, src_device_id = None
-                    , dst_ip = None, dst_device_id = None
-                    , duration = None, ttl = None, ts = None, tz = None
-                    ):
-        super().__init__(self, MessageType.active_power, one_to_one, isoptimal
-                        , value, value_data_type, units
-                        , price_id
-                        , src_ip, src_device_id
-                        , dst_ip, dst_device_id
-                        , duration, ttl, ts, tz
-                        )
-        return
+    def __init__(self,
+        msg_type, one_to_one = False, isoptimal = False,
+        value = None, value_data_type = None, units = None,
+        price_id = None,
+        src_ip = None, src_device_id = None,
+        dst_ip = None, dst_device_id = None,
+        duration = None, ttl = None, ts = None, tz = None
+        ):
+        ISPACE_Msg_PricePoint.__init__(self,
+            MessageType.active_power, one_to_one, isoptimal,
+            value, value_data_type, units,
+            price_id,
+            src_ip, src_device_id,
+            dst_ip, dst_device_id,
+            duration, ttl, ts, tz
+            )
+        pass
     pass
     
     
 class ISPACE_Msg_ActivePower(ISPACE_Msg):
     energy_category = None
-    def __init__(self, msg_type, one_to_one = None, isoptimal = True
-                    , value = None, value_data_type = None, units = None
-                    , price_id = None
-                    , src_ip = None, src_device_id = None
-                    , dst_ip = None, dst_device_id = None
-                    , duration = None, ttl = None, ts = None, tz = None
-                    , energy_category = None
-                    ):
-        super().__init__(self, MessageType.active_power, one_to_one, isoptimal
-                        , value, value_data_type, units
-                        , price_id
-                        , src_ip, src_device_id
-                        , dst_ip, dst_device_id
-                        , duration, ttl, ts, tz
-                        )
+    def __init__(self,
+        msg_type=MessageType.active_power,
+        one_to_one = False, isoptimal = True,
+        value = None, value_data_type = None, units = None,
+        price_id = None,
+        src_ip = None, src_device_id = None,
+        dst_ip = None, dst_device_id = None,
+        duration = None, ttl = None, ts = None, tz = None,
+        energy_category = None
+        ):
+        ISPACE_Msg.__init__(self,
+            msg_type, one_to_one, isoptimal,
+            value, value_data_type, units,
+            price_id,
+            src_ip, src_device_id,
+            dst_ip, dst_device_id,
+            duration, ttl, ts, tz
+            )
         if energy_category is not None: self.set_energy_category(energy_category)
-        return
+        pass
         
     def __copy__(self):
-        newcopy = super().__copy__(self)
+        #newcopy = super(ISPACE_Msg_ActivePower, self).__copy__(self)
+        newcopy = ISPACE_Msg.__copy__(self)
         newcopy.energy_category = self.energy_category
         return newcopy
         
     def _get_params_dict(self):
         self._params['energy_category'] = self.energy_category
-        return super()._get_params_dict(self)
+        #return super(ISPACE_Msg_ActivePower, self)._get_params_dict(self)
+        return ISPACE_Msg._get_params_dict(self)
     
     def _cp_attrib(self, attrib, value):
         if attrib == 'energy_category': self.set_energy_category(value)
-        else: super()._cp_attrib(self, attrib, value)
+        #else: super(ISPACE_Msg_ActivePower, self)._cp_attrib(self, attrib, value)
+        else: ISPACE_Msg._cp_attrib(self, attrib, value)
         return
         
     def _is_attrib_null(self, attrib):
@@ -631,7 +656,8 @@ class ISPACE_Msg_ActivePower(ISPACE_Msg):
         if attrib == 'energy_category' and self.energy_category is None: 
             is_null = True
         else:
-            is_null = super()._is_attrib_null(self, attrib)
+            #is_null = super(ISPACE_Msg_ActivePower, self)._is_attrib_null(self, attrib)
+            is_null = ISPACE_Msg._is_attrib_null(self, attrib)
         return is_null
         
     def get_energy_category(self):
@@ -646,16 +672,50 @@ class ISPACE_Msg_ActivePower(ISPACE_Msg):
     
     
 class ISPACE_Msg_Energy(ISPACE_Msg_ActivePower):
-    def __init__(self):
-        super().__init__(self, MessageType.energy_demand, False, False)
-        return
+    def __init__(self,
+        msg_type=MessageType.energy_demand,
+        one_to_one = False, isoptimal = False,
+        value = None, value_data_type = None, units = None,
+        price_id = None,
+        src_ip = None, src_device_id = None,
+        dst_ip = None, dst_device_id = None,
+        duration = None, ttl = None, ts = None, tz = None,
+        energy_category = None
+        ):
+        ISPACE_Msg_ActivePower.__init__(self,
+            msg_type, one_to_one, isoptimal,
+            value, value_data_type, units,
+            price_id,
+            src_ip, src_device_id,
+            dst_ip, dst_device_id,
+            duration, ttl, ts, tz,
+            energy_category
+            )
+        pass
     pass
     
     
 class ISPACE_Msg_Budget(ISPACE_Msg_Energy):
-    def __init__(self):
-        super().__init__(self, MessageType.budget)
-        return
+    def __init__(self,
+        msg_type=MessageType.energy_demand,
+        one_to_one = False, isoptimal = False,
+        value = None, value_data_type = None, units = None,
+        price_id = None,
+        src_ip = None, src_device_id = None,
+        dst_ip = None, dst_device_id = None,
+        duration = None, ttl = None, ts = None, tz = None,
+        energy_category = None
+        ):
+        ISPACE_Msg_Energy.__init__(self,
+            msg_type, one_to_one, isoptimal,
+            value, value_data_type, units,
+            price_id,
+            src_ip, src_device_id,
+            dst_ip, dst_device_id,
+            duration, ttl, ts, tz,
+            energy_category
+            )
+        pass
     pass
     
     
