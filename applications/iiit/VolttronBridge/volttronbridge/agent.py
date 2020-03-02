@@ -663,7 +663,7 @@ class VolttronBridge(Agent):
         discovery_address = pp_msg.get_dst_ip()
         url_root = 'http://' + discovery_address + '/bridge'
         args = pp_msg.get_json_params()
-        result = do_rpc(self._agent_id, url_root, 'pricepoint',
+        success = do_rpc(self._agent_id, url_root, 'pricepoint',
             args,
             'POST'
             )
@@ -678,7 +678,7 @@ class VolttronBridge(Agent):
                         + ' {} sec!!!'.format(self._period_process_pp)
                         + ', result: {}'.format(success))
 
-        self._all_ds_posts_success  = result
+        self._all_ds_posts_success  = success
         _log.debug('_ds_rpc_1_to_1()...done')
         return
 
@@ -704,7 +704,7 @@ class VolttronBridge(Agent):
             pp_msg.get_json_params(),
             'POST') for url_root in url_roots
             ]
-        gevent.joinall(jobs, timeout=5)
+        gevent.joinall(jobs, timeout=10)
 
         for idx, job in enumerate(jobs):
             index = main_idx[idx]
