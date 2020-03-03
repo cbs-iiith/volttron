@@ -106,7 +106,7 @@ def get_default_pp_msg(discovery_address, device_id):
 def get_default_ap_msg(
     discovery_address,
     device_id,
-    category=EnergyCategory.mixed
+    category = EnergyCategory.mixed
     ):
     return ISPACE_Msg_ActivePower(
         MessageType.active_power, False, True,
@@ -122,7 +122,7 @@ def get_default_ap_msg(
 def get_default_ed_msg(
     discovery_address,
     device_id,
-    category=EnergyCategory.mixed
+    category = EnergyCategory.mixed
     ):
     return ISPACE_Msg_Energy(
         MessageType.energy_demand, False, True,
