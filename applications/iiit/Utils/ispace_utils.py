@@ -484,17 +484,17 @@ class Runningstats():
         self.M1 += delta_n;
 
         self.M4 += (
-            term1 * delta_n2 * (self.n * self.n - 3 * self.n + 3) + 
-            6 * delta_n2 * self.M2 - 
-            4 * delta_n * self.M3
+            (term1 * delta_n2 * ((self.n * self.n) - (3 * self.n) + 3)) +
+            (6 * delta_n2 * self.M2) -
+            (4 * delta_n * self.M3)
             )
 
-        self.M3 += term1 * delta_n * (n - 2) - 3 * delta_n * self.M2
+        self.M3 += (term1 * delta_n * (self.n - 2)) - (3 * delta_n * self.M2)
 
         self.M2 += term1
 
         #Exponential weighted moving average
-        self.exp_avg = self.exp_avg + (x - self.exp_avg) / min(self.n, FACTOR)
+        self.exp_avg += (x - self.exp_avg) / min(self.n, self.factor)
 
         return
 
