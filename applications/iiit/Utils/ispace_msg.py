@@ -666,7 +666,7 @@ class ISPACE_Msg_ActivePower(ISPACE_Msg):
         
     # setters
     def set_energy_category(self, energy_category):
-        self.energy_category = energy_category
+        self.energy_category = int(energy_category)
         
         
     pass

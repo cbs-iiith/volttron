@@ -713,7 +713,7 @@ class PriceController(Agent):
             else False
             )
 
-    def on_ds_ed(self, peer, sender, bus,  topic, headers, message):
+    def on_ds_ed(self, peer, sender, bus, topic, headers, message):
         _log.debug('on_ds_ed()')
         # check if this agent is not diabled
         if self._pca_standby:
