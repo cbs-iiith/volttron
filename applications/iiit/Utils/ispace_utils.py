@@ -122,6 +122,10 @@ def register_rpc_route(self, name, handle, sleep_time=10):
             if success is None:
                 _log.info('done.')
                 break
+        except gevent.Timeout:
+            _log.warning('maybe the Volttron instance is not yet ready!!!'
+                + ' message: {}'.format(e.message)
+            pass
         except Exception as e:
             # print(e)
             _log.warning('maybe the Volttron instance is not yet ready!!!'
