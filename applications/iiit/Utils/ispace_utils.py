@@ -458,7 +458,7 @@ class Runningstats():
     factor = 120
 
     def __init__(self, factor = 120):
-        clear()
+        self.clear()
         self.factor = factor
         pass
 
@@ -495,6 +495,7 @@ class Runningstats():
 
         #Exponential weighted moving average
         self.exp_avg = self.exp_avg + (x - self.exp_avg) / min(self.n, FACTOR)
+
         return
 
     def num_data_values(self):
@@ -507,7 +508,7 @@ class Runningstats():
         return (self.M2/(self.n - 1))
 
     def std_dev(self):
-        return (math.sqrt(variance))
+        return (math.sqrt(self.variance()))
 
     def skewness(self):
         return (math.sqrt(self.n) * self.M3 / pow(self.M2, 1.5))
