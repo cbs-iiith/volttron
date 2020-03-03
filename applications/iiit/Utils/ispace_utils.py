@@ -466,7 +466,7 @@ class Runningstats():
         self.n = 0
         self.M1 = self.M2 = self.M3 = self.M4 = 0.0
 
-    def push(x = 0.0):
+    def push(self, x = 0.0):
         delta = 0.0
         delta_n = 0.0
         delta_n2 = 0.0
