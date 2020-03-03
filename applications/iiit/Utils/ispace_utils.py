@@ -424,3 +424,97 @@ def do_rpc(id, url_root, method, params=None, request_method='POST'):
         except:
             return response
 '''
+
+
+class Runningstats():
+    '''
+    "https://en.wikipedia.org/wiki/Algorithms_for_calculating_variance#Welford's
+    _online_algorithm"
+    https://www.johndcook.com/blog/standard_deviation/
+    https://www.johndcook.com/blog/skewness_kurtosis/
+    The code is an extension of the method of Knuth and Welford for computing
+    standard deviation in one pass through the data. It computes skewness and
+    kurtosis as well with a similar interface.
+    
+    mean()
+    Variance()
+    std_dev()
+    skewness()
+    kurtosis()
+    
+    "https://stackoverflow.com/questions/12636613/how-to-calculate-moving-
+    average-without-keeping-the-count-and-data-total"
+    
+    '''
+    n = 0
+    M1 = M2 = M3 = M4 = 0.0
+
+    #Exponential weighted moving average
+    exp_avg = 0.0
+    # factor is a constant that affects how quickly the average "catches up" to
+    # the latest trend. Smaller the number the faster. (At 1 it's no longer an
+    # average and just becomes the latest value.)
+    # assuming 2 reading per minute, 1 hour = 120 reading
+    factor = 120
+
+    def __init__(self, factor = 120):
+        clear()
+        self.factor = factor
+        pass
+
+    def clear(self):
+        self.n = 0
+        self.M1 = self.M2 = self.M3 = self.M4 = 0.0
+
+    def push(x = 0.0):
+        delta = 0.0
+        delta_n = 0.0
+        delta_n2 = 0.0
+        term1 = 0.0
+
+        n1 = self.n
+
+        self.n += 1
+
+        delta = x - self.M1
+        delta_n = delta / self.n
+        delta_n2 = delta_n * delta_n
+        term1 = delta * delta_n * n1
+
+        self.M1 += delta_n;
+
+        self.M4 += (
+            term1 * delta_n2 * (self.n * self.n - 3 * self.n + 3) + 
+            6 * delta_n2 * self.M2 - 
+            4 * delta_n * self.M3
+            )
+
+        self.M3 += term1 * delta_n * (n - 2) - 3 * delta_n * self.M2
+
+        self.M2 += term1
+
+        #Exponential weighted moving average
+        self.exp_avg = self.exp_avg + (x - self.exp_avg) / min(self.n, FACTOR)
+        return
+
+    def num_data_values(self):
+        return self.n
+
+    def mean(self):
+        return self.M1
+
+    def variance(self):
+        return (self.M2/(self.n - 1))
+
+    def std_dev(self):
+        return (math.sqrt(variance))
+
+    def skewness(self):
+        return (math.sqrt(self.n) * self.M3 / pow(self.M2, 1.5))
+
+    def kurtosis(self):
+        return (self.n * self.M4 / (self.M2 * self.M2) - 3.0)
+        
+    def exp_wt_mv_avg(self):
+        return self.exp_avg
+
