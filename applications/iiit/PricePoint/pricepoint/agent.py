@@ -39,7 +39,7 @@ from copy import copy
 
 
 from ispace_utils import publish_to_bus, retrive_details_from_vb, register_rpc_route
-from ispace_msg import ISPACE_Msg, MessageType
+from ispace_msg import ISPACE_Msg, MessageType, EnergyCategory
 from ispace_msg_utils import parse_jsonrpc_msg, check_msg_type
 
 utils.setup_logging()

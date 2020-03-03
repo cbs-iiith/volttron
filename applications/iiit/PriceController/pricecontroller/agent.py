@@ -38,7 +38,7 @@ import gevent.event
 
 from ispace_utils import publish_to_bus, retrive_details_from_vb
 from ispace_utils import ping_vb_failed, register_rpc_route
-from ispace_msg import ISPACE_Msg, MessageType
+from ispace_msg import ISPACE_Msg, MessageType, EnergyCategory
 from ispace_msg_utils import parse_bustopic_msg, valid_bustopic_msg, tap_helper
 from ispace_msg_utils import get_default_pp_msg, check_msg_type, ted_helper
 
@@ -1090,7 +1090,8 @@ class PriceController(Agent):
             self._device_id,
             self._discovery_address,
             opt_tap,
-            self._period_read_data
+            self._period_read_data,
+            EnergyCategory.mixed
             )
 
         _log.debug(
@@ -1113,11 +1114,13 @@ class PriceController(Agent):
     def _publish_bid_ted(self, pp_msg, bid_ted):
         # already checked if all bids are received or timeout
         # create a MessageType.energy ISPACE_Msg
-        ted_msg = ted_helper(pp_msg,
+        ted_msg = ted_helper(
+            pp_msg,
             self._device_id,
             self._discovery_address,
             bid_ted,
-            self._period_read_data
+            self._period_read_data,
+            EnergyCategory.mixed
             )
 
         # compute total energy demand (ted)

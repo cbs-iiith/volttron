@@ -106,7 +106,7 @@ def get_default_pp_msg(discovery_address, device_id):
 def get_default_ap_msg(
     discovery_address,
     device_id,
-    category=EnergyCategory.thermal
+    category=EnergyCategory.mixed
     ):
     return ISPACE_Msg_ActivePower(
         MessageType.active_power, False, True,
@@ -122,7 +122,7 @@ def get_default_ap_msg(
 def get_default_ed_msg(
     discovery_address,
     device_id,
-    category=EnergyCategory.thermal
+    category=EnergyCategory.mixed
     ):
     return ISPACE_Msg_Energy(
         MessageType.energy_demand, False, True,
@@ -135,7 +135,14 @@ def get_default_ed_msg(
         )
 
 # create a MessageType.energy ISPACE_Msg
-def ted_helper(pp_msg, device_id, discovery_address, ted, new_ttl=60):
+def ted_helper(
+    pp_msg,
+    device_id,
+    discovery_address,
+    ted,
+    new_ttl=60,
+    category = EnergyCategory.mixed
+    ):
     # print(MessageType.energy_demand)
     msg_type = MessageType.energy_demand
     one_to_one = copy(pp_msg.get_one_to_one())
@@ -152,17 +159,25 @@ def ted_helper(pp_msg, device_id, discovery_address, ted, new_ttl=60):
     ttl = new_ttl
     ts = datetime.datetime.utcnow().isoformat(' ') + 'Z'
     tz = 'UTC'
-    return ISPACE_Msg(
+    return ISPACE_Msg_Energy(
         msg_type, one_to_one, isoptimal,
         value, value_data_type, units,
         price_id,
         src_ip, src_device_id,
         dst_ip, dst_device_id,
-        duration, ttl, ts, tz
+        duration, ttl, ts, tz,
+        category
         )
 
 # create a MessageType.active_power ISPACE_Msg
-def tap_helper(pp_msg, device_id, discovery_address, tap, new_ttl=60):
+def tap_helper(
+    pp_msg,
+    device_id,
+    discovery_address,
+    tap,
+    new_ttl=60,
+    category = EnergyCategory.mixed
+    ):
     # print(MessageType.active_power)
     msg_type = MessageType.active_power
     one_to_one = copy(pp_msg.get_one_to_one())
@@ -179,13 +194,14 @@ def tap_helper(pp_msg, device_id, discovery_address, tap, new_ttl=60):
     ttl = new_ttl
     ts = datetime.datetime.utcnow().isoformat(' ') + 'Z'
     tz = 'UTC'
-    return ISPACE_Msg(
+    return ISPACE_Msg_ActivePower(
         msg_type, one_to_one,
         isoptimal, value, value_data_type, units,
         price_id,
         src_ip, src_device_id,
         dst_ip, dst_device_id,
-        duration, ttl, ts, tz
+        duration, ttl, ts, tz,
+        category
         )
 
 def check_msg_type(message, msg_type):

@@ -40,7 +40,7 @@ import gevent.event
 #import grequests
 
 from ispace_utils import do_rpc, register_rpc_route, publish_to_bus
-from ispace_msg import ISPACE_Msg, MessageType
+from ispace_msg import ISPACE_Msg, MessageType, EnergyCategory
 from ispace_msg_utils import (
         parse_bustopic_msg, check_msg_type,
         parse_jsonrpc_msg, get_default_pp_msg,

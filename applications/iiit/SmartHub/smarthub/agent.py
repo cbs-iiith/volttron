@@ -45,7 +45,7 @@ from ispace_utils import isclose, get_task_schdl, cancel_task_schdl, publish_to_
 from ispace_utils import retrive_details_from_vb, register_with_bridge, register_rpc_route
 from ispace_utils import calc_energy_wh, calc_energy_kwh
 from ispace_utils import unregister_with_bridge
-from ispace_msg import ISPACE_Msg, MessageType
+from ispace_msg import ISPACE_Msg, MessageType, EnergyCategory
 from ispace_msg_utils import parse_bustopic_msg, check_msg_type, tap_helper, ted_helper
 from ispace_msg_utils import get_default_pp_msg, valid_bustopic_msg
 
@@ -1108,12 +1108,14 @@ class SmartHub(Agent):
         opt_tap = self._calc_total_act_pwr()
         
         # create a MessageType.active_power ISPACE_Msg
-        ap_msg = tap_helper(pp_msg
-                            , self._device_id
-                            , self._discovery_address
-                            , opt_tap
-                            , self._period_read_data
-                            )
+        ap_msg = tap_helper(
+            pp_msg,
+            self._device_id,
+            self._discovery_address,
+            opt_tap,
+            self._period_read_data,
+            EnergyCategory.mixed
+            )
         _log.debug('***** Total Active Power(TAP) opt'
                                     + ' for us opt pp_msg({})'.format(price_id)
                                     + ': {:0.4f}'.format(opt_tap))
@@ -1169,12 +1171,14 @@ class SmartHub(Agent):
         bid_ted = self._calc_total_energy_demand()
         
         # create a MessageType.energy ISPACE_Msg
-        ed_msg = ted_helper(pp_msg
-                            , self._device_id
-                            , self._discovery_address
-                            , bid_ted
-                            , self._period_read_data
-                            )
+        ed_msg = ted_helper(
+            pp_msg,
+            self._device_id,
+            self._discovery_address,
+            bid_ted,
+            self._period_read_data,
+            EnergyCategory.mixed
+            )
         _log.debug('***** Total Energy Demand(TED) bid'
                                     + ' for us bid pp_msg({})'.format(price_id)
                                     + ': {:0.4f}'.format(bid_ted))

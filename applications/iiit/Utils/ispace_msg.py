@@ -88,6 +88,7 @@ class EnergyCategory(IntEnum):
     thermal = 0
     lighting = 1
     plug_load = 2
+    mixed = 9
     pass
 
 
