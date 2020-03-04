@@ -90,6 +90,7 @@ def valid_bustopic_msg(
 
 # a default pricepoint message
 def get_default_pp_msg(discovery_address, device_id):
+    # type: (str, str) -> ISPACE_Msg
     return ISPACE_Msg(
         MessageType.price_point, False, True,
         0, 'float', '%',
