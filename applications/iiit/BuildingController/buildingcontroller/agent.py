@@ -236,7 +236,7 @@ class BuildingController(Agent):
         self._process_opt_pp(pp_msg)
         return
 
-    def _run_bms_test(self):
+    def _run_bms_test(self, pp_msg):
         _log.debug('Running: _runBMS Commu Test()...')
         self._test_new_pp(pp_msg, 0.10)
         time.sleep(1)
