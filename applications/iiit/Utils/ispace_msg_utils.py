@@ -47,7 +47,7 @@ def valid_bustopic_msg(
             + ' not in sender list: {}'.format(valid_senders_list)
             + ', do nothing!!!'
         )
-        return (False, pp_msg)
+        return False, pp_msg
 
     try:
         # _log.debug('message: {}'.format(message))
@@ -59,15 +59,17 @@ def valid_bustopic_msg(
         _log.exception(
             jsonrpc.json_error(
                 'NA',
-                INVALID_PARAMS,
-                'Invalid params {}'.format(rpcdata.params)
+                jsonrpc.INVALID_PARAMS,
+                'Invalid params, message: {}'.format(message)
             )
         )
-        return (False, pp_msg)
+        return False, pp_msg
     except Exception as e:
         _log.exception(e.message)
-        _log.exception(jsonrpc.json_error('NA', UNHANDLED_EXCEPTION, e))
-        return (False, pp_msg)
+        _log.exception(jsonrpc.json_error('NA',
+                                          jsonrpc.UNHANDLED_EXCEPTION,
+                                          e))
+        return False, pp_msg
 
     hint = (
         'Price Point'
@@ -82,8 +84,8 @@ def valid_bustopic_msg(
     # sanity measure like, valid fields, valid pp ids, ttl expiry, etc.,
     if not pp_msg.sanity_check_ok(hint, validate_fields, valid_price_ids):
         _log.warning('Msg sanity checks failed!!!')
-        return (False, pp_msg)
-    return (True, pp_msg)
+        return False, pp_msg
+    return True, pp_msg
 
 
 # a default pricepoint message
@@ -212,17 +214,25 @@ def check_msg_type(message, msg_type):
         else rpcdata.params
     )
     try:
-        # if 'msg_type' in data.keys() and
-        if data['msg_type'] == msg_type:
+        if 'msg_type' in data.keys() and data['msg_type'] == msg_type:
             return True
-    except Exception:
-        _log.warning('key attrib: "msg_type", not available in the message.')
+    except Exception as e:
+        _log.warning(
+            'key attrib: "msg_type", not available in the message. {}'.format(
+                e.message))
         pass
     return False
 
 
 # converts bus message into an ispace_msg
-def parse_bustopic_msg(message, minimum_fields=[]):
+def parse_bustopic_msg(message, minimum_fields=None):
+    """
+
+    :param message:
+    :type minimum_fields: list
+    """
+    if minimum_fields is None:
+        minimum_fields = []
     rpcdata = jsonrpc.JsonRpcData.parse(message)
     data = (
         json.loads(rpcdata.params)
@@ -233,7 +243,14 @@ def parse_bustopic_msg(message, minimum_fields=[]):
 
 
 # converts jsonrpc_msg into an ispace_msg
-def parse_jsonrpc_msg(message, minimum_fields=[]):
+def parse_jsonrpc_msg(message, minimum_fields=None):
+    """
+
+    :param message:
+    :type minimum_fields: list
+    """
+    if minimum_fields is None:
+        minimum_fields = []
     rpcdata = jsonrpc.JsonRpcData.parse(message)
     data = (
         json.loads(rpcdata.params)
@@ -285,7 +302,14 @@ def _update_value(new_msg, attrib, new_value):
     return
 
 
-def _parse_data(data, minimum_fields=[]):
+def _parse_data(data, minimum_fields=None):
+    """
+
+    :type data: dict
+    :type minimum_fields: list
+    """
+    if minimum_fields is None:
+        minimum_fields = []
     msg_type = data['msg_type']
 
     # TODO: select class msg_type based on msg_type, instead of base class
@@ -294,7 +318,7 @@ def _parse_data(data, minimum_fields=[]):
 
     # if list is empty, parse for all attributes, 
     # if any attrib not found throw keynot found error
-    if minimum_fields == []:
+    if not minimum_fields:
         # if the attrib is not found in the data, throws a keyerror exception
         _log.warning('minimum_fields to check against is empty!!!')
         for attrib in ISPACE_MSG_ATTRIB_LIST:
