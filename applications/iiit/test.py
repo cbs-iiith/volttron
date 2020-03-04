@@ -7,22 +7,23 @@
 #
 # IIIT Hyderabad
 
-#}}}
+# }}}
 
-#Sam
+# Sam
 
 from collections import defaultdict
-import pandas as pd
 
-#https://www.geeksforgeeks.org/python-creating-multidimensional-dictionary/
+
+# https://www.geeksforgeeks.org/python-creating-multidimensional-dictionary/
 def multi_dict(K, type):
     if K == 1:
         d = defaultdict(type)
     else:
-        d = defaultdict(lambda: multi_dict(K-1, type))
+        d = defaultdict(lambda: multi_dict(K - 1, type))
     return d
 
-#historical values
+
+# historical values
 h_opt_tap = {}
 
 d_1 = 'device-1'
@@ -35,17 +36,19 @@ ap_cat_1 = 'cooling'
 ap_cat_2 = 'lighting'
 ap_cat_3 = 'electrical'
 
+
 def get_idx_device_id(device_id):
     if device_id not in h_opt_tap_idx:
         h_opt_tap_idx.append(device_id)
     return h_opt_tap_idx.index(device_id)
 
-# Initialize dictionary 
-h_opt_tap = {} 
-  
+
+# Initialize dictionary
+h_opt_tap = {}
+
 # printing original dictionary 
-print("The original dictionary : " +  str(h_opt_tap)) 
-  
+print("The original dictionary : " + str(h_opt_tap))
+
 # Using defaultdict() 
 # Creating Multidimensional dictionary 
 # calling function 
@@ -61,19 +64,16 @@ h_opt_tap[d_2][ap_cat_3][0] = 7.0
 h_opt_tap[d_2][ap_cat_1][0] = 8.0
 h_opt_tap[d_2][ap_cat_2][0] = 9.0
 h_opt_tap[d_4][ap_cat_3][0] = 10.0
-  
+
 # printing result  
-print("Dictionary after nesting : " + str(dict(h_opt_tap))) 
+print("Dictionary after nesting : " + str(dict(h_opt_tap)))
 
 tmp = [v for k, v in h_opt_tap[d_1].items()]
 print(" Count h_opt_tap[d_1][ap_cat_1]:" + str(len(tmp)))
-
 
 temp = [v for k, v in h_opt_tap[d_1][ap_cat_1].items()]
 print(" Total h_opt_tap[d_1][ap_cat_1]:" + str(sum(temp)))
 print(" Count h_opt_tap[d_1][ap_cat_1]:" + str(len(temp)))
 
-
-
-#idx = get_idx_device_id(d_1)
-#h_opt_tap[idx].append[ap_cat_1]
+# idx = get_idx_device_id(d_1)
+# h_opt_tap[idx].append[ap_cat_1]

@@ -7,9 +7,9 @@
 #
 # IIIT Hyderabad
 
-#}}}
+# }}}
 
-#Sam
+# Sam
 
 
 S_STR = '2017-05-05'
@@ -19,8 +19,7 @@ g = open('v-' + S_STR + '.log', 'w')
 
 for line in f:
     if S_STR in line:
-        #print line
+        # print line
         g.write(line)
 f.close()
 g.close()
-

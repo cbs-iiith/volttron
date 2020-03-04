@@ -7,23 +7,26 @@
 #
 # IIIT Hyderabad
 
-#}}}
+# }}}
 
-#Sam
+# Sam
+
+import json
+import sys
 
 import requests
-import sys
-import json
-authentication=None
 
-def do_rpc(method, params=None ):
+authentication = None
+
+
+def do_rpc(method, params=None):
     global authentication
     url_root = 'http://192.168.1.50:8080/PricePoint'
 
     json_package = {
         'jsonrpc': '2.0',
         'id': '2503402',
-        'method':method,
+        'method': method,
     }
 
     if authentication:
@@ -36,10 +39,11 @@ def do_rpc(method, params=None ):
 
     return requests.post(url_root, data=json.dumps(json_package))
 
+
 if __name__ == '__main__':
     try:
         response = do_rpc("rpc_updatePricePoint1", {'newPricePoint1': 'temp'})
-        print('response: ' +str(response))
+        print('response: ' + str(response))
         if response.ok:
             success = response.json()['result']
             print(success)
@@ -53,14 +57,7 @@ if __name__ == '__main__':
         error = response.json()['error']
         print (error)
     except Exception as e:
-        #print (e)
+        # print (e)
         print('do_rpc() unhandled exception, most likely server is down')
 
     sys.exit(0)
-
-
-    
-
-
-
-

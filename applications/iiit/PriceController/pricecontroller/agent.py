@@ -12,35 +12,28 @@
 # Sam
 
 import datetime
-import dateutil
 import logging
 import sys
-import uuid
-from random import random, randint
 from copy import copy
+from random import randint
 
-from volttron.platform.vip.agent import Agent, Core, PubSub, compat, RPC
-from volttron.platform.agent import utils
-from volttron.platform.messaging import topics, headers as headers_mod
-from volttron.platform.agent.known_identities import (
-    MASTER_WEB, VOLTTRON_CENTRAL, VOLTTRON_CENTRAL_PLATFORM)
-from volttron.platform import jsonrpc
-from volttron.platform.jsonrpc import (
-        INVALID_REQUEST, METHOD_NOT_FOUND, PARSE_ERROR,
-        UNHANDLED_EXCEPTION, UNAUTHORIZED,
-        UNABLE_TO_REGISTER_INSTANCE, DISCOVERY_ERROR,
-        UNABLE_TO_UNREGISTER_INSTANCE, UNAVAILABLE_PLATFORM, INVALID_PARAMS,
-        UNAVAILABLE_AGENT)
-
-import time
+import dateutil
 import gevent
 import gevent.event
 
-from ispace_utils import publish_to_bus, retrive_details_from_vb
-from ispace_utils import ping_vb_failed, register_rpc_route
 from ispace_msg import ISPACE_Msg, MessageType, EnergyCategory
-from ispace_msg_utils import parse_bustopic_msg, valid_bustopic_msg, tap_helper
 from ispace_msg_utils import get_default_pp_msg, check_msg_type, ted_helper
+from ispace_msg_utils import valid_bustopic_msg, tap_helper
+from ispace_utils import publish_to_bus, retrive_details_from_vb
+from ispace_utils import register_rpc_route
+from volttron.platform import jsonrpc
+from volttron.platform.agent import utils
+from volttron.platform.agent.known_identities import (
+    MASTER_WEB)
+from volttron.platform.jsonrpc import (
+    METHOD_NOT_FOUND, PARSE_ERROR,
+    UNHANDLED_EXCEPTION, INVALID_PARAMS)
+from volttron.platform.vip.agent import Agent, Core, RPC
 
 utils.setup_logging()
 _log = logging.getLogger(__name__)
@@ -71,11 +64,11 @@ class PriceController(Agent):
     _topic_energy_demand_ds = None
     _topic_energy_demand = None
 
-    _pca_state = None       # ['ONLINE', 'STANDALONE', 'STANDBY']
+    _pca_state = None  # ['ONLINE', 'STANDALONE', 'STANDBY']
     _pca_standby = False
     _pca_standalone = False
     _pca_online = True
-    _pca_mode = None        # ['PASS_ON_PP', 'DEFAULT_OPT', 'EXTERN_OPT']
+    _pca_mode = None  # ['PASS_ON_PP', 'DEFAULT_OPT', 'EXTERN_OPT']
 
     _device_id = None
     _discovery_address = None
@@ -114,7 +107,7 @@ class PriceController(Agent):
         self._mode_pass_on_params = self.config.get(
             'mode_pass_on_params', {
                 "bids_timeout": 120
-                }
+            }
         )
 
         self._mode_default_opt_params = self.config.get(
@@ -125,7 +118,7 @@ class PriceController(Agent):
                 "gamma": 0.0001,
                 "alpha": 0.0035,
                 "weight_factors": [0.5, 0.5]
-                }
+            }
         )
 
         self._mode_extrn_opt_params = self.config.get(
@@ -133,7 +126,7 @@ class PriceController(Agent):
                 "vip_identity": "iiit.external_optimizer",
                 "pp_topic": "pca/pricepoint",
                 "ed_topic": "pca/energydemand"
-                }
+            }
         )
 
         if self._pca_state == 'ONLINE':
@@ -161,23 +154,23 @@ class PriceController(Agent):
         self._vb_vip_identity = self.config.get(
             'vb_vip_identity',
             'iiit.volttronbridge'
-            )
+        )
         self._topic_price_point_us = self.config.get(
             'pricePoint_topic_us',
             'us/pricepoint'
-            )
+        )
         self._topic_price_point = self.config.get(
             'pricePoint_topic',
             'building/pricepoint'
-            )
+        )
         self._topic_energy_demand_ds = self.config.get(
             'energyDemand_topic_ds',
             'ds/energydemand'
-            )
+        )
         self._topic_energy_demand = self.config.get(
             'energyDemand_topic',
             'building/energydemand'
-            )
+        )
         return
 
     @Core.receiver('onstart')
@@ -216,7 +209,7 @@ class PriceController(Agent):
             'pubsub',
             self._topic_price_point_us,
             self.on_new_us_pp
-            )
+        )
 
         # subscribing to ds energy demand,
         # vb publishes ed from registered ds to this topic
@@ -224,7 +217,7 @@ class PriceController(Agent):
             'pubsub',
             self._topic_energy_demand_ds,
             self.on_ds_ed
-            )
+        )
 
         # perodically publish total active power (tap) to local/energydemand
         # vb RPCs this value to the next level. since time period is much
@@ -235,14 +228,14 @@ class PriceController(Agent):
             self._period_read_data,
             self.aggregator_us_tap,
             wait=None
-            )
+        )
 
         # subscribing to topic_price_point_extr
         if self._pca_state == 'EXTERN_OPT':
             self.vip.pubsub.subscribe('pubsub',
-                self._mode_extrn_opt_params['pp_topic'],
-                self.on_new_extrn_pp
-                )
+                                      self._mode_extrn_opt_params['pp_topic'],
+                                      self.on_new_extrn_pp
+                                      )
 
         self._published_us_bid_ted = True
         # at regular interval check if all bid ds ed received, 
@@ -252,16 +245,16 @@ class PriceController(Agent):
             self._period_process_loop,
             self.aggregator_us_bid_ted,
             wait=None
-            )
+        )
 
         # default_opt process loop, i.e, each iteration's periodicity
         # if the cycle time (time consumed for each iteration) is more than
         # periodicity, the next iterations gets delayed.
         # self.core.periodic(
-            # self._period_process_loop,
-            # self.process_loop,
-            # wait=None
-            # )
+        # self._period_process_loop,
+        # self.process_loop,
+        # wait=None
+        # )
 
         _log.info('startup() - Done. Agent is ready')
         return
@@ -269,20 +262,20 @@ class PriceController(Agent):
     @Core.receiver('onstop')
     def onstop(self, sender, **kwargs):
         _log.debug('onstop()')
-        
+
         self._us_local_opt_ap.clear()
         self._us_local_bid_ed.clear()
         self._local_bid_ed.clear()
-        
+
         self._us_ds_opt_ap.clear()
         self._us_ds_bid_ed.clear()
         self._ds_bid_ed.clear()
-        
+
         _log.debug('un registering rpc routes')
         self.vip.rpc.call(
             MASTER_WEB,
             'unregister_all_agent_routes'
-            ).get(timeout=10)
+        ).get(timeout=10)
         return
 
     @Core.receiver('onfinish')
@@ -296,36 +289,36 @@ class PriceController(Agent):
         try:
             rpcdata = jsonrpc.JsonRpcData.parse(message)
             _log.debug('rpc_from_net()... '
-                        #+ 'header: {}'.format(header)
-                        + ', rpc method: {}'.format(rpcdata.method)
-                        #+ ', rpc params: {}'.format(rpcdata.params)
-                        )
+                       # + 'header: {}'.format(header)
+                       + ', rpc method: {}'.format(rpcdata.method)
+                       # + ', rpc params: {}'.format(rpcdata.params)
+                       )
             if rpcdata.method == 'ping':
                 result = True
             elif (
-                rpcdata.method == 'state'
-                and header['REQUEST_METHOD'].upper() == 'POST'
-                ):
+                    rpcdata.method == 'state'
+                    and header['REQUEST_METHOD'].upper() == 'POST'
+            ):
                 result = self._pca_mode(rpcdata.id, message)
             elif (
-                rpcdata.method == 'mode'
-                and header['REQUEST_METHOD'].upper() == 'POST'
-                ):
+                    rpcdata.method == 'mode'
+                    and header['REQUEST_METHOD'].upper() == 'POST'
+            ):
                 result = self._pca_mode(rpcdata.id, message)
             elif (
-                rpcdata.method == 'external-optimizer'
-                and header['REQUEST_METHOD'].upper() == 'POST'
-                ):
+                    rpcdata.method == 'external-optimizer'
+                    and header['REQUEST_METHOD'].upper() == 'POST'
+            ):
                 result = self._register_external_opt_agent(
                     rpcdata.id,
                     message
-                    )
+                )
             else:
                 return jsonrpc.json_error(
                     rpcdata.id,
                     METHOD_NOT_FOUND,
                     'Invalid method {}'.format(rpcdata.method)
-                    )
+                )
         except KeyError as ke:
             msg = 'Invalid params {}'.format(rpcdata.params)
             error = jsonrpc.json_error(rpcdata.id, INVALID_PARAMS, msg)
@@ -342,11 +335,11 @@ class PriceController(Agent):
             'ONLINE',
             'STANDALONE',
             'STANDBY'
-            ]:
+        ]:
             return jsonrpc.json_error(rpcdata_id,
-                PARSE_ERROR,
-                'Invalid option!!!'
-                ) 
+                                      PARSE_ERROR,
+                                      'Invalid option!!!'
+                                      )
         self._pca_state = state
         return True
 
@@ -356,12 +349,12 @@ class PriceController(Agent):
             'PASS_ON_PP',
             'DEFAULT_OPT',
             'EXTERN_OPT'
-            ]:
+        ]:
             return jsonrpc.json_error(
                 rpcdata_id,
                 PARSE_ERROR,
                 'Invalid option!!!'
-                )
+            )
         self._pca_mode = mode
         return True
 
@@ -373,11 +366,11 @@ class PriceController(Agent):
                 rpcdata_id,
                 PARSE_ERROR,
                 'Invalid option!!!'
-                )
+            )
         self.external_vip_identity = external_vip_identity
         return True
 
-    def on_new_extrn_pp(self, peer, sender, bus,  topic, headers, message):
+    def on_new_extrn_pp(self, peer, sender, bus, topic, headers, message):
         _log.debug('on_new_us_pp()')
         if self._pp_optimize_option != 'EXTERN_OPT':
             return
@@ -385,10 +378,10 @@ class PriceController(Agent):
         if self._pca_standby:
             _log.debug('[LOG] PCA mode: STANDBY, do nothing')
             return
-            
+
         # check message type before parsing
         if not check_msg_type(message, MessageType.price_point): return
-        
+
         valid_senders_list = [self.external_vip_identity]
         minimum_fields = ['value', 'price_id']
         validate_fields = ['value', 'price_id', 'isoptimal']
@@ -400,22 +393,23 @@ class PriceController(Agent):
             validate_fields,
             valid_price_ids,
             message
-            )
-        if not success or pp_msg is None: return
+        )
+        if not success or pp_msg is None:
+            return
         else:
             _log.debug(
                 'New pp msg on the local-bus, topic: {}'.format(topic)
-                )
+            )
 
         self.act_pp_msg = copy(pp_msg)
         if pp_msg.get_isoptimal():
             # TODO: relook at this scenario
-            #self.lc_opt_pp_msg = copy(pp_msg)
+            # self.lc_opt_pp_msg = copy(pp_msg)
             pass
         else:
             self.lc_bid_pp_msg = copy(pp_msg)
-        
-            pub_topic =  self._topic_price_point
+
+            pub_topic = self._topic_price_point
             pub_msg = pp_msg.get_json_message(self._agent_id, 'bus_topic')
             _log.info('[LOG] Price Point, Msg: {}'.format(pub_msg))
             _log.debug('Publishing to local bus topic: {}'.format(pub_topic))
@@ -425,7 +419,7 @@ class PriceController(Agent):
 
         return
 
-    def on_new_us_pp(self, peer, sender, bus,  topic, headers, message):
+    def on_new_us_pp(self, peer, sender, bus, topic, headers, message):
         _log.debug('on_new_us_pp()')
         if self._pca_mode not in ['PASS_ON_PP', 'DEFAULT_OPT']: return
 
@@ -448,9 +442,11 @@ class PriceController(Agent):
             validate_fields,
             valid_price_ids,
             message
-            )
-        if not success or pp_msg is None: return
-        else: _log.debug('New pp msg on the us-bus, topic: {}'.format(topic))
+        )
+        if not success or pp_msg is None:
+            return
+        else:
+            _log.debug('New pp msg on the us-bus, topic: {}'.format(topic))
 
         # keep a track of us pp_msg
         price_id = pp_msg.get_price_id()
@@ -461,16 +457,16 @@ class PriceController(Agent):
                 '***** New optimal price point from us:'
                 + ' {:0.2f}'.format(price)
                 + ' , price_id: {}'.format(price_id)
-                )
+            )
         else:
             self.us_bid_pp_msg = copy(pp_msg)
             _log.debug(
                 '***** New bid price point from us:'
                 + ' {:0.2f}'.format(price)
                 + ' , price_id: {}'.format(price_id)
-                )
+            )
         # log this msg
-        #_log.info('[LOG] pp msg from us: {}'.format(pp_msg))
+        # _log.info('[LOG] pp msg from us: {}'.format(pp_msg))
 
         # re-initialize aggregator_us_bid_ted
         if not pp_msg.get_isoptimal():
@@ -478,12 +474,12 @@ class PriceController(Agent):
 
         if self._pca_mode == 'PASS_ON_PP':
             _log.info('[LOG] PCA mode: PASS_ON_PP')
-            pub_topic =  self._topic_price_point
+            pub_topic = self._topic_price_point
             pub_msg = pp_msg.get_json_message(self._agent_id, 'bus_topic')
             _log.info(
                 '[LOG] Price Point for local/ds devices, Msg:'
                 + ' {}'.format(pub_msg)
-                )
+            )
             _log.debug('Publishing to local bus topic: {}'.format(pub_topic))
             publish_to_bus(self, pub_topic, pub_msg)
             _log.debug('done.')
@@ -495,29 +491,29 @@ class PriceController(Agent):
             _log.debug('Compute new price points...')
             new_pp_msg_list = self._computeNewPrice()
             self.lc_bid_pp_msg_list = copy(new_pp_msg_list)
-            #_log.info('new bid pp_msg_list: {}'.format(new_pp_msg_list))
+            # _log.info('new bid pp_msg_list: {}'.format(new_pp_msg_list))
 
             # TODO: maybe publish a list of the pp messages 
             # and let the bridge do_rpc concurrently
             for msg in new_pp_msg_list:
-                #_log.info('new msg: {}'.format(msg))
-                pub_topic =  self._topic_price_point
+                # _log.info('new msg: {}'.format(msg))
+                pub_topic = self._topic_price_point
                 pub_msg = new_pp_msg.get_json_message(
                     self._agent_id,
                     'bus_topic'
-                    )
+                )
                 device_id = (new_pp_msg.get_dst_device_id()
-                    if new_pp_msg.get_one_to_one()
-                    else 'local/ds devices'
-                    )
+                             if new_pp_msg.get_one_to_one()
+                             else 'local/ds devices'
+                             )
                 _log.info(
                     '[LOG] Price Point for {}'.format(device_id)
-                    + ', Msg: {}'.format( pub_msg)
-                    )
+                    + ', Msg: {}'.format(pub_msg)
+                )
                 _log.debug(
                     'Publishing to local bus topic:'
                     + ' {}'.format(pub_topic)
-                    )
+                )
                 publish_to_bus(self, pub_topic, pub_msg)
                 _log.debug('done.')
             return
@@ -535,15 +531,18 @@ class PriceController(Agent):
         '''
         computes the new prices
         cf may use priorities (manager assign individual device priorities
-                                    or group priorities based on device categories)
-        returns array of new pp_msg with one_to_one TRUE, if priorities are enabled
+                                    or group priorities based on device 
+                                    categories)
+        returns array of new pp_msg with one_to_one TRUE, if priorities are 
+        enabled
                 --> array of new pp_msg with one_to_one FALSE
                 , if priorities are disabled (i.e, equal priorities)
 
         TODO: implement the algorithm to compute the new price
              based on walras algorithm.
               config.get (optimization cost function)
-              based on some initial condition like ed, us_new_pp, etc, compute new_pp
+              based on some initial condition like ed, us_new_pp, etc, 
+              compute new_pp
               publish to bus
         
         optimization algo
@@ -618,23 +617,27 @@ class PriceController(Agent):
             # (vb RPCs this value to the next level)
             bid_ted = self._calc_total(self._local_bid_ed, self._ds_bid_ed)
 
-            # publish to local/energyDemand (vb pushes(RPC) this value to the next level)
+            # publish to local/energyDemand (vb pushes(RPC) this value to the
+            # next level)
             self._publish_bid_ted(pp_msg, bid_ted)
-            
+
             # need to reset the corresponding buckets to zero
             self._local_bid_ed.clear()
             self._ds_bid_ed.clear()
             return
 
-        isoptimal = (True if (self._target_acheived and self._pca_state == 'STANDALONE') 
-                            else False)
+        isoptimal = (
+            True if (self._target_acheived and self._pca_state == 'STANDALONE')
+            else False)
 
         pp_messages = []
         for device_idx in device_list:
             pp_msg = ISPACE_Msg(msg_type, one_to_one
-                    , isoptimal, new_pricepoint[device_idx], value_data_type, units, price_id
-                    , src_ip, src_device_id, dst_ip[device_idx], dst_device_id[device_idx]
-                    , duration, ttl, ts, tz)
+                                , isoptimal, new_pricepoint[device_idx],
+                                value_data_type, units, price_id
+                                , src_ip, src_device_id, dst_ip[device_idx],
+                                dst_device_id[device_idx]
+                                , duration, ttl, ts, tz)
             pp_messages.insert(pp_msg)
         return pp_messages
 
@@ -642,7 +645,8 @@ class PriceController(Agent):
         new_pricepoints = []
         return new_pricepoints
 
-    # perodically run this function to check if ted from all ds received or ted_timed_out
+    # perodically run this function to check if ted from all ds received or
+    # ted_timed_out
     def process_loop(self):
         if not self._pp_optimize_option == 'DEFAULT_OPT': return
 
@@ -654,13 +658,14 @@ class PriceController(Agent):
 
         # TODO: timeout check -- visit later
         # lc_bid_pp_timeout = self._lc_bid_pp_timeout()
-        lc_bid_pp_timeout = False               # never timeout
+        lc_bid_pp_timeout = False  # never timeout
 
         #       if new_pp_isopt
         #           # local optimal reached
         #           publish_ed(local/ed, _ed, us_bid_pp_id)
         #           # if next level accepts this bid, the new target is this ed
-        #       based on opt conditon _computeNewPrice can publish new bid_pp or 
+        #       based on opt conditon _computeNewPrice can publish new bid_pp
+        #       or
         # and save data to self._ds_bid_ed
 
         pp_messages = self._compute_new_price()
@@ -675,43 +680,43 @@ class PriceController(Agent):
         if self._bids_timeout == 0: return False
         s_now = datetime.datetime.utcnow().isoformat(' ') + 'Z'
         now = dateutil.parser.parse(s_now)
-        ts  = dateutil.parser.parse(self.us_bid_pp_msg.get_ts())
+        ts = dateutil.parser.parse(self.us_bid_pp_msg.get_ts())
         return (True
-            if (now - ts).total_seconds() > self._bids_timeout
-            else False
-            )
+                if (now - ts).total_seconds() > self._bids_timeout
+                else False
+                )
 
     def _rcvd_all_us_bid_ed_lc(self, vb_local_device_ids):
         # may be some devices may have disconnected
         #      i.e., devices_count >= len(vb_devices_count)
         return (True
-            if len(self._us_local_bid_ed) >= len(vb_local_device_ids)
-            else False
-            )
+                if len(self._us_local_bid_ed) >= len(vb_local_device_ids)
+                else False
+                )
 
     def _rcvd_all_us_bid_ed_ds(self, vb_ds_device_ids):
         # may be some devices may have disconnected
         #      i.e., devices_count >= len(vb_devices_count)
         return (True
-            if len(self._us_ds_bid_ed) >= len(vb_ds_device_ids)
-            else False
-            )
+                if len(self._us_ds_bid_ed) >= len(vb_ds_device_ids)
+                else False
+                )
 
     def _rcvd_all_lc_bid_ed_lc(self, vb_local_device_ids):
         # may be some devices may have disconnected
         #      i.e., devices_count >= len(vb_devices_count)
         return (True
-            if len(self._local_bid_ed) >= len(vb_local_device_ids)
-            else False
-            )
+                if len(self._local_bid_ed) >= len(vb_local_device_ids)
+                else False
+                )
 
     def _rcvd_all_lc_bid_ed_ds(self, vb_ds_device_ids):
         # may be some devices may have disconnected
         #      i.e., devices_count >= len(vb_devices_count)
         return (True
-            if len(self._ds_bid_ed) >= len(vb_ds_device_ids)
-            else False
-            )
+                if len(self._ds_bid_ed) >= len(vb_ds_device_ids)
+                else False
+                )
 
     def on_ds_ed(self, peer, sender, bus, topic, headers, message):
         _log.debug('on_ds_ed()')
@@ -735,13 +740,15 @@ class PriceController(Agent):
         #      (i.e., ed for either us opt_pp_id or bid_pp_id)
 
         # handle only ap or ed type messages
-        if check_msg_type(message, MessageType.active_power): pass
-        elif check_msg_type(message, MessageType.energy_demand): pass
-        else: 
+        if check_msg_type(message, MessageType.active_power):
+            pass
+        elif check_msg_type(message, MessageType.energy_demand):
+            pass
+        else:
             _log.warning('Not a ap nor ed msg!!!')
             return
 
-        #if ping_vb_failed(self):
+        # if ping_vb_failed(self):
         #    _log.warning('!!! unable to contact bridge !!!')
         #    return
 
@@ -761,22 +768,22 @@ class PriceController(Agent):
             validate_fields,
             valid_price_ids,
             message
-            )
+        )
         if not success or ed_msg is None:
             _log.warning(
                 'valid_bustopic_msg success: {}'.format(success)
                 + ', is ed_msg None? ed_msg: {}'.format(ed_msg)
-                )
+            )
             return
         else:
             _log.debug(
                 'New'
                 + (' energy demand bid (ed)'
-                    if ed_msg.get_msg_type() == MessageType.energy_demand
-                    else ' active power (ap)'
-                    )
+                   if ed_msg.get_msg_type() == MessageType.energy_demand
+                   else ' active power (ap)'
+                   )
                 + ' msg on the local-bus, topic: {}'.format(topic)
-                )
+            )
 
         _log.debug('Sorting the ed_msg...')
         self._sort_ed_msg(ed_msg)
@@ -795,24 +802,28 @@ class PriceController(Agent):
         sort energy packet to respective buckets 
             
                            |--> _us_local_opt_ap    |
-        us_opt_tap---------|                        |--> aggregator publishs tap to us/energydemand
+        us_opt_tap---------|                        |--> aggregator publishs 
+        tap to us/energydemand
                            |--> _us_ds_opt_ap       |       at regular interval 
 
 
                            |--> _us_local_bid_ed    |
-        us_bid_ted---------|                        |--> aggregator publishs ted to us/energydemand 
-                           |--> _us_ds_bid_ed       |       if received from all or timeout
+        us_bid_ted---------|                        |--> aggregator publishs 
+        ted to us/energydemand 
+                           |--> _us_ds_bid_ed       |       if received from 
+                           all or timeout
 
 
                            |--> _local_bid_ed       |
-        local_bid_ted------|                        |--> process_loop() initiates
+        local_bid_ted------|                        |--> process_loop() 
+        initiates
                            |--> _ds_bid_ed          |       _compute_new_price()
        '''
         # MessageType.active_power
         # aggregator publishes this data to local/energydemand
         if (success_ap
-            and price_id == self.us_opt_pp_msg.get_price_id()
-            ):
+                and price_id == self.us_opt_pp_msg.get_price_id()
+        ):
             # put data to local_tap bucket
             if device_id in self._local_device_ids:
                 opt_tap = ed_msg.get_value()
@@ -820,7 +831,7 @@ class PriceController(Agent):
                     '[LOG] TAP opt from local ({})'.format(device_id)
                     + ' for us opt pp_msg({})):'.format(price_id)
                     + ' {:0.4f}'.format(opt_tap)
-                    )
+                )
                 self._us_local_opt_ap[device_id] = opt_tap
                 return
             # put data to ds_tap bucket
@@ -830,15 +841,15 @@ class PriceController(Agent):
                     '[LOG] TAP opt from ds ({})'.format(device_id)
                     + ' for us opt pp_msg({})):'.format(price_id)
                     + ' {:0.4f}'.format(opt_tap)
-                    )
+                )
                 self._us_ds_opt_ap[device_id] = opt_tap
                 return
 
         # MessageType.energy_demand
         # aggregator publishes this data to local/energydemand
         elif (success_ed
-            and price_id == self.us_bid_pp_msg.get_price_id()
-            ):
+              and price_id == self.us_bid_pp_msg.get_price_id()
+        ):
             # put data to ds_tap bucket
             if device_id in self._local_device_ids:
                 bid_ted = ed_msg.get_value()
@@ -846,7 +857,7 @@ class PriceController(Agent):
                     '[LOG] TED bid from local ({})'.format(device_id)
                     + ' for us bid pp_msg({})):'.format(price_id)
                     + ' {:0.4f}'.format(bid_ted)
-                    )
+                )
                 self._us_local_bid_ed[device_id] = bid_ted
                 return
             # put data to ds_tap bucket
@@ -856,15 +867,15 @@ class PriceController(Agent):
                     '[LOG] TED bid from ds ({})'.format(device_id)
                     + ' for us bid pp_msg({})):'.format(price_id)
                     + ' {:0.4f}'.format(bid_ted)
-                    )
+                )
                 self._us_ds_bid_ed[device_id] = ed_msg.get_value()
                 return
 
         # MessageType.energy_demand
         # process_loop() initiates _compute_new_price()
         elif (success_ed
-            and price_id == self.lc_bid_pp_msg.get_price_id()
-            ):
+              and price_id == self.lc_bid_pp_msg.get_price_id()
+        ):
             # put data to local_tap bucket
             if device_id in self._local_device_ids:
                 bid_ted = ed_msg.get_value()
@@ -872,7 +883,7 @@ class PriceController(Agent):
                     '[LOG] TED bid from local ({})'.format(device_id)
                     + ' for local bid pp_msg({})):'.format(price_id)
                     + ' {:0.4f}'.format(bid_ted)
-                    )
+                )
                 self._local_bid_ed[device_id] = ed_msg.get_value()
                 return
             # put data to local_ted bucket
@@ -882,7 +893,7 @@ class PriceController(Agent):
                     '[LOG] TED bid from ds ({})'.format(device_id)
                     + ' for local bid pp_msg({})):'.format(price_id)
                     + ' {:0.4f}'.format(bid_ted)
-                    )
+                )
                 self._ds_bid_ed[device_id] = ed_msg.get_value()
                 return
         return
@@ -894,24 +905,25 @@ class PriceController(Agent):
         # any ways this is used for monitoring purpose
         # and the readings are averaged over a period
         if (
-            self._pca_state != 'ONLINE'
-            or self._pca_mode not in [
-                'PASS_ON_PP',
-                'DEFAULT_OPT',
-                'EXTERN_OPT'
-                ]
-            ):
+                self._pca_state != 'ONLINE'
+                or self._pca_mode not in [
+            'PASS_ON_PP',
+            'DEFAULT_OPT',
+            'EXTERN_OPT'
+        ]
+        ):
             if self._pca_state in [
                 'STANDALONE',
-                #'STANDBY'
-                ]: return
+                # 'STANDBY'
+            ]:
+                return
             # not implemented
-            else: 
+            else:
                 _log.warning(
                     'aggregator_us_tap() not implemented'
                     + ' pca_state: {}'.format(self._pca_state)
                     + ' pca_mode: {}'.format(self._pca_mode)
-                    )
+                )
             return
 
         # compute total active power (tap)
@@ -931,26 +943,26 @@ class PriceController(Agent):
         if self._published_us_bid_ted: return
 
         if (self._pca_state in
-            [
-                'STANDALONE',
-                'STANDBY'
-            ]):
+                [
+                    'STANDALONE',
+                    'STANDBY'
+                ]):
             return
 
         if (
-            self._pca_state != 'ONLINE'
-            or self._pca_mode not in
+                self._pca_state != 'ONLINE'
+                or self._pca_mode not in
                 [
                     'PASS_ON_PP',
                     'DEFAULT_OPT',
                     'EXTERN_OPT'
                 ]
-            ):
+        ):
             # not implemented
             _log.warning('aggregator_us_tap() not implemented'
-                + ' pca_state: {}'.format(self._pca_state)
-                + ' pca_mode: {}'.format(self._pca_mode)
-                )
+                         + ' pca_state: {}'.format(self._pca_state)
+                         + ' pca_mode: {}'.format(self._pca_mode)
+                         )
             return
 
         # check if all the bids are received from both local & ds devices
@@ -968,18 +980,18 @@ class PriceController(Agent):
             if not us_bids_timeout:
                 retry_time = self._period_process_loop
                 _log.debug('not all bids received and not yet timeout'
-                    + ', bid price_id: {}!!!'.format(price_id)
-                    + ' rcvd all us bid ed lc: {}'.format(rcvd_all_lc)
-                    + ' rcvd_all us bid ed ds: {}'.format(rcvd_all_ds)
-                    + ' us_bids_timeout: {}'.format(us_bids_timeout)
-                    + ', will try again in {} sec'.format(retry_time)
-                    )
+                           + ', bid price_id: {}!!!'.format(price_id)
+                           + ' rcvd all us bid ed lc: {}'.format(rcvd_all_lc)
+                           + ' rcvd_all us bid ed ds: {}'.format(rcvd_all_ds)
+                           + ' us_bids_timeout: {}'.format(us_bids_timeout)
+                           + ', will try again in {} sec'.format(retry_time)
+                           )
                 self._published_us_bid_ted = False
                 return
             else:
                 _log.warning('!!! us bid pp timeout'
-                    + ', bid price_id: {}!!!'.format(price_id)
-                    )
+                             + ', bid price_id: {}!!!'.format(price_id)
+                             )
 
         # compute total energy demand (ted)
         bid_ted = self._calc_total(self._us_local_bid_ed, self._us_ds_bid_ed)
@@ -1003,13 +1015,13 @@ class PriceController(Agent):
         return
 
     def _rpcget_local_ed_agents(self):
-        #if rpc get failed, return the old copy
+        # if rpc get failed, return the old copy
         result = self._local_ed_agents
         try:
             result = self.vip.rpc.call(
                 self._vb_vip_identity,
                 'local_ed_agents'
-                ).get(timeout=1)
+            ).get(timeout=1)
         except gevent.Timeout:
             _log.warning('gevent.Timeout in _rpcget_local_ed_agents()!!!')
             pass
@@ -1017,47 +1029,47 @@ class PriceController(Agent):
             _log.warning(
                 'unable to get local ed agents vip_identities from bridge.'
                 + ' message: {}'.format(e.message)
-                )
+            )
             pass
         return result
 
     def _rpcget_local_device_ids(self):
-        #if rpc get failed, return the old copy
+        # if rpc get failed, return the old copy
         result = self._local_device_ids
         try:
             result = self.vip.rpc.call(
                 self._vb_vip_identity,
                 'get_local_device_ids'
-                ).get(timeout=1)
+            ).get(timeout=1)
         except gevent.Timeout:
             _log.warning('gevent.Timeout in _rpcget_local_device_ids()!!!')
             pass
         except Exception as e:
-            #print(e)
+            # print(e)
             _log.warning(
                 'unable to get local devices ids from bridge.'
                 + ' message: {}'.format(e.message)
-                )
+            )
             pass
         return result
 
     def _rpcget_ds_device_ids(self):
-        #if rpc get failed, return the old copy
+        # if rpc get failed, return the old copy
         result = self._ds_device_ids
         try:
             result = self.vip.rpc.call(
                 self._vb_vip_identity,
                 'get_ds_device_ids'
-                ).get(timeout=1)
+            ).get(timeout=1)
         except gevent.Timeout:
             _log.warning('gevent.Timeout in _rpcget_ds_device_ids()!!!')
             pass
         except Exception as e:
-            #print(e)
+            # print(e)
             _log.warning(
                 'unable to get ds device ids from bridge.'
                 + ' message: {}'.format(e.message)
-                )
+            )
             pass
         return result
 
@@ -1068,18 +1080,18 @@ class PriceController(Agent):
                 self.us_opt_pp_msg.get_price_id()
                 if self.us_opt_pp_msg is not None
                 else ''
-                )
+            )
             bid_price_id = (
                 self.us_bid_pp_msg.get_price_id()
                 if self.us_bid_pp_msg is not None
                 else ''
-                )
+            )
             price_ids = [opt_price_id, bid_price_id]
         else:
             _log.error(
                 '_get_valid_price_ids() for mode {} not implemented'
                 + '!!!'.format(self._pca_mode)
-                )
+            )
         return price_ids
 
     def _publish_opt_tap(self, opt_tap):
@@ -1092,20 +1104,20 @@ class PriceController(Agent):
             opt_tap,
             self._period_read_data,
             EnergyCategory.mixed
-            )
+        )
 
         _log.debug(
             '***** Total Active Power(TAP) opt'
             + ' (for us pp_msg ({})):'.format(tap_msg.get_price_id())
             + ' {:0.4f}'.format(opt_tap)
-            )
+        )
         # publish the total active power to the local message bus
         # volttron bridge pushes(RPC) this value to the next level
         pub_topic = self._topic_energy_demand
         pub_msg = tap_msg.get_json_message(self._agent_id, 'bus_topic')
         _log.info(
             '[LOG] Total Active Power(TAP) opt, Msg: {}'.format(pub_msg)
-            )
+        )
         _log.debug('Publishing to local bus topic: {}'.format(pub_topic))
         publish_to_bus(self, pub_topic, pub_msg)
         _log.debug('done.')
@@ -1121,7 +1133,7 @@ class PriceController(Agent):
             bid_ted,
             self._period_read_data,
             EnergyCategory.mixed
-            )
+        )
 
         # compute total energy demand (ted)
         bid_ted = self._calc_total(self._us_local_bid_ed, self._us_ds_bid_ed)
@@ -1129,14 +1141,14 @@ class PriceController(Agent):
             '***** Total Energy Demand(TED) bid'
             + ' (for us pp_msg ({})):'.format(ted_msg.get_price_id())
             + ' {:0.4f}'.format(bid_ted)
-            )
+        )
         # publish the total energy demand to the local message bus
         # volttron bridge pushes(RPC) this value to the next level
         pub_topic = self._topic_energy_demand
         pub_msg = ted_msg.get_json_message(self._agent_id, 'bus_topic')
         _log.info(
             '[LOG] Total Energy Demand(TED) bid, Msg: {}'.format(pub_msg)
-            )
+        )
         _log.debug('Publishing to local bus topic: {}'.format(pub_topic))
         publish_to_bus(self, pub_topic, pub_msg)
         _log.debug('done.')
@@ -1150,11 +1162,11 @@ class PriceController(Agent):
         new_local_device_ids = list(
             set(local_bucket.keys())
             & set(self._local_device_ids)
-            )
+        )
         new_ds_device_ids = list(
             set(ds_bucket.keys())
             & set(self._ds_device_ids)
-            )
+        )
         # compute total
         total = 0.0
         for device_id in new_local_device_ids:
@@ -1178,4 +1190,3 @@ if __name__ == '__main__':
         sys.exit(main(sys.argv))
     except KeyboardInterrupt:
         pass
-

@@ -7,11 +7,12 @@
 #
 # IIIT Hyderabad
 
-#}}}
+# }}}
 
-#Sam
+# Sam
 
 from os import path
+
 from setuptools import setup, find_packages
 
 MAIN_MODULE = 'agent'

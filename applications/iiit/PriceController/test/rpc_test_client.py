@@ -7,31 +7,35 @@
 #
 # IIIT Hyderabad
 
-#}}}
+# }}}
 
-#Sam
+# Sam
+
+import json
+import sys
 
 import requests
-import sys
-import json
-authentication=None
 
-def do_rpc(url_root, method, params=None ):
-    #_log.debug('do_rpc()')
+authentication = None
+
+
+def do_rpc(url_root, method, params=None):
+    # _log.debug('do_rpc()')
     result = False
     json_package = {
         'jsonrpc': '2.0',
         'id': 'testing',
-        'method':method,
+        'method': method,
     }
-    
+
     if params:
         json_package['params'] = params
-        
+
     data = json.dumps(json_package)
     try:
-        response = requests.post(url_root, data=json.dumps(json_package), timeout=10)
-        
+        response = requests.post(url_root, data=json.dumps(json_package),
+                                 timeout=10)
+
         if response.ok:
             success = response.json()['result']
             if success == True:
@@ -47,9 +51,11 @@ def do_rpc(url_root, method, params=None ):
         return False
     except Exception as e:
         print (e)
-        print('Exception: do_rpc() unhandled exception, most likely dest is down')
+        print(
+            'Exception: do_rpc() unhandled exception, most likely dest is down')
         return False
     return result
+
 
 if __name__ == '__main__':
     url_root = 'http://192.168.1.4:8080/PriceController'
@@ -57,22 +63,15 @@ if __name__ == '__main__':
     print('result: ' + str(result))
     print('******** result should be --> result: False')
     print('Test passed!!!\n' if result == False else 'Test failed!!!\n')
-    
+
     result = do_rpc(url_root, "rpc_disable_agent", {'disable_agent': True})
     print('result: ' + str(result))
     print('******** result should be --> result: True')
     print('Test passed!!!\n' if result == True else 'Test failed!!!\n')
-    
+
     result = do_rpc(url_root, "rpc_disable_agent", {'disable_agent': False})
     print('result: ' + str(result))
     print('******** result should be --> result: True')
     print('Test passed!!!\n' if result == True else 'Test failed!!!\n')
-    
+
     sys.exit(0)
-
-
-    
-
-
-
-

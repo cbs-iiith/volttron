@@ -7,24 +7,27 @@
 #
 # IIIT Hyderabad
 
-#}}}
+# }}}
 
-#Sam
+# Sam
+
+import json
+import sys
+import time
 
 import requests
-import sys
-import json
-import time
-authentication=None
 
-def do_rpc(method, params=None ):
+authentication = None
+
+
+def do_rpc(method, params=None):
     global authentication
     url_root = 'http://192.168.1.250:8080/VolttronBridge'
 
     json_package = {
         'jsonrpc': '2.0',
         'id': '2503402',
-        'method':method,
+        'method': method,
     }
 
     if authentication:
@@ -37,11 +40,12 @@ def do_rpc(method, params=None ):
 
     return requests.post(url_root, data=json.dumps(json_package))
 
+
 def test_register():
     response = do_rpc("rpc_registerDsBridge", \
-                {'discovery_address': '192.168.1.61:8080', \
-                    'deviceId': 'SmartHub-61'\
-                })
+                      {'discovery_address': '192.168.1.61:8080', \
+                       'deviceId': 'SmartHub-61' \
+                       })
     print('response: ' + str(response))
     if response.ok:
         success = response.json()['result']
@@ -52,14 +56,15 @@ def test_register():
             print("not registered")
     else:
         print('do_rpc register response not ok')
-        
+
     return True
-        
+
+
 def test_unregister():
     response = do_rpc("rpc_unregisterDsBridge", \
-                {'discovery_address': '192.168.1.61:8080', \
-                    'deviceId': 'SmartHub-61'\
-                })
+                      {'discovery_address': '192.168.1.61:8080', \
+                       'deviceId': 'SmartHub-61' \
+                       })
     print('response: ' + str(response))
     if response.ok:
         success = response.json()['result']
@@ -70,11 +75,12 @@ def test_unregister():
             print("not registered")
     else:
         print('do_rpc register response not ok')
-        
+
     return True
 
+
 if __name__ == '__main__':
-    
+
     try:
         test_register()
         time.sleep(5)
@@ -87,10 +93,3 @@ if __name__ == '__main__':
         print('do_rpc() unhandled exception, most likely server is down')
 
     sys.exit(0)
-
-
-    
-
-
-
-
