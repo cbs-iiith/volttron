@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*- {{{
 # vim: set fenc=utf-8 ft=python sw=4 ts=4 sts=4 et:
-# 
+#
 # Copyright (c) 2020, Sam Babu, Godithi.
 # All rights reserved.
-# 
-# 
+#
+#
 # IIIT Hyderabad
 
 # }}}
@@ -22,9 +22,7 @@ from volttron.platform import jsonrpc
 from volttron.platform.agent import utils
 from volttron.platform.agent.known_identities import (
     MASTER_WEB)
-from volttron.platform.jsonrpc import (
-    METHOD_NOT_FOUND, PARSE_ERROR,
-    UNHANDLED_EXCEPTION, INVALID_PARAMS)
+from volttron.platform.jsonrpc import JsonRpcData
 from volttron.platform.vip.agent import Agent, Core, RPC
 
 utils.setup_logging()
@@ -44,8 +42,9 @@ def pricepoint(config_path, **kwargs):
 
 
 class PricePoint(Agent):
-    '''Agent for posting a price point to msg bus
-    '''
+    """
+    Agent for posting a price point to msg bus
+    """
 
     # initialized  during __init__ from config
     _default_base_price = None
@@ -64,6 +63,8 @@ class PricePoint(Agent):
         _log.debug('vip_identity: ' + self.core.identity)
 
         self.config = utils.load_config(config_path)
+        self._agent_id = self.config['agentid']
+
         self._config_get_points()
         self._config_get_init_values()
         return
@@ -71,7 +72,6 @@ class PricePoint(Agent):
     @Core.receiver('onsetup')
     def setup(self, sender, **kwargs):
         _log.info(self.config['message'])
-        self._agent_id = self.config['agentid']
 
         return
 
@@ -79,9 +79,9 @@ class PricePoint(Agent):
     def startup(self, sender, **kwargs):
         _log.info('Starting Price Point...')
 
-        # retrive self._device_id, self._ip_addr, self._discovery_address
+        # retrieve self._device_id, self._ip_addr, self._discovery_address
         # from the bridge
-        # retrive_details_from_vb is a blocking call
+        # retrieve_details_from_vb is a blocking call
         retrive_details_from_vb(self, 5)
 
         # register rpc routes with MASTER_WEB
@@ -121,9 +121,13 @@ class PricePoint(Agent):
 
     @RPC.export
     def rpc_from_net(self, header, message):
-        result = False
+        """
+
+        :type header: jsonstr
+        :type message: jsonstr
+        """
         try:
-            rpcdata = jsonrpc.JsonRpcData.parse(message)
+            rpcdata = jsonrpc.JsonRpcData.parse(message)  # type: JsonRpcData
 
             _log.debug('rpc_from_net()...'
                        # + 'header: {}'.format(header)
@@ -136,7 +140,7 @@ class PricePoint(Agent):
                 result = self.update_price_point(rpcdata.id, header, message)
             else:
                 _log.error('method not found!!!')
-                return jsonrpc.json_error(rpcdata.id, METHOD_NOT_FOUND,
+                return jsonrpc.json_error(rpcdata.id, jsonrpc.METHOD_NOT_FOUND,
                                           'Invalid method {}'.format(
                                               rpcdata.method))
         except KeyError:
@@ -144,7 +148,7 @@ class PricePoint(Agent):
             _log.error(
                 'id: {}, message: invalid params {}!!!'.format(rpcdata.id,
                                                                rpcdata.params))
-            return jsonrpc.json_error(rpcdata.id, INVALID_PARAMS,
+            return jsonrpc.json_error(rpcdata.id, jsonrpc.INVALID_PARAMS,
                                       'Invalid params {}'.format(
                                           rpcdata.params))
         except Exception as e:
@@ -152,11 +156,14 @@ class PricePoint(Agent):
             _log.exception('id: {}'.format(rpcdata.id)
                            + ', message: unhandled exception {}!!!'.format(
                 e.message))
-            return jsonrpc.json_error(rpcdata.id, UNHANDLED_EXCEPTION, e)
-        return (jsonrpc.json_result(rpcdata.id, result) if result else result)
+            return jsonrpc.json_error(rpcdata.id, jsonrpc.UNHANDLED_EXCEPTION,
+                                      e)
+
+        if result:
+            result = (jsonrpc.json_result(rpcdata.id, result))
+        return result
 
     def update_price_point(self, rpcdata_id, header, message):
-        pp_msg = None
         rpcdata = jsonrpc.JsonRpcData.parse(message)
         # Note: this is on a rpc message do the check here ONLY
         # check message for MessageType.price_point
@@ -164,19 +171,19 @@ class PricePoint(Agent):
             _log.error(
                 'id: {}, message: invalid params {}!!!'.format(rpcdata_id,
                                                                rpcdata.params))
-            return jsonrpc.json_error(rpcdata_id, INVALID_PARAMS
-                                      , 'Invalid params {}'.format(
-                    rpcdata.params))
+            return jsonrpc.json_error(rpcdata_id, jsonrpc.INVALID_PARAMS,
+                                      'Invalid params {}'.format(
+                                          rpcdata.params))
         try:
             minimum_fields = ['value', 'value_data_type', 'units', 'price_id']
             pp_msg = parse_jsonrpc_msg(message, minimum_fields)
             # _log.info('pp_msg: {}'.format(pp_msg))
-        except KeyError as ke:
+        except KeyError:
             # print(ke)
             _log.error(
                 'id: {}, message: invalid params {}!!!'.format(rpcdata_id,
                                                                rpcdata.params))
-            return jsonrpc.json_error(rpcdata_id, INVALID_PARAMS,
+            return jsonrpc.json_error(rpcdata_id, jsonrpc.INVALID_PARAMS,
                                       'Invalid params {}'.format(
                                           rpcdata.params))
         except Exception as e:
@@ -184,7 +191,8 @@ class PricePoint(Agent):
             _log.exception('id: {}'.format(rpcdata_id)
                            + ', message: unhandled exception {}!!!'.format(
                 e.message))
-            return jsonrpc.json_error(rpcdata_id, UNHANDLED_EXCEPTION, e)
+            return jsonrpc.json_error(rpcdata_id, jsonrpc.UNHANDLED_EXCEPTION,
+                                      e)
 
         # validate various sanity measure like, valid fields, valid pp ids,
         # ttl expiry, etc.,
@@ -196,7 +204,7 @@ class PricePoint(Agent):
             _log.warning(
                 'id: {}, Msg sanity checks failed, parse error!!!'.format(
                     rpcdata_id))
-            return jsonrpc.json_error(rpcdata_id, PARSE_ERROR,
+            return jsonrpc.json_error(rpcdata_id, jsonrpc.PARSE_ERROR,
                                       'Msg sanity checks failed!!!')
 
         _log.debug('***** Price Point ({})'.format(
@@ -220,7 +228,7 @@ class PricePoint(Agent):
 
 
 def main(argv=sys.argv):
-    '''Main method called by the eggsecutable.'''
+    """Main method called by the eggsecutable."""
     try:
         utils.vip_main(pricepoint)
     except Exception as e:
