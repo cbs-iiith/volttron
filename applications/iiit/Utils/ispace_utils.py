@@ -517,6 +517,10 @@ class Runningstats:
                                combined.n * combined.n) + 4.0 * delta * (
                                self.n * other.M3 - other.n * self.M3) / \
                        combined.n
+
+        combined.exp_avg = (min(self.n, self.factor) * self.exp_avg + min(
+            other.n, other.factor) * other.exp_avg) / combined.n
+
         return combined
 
     ''' ENDOF overload methods for self and value
