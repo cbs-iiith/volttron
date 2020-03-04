@@ -23,7 +23,7 @@ from random import random, randint
 
 import requests
 
-from test_utils import get_timestamp
+from applications.iiit.Utils.test_utils import get_timestamp
 
 authentication = None
 
@@ -112,6 +112,7 @@ def post_random_price():
 
 
 class Job(threading.Thread):
+
     def __init__(self, interval, execute, *args, **kwargs):
         threading.Thread.__init__(self)
         self.daemon = False

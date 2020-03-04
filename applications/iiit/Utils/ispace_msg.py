@@ -54,6 +54,7 @@ ISPACE_MSG_ATTRIB_LIST = ['msg_type', 'one_to_one', 'isoptimal'
 # Making a Fast Copy of an Object. Credit: Alex Martelli
 def empty_copy(obj):
     class Empty(obj.__class__):
+
         def __init__(self): pass
 
 
@@ -607,6 +608,7 @@ class ISPACE_Msg:
 
 
 class ISPACE_Msg_PricePoint(ISPACE_Msg):
+
     def __init__(self,
                  msg_type, one_to_one=False, isoptimal=True,
                  value=None, value_data_type=None, units=None,
@@ -629,6 +631,7 @@ class ISPACE_Msg_PricePoint(ISPACE_Msg):
 
 
 class ISPACE_Msg_OptPricePoint(ISPACE_Msg_PricePoint):
+
     def __init__(self,
                  msg_type, one_to_one=False, isoptimal=True,
                  value=None, value_data_type=None, units=None,
@@ -652,6 +655,7 @@ class ISPACE_Msg_OptPricePoint(ISPACE_Msg_PricePoint):
 
 
 class ISPACE_Msg_BidPricePoint(ISPACE_Msg_PricePoint):
+
     def __init__(self,
                  msg_type, one_to_one=False, isoptimal=False,
                  value=None, value_data_type=None, units=None,
@@ -740,6 +744,7 @@ class ISPACE_Msg_ActivePower(ISPACE_Msg):
 
 
 class ISPACE_Msg_Energy(ISPACE_Msg_ActivePower):
+
     def __init__(self,
                  msg_type=MessageType.energy_demand,
                  one_to_one=False, isoptimal=False,
@@ -765,6 +770,7 @@ class ISPACE_Msg_Energy(ISPACE_Msg_ActivePower):
 
 
 class ISPACE_Msg_Budget(ISPACE_Msg_Energy):
+
     def __init__(self,
                  msg_type=MessageType.energy_demand,
                  one_to_one=False, isoptimal=False,
