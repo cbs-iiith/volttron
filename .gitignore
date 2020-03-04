@@ -24,3 +24,4 @@ volttron.log
 *.out
 *.log
 *.bak
+/venv/
