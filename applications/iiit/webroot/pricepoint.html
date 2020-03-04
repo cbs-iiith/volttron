@@ -12,7 +12,8 @@
     <META CONTENT="no-cache" HTTP-EQUIV="Pragma">
     <meta content="IE=edge" http-equiv="X-UA-Compatible"/>
 
-    <script language="javascript" src="http://code.jquery.com/jquery-2.1.4.min.js"></script>
+    <script language="javascript"
+            src="http://code.jquery.com/jquery-2.1.4.min.js"></script>
     <style>
         .switch {
             position: relative;
@@ -89,6 +90,10 @@
         .slider.round:before {
             border-radius: 50%;
         }
+
+
+
+
     </style>
 </head>
 
@@ -100,7 +105,8 @@
 
     <div class="pages">
 
-        <div class="panel" data-title="Publish New PricePoint" id="setPricePoint">
+        <div class="panel" data-title="Publish New PricePoint"
+             id="setPricePoint">
 
             <p>New Price Point</p>
             <div class="row">
@@ -108,11 +114,15 @@
                     &nbsp;
                 </div>
                 <div class="large-2 columns">
-                    <input id="slider_pp" max="1.1" min="0.01" onchange="printValue('slider_pp','new_pp_value')" step="0.01" type="range"
+                    <input id="slider_pp" max="1.1" min="0.01"
+                           onchange="printValue('slider_pp','new_pp_value')"
+                           step="0.01" type="range"
                            value="0.5"/>
                 </div>
                 <div class="large-2 columns">
-                    <input id="new_pp_value" onchange="printValue2('new_pp_value', 'slider_pp')" size="4" type="text"/>
+                    <input id="new_pp_value"
+                           onchange="printValue2('new_pp_value', 'slider_pp')"
+                           size="4" type="text"/>
                 </div>
                 <div class="large-2 columns">
                     &nbsp;
@@ -124,8 +134,11 @@
                 <!-- Rounded switch -->
                 <div class="large-2 columns">
                     <label class="switch">
-                        <input checked id="new_pp_isoptimal" onchange="clearPubStatus()" type="checkbox" value="True">
-                        <div class="slider round"></div>
+                        <input checked id="new_pp_isoptimal"
+                               onchange="clearPubStatus()" type="checkbox"
+                               value="True">
+                        <div class="slider round">
+                        </div>
                     </label>
                 </div>
             </div>
@@ -136,11 +149,15 @@
                     &nbsp;
                 </div>
                 <div class="large-2 columns">
-                    <input id="slider_pp_ttl" max="3600" min="0" onchange="printValue('slider_pp_ttl','new_pp_ttl')" step="5" type="range"
+                    <input id="slider_pp_ttl" max="3600" min="0"
+                           onchange="printValue('slider_pp_ttl','new_pp_ttl')"
+                           step="5" type="range"
                            value="3600"/>
                 </div>
                 <div class="large-2 columns">
-                    <input id="new_pp_ttl" onchange="printValue2('new_pp_ttl', 'slider_pp_ttl')" size="4" type="text"/>
+                    <input id="new_pp_ttl"
+                           onchange="printValue2('new_pp_ttl', 'slider_pp_ttl')"
+                           size="4" type="text"/>
                 </div>
                 <div class="large-2 columns">
                     &nbsp;
@@ -153,11 +170,15 @@
                     &nbsp;
                 </div>
                 <div class="large-2 columns">
-                    <input id="slider_pp_dur" max="3600" min="0" onchange="printValue('slider_pp_dur','new_pp_dur')" step="5" type="range"
+                    <input id="slider_pp_dur" max="3600" min="0"
+                           onchange="printValue('slider_pp_dur','new_pp_dur')"
+                           step="5" type="range"
                            value="3600"/>
                 </div>
                 <div class="large-2 columns">
-                    <input id="new_pp_dur" onchange="printValue2('new_pp_dur', 'slider_pp_dur')" size="4" type="text"/>
+                    <input id="new_pp_dur"
+                           onchange="printValue2('new_pp_dur', 'slider_pp_dur')"
+                           size="4" type="text"/>
                 </div>
                 <div class="large-2 columns">
                     &nbsp;
@@ -241,6 +262,10 @@
             }
         });
     });
+
+
+
+
 </script>
 <script>
     function clearPubStatus() {
@@ -270,6 +295,10 @@
         printValue('slider_pp_ttl', 'new_pp_ttl');
         printValue('slider_pp_dur', 'new_pp_dur');
     }
+
+
+
+
 </script>
 </body>
 </html>
