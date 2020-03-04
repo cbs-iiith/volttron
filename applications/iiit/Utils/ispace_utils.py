@@ -489,7 +489,7 @@ class Runningstats():
 
         combined.M4 = self.M4 + other.M4 + delta4 *self.n * other.n * (self.n * self.n - self.n  *other.n + other.n * other.n) / (combined.n *combined.n * combined.n)
         combined.M4 += 6.0 * delta2 * (self.n*self.n*other.M2 + other.n*other.n*self.M2)/(combined.n * combined.n) + 4.0 * delta * (self.n * other.M3 - other.n * self.M3) / combined.n
-        return c
+        return combined
 
     ''' ENDOF overload methods for self and value
     '''
