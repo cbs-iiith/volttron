@@ -22,7 +22,6 @@ from volttron.platform import jsonrpc
 from volttron.platform.agent import utils
 from volttron.platform.agent.known_identities import (
     MASTER_WEB)
-from volttron.platform.jsonrpc import JsonRpcData
 from volttron.platform.vip.agent import Agent, Core, RPC
 
 utils.setup_logging()
@@ -127,7 +126,8 @@ class PricePoint(Agent):
         :type message: jsonstr
         """
         try:
-            rpcdata = jsonrpc.JsonRpcData.parse(message)  # type: JsonRpcData
+            rpcdata = jsonrpc.JsonRpcData.parse(
+                message)  # type: jsonrpc.JsonRpcData
 
             _log.debug('rpc_from_net()...'
                        # + 'header: {}'.format(header)
