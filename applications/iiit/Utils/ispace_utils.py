@@ -467,6 +467,33 @@ class Runningstats():
         self.factor = factor
         pass
 
+    ''' overload methods for self and other
+    '''
+    # overload + operator
+    def __add__(self, other):
+        combined = Runningstats(self.factor)
+
+        combined.n = self.n + other.n
+
+        delta = other.M1 - self.M1
+        delta2 = delta * delta
+        delta3 = delta * delta2
+        delta4 = delta2 * delta2
+
+        combined.M1 = (self.n * self.M1 + other.n * other.M1) / combined.n
+        
+        combined.M2 = self.M2 + other.M2 + delta2 * self.n * other.n / combined.n
+
+        combined.M3 = self.M3 + other.M3 + delta3 * self.n * other.n * (self.n - other.n)/(combined.n*combined.n)
+        combined.M3 += 3.0 * delta * (self.n * other.M2 - other.n * self.M2) / combined.n
+
+        combined.M4 = self.M4 + other.M4 + delta4 *self.n * other.n * (self.n * self.n - self.n  *other.n + other.n * other.n) / (combined.n *combined.n * combined.n)
+        combined.M4 += 6.0 * delta2 * (self.n*self.n*other.M2 + other.n*other.n*self.M2)/(combined.n * combined.n) + 4.0 * delta * (self.n * other.M3 - other.n * self.M3) / combined.n
+        return c
+
+    ''' ENDOF overload methods for self and value
+    '''
+
     def clear(self):
         self.n = 0
         self.M1 = self.M2 = self.M3 = self.M4 = 0.0
