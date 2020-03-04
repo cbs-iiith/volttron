@@ -21,11 +21,11 @@ import dateutil
 import gevent
 import gevent.event
 
-from ispace_msg import ISPACE_Msg, MessageType, EnergyCategory
-from ispace_msg_utils import get_default_pp_msg, check_msg_type, ted_helper
-from ispace_msg_utils import valid_bustopic_msg, tap_helper
-from ispace_utils import publish_to_bus, retrive_details_from_vb
-from ispace_utils import register_rpc_route
+from applications.iiit.Utils.ispace_msg import ISPACE_Msg, MessageType, EnergyCategory
+from applications.iiit.Utils.ispace_msg_utils import get_default_pp_msg, check_msg_type, ted_helper
+from applications.iiit.Utils.ispace_msg_utils import valid_bustopic_msg, tap_helper
+from applications.iiit.Utils.ispace_utils import publish_to_bus, retrive_details_from_vb
+from applications.iiit.Utils.ispace_utils import register_rpc_route
 from volttron.platform import jsonrpc
 from volttron.platform.agent import utils
 from volttron.platform.agent.known_identities import (

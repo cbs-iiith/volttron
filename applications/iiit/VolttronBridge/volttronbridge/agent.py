@@ -20,11 +20,11 @@ from random import randint
 import gevent
 import gevent.event
 
-from ispace_msg import MessageType
-from ispace_msg_utils import (
+from applications.iiit.Utils.ispace_msg import MessageType
+from applications.iiit.Utils.ispace_msg_utils import (
     check_msg_type,
     parse_jsonrpc_msg, valid_bustopic_msg)
-from ispace_utils import do_rpc, register_rpc_route, publish_to_bus
+from applications.iiit.Utils.ispace_utils import do_rpc, register_rpc_route, publish_to_bus
 from volttron.platform import jsonrpc
 from volttron.platform.agent import utils
 from volttron.platform.agent.known_identities import (

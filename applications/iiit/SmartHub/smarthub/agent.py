@@ -20,16 +20,16 @@ from random import randint
 import gevent
 import gevent.event
 
-from ispace_msg import MessageType, EnergyCategory
-from ispace_msg_utils import check_msg_type, tap_helper, \
+from applications.iiit.Utils.ispace_msg import MessageType, EnergyCategory
+from applications.iiit.Utils.ispace_msg_utils import check_msg_type, tap_helper, \
     ted_helper
-from ispace_msg_utils import get_default_pp_msg, valid_bustopic_msg
-from ispace_utils import calc_energy_wh
-from ispace_utils import isclose, get_task_schdl, cancel_task_schdl, \
+from applications.iiit.Utils.ispace_msg_utils import get_default_pp_msg, valid_bustopic_msg
+from applications.iiit.Utils.ispace_utils import calc_energy_wh
+from applications.iiit.Utils.ispace_utils import isclose, get_task_schdl, cancel_task_schdl, \
     publish_to_bus, mround
-from ispace_utils import retrive_details_from_vb, register_with_bridge, \
+from applications.iiit.Utils.ispace_utils import retrive_details_from_vb, register_with_bridge, \
     register_rpc_route
-from ispace_utils import unregister_with_bridge
+from applications.iiit.Utils.ispace_utils import unregister_with_bridge
 from volttron.platform import jsonrpc
 from volttron.platform.agent import utils
 from volttron.platform.agent.known_identities import (
