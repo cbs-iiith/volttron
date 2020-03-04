@@ -15,7 +15,8 @@ import logging
 import sys
 
 from applications.iiit.Utils.ispace_msg import MessageType
-from applications.iiit.Utils.ispace_msg_utils import check_msg_type, valid_bustopic_msg
+from applications.iiit.Utils.ispace_msg_utils import check_msg_type, \
+    valid_bustopic_msg
 from applications.iiit.Utils.ispace_utils import do_rpc
 from volttron.platform.agent import utils
 from volttron.platform.vip.agent import Agent, Core

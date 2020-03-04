@@ -15,8 +15,8 @@ import logging
 import sys
 
 import dateutil
-
 from smap_tools import smap_post
+
 from volttron.platform.agent import utils
 from volttron.platform.messaging import headers as headers_mod
 from volttron.platform.vip.agent import Agent, Core
@@ -50,6 +50,7 @@ SENDER_VB = 'iiit.volttronbridge'
 def smartstripsmapuploader(config_path, **kwargs):
     config = utils.load_config(config_path)
     agent_id = config['agentid']
+
 
     class SmartStripSmapUploader(Agent):
         '''
@@ -142,12 +143,12 @@ def smartstripsmapuploader(config_path, **kwargs):
                 # volt, current & apwr) to the smap
                 # so posting individually
 
-                topic = '/SmartStrip/' + self.ss_id + '/meterdata/voltage/' +\
+                topic = '/SmartStrip/' + self.ss_id + '/meterdata/voltage/' + \
                         plug_id
                 self.smapPostMeterData('voltage', topic, headers, message,
                                        msg_time)
 
-                topic = '/SmartStrip/' + self.ss_id + '/meterdata/current/' +\
+                topic = '/SmartStrip/' + self.ss_id + '/meterdata/current/' + \
                         plug_id
                 self.smapPostMeterData('current', topic, headers, message,
                                        msg_time)
@@ -243,6 +244,7 @@ def smartstripsmapuploader(config_path, **kwargs):
             smap_post(self.smap_root, self.api_key, topic, units, reading_type,
                       readings, self.source_data, self.time_zone)
             return
+
 
     Agent.__name__ = 'SmartStripSmapUploader_Agent'
     return SmartStripSmapUploader(**kwargs)

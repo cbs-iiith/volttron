@@ -86,6 +86,7 @@ def ss_sh_device(config_path, **kwargs):
 
     '''
 
+
     class SS_SH_Device(Agent):
 
         def __init__(self, **kwargs):
@@ -202,6 +203,7 @@ def ss_sh_device(config_path, **kwargs):
 
         def _monitorShBattery(self):
             return
+
 
     Agent.__name__ = 'SS_SH_Device_Agent'
     return SS_SH_Device(**kwargs)

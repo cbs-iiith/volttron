@@ -13,38 +13,27 @@
 
 import logging
 import sys
-
-from volttron.platform.vip.agent import Agent, Core, compat, RPC
-from volttron.platform.agent import utils
-
-from volttron.platform.agent.known_identities import (
-    MASTER_WEB, VOLTTRON_CENTRAL_PLATFORM)
-from volttron.platform import jsonrpc
-from volttron.platform.jsonrpc import (
-    METHOD_NOT_FOUND,
-    UNHANDLED_EXCEPTION, UNAUTHORIZED,
-    DISCOVERY_ERROR,
-    UNAVAILABLE_PLATFORM, INVALID_PARAMS)
-
-from random import random, randint
-from copy import copy
-
-import settings
-
 import time
-import struct
+from copy import copy
+from random import random, randint
+
 import gevent
 import gevent.event
 
-from applications.iiit.Utils.ispace_utils import isclose, get_task_schdl, cancel_task_schdl, \
-    publish_to_bus, mround
-from applications.iiit.Utils.ispace_utils import retrive_details_from_vb, register_with_bridge, \
-    register_rpc_route
-from applications.iiit.Utils.ispace_utils import unregister_with_bridge
 from applications.iiit.Utils.ispace_msg import MessageType, EnergyCategory
 from applications.iiit.Utils.ispace_msg_utils import check_msg_type, tap_helper, \
-    ted_helper
-from applications.iiit.Utils.ispace_msg_utils import get_default_pp_msg, valid_bustopic_msg
+    ted_helper, get_default_pp_msg, valid_bustopic_msg
+from applications.iiit.Utils.ispace_utils import isclose, get_task_schdl, \
+    cancel_task_schdl, publish_to_bus, mround, retrive_details_from_vb, \
+    register_with_bridge, register_rpc_route, unregister_with_bridge
+from volttron.platform import jsonrpc
+from volttron.platform.agent import utils
+from volttron.platform.agent.known_identities import (
+    MASTER_WEB)
+from volttron.platform.jsonrpc import (
+    METHOD_NOT_FOUND,
+    UNHANDLED_EXCEPTION, INVALID_PARAMS)
+from volttron.platform.vip.agent import Agent, Core, RPC
 
 utils.setup_logging()
 _log = logging.getLogger(__name__)

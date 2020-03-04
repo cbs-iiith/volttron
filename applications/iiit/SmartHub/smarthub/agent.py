@@ -22,14 +22,11 @@ import gevent.event
 
 from applications.iiit.Utils.ispace_msg import MessageType, EnergyCategory
 from applications.iiit.Utils.ispace_msg_utils import check_msg_type, tap_helper, \
-    ted_helper
-from applications.iiit.Utils.ispace_msg_utils import get_default_pp_msg, valid_bustopic_msg
-from applications.iiit.Utils.ispace_utils import calc_energy_wh
-from applications.iiit.Utils.ispace_utils import isclose, get_task_schdl, cancel_task_schdl, \
-    publish_to_bus, mround
-from applications.iiit.Utils.ispace_utils import retrive_details_from_vb, register_with_bridge, \
-    register_rpc_route
-from applications.iiit.Utils.ispace_utils import unregister_with_bridge
+    ted_helper, get_default_pp_msg, valid_bustopic_msg
+from applications.iiit.Utils.ispace_utils import calc_energy_wh, isclose, \
+    get_task_schdl, cancel_task_schdl, publish_to_bus, mround, \
+    retrive_details_from_vb, register_with_bridge, register_rpc_route, \
+    unregister_with_bridge
 from volttron.platform import jsonrpc
 from volttron.platform.agent import utils
 from volttron.platform.agent.known_identities import (

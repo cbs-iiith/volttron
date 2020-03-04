@@ -15,8 +15,8 @@ import logging
 import sys
 
 import dateutil
-
 from smap_tools import smap_post
+
 from volttron.platform.agent import utils
 from volttron.platform.messaging import headers as headers_mod
 from volttron.platform.vip.agent import Agent, Core
@@ -51,6 +51,7 @@ SENDER_GC = 'iiit.smarthubgc'
 def smarthubsmapuploader(config_path, **kwargs):
     config = utils.load_config(config_path)
     agent_id = config['agentid']
+
 
     class SmartHubSmapUploader(Agent):
         '''
@@ -310,6 +311,7 @@ def smarthubsmapuploader(config_path, **kwargs):
             smap_post(self.smap_root, self.api_key, topic, units, reading_type,
                       readings, self.source_data, self.time_zone)
             return
+
 
     Agent.__name__ = 'SmartHubSmapUploader_Agent'
     return SmartHubSmapUploader(**kwargs)

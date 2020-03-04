@@ -32,6 +32,7 @@ def smartstripui_clnt(config_path, **kwargs):
     PLUG_ID_1 = 0
     PLUG_ID_2 = 1
 
+
     class SmartStripUI_Clnt(Agent):
         '''
         retrive the data from volttron and pushes it to the BLE UI Server
@@ -194,6 +195,7 @@ def smartstripui_clnt(config_path, **kwargs):
             tagID = message[0]
             _log.debug('plugID: ' + str(plugID) + ', tagID: ' + tagID)
             self.do_rpc('plugTagID', {'plugID': plugID, 'tagID': tagID})
+
 
     Agent.__name__ = 'SmartStripUI_Clnt_Agent'
     return SmartStripUI_Clnt(**kwargs)
