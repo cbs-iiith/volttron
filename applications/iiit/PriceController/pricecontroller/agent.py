@@ -495,7 +495,7 @@ class PriceController(Agent):
 
             # TODO: maybe publish a list of the pp messages 
             # and let the bridge do_rpc concurrently
-            for msg in new_pp_msg_list:
+            for new_pp_msg in new_pp_msg_list:
                 # _log.info('new msg: {}'.format(msg))
                 pub_topic = self._topic_price_point
                 pub_msg = new_pp_msg.get_json_message(
