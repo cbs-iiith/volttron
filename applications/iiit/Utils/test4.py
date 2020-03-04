@@ -1,4 +1,3 @@
-
 # -*- coding: utf-8 -*- {{{
 # vim: set fenc=utf-8 ft=python sw=4 ts=4 sts=4 et:
 #
@@ -8,11 +7,9 @@
 #
 # IIIT Hyderabad
 
-#}}}
+# }}}
 
-#Sam
-
-import sys
+# Sam
 
 from ispace_utils import Runningstats
 

@@ -12,26 +12,20 @@
 # Sam
 
 import datetime
-import dateutil
-from enum import IntEnum
-import logging
-from random import randint
-from copy import copy
 import json
+import logging
+from copy import copy
+from random import randint
 
-from volttron.platform.agent import utils
-from volttron.platform import jsonrpc
-from volttron.platform.agent import json as jsonapi
-
-from ispace_utils import mround
 from ispace_msg import (
     ISPACE_Msg, MessageType, ISPACE_MSG_ATTRIB_LIST, ISPACE_Msg_ActivePower,
     EnergyCategory, ISPACE_Msg_Energy
-    )
+)
+from volttron.platform import jsonrpc
+from volttron.platform.agent import utils
 
 utils.setup_logging()
 _log = logging.getLogger(__name__)
-
 
 ROUNDOFF_PRICE_POINT = 0.01
 ROUNDOFF_BUDGET = 0.0001
@@ -41,9 +35,9 @@ ROUNDOFF_ENERGY = 0.0001
 
 # validate incomming bus topic message
 def valid_bustopic_msg(
-    sender, valid_senders_list, minimum_fields,
-    validate_fields, valid_price_ids, message
-    ):
+        sender, valid_senders_list, minimum_fields,
+        validate_fields, valid_price_ids, message
+):
     _log.debug('validate_bustopic_msg()')
     pp_msg = None
 
@@ -52,12 +46,12 @@ def valid_bustopic_msg(
             'sender: {}'.format(sender)
             + ' not in sender list: {}'.format(valid_senders_list)
             + ', do nothing!!!'
-            )
+        )
         return (False, pp_msg)
 
     try:
         # _log.debug('message: {}'.format(message))
-        #minimum_fields = ['value', 'value_data_type', 'units', 'price_id']
+        # minimum_fields = ['value', 'value_data_type', 'units', 'price_id']
         pp_msg = parse_bustopic_msg(message, minimum_fields)
         # _log.info('pp_msg: {}'.format(pp_msg))
     except KeyError as ke:
@@ -67,8 +61,8 @@ def valid_bustopic_msg(
                 'NA',
                 INVALID_PARAMS,
                 'Invalid params {}'.format(rpcdata.params)
-                )
             )
+        )
         return (False, pp_msg)
     except Exception as e:
         _log.exception(e.message)
@@ -79,17 +73,18 @@ def valid_bustopic_msg(
         'Price Point'
         if pp_msg.get_msg_type() == MessageType.price_point
         else 'Active Power'
-            if pp_msg.get_msg_type() == MessageType.active_power
-            else 'Energy Demand'
-                if pp_msg.get_msg_type() == MessageType.energy_demand
-                else 'Unknown Msg Type'
-        )
+        if pp_msg.get_msg_type() == MessageType.active_power
+        else 'Energy Demand'
+        if pp_msg.get_msg_type() == MessageType.energy_demand
+        else 'Unknown Msg Type'
+    )
 
     # sanity measure like, valid fields, valid pp ids, ttl expiry, etc.,
     if not pp_msg.sanity_check_ok(hint, validate_fields, valid_price_ids):
         _log.warning('Msg sanity checks failed!!!')
         return (False, pp_msg)
     return (True, pp_msg)
+
 
 # a default pricepoint message
 def get_default_pp_msg(discovery_address, device_id):
@@ -100,14 +95,15 @@ def get_default_pp_msg(discovery_address, device_id):
         discovery_address, device_id,
         None, None,
         3600, 3600, 60, 'UTC'
-        )
+    )
+
 
 # a default active power message
 def get_default_ap_msg(
-    discovery_address,
-    device_id,
-    category = EnergyCategory.mixed
-    ):
+        discovery_address,
+        device_id,
+        category=EnergyCategory.mixed
+):
     return ISPACE_Msg_ActivePower(
         MessageType.active_power, False, True,
         0, 'float', 'W',
@@ -116,14 +112,15 @@ def get_default_ap_msg(
         None, None,
         3600, 3600, 60, 'UTC',
         category
-        )
+    )
+
 
 # a default energy demand message
 def get_default_ed_msg(
-    discovery_address,
-    device_id,
-    category = EnergyCategory.mixed
-    ):
+        discovery_address,
+        device_id,
+        category=EnergyCategory.mixed
+):
     return ISPACE_Msg_Energy(
         MessageType.energy_demand, False, True,
         0, 'float', 'Wh',
@@ -132,17 +129,18 @@ def get_default_ed_msg(
         None, None,
         3600, 3600, 60, 'UTC',
         category
-        )
+    )
+
 
 # create a MessageType.energy ISPACE_Msg
 def ted_helper(
-    pp_msg,
-    device_id,
-    discovery_address,
-    ted,
-    new_ttl=60,
-    category = EnergyCategory.mixed
-    ):
+        pp_msg,
+        device_id,
+        discovery_address,
+        ted,
+        new_ttl=60,
+        category=EnergyCategory.mixed
+):
     # print(MessageType.energy_demand)
     msg_type = MessageType.energy_demand
     one_to_one = copy(pp_msg.get_one_to_one())
@@ -167,17 +165,18 @@ def ted_helper(
         dst_ip, dst_device_id,
         duration, ttl, ts, tz,
         category
-        )
+    )
+
 
 # create a MessageType.active_power ISPACE_Msg
 def tap_helper(
-    pp_msg,
-    device_id,
-    discovery_address,
-    tap,
-    new_ttl=60,
-    category = EnergyCategory.mixed
-    ):
+        pp_msg,
+        device_id,
+        discovery_address,
+        tap,
+        new_ttl=60,
+        category=EnergyCategory.mixed
+):
     # print(MessageType.active_power)
     msg_type = MessageType.active_power
     one_to_one = copy(pp_msg.get_one_to_one())
@@ -202,7 +201,8 @@ def tap_helper(
         dst_ip, dst_device_id,
         duration, ttl, ts, tz,
         category
-        )
+    )
+
 
 def check_msg_type(message, msg_type):
     rpcdata = jsonrpc.JsonRpcData.parse(message)
@@ -210,9 +210,9 @@ def check_msg_type(message, msg_type):
         json.loads(rpcdata.params)
         if isinstance(rpcdata.params, str)
         else rpcdata.params
-        )
+    )
     try:
-        #if 'msg_type' in data.keys() and
+        # if 'msg_type' in data.keys() and
         if data['msg_type'] == msg_type:
             return True
     except Exception:
@@ -220,25 +220,28 @@ def check_msg_type(message, msg_type):
         pass
     return False
 
+
 # converts bus message into an ispace_msg
-def parse_bustopic_msg(message, minimum_fields = []):
+def parse_bustopic_msg(message, minimum_fields=[]):
     rpcdata = jsonrpc.JsonRpcData.parse(message)
     data = (
         json.loads(rpcdata.params)
         if isinstance(rpcdata.params, str)
         else rpcdata.params
-        )
+    )
     return _parse_data(data, minimum_fields)
 
+
 # converts jsonrpc_msg into an ispace_msg
-def parse_jsonrpc_msg(message, minimum_fields = []):
+def parse_jsonrpc_msg(message, minimum_fields=[]):
     rpcdata = jsonrpc.JsonRpcData.parse(message)
     data = (
         json.loads(rpcdata.params)
         if isinstance(rpcdata.params, str)
         else rpcdata.params
-        )
+    )
     return _parse_data(data, minimum_fields)
+
 
 def _update_value(new_msg, attrib, new_value):
     if attrib == 'msg_type':
@@ -253,10 +256,10 @@ def _update_value(new_msg, attrib, new_value):
         new_msg.set_units(new_value)
     elif attrib == 'price_id':
         new_msg.set_price_id(
-            new_value 
-            if new_value is not None 
+            new_value
+            if new_value is not None
             else randint(0, 99999999)
-            )
+        )
     elif attrib == 'isoptimal':
         new_msg.set_isoptimal(new_value)
     elif attrib == 'src_ip':
@@ -276,13 +279,14 @@ def _update_value(new_msg, attrib, new_value):
             new_value
             if new_value is not None
             else datetime.datetime.utcnow().isoformat(' ') + 'Z'
-            )
+        )
     elif attrib == 'tz':
         new_msg.set_tz(new_value if new_value is not None else 'UTC')
     return
 
-def _parse_data(data, minimum_fields = []):
-    msg_type =  data['msg_type']
+
+def _parse_data(data, minimum_fields=[]):
+    msg_type = data['msg_type']
 
     # TODO: select class msg_type based on msg_type, instead of base class
     new_msg = ISPACE_Msg(msg_type)
@@ -305,14 +309,13 @@ def _parse_data(data, minimum_fields = []):
         # if attrib not found, catch the exception(pass)
         # and continue with next attrib
         for attrib in ISPACE_MSG_ATTRIB_LIST:
-            if attrib not in minimum_fields:    # data parsed in first pass
+            if attrib not in minimum_fields:  # data parsed in first pass
                 try:
                     _update_value(new_msg, attrib, data[attrib])
                 except KeyError:
                     _log.warning(
                         'key: {}, not available in the data'.format(attrib)
-                        )
+                    )
                     pass
-                
-    return new_msg
 
+    return new_msg

@@ -7,19 +7,17 @@
 #
 # IIIT Hyderabad
 
-#}}}
+# }}}
 
-#Sam
+# Sam
 
-import sys
-
+from copy import copy
 
 from ispace_msg import (
-    ISPACE_Msg, MessageType, ISPACE_Msg_ActivePower, ISPACE_Msg_Energy,
+    MessageType, ISPACE_Msg_ActivePower, ISPACE_Msg_Energy,
     EnergyCategory
-    )
+)
 from ispace_msg_utils import get_default_ap_msg, get_default_ed_msg
-from copy import copy
 
 tmp1 = ISPACE_Msg_ActivePower(
     MessageType.active_power, False, True,
@@ -29,7 +27,7 @@ tmp1 = ISPACE_Msg_ActivePower(
     None, None,
     3600, 3600, 60, 'UTC',
     EnergyCategory.thermal
-    )
+)
 tmp2 = ISPACE_Msg_ActivePower(
     MessageType.active_power, False, True,
     0, 'float', 'W',
@@ -38,7 +36,7 @@ tmp2 = ISPACE_Msg_ActivePower(
     None, None,
     3600, 3600, 60, 'UTC',
     EnergyCategory.lighting
-    )
+)
 
 tmp3 = get_default_ap_msg('192.168.1.4', 'device-3')
 tmp4 = get_default_ap_msg('192.168.1.4', 'device-4')
@@ -51,7 +49,6 @@ print('Message3: {}'.format(tmp3))
 print('Message4: {}'.format(tmp4))
 print('Message5: {}'.format(tmp5))
 
-
 tmp1 = ISPACE_Msg_Energy(
     MessageType.energy_demand, False, True,
     0, 'float', 'Wh',
@@ -60,7 +57,7 @@ tmp1 = ISPACE_Msg_Energy(
     None, None,
     3600, 3600, 60, 'UTC',
     EnergyCategory.thermal
-    )
+)
 tmp2 = ISPACE_Msg_Energy(
     MessageType.energy_demand, False, True,
     0, 'float', 'Wh',
@@ -69,7 +66,7 @@ tmp2 = ISPACE_Msg_Energy(
     None, None,
     3600, 3600, 60, 'UTC',
     EnergyCategory.lighting
-    )
+)
 
 tmp3 = get_default_ed_msg('192.168.1.4', 'device-3')
 tmp4 = get_default_ed_msg('192.168.1.4', 'device-4')
