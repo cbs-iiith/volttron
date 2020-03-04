@@ -145,7 +145,6 @@ print('    skewness: {}'.format(rc.skewness()))
 print('    kurtosis: {}'.format(rc.kurtosis()))
 print('    exp_wt_mv_avg: {}'.format(rc.exp_wt_mv_avg()))
 
-
 rc1 = Runningstats(120)
 rc2 = Runningstats(120)
 # D:\Sam NotExtreme\FDD_LAB_VOLT_LOGS\Analysis\Book2.xlsx Sheet3
