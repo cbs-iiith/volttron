@@ -17,11 +17,13 @@ import sys
 import time
 from copy import copy
 from random import random, randint
+from typing import List
 
 import gevent
 import gevent.event
 
-from applications.iiit.Utils.ispace_msg import MessageType, EnergyCategory
+from applications.iiit.Utils.ispace_msg import MessageType, EnergyCategory, \
+    ISPACE_Msg
 from applications.iiit.Utils.ispace_msg_utils import check_msg_type, \
     tap_helper, ted_helper, get_default_pp_msg, valid_bustopic_msg
 from applications.iiit.Utils.ispace_utils import isclose, get_task_schdl, \
@@ -31,6 +33,7 @@ from volttron.platform import jsonrpc
 from volttron.platform.agent import utils
 from volttron.platform.agent.known_identities import (
     MASTER_WEB)
+from volttron.platform.jsonrpc import JsonRpcData
 from volttron.platform.vip.agent import Agent, Core, RPC
 
 utils.setup_logging()
@@ -61,8 +64,13 @@ def buildingcontroller(config_path, **kwargs):
 
 
 class BuildingController(Agent):
-    '''Building Controller
-    '''
+    """
+    Building Controller
+    """
+    _opt_pp_msg_current = None  # type: ISPACE_Msg
+    _opt_pp_msg_latest = None  # type: ISPACE_Msg
+    _bid_pp_msg_latest = None  # type: ISPACE_Msg
+    _valid_senders_list_pp = None  # type: List[str]
     # initialized  during __init__ from config
     _period_read_data = None
     _period_process_pp = None
@@ -98,9 +106,9 @@ class BuildingController(Agent):
     def startup(self, sender, **kwargs):
         _log.info('Starting BuildingController...')
 
-        # retrive self._device_id, self._ip_addr, self._discovery_address
+        # retrieve self._device_id, self._ip_addr, self._discovery_address
         # from the bridge
-        # retrive_details_from_vb is a blocking call
+        # retrieve_details_from_vb is a blocking call
         retrive_details_from_vb(self, 5)
 
         # register rpc routes with MASTER_WEB
@@ -136,21 +144,21 @@ class BuildingController(Agent):
 
         # TODO: get the latest values (states/levels) from h/w
         # self.getInitialHwState()
-        # time.sleep(1) # yeild for a movement
+        # time.sleep(1) # yield for a movement
 
         # TODO: apply pricing policy for default values
 
         # TODO: publish initial data to volttron bus
 
-        # perodically publish total active power to volttron bus
-        # active power is comupted at regular interval (_period_read_data
+        # periodically publish total active power to volttron bus
+        # active power is computed at regular interval (_period_read_data
         # default(30s))
         # this power corresponds to current opt pp
         # tap --> total active power (Wh)
         self.core.periodic(self._period_read_data, self.publish_opt_tap,
                            wait=None)
 
-        # perodically process new pricing point that keeps trying to apply
+        # periodically process new pricing point that keeps trying to apply
         # the new pp till success
         self.core.periodic(self._period_process_pp, self.process_opt_pp,
                            wait=None)
@@ -180,20 +188,26 @@ class BuildingController(Agent):
 
     @RPC.export
     def rpc_from_net(self, header, message):
-        result = False
+        """
+
+        :type header: jsonstr
+        :type message: jsonstr
+        """
+        result = False  # type: bool
         try:
-            rpcdata = jsonrpc.JsonRpcData.parse(message)
+            rpcdata = jsonrpc.JsonRpcData.parse(message)  # type: JsonRpcData
             _log.debug('rpc_from_net()... '
-                       # + 'header: {}'.format(header)
+                       + 'header: {}'.format(header)
                        + ', rpc method: {}'.format(rpcdata.method)
                        # + ', rpc params: {}'.format(rpcdata.params)
                        )
             if rpcdata.method == 'ping':
                 return True
             else:
-                return jsonrpc.json_error(rpcdata.id, jsonrpc.METHOD_NOT_FOUND,
-                                          'Invalid method {}'.format(
-                                              rpcdata.method))
+                result = jsonrpc.json_error(rpcdata.id,
+                                            jsonrpc.METHOD_NOT_FOUND,
+                                            'Invalid method {}'.format(
+                                                rpcdata.method))
         except KeyError as ke:
             # print(ke)
             return jsonrpc.json_error(rpcdata.id, jsonrpc.INVALID_PARAMS,
@@ -204,7 +218,9 @@ class BuildingController(Agent):
             return jsonrpc.json_error(rpcdata.id, jsonrpc.UNHANDLED_EXCEPTION,
                                       e)
         # noinspection PyUnreachableCode
-        return (jsonrpc.json_result(rpcdata.id, result) if result else result)
+        if result:
+            result = jsonrpc.json_result(rpcdata.id, result)
+        return result
 
     def _config_get_init_values(self):
         self._period_read_data = self.config.get('period_read_data', 30)
@@ -380,7 +396,7 @@ class BuildingController(Agent):
         self.process_opt_pp()
         return
 
-    # this is a perodic function that keeps trying to apply the new pp till
+    # this is a periodic function that keeps trying to apply the new pp till
     # success
     def process_opt_pp(self):
         if self._process_opt_pp_success: return
@@ -416,7 +432,7 @@ class BuildingController(Agent):
         #      set self._process_opt_pp_success = False
         return
 
-    # perodic function to publish active power
+    # periodic function to publish active power
     def publish_opt_tap(self):
         pp_msg = self._opt_pp_msg_current
         price_id = pp_msg.get_price_id()
@@ -446,7 +462,8 @@ class BuildingController(Agent):
         return
 
     # calculate total active power (tap)
-    def _calc_total_act_pwr(self):
+    @staticmethod
+    def _calc_total_act_pwr():
         # _log.debug('_calc_total_act_pwr()')
         tap = random() * 1000
         return tap
@@ -495,7 +512,7 @@ class BuildingController(Agent):
     # and this msg is valid for self._period_read_data (ttl - default 30s)
     def _calc_total_energy_demand(self):
         pp_msg = self._bid_pp_msg_latest
-        bid_pp = pp_msg.get_value()
+        bid_pp = pp_msg.get_value()  # type: float
         duration = pp_msg.get_duration()
 
         # for testing
@@ -504,7 +521,9 @@ class BuildingController(Agent):
 
 
 def main(argv=sys.argv):
-    '''Main method called by the eggsecutable.'''
+    """
+    Main method called by the eggsecutable.
+    """
     try:
         utils.vip_main(buildingcontroller)
     except Exception as e:
