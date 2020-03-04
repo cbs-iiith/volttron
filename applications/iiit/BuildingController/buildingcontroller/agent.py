@@ -14,32 +14,24 @@
 import datetime
 import logging
 import sys
-
-from volttron.platform.vip.agent import Agent, Core, RPC
-from volttron.platform.agent import utils
-from volttron.platform.agent.known_identities import (
-    MASTER_WEB)
-from volttron.platform import jsonrpc
-from volttron.platform.jsonrpc import (
-    METHOD_NOT_FOUND, UNHANDLED_EXCEPTION, UNABLE_TO_REGISTER_INSTANCE,
-    INVALID_PARAMS)
-
-from random import random, randint
-from copy import copy
-
 import time
+from copy import copy
+from random import random, randint
+
 import gevent
 import gevent.event
 
-from applications.iiit.Utils.ispace_utils import isclose, get_task_schdl, cancel_task_schdl, \
-    publish_to_bus
-from applications.iiit.Utils.ispace_utils import retrive_details_from_vb, register_with_bridge, \
-    register_rpc_route
-from applications.iiit.Utils.ispace_utils import unregister_with_bridge
 from applications.iiit.Utils.ispace_msg import MessageType, EnergyCategory
-from applications.iiit.Utils.ispace_msg_utils import parse_bustopic_msg, check_msg_type, tap_helper, \
-    ted_helper
-from applications.iiit.Utils.ispace_msg_utils import get_default_pp_msg, valid_bustopic_msg
+from applications.iiit.Utils.ispace_msg_utils import check_msg_type, \
+    tap_helper, ted_helper, get_default_pp_msg, valid_bustopic_msg
+from applications.iiit.Utils.ispace_utils import isclose, get_task_schdl, \
+    cancel_task_schdl, publish_to_bus, retrive_details_from_vb, \
+    register_with_bridge, register_rpc_route, unregister_with_bridge
+from volttron.platform import jsonrpc
+from volttron.platform.agent import utils
+from volttron.platform.agent.known_identities import (
+    MASTER_WEB)
+from volttron.platform.vip.agent import Agent, Core, RPC
 
 utils.setup_logging()
 _log = logging.getLogger(__name__)
@@ -199,17 +191,19 @@ class BuildingController(Agent):
             if rpcdata.method == 'ping':
                 return True
             else:
-                return jsonrpc.json_error(rpcdata.id, METHOD_NOT_FOUND,
+                return jsonrpc.json_error(rpcdata.id, jsonrpc.METHOD_NOT_FOUND,
                                           'Invalid method {}'.format(
                                               rpcdata.method))
         except KeyError as ke:
             # print(ke)
-            return jsonrpc.json_error(rpcdata.id, INVALID_PARAMS,
+            return jsonrpc.json_error(rpcdata.id, jsonrpc.INVALID_PARAMS,
                                       'Invalid params {}'.format(
                                           rpcdata.params))
         except Exception as e:
             # print(e)
-            return jsonrpc.json_error(rpcdata.id, UNHANDLED_EXCEPTION, e)
+            return jsonrpc.json_error(rpcdata.id, jsonrpc.UNHANDLED_EXCEPTION,
+                                      e)
+        # noinspection PyUnreachableCode
         return (jsonrpc.json_result(rpcdata.id, result) if result else result)
 
     def _config_get_init_values(self):
@@ -237,7 +231,7 @@ class BuildingController(Agent):
         return
 
     def _run_bms_test(self, pp_msg):
-        _log.debug('Running: _runBMS Commu Test()...')
+        _log.debug('Running: _runBMS Communication Test()...')
         self._test_new_pp(pp_msg, 0.10)
         time.sleep(1)
 
@@ -263,19 +257,17 @@ class BuildingController(Agent):
 
     def _rpcget_bms_pp(self):
         try:
-            pp = self.vip.rpc.call('platform.actuator'
-                                   , 'get_point'
-                                   ,
-                                   'iiit/cbs/buildingcontroller/Building_PricePoint'
-                                   ).get(timeout=10)
+            point = 'iiit/cbs/buildingcontroller/Building_PricePoint'
+            pp = self.vip.rpc.call('platform.actuator', 'get_point', point).get(
+                timeout=10)
             return pp
         except gevent.Timeout:
             _log.exception('gevent.Timeout in _rpcget_bms_pp()')
-            return E_UNKNOWN_BPP
+            pass
         except Exception as e:
             _log.exception('Could not contact actuator. Is it running?')
             print(e)
-            return E_UNKNOWN_BPP
+            pass
         return E_UNKNOWN_BPP
 
     # Publish new price to bms (for logging (or) for further processing by
@@ -287,13 +279,10 @@ class BuildingController(Agent):
         success = get_task_schdl(self, task_id, 'iiit/cbs/buildingcontroller')
         if not success: return
         try:
-            result = self.vip.rpc.call('platform.actuator'
-                                       , 'set_point'
-                                       , self._agent_id
-                                       ,
-                                       'iiit/cbs/buildingcontroller/Building_PricePoint'
-                                       , new_pp
-                                       ).get(timeout=10)
+            point = 'iiit/cbs/buildingcontroller/Building_PricePoint'
+            result = self.vip.rpc.call('platform.actuator', 'set_point',
+                                       self._agent_id, point, new_pp).get(
+                timeout=10)
             self._update_bms_pp(new_pp)
         except gevent.Timeout:
             _log.exception('gevent.Timeout in _rpcset_bms_pp()!!!')
