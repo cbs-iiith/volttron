@@ -171,19 +171,19 @@ class SmartStrip(Agent):
         # publish initial data from hw to volttron bus
         # self.publish_hw_data()
 
-        # perodically publish hw data to volttron bus. 
+        # periodically publish hw data to volttron bus. 
         # The data includes plug th_pp, meter data
         self.core.periodic(self._period_read_data, self.publish_hw_data,
                            wait=None)
 
         # time.sleep(5) #yeild
 
-        # perodically process connected tag ids from h/w
+        # periodically process connected tag ids from h/w
         # self.core.periodic(self._period_read_data,
         # self.process_plugs_tag_id, wait=None)
         # time.sleep(5) #yeild
 
-        # perodically publish total active power to volttron bus
+        # periodically publish total active power to volttron bus
         # active power is comupted at regular interval (_period_read_data
         # default(30s))
         # this power corresponds to current opt pp
@@ -192,7 +192,7 @@ class SmartStrip(Agent):
                            wait=None)
 
         # time.sleep(2) #yeild
-        # perodically process new pricing point that keeps trying to apply
+        # periodically process new pricing point that keeps trying to apply
         # the new pp till success
         self.core.periodic(self._period_process_pp, self.process_opt_pp,
                            wait=None)

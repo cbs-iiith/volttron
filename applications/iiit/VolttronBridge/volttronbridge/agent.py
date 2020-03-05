@@ -220,13 +220,13 @@ class VolttronBridge(Agent):
             self.us_opt_pp_id = randint(0, 99999999)
             self.us_bid_pp_id = randint(0, 99999999)
 
-        # perodically keeps trying to post ed to us
+        # periodically keeps trying to post ed to us
         if self._bridge_host != 'LEVEL_HEAD':
             self.core.periodic(self._period_process_pp
                                , self.post_us_new_ed
                                , wait=None)
 
-        # perodically keeps trying to post pp to ds
+        # periodically keeps trying to post pp to ds
         if self._bridge_host != 'LEVEL_TAILEND':
             self.core.periodic(self._period_process_pp
                                , self.post_ds_new_pp
@@ -502,7 +502,7 @@ class VolttronBridge(Agent):
         self._schdl_post_us_new_ed(10)
         return
 
-    # perodically keeps trying to post ed to us
+    # periodically keeps trying to post ed to us
     def post_us_new_ed(self):
         if self._all_us_posts_success: return
 
@@ -588,7 +588,7 @@ class VolttronBridge(Agent):
         _log.debug('post_us_new_ed()...done')
         return
 
-    # perodically keeps trying to post pp to ds
+    # periodically keeps trying to post pp to ds
     # ensure that only failed in previous iterations and the new msg are sent
     def post_ds_new_pp(self):
         if self._all_ds_posts_success: return
