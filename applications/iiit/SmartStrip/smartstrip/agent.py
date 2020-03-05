@@ -39,7 +39,7 @@ from applications.iiit.Utils.ispace_utils import (calc_energy_wh,
 from volttron.platform import jsonrpc
 from volttron.platform.agent import utils
 from volttron.platform.agent.known_identities import (MASTER_WEB)
-from volttron.platform.vip.agent import Agent, Core
+from volttron.platform.vip.agent import Agent, Core, RPC
 
 utils.setup_logging()
 _log = logging.getLogger(__name__)
@@ -240,7 +240,7 @@ class SmartStrip(Agent):
         _log.debug('onfinish() -  do nothing!!!')
         return
 
-    @staticmethod
+    @RPC.export
     def rpc_from_net(self, header, message):
         rpcdata = jsonrpc.JsonRpcData(None, None, None, None, None)
         try:
@@ -285,14 +285,16 @@ class SmartStrip(Agent):
             result = jsonrpc.json_result(rpcdata.id, result)
         return result
 
-    @staticmethod
-    def ping():
+    @RPC.export
+    def ping(self):
         return True
 
+    @RPC.export
     def get_th_pp(self, plug_id):
         _log.debug('get_th_pp()')
         return self._plugs_th_pp[plug_id]
 
+    @RPC.export
     def set_th_pp(self, plug_id, new_th_pp):
         _log.debug('set_th_pp()')
         if self._plugs_th_pp[plug_id] != new_th_pp:

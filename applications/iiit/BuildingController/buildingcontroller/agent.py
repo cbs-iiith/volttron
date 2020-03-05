@@ -37,7 +37,7 @@ from applications.iiit.Utils.ispace_utils import (isclose, get_task_schdl,
 from volttron.platform import jsonrpc
 from volttron.platform.agent import utils
 from volttron.platform.agent.known_identities import MASTER_WEB
-from volttron.platform.vip.agent import Agent, Core
+from volttron.platform.vip.agent import Agent, Core, RPC
 
 utils.setup_logging()
 _log = logging.getLogger(__name__)
@@ -190,8 +190,8 @@ class BuildingController(Agent):
         _log.debug('onfinish()')
         return
 
-    @staticmethod
-    def rpc_from_net(header, message):
+    @RPC.export
+    def rpc_from_net(self, header, message):
         """
 
         :type header: jsonstr
@@ -225,6 +225,10 @@ class BuildingController(Agent):
         if result:
             result = jsonrpc.json_result(rpcdata.id, result)
         return result
+
+    @RPC.export
+    def ping(self):
+        return True
 
     def _config_get_init_values(self):
         self._period_read_data = self.config.get('period_read_data', 30)

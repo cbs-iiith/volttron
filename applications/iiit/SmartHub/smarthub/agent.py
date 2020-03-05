@@ -38,7 +38,7 @@ from applications.iiit.Utils.ispace_utils import (calc_energy_wh, isclose,
 from volttron.platform import jsonrpc
 from volttron.platform.agent import utils
 from volttron.platform.agent.known_identities import (MASTER_WEB)
-from volttron.platform.vip.agent import Agent, Core
+from volttron.platform.vip.agent import Agent, Core, RPC
 
 utils.setup_logging()
 _log = logging.getLogger(__name__)
@@ -249,6 +249,7 @@ class SmartHub(Agent):
             self._stop_volt()
         return
 
+    @RPC.export
     def rpc_from_net(self, header, message):
         rpcdata = jsonrpc.JsonRpcData(None, None, None, None, None)
         try:
@@ -300,8 +301,8 @@ class SmartHub(Agent):
             result = jsonrpc.json_result(rpcdata.id, result)
         return result
 
-    @staticmethod
-    def ping():
+    @RPC.export
+    def ping(self):
         return True
 
     def _stop_volt(self):

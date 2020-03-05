@@ -29,7 +29,7 @@ from applications.iiit.Utils.ispace_utils import (do_rpc, register_rpc_route,
 from volttron.platform import jsonrpc
 from volttron.platform.agent import utils
 from volttron.platform.agent.known_identities import MASTER_WEB
-from volttron.platform.vip.agent import Agent, Core
+from volttron.platform.vip.agent import Agent, Core, RPC
 
 # from gevent import monkey
 # monkey.patch_all() #not required grequests does it for us
@@ -320,6 +320,7 @@ class VolttronBridge(Agent):
                                                   'zone/pricepoint')
         return
 
+    @RPC.export
     def rpc_from_net(self, header, message):
         rpcdata = jsonrpc.JsonRpcData(None, None, None, None, None)
         try:
@@ -366,39 +367,48 @@ class VolttronBridge(Agent):
             result = jsonrpc.json_result(rpcdata.id, result)
         return result
 
-    @staticmethod
-    def ping():
+    @RPC.export
+    def ping(self):
         return True
 
+    @RPC.export
     def get_ds_device_ids(self):
         return (self._ds_device_ids
                 if self._bridge_host != 'LEVEL_TAILEND'
                 else [])
 
+    @RPC.export
     def local_ed_agents(self):
         # return local ed agents vip_identities
         return self._local_devices_register
 
+    @RPC.export
     def get_local_device_ids(self):
         return self._local_device_ids
 
+    @RPC.export
     def count_ds_devices(self):
         return (len(self._ds_device_ids)
                 if self._bridge_host != 'LEVEL_TAILEND'
                 else 0)
 
+    @RPC.export
     def count_local_devices(self):
         return len(self._local_device_ids)
 
+    @RPC.export
     def device_id(self):
         return self._device_id
 
+    @RPC.export
     def ip_addr(self):
         return self._this_ip_addr
 
+    @RPC.export
     def discovery_address(self):
         return self._discovery_address
 
+    @RPC.export
     def register_local_ed_agent(self, sender, device_id):
         if device_id is None:
             return False
@@ -416,6 +426,7 @@ class VolttronBridge(Agent):
         _log.debug('registered!!!')
         return True
 
+    @RPC.export
     def unregister_local_ed_agent(self, sender):
         _log.debug('unregister_local_ed_agent(), sender: '.format(sender))
         if sender not in self._local_devices_register:

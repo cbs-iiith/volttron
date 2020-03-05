@@ -34,7 +34,7 @@ from applications.iiit.Utils.ispace_utils import (publish_to_bus,
 from volttron.platform import jsonrpc
 from volttron.platform.agent import utils
 from volttron.platform.agent.known_identities import MASTER_WEB
-from volttron.platform.vip.agent import Agent, Core
+from volttron.platform.vip.agent import Agent, Core, RPC
 
 utils.setup_logging()
 _log = logging.getLogger(__name__)
@@ -304,6 +304,8 @@ class PriceController(Agent):
         _log.debug('onfinish()')
         return
 
+    @staticmethod
+    @RPC.export
     def rpc_from_net(self, header, message):
         rpcdata = jsonrpc.JsonRpcData(None, None, None, None, None)
         try:
@@ -352,6 +354,10 @@ class PriceController(Agent):
         if result:
             result = jsonrpc.json_result(rpcdata.id, result)
         return result
+
+    @RPC.export
+    def ping(self):
+        return True
 
     def _get_pca_state(self, rpcdata_id, message):
         state = jsonrpc.JsonRpcData.parse(message).params['state']

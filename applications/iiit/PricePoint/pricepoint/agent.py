@@ -23,7 +23,7 @@ from applications.iiit.Utils.ispace_utils import (publish_to_bus,
 from volttron.platform import jsonrpc
 from volttron.platform.agent import utils
 from volttron.platform.agent.known_identities import MASTER_WEB
-from volttron.platform.vip.agent import Agent, Core
+from volttron.platform.vip.agent import Agent, Core, RPC
 
 utils.setup_logging()
 _log = logging.getLogger(__name__)
@@ -119,6 +119,7 @@ class PricePoint(Agent):
                                                   'zone/pricepoint')
         return
 
+    @RPC.export
     def rpc_from_net(self, header, message):
         """
 
@@ -162,6 +163,10 @@ class PricePoint(Agent):
         if result:
             result = (jsonrpc.json_result(rpcdata.id, result))
         return result
+
+    @RPC.export
+    def ping(self):
+        return True
 
     def update_price_point(self, rpcdata_id, header, message):
         rpcdata = jsonrpc.JsonRpcData.parse(message)

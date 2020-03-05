@@ -37,7 +37,7 @@ from applications.iiit.Utils.ispace_utils import (isclose, get_task_schdl,
 from volttron.platform import jsonrpc
 from volttron.platform.agent import utils
 from volttron.platform.agent.known_identities import (MASTER_WEB)
-from volttron.platform.vip.agent import Agent, Core
+from volttron.platform.vip.agent import Agent, Core, RPC
 
 utils.setup_logging()
 _log = logging.getLogger(__name__)
@@ -203,8 +203,8 @@ class RadiantCubicle(Agent):
         _log.debug('onfinish()')
         return
 
-    @staticmethod
-    def rpc_from_net(header, message):
+    @RPC.export
+    def rpc_from_net(self, header, message):
         rpcdata = jsonrpc.JsonRpcData(None, None, None, None, None)
         try:
             rpcdata = jsonrpc.JsonRpcData.parse(message)
@@ -231,8 +231,8 @@ class RadiantCubicle(Agent):
             result = jsonrpc.json_result(rpcdata.id, result)
         return result
 
-    @staticmethod
-    def ping():
+    @RPC.export
+    def ping(self):
         return True
 
     def _config_get_init_values(self):
