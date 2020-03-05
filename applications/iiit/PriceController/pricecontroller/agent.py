@@ -64,13 +64,12 @@ class PriceController(Agent):
     _topic_energy_demand_ds = None
     _topic_energy_demand = None
 
-    _pp_optimize_option = None
-
     _pca_state = None  # ['ONLINE', 'STANDALONE', 'STANDBY']
     _pca_standby = False
     _pca_standalone = False
     _pca_online = True
     _pca_mode = None  # ['PASS_ON_PP', 'DEFAULT_OPT', 'EXTERN_OPT']
+    _pp_optimize_option = None
 
     _mode_pass_on_params = None
     _mode_default_opt_params = None
@@ -1027,7 +1026,7 @@ class PriceController(Agent):
         # need to reset the corresponding buckets to zero
         self._us_local_bid_ed.clear()
         self._us_ds_bid_ed.clear()
-        self.us_bid_pp_msg = None
+        self.us_bid_pp_msg = ISPACE_Msg(MessageType.price_point)
         self._published_us_bid_ted = True
         return
 
