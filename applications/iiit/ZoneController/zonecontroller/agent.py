@@ -20,20 +20,25 @@ from random import randint
 import gevent
 import gevent.event
 
-from applications.iiit.Utils.ispace_msg import MessageType, EnergyCategory
-from applications.iiit.Utils.ispace_msg_utils import check_msg_type, tap_helper, \
-    ted_helper, get_default_pp_msg, valid_bustopic_msg
-from applications.iiit.Utils.ispace_utils import isclose, get_task_schdl, \
-    cancel_task_schdl, publish_to_bus, mround, retrieve_details_from_vb, \
-    register_with_bridge, register_rpc_route, unregister_with_bridge
+from applications.iiit.Utils.ispace_msg import (MessageType, EnergyCategory,
+                                                ISPACE_Msg)
+from applications.iiit.Utils.ispace_msg_utils import (check_msg_type,
+                                                      tap_helper,
+                                                      ted_helper,
+                                                      get_default_pp_msg,
+                                                      valid_bustopic_msg)
+from applications.iiit.Utils.ispace_utils import (isclose, get_task_schdl,
+                                                  cancel_task_schdl,
+                                                  publish_to_bus, mround,
+                                                  retrieve_details_from_vb,
+                                                  register_with_bridge,
+                                                  register_rpc_route,
+                                                  unregister_with_bridge)
 from volttron.platform import jsonrpc
 from volttron.platform.agent import utils
 from volttron.platform.agent.known_identities import (
     MASTER_WEB)
-from volttron.platform.jsonrpc import (
-    METHOD_NOT_FOUND,
-    UNHANDLED_EXCEPTION, INVALID_PARAMS)
-from volttron.platform.vip.agent import Agent, Core, RPC
+from volttron.platform.vip.agent import Agent, Core
 
 utils.setup_logging()
 _log = logging.getLogger(__name__)
@@ -64,8 +69,9 @@ def zonecontroller(config_path, **kwargs):
 
 
 class ZoneController(Agent):
-    '''Zone Controller
-    '''
+    """
+    Zone Controller
+    """
     # initialized  during __init__ from config
     _period_read_data = None
     _period_process_pp = None
@@ -91,20 +97,26 @@ class ZoneController(Agent):
     _edf_zn_ac = None
     _edf_zn_light = None
 
+    _valid_senders_list_pp = None  # type: list
+    _opt_pp_msg_current = None  # type: ISPACE_Msg
+    _opt_pp_msg_latest = None  # type: ISPACE_Msg
+    _bid_pp_msg_latest = None  # type: ISPACE_Msg
+
     def __init__(self, config_path, **kwargs):
         super(ZoneController, self).__init__(**kwargs)
         _log.debug('vip_identity: ' + self.core.identity)
 
         self.config = utils.load_config(config_path)
+        self._agent_id = self.config['agentid']
+
         self._config_get_points()
         self._config_get_init_values()
-        self._config_get_pricefucntions()
+        self._config_get_price_functions()
         return
 
     @Core.receiver('onsetup')
     def setup(self, sender, **kwargs):
         _log.info(self.config['message'])
-        self._agent_id = self.config['agentid']
         return
 
     @Core.receiver('onstart')
@@ -113,7 +125,7 @@ class ZoneController(Agent):
 
         # retrieve self._device_id, self._ip_addr, self._discovery_address
         # from the bridge
-        # retrive_details_from_vb is a blocking call
+        # retrieve_details_from_vb is a blocking call
         retrieve_details_from_vb(self, 5)
 
         # register rpc routes with MASTER_WEB
@@ -150,16 +162,12 @@ class ZoneController(Agent):
         self._zone_tsp = 0
         self._zone_lsp = 0
 
-        # TODO: get the latest values (states/levels) from h/w
+        # get the latest values (states/levels) from h/w
         # self.getInitialHwState()
-        # time.sleep(1) # yeild for a movement
-
-        # TODO: apply pricing policy for default values
-
-        # TODO: publish initial data to volttron bus
+        # time.sleep(1) # yield for a movement
 
         # periodically publish total active power to volttron bus
-        # active power is comupted at regular interval (_period_read_data
+        # active power is computed at regular interval (_period_read_data
         # default(30s))
         # this power corresponds to current opt pp
         # tap --> total active power (Wh)
@@ -194,9 +202,9 @@ class ZoneController(Agent):
         _log.debug('onfinish()')
         return
 
-    @RPC.export
-    def rpc_from_net(self, header, message):
-        result = False
+    @staticmethod
+    def rpc_from_net(header, message):
+        rpcdata = jsonrpc.JsonRpcData(None, None, None, None, None)
         try:
             rpcdata = jsonrpc.JsonRpcData.parse(message)
             _log.debug('rpc_from_net()... '
@@ -207,18 +215,23 @@ class ZoneController(Agent):
             if rpcdata.method == 'ping':
                 return True
             else:
-                return jsonrpc.json_error(rpcdata.id, METHOD_NOT_FOUND,
-                                          'Invalid method {}'.format(
-                                              rpcdata.method))
-        except KeyError as ke:
+                result = jsonrpc.json_error(rpcdata.id,
+                                            jsonrpc.METHOD_NOT_FOUND,
+                                            'Invalid method {}'.format(
+                                                rpcdata.method))
+        except KeyError:
             # print(ke)
-            return jsonrpc.json_error(rpcdata.id, INVALID_PARAMS,
-                                      'Invalid params {}'.format(
-                                          rpcdata.params))
+            result = jsonrpc.json_error(rpcdata.id, jsonrpc.INVALID_PARAMS,
+                                        'Invalid params {}'.format(
+                                            rpcdata.params))
         except Exception as e:
             # print(e)
-            return jsonrpc.json_error(rpcdata.id, UNHANDLED_EXCEPTION, e)
-        return (jsonrpc.json_result(rpcdata.id, result) if result else result)
+            result = jsonrpc.json_error(rpcdata.id, jsonrpc.UNHANDLED_EXCEPTION,
+                                        e)
+
+        if result:
+            result = jsonrpc.json_result(rpcdata.id, result)
+        return result
 
     def _config_get_init_values(self):
         self._period_read_data = self.config.get('period_read_data', 30)
@@ -236,8 +249,8 @@ class ZoneController(Agent):
                                                     'ds/energydemand')
         return
 
-    def _config_get_pricefucntions(self):
-        _log.debug('_config_get_pricefucntions()')
+    def _config_get_price_functions(self):
+        _log.debug('_config_get_price_functions()')
 
         self._pf_zn_ac = self.config.get('pf_zn_ac')
         self._pf_zn_light = self.config.get('pf_zn_light')
@@ -248,7 +261,7 @@ class ZoneController(Agent):
         return
 
     def _run_bms_test(self):
-        _log.debug('Running: _runBMS Commu Test()...')
+        _log.debug('Running: _runBMS Communication Test()...')
 
         _log.debug('change tsp 26')
         self._rpcset_zone_tsp(26.0)
@@ -302,19 +315,20 @@ class ZoneController(Agent):
 
         task_id = str(randint(0, 99999999))
         success = get_task_schdl(self, task_id, 'iiit/cbs/zonecontroller')
-        if not success: return
+        if not success:
+            return
         try:
-            result = self.vip.rpc.call('platform.actuator'
-                                       , 'set_point'
-                                       , self._agent_id
-                                       , 'iiit/cbs/zonecontroller/RM_TSP'
-                                       , tsp
-                                       ).get(timeout=10)
+            point = 'iiit/cbs/zonecontroller/RM_TSP'
+            self.vip.rpc.call('platform.actuator', 'set_point', self._agent_id,
+                              point, tsp).get(timeout=10)
             self._update_zone_tsp(tsp)
         except gevent.Timeout:
             _log.exception('gevent.Timeout in _rpcset_zone_tsp()')
         except Exception as e:
-            _log.exception('changing ambient tsp')
+            _log.exception(
+                'changing ambient tsp'
+                + ', Message: {}'.format(e.message)
+            )
             # print(e)
         finally:
             # cancel the schedule
@@ -331,19 +345,20 @@ class ZoneController(Agent):
 
         task_id = str(randint(0, 99999999))
         success = get_task_schdl(self, task_id, 'iiit/cbs/zonecontroller')
-        if not success: return
+        if not success:
+            return
         try:
-            result = self.vip.rpc.call('platform.actuator'
-                                       , 'set_point'
-                                       , self._agent_id
-                                       , 'iiit/cbs/zonecontroller/RM_LSP'
-                                       , lsp
-                                       ).get(timeout=10)
+            point = 'iiit/cbs/zonecontroller/RM_LSP'
+            self.vip.rpc.call('platform.actuator', 'set_point', self._agent_id,
+                              point, lsp).get(timeout=10)
             self._update_zone_lsp(lsp)
         except gevent.Timeout:
             _log.exception('gevent.Timeout in _rpcset_zone_lsp()')
         except Exception as e:
-            _log.exception('changing ambient lsp')
+            _log.exception(
+                'changing ambient lsp'
+                + ', Message: {}'.format(e.message)
+            )
             # print(e)
         finally:
             # cancel the schedule
@@ -383,82 +398,87 @@ class ZoneController(Agent):
     def _rpcget_zone_lighting_power(self):
         task_id = str(randint(0, 99999999))
         success = get_task_schdl(self, task_id, 'iiit/cbs/zonecontroller')
-        if not success: return E_UNKNOWN_CLE
+        if not success:
+            return E_UNKNOWN_CLE
         try:
-            lightEnergy = self.vip.rpc.call('platform.actuator'
-                                            , 'get_point'
-                                            ,
-                                            'iiit/cbs/zonecontroller/RM_LIGHT_CALC_PWR'
-                                            ).get(timeout=10)
-            return lightEnergy
+            point = 'iiit/cbs/zonecontroller/RM_LIGHT_CALC_PWR'
+            light_energy = self.vip.rpc.call('platform.actuator', 'get_point',
+                                             point).get(timeout=10)
+            return light_energy
         except gevent.Timeout:
             _log.exception('gevent.Timeout in rpc_getRmCalcLightEnergy()')
         except Exception as e:
-            _log.exception('Could not contact actuator. Is it running?')
+            _log.exception(
+                'Could not contact actuator. Is it running?'
+                + ', Message: {}'.format(e.message)
+            )
             # print(e)
         finally:
             # cancel the schedule
             cancel_task_schdl(self, task_id)
+            pass
         return E_UNKNOWN_CLE
 
     def _rpcget_zone_cooling_power(self):
         task_id = str(randint(0, 99999999))
         success = get_task_schdl(self, task_id, 'iiit/cbs/zonecontroller')
-        if not success: return E_UNKNOWN_CCE
+        if not success:
+            return E_UNKNOWN_CCE
         try:
-            coolingEnergy = self.vip.rpc.call('platform.actuator'
-                                              , 'get_point'
-                                              , 'iiit/cbs/zonecontroller/RM_CCE'
-                                              ).get(timeout=10)
-            return coolingEnergy
+            point = 'iiit/cbs/zonecontroller/RM_CCE'
+            cooling_energy = self.vip.rpc.call('platform.actuator', 'get_point',
+                                               point).get(timeout=10)
+            return cooling_energy
         except gevent.Timeout:
             _log.exception('gevent.Timeout in _rpcget_zone_cooling_power()')
-            return E_UNKNOWN_CCE
         except Exception as e:
-            _log.exception('Could not contact actuator. Is it running?')
+            _log.exception(
+                'Could not contact actuator. Is it running?'
+                + ', Message: {}'.format(e.message)
+            )
             # print(e)
-            return E_UNKNOWN_CCE
         finally:
             # cancel the schedule
             cancel_task_schdl(self, task_id)
+            pass
         return E_UNKNOWN_CCE
 
     def _rpcget_zone_tsp(self):
         try:
-            rm_tsp = self.vip.rpc.call('platform.actuator'
-                                       , 'get_point'
-                                       , 'iiit/cbs/zonecontroller/RM_TSP'
-                                       ).get(timeout=10)
+            point = 'iiit/cbs/zonecontroller/RM_TSP'
+            rm_tsp = self.vip.rpc.call('platform.actuator', 'get_point',
+                                       point).get(timeout=10)
             return rm_tsp
         except gevent.Timeout:
             _log.exception('gevent.Timeout in _rpcget_zone_tsp()')
-            return E_UNKNOWN_TSP
         except Exception as e:
-            _log.exception('Could not contact actuator. Is it running?')
+            _log.exception(
+                'Could not contact actuator. Is it running?'
+                + ', Message: {}'.format(e.message)
+            )
             # print(e)
-            return E_UNKNOWN_TSP
         return E_UNKNOWN_TSP
 
     def _rpcget_zone_lsp(self):
         try:
-            rm_lsp = self.vip.rpc.call('platform.actuator'
-                                       , 'get_point'
-                                       , 'iiit/cbs/zonecontroller/RM_LSP'
-                                       ).get(timeout=10)
+            point = 'iiit/cbs/zonecontroller/RM_LSP'
+            rm_lsp = self.vip.rpc.call('platform.actuator', 'get_point',
+                                       point).get(timeout=10)
             return rm_lsp
         except gevent.Timeout:
             _log.exception('gevent.Timeout in _rpcget_zone_lsp()')
-            return E_UNKNOWN_LSP
         except Exception as e:
-            _log.exception('Could not contact actuator. Is it running?')
+            _log.exception(
+                'Could not contact actuator. Is it running?'
+                + ', Message: {}'.format(e.message)
+            )
             # print(e)
-            return E_UNKNOWN_LSP
         return E_UNKNOWN_LSP
 
     def _publish_zone_tsp(self, tsp):
         # _log.debug('_publish_zone_tsp()')
         pub_topic = self._root_topic + '/rm_tsp'
-        pub_msg = [tsp, {'units': 'celcius', 'tz': 'UTC', 'type': 'float'}]
+        pub_msg = [tsp, {'units': 'celsius', 'tz': 'UTC', 'type': 'float'}]
         _log.info('[LOG] Zone TSP, Msg: {}'.format(pub_msg))
         _log.debug('Publishing to local bus topic: {}'.format(pub_topic))
         publish_to_bus(self, pub_topic, pub_msg)
@@ -479,17 +499,19 @@ class ZoneController(Agent):
         Functionality related to the market mechanisms
         
         1. receive new prices (optimal pp or bid pp) from the pca
-        2. if opt pp, apply pricing policy by computing the new setpoint 
+        2. if opt pp, apply pricing policy by computing the new set point 
         based on price functions
         3. if bid pp, compute the new bid energy demand
         
     '''
 
     def on_new_price(self, peer, sender, bus, topic, headers, message):
-        if sender not in self._valid_senders_list_pp: return
+        if sender not in self._valid_senders_list_pp:
+            return
 
         # check message type before parsing
-        if not check_msg_type(message, MessageType.price_point): return False
+        if not check_msg_type(message, MessageType.price_point):
+            return False
 
         valid_senders_list = self._valid_senders_list_pp
         minimum_fields = ['msg_type', 'value', 'value_data_type', 'units',
@@ -497,11 +519,9 @@ class ZoneController(Agent):
         validate_fields = ['value', 'units', 'price_id', 'isoptimal',
                            'duration', 'ttl']
         valid_price_ids = []
-        (success, pp_msg) = valid_bustopic_msg(sender, valid_senders_list
-                                               , minimum_fields
-                                               , validate_fields
-                                               , valid_price_ids
-                                               , message)
+        (success, pp_msg) = valid_bustopic_msg(sender, valid_senders_list,
+                                               minimum_fields, validate_fields,
+                                               valid_price_ids, message)
         if not success or pp_msg is None:
             return
         else:
@@ -530,10 +550,11 @@ class ZoneController(Agent):
         self.process_opt_pp()
         return
 
-    # this is a perodic function that keeps trying to apply the new pp till
+    # this is a periodic function that keeps trying to apply the new pp till
     # success
     def process_opt_pp(self):
-        if self._process_opt_pp_success: return
+        if self._process_opt_pp_success:
+            return
 
         # any process that failed to apply pp sets this flag False
         self._process_opt_pp_success = True
@@ -541,9 +562,10 @@ class ZoneController(Agent):
         self._apply_pricing_policy()
 
         if not self._process_opt_pp_success:
-            _log.debug('unable to process_opt_pp()'
-                       + ', will try again in {} sec'.format(
-                self._period_process_pp))
+            _log.debug(
+                'unable to process_opt_pp()'
+                + ', will try again in {} sec'.format(self._period_process_pp)
+            )
             return
 
         _log.info('New Price Point processed.')
@@ -557,20 +579,20 @@ class ZoneController(Agent):
 
         # apply for ambient ac
         tsp = self._compute_new_tsp(self._price_point_latest)
-        _log.debug('New Ambient AC Setpoint: {:0.1f}'.format(tsp))
+        _log.debug('New Ambient AC set point: {:0.1f}'.format(tsp))
         self._rpcset_zone_tsp(tsp)
         if not isclose(tsp, self._zone_tsp, EPSILON):
             self._process_opt_pp_success = False
 
-        # apply for ambient lightinh
+        # apply for ambient lighting
         lsp = self._compute_new_lsp(self._price_point_latest)
-        _log.debug('New Ambient Lighting Setpoint: {:0.1f}'.format(lsp))
+        _log.debug('New Ambient Lighting set point: {:0.1f}'.format(lsp))
         self._rpcset_zone_lsp(lsp)
         if not isclose(lsp, self._zone_lsp, EPSILON):
             self._process_opt_pp_success = False
         return
 
-    # compute new zone temperature setpoint from price functions
+    # compute new zone temperature set point from price functions
     def _compute_new_tsp(self, pp):
         pp = 0 if pp < 0 else 1 if pp > 1 else pp
 
@@ -626,7 +648,7 @@ class ZoneController(Agent):
         ed_light = a * bid_lsp ** 2 + b * bid_lsp + c
         return mround(ed_light, roundup)
 
-    # perodic function to publish active power
+    # periodic function to publish active power
     def publish_opt_tap(self):
         pp_msg = self._opt_pp_msg_current
         price_id = pp_msg.get_price_id()
@@ -717,15 +739,15 @@ class ZoneController(Agent):
         bid_tsp = self._compute_new_tsp(bid_pp)
         bid_lsp = self._compute_new_lsp(bid_pp)
 
-        ed_ac = self._compute_ed_ac(bid_tsp)
-        ed_light = self._compute_ed_light(bid_lsp)
+        ed_ac = self._compute_ed_ac(bid_tsp) * duration / 3600
+        ed_light = self._compute_ed_light(bid_lsp) * duration / 3600
 
         ted = ed_ac + ed_light
         return ted
 
 
 def main(argv=sys.argv):
-    '''Main method called by the eggsecutable.'''
+    """Main method called by the eggsecutable."""
     try:
         utils.vip_main(zonecontroller)
     except Exception as e:
