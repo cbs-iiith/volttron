@@ -20,7 +20,7 @@ from random import randint
 import gevent
 import gevent.event
 
-from applications.iiit.Utils.ispace_msg import (MessageType)
+from applications.iiit.Utils.ispace_msg import (MessageType, ISPACE_Msg)
 from applications.iiit.Utils.ispace_msg_utils import (check_msg_type,
                                                       parse_jsonrpc_msg,
                                                       valid_bustopic_msg)
@@ -109,8 +109,8 @@ class VolttronBridge(Agent):
     _local_device_ids = None  # type: list
 
     # queues to store us price and ds energy messages
-    _us_pp_messages = None
-    _ds_ed_messages = None
+    _us_pp_messages = None  # type: list
+    _ds_ed_messages = None   # type: list
 
     _post_ds_new_pp_event = None
     _post_us_new_ed_event = None

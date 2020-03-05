@@ -17,7 +17,6 @@ import sys
 import time
 from copy import copy
 from random import random, randint
-from typing import List
 
 import gevent
 import gevent.event
@@ -38,7 +37,7 @@ from applications.iiit.Utils.ispace_utils import (isclose, get_task_schdl,
 from volttron.platform import jsonrpc
 from volttron.platform.agent import utils
 from volttron.platform.agent.known_identities import MASTER_WEB
-from volttron.platform.vip.agent import Agent, Core, RPC
+from volttron.platform.vip.agent import Agent, Core
 
 utils.setup_logging()
 _log = logging.getLogger(__name__)
@@ -74,7 +73,7 @@ class BuildingController(Agent):
     _opt_pp_msg_current = None  # type: ISPACE_Msg
     _opt_pp_msg_latest = None  # type: ISPACE_Msg
     _bid_pp_msg_latest = None  # type: ISPACE_Msg
-    _valid_senders_list_pp = None  # type: List[str]
+    _valid_senders_list_pp = None  # type: list
     # initialized  during __init__ from config
     _period_read_data = None
     _period_process_pp = None
@@ -96,6 +95,8 @@ class BuildingController(Agent):
         _log.debug('vip_identity: ' + self.core.identity)
 
         self.config = utils.load_config(config_path)
+        self._agent_id = self.config['agentid']
+
         self._config_get_points()
         self._config_get_init_values()
         return
@@ -103,7 +104,6 @@ class BuildingController(Agent):
     @Core.receiver('onsetup')
     def setup(self, sender, **kwargs):
         _log.info(self.config['message'])
-        self._agent_id = self.config['agentid']
         return
 
     @Core.receiver('onstart')
@@ -190,16 +190,16 @@ class BuildingController(Agent):
         _log.debug('onfinish()')
         return
 
-    @RPC.export
-    def rpc_from_net(self, header, message):
+    @staticmethod
+    def rpc_from_net(header, message):
         """
 
         :type header: jsonstr
         :type message: jsonstr
         """
-        result = False  # type: bool
+        rpcdata = jsonrpc.JsonRpcData(None, None, None, None, None)
         try:
-            rpcdata = jsonrpc.JsonRpcData.parse(message)  # type: JsonRpcData
+            rpcdata = jsonrpc.JsonRpcData.parse(message)
             _log.debug('rpc_from_net()... '
                        + 'header: {}'.format(header)
                        + ', rpc method: {}'.format(rpcdata.method)
@@ -212,7 +212,7 @@ class BuildingController(Agent):
                                             jsonrpc.METHOD_NOT_FOUND,
                                             'Invalid method {}'.format(
                                                 rpcdata.method))
-        except KeyError as ke:
+        except KeyError:
             # print(ke)
             return jsonrpc.json_error(rpcdata.id, jsonrpc.INVALID_PARAMS,
                                       'Invalid params {}'.format(
@@ -297,17 +297,19 @@ class BuildingController(Agent):
 
         task_id = str(randint(0, 99999999))
         success = get_task_schdl(self, task_id, 'iiit/cbs/buildingcontroller')
-        if not success: return
+        if not success:
+            return
         try:
             point = 'iiit/cbs/buildingcontroller/Building_PricePoint'
-            result = self.vip.rpc.call('platform.actuator', 'set_point',
-                                       self._agent_id, point, new_pp).get(
-                timeout=10)
+            self.vip.rpc.call('platform.actuator', 'set_point', self._agent_id,
+                              point, new_pp).get(timeout=10)
             self._update_bms_pp(new_pp)
         except gevent.Timeout:
             _log.exception('gevent.Timeout in _rpcset_bms_pp()!!!')
         except Exception as e:
-            _log.exception('_rpcset_bms_pp() changing price in the bms!!!')
+            _log.exception(
+                '_rpcset_bms_pp() changing price in the bms!!!'
+                + 'message: {}'.format(e.message))
             # print(e)
         finally:
             # cancel the schedule
@@ -356,10 +358,12 @@ class BuildingController(Agent):
     '''
 
     def on_new_price(self, peer, sender, bus, topic, headers, message):
-        if sender not in self._valid_senders_list_pp: return
+        if sender not in self._valid_senders_list_pp:
+            return
 
         # check message type before parsing
-        if not check_msg_type(message, MessageType.price_point): return False
+        if not check_msg_type(message, MessageType.price_point):
+            return False
 
         valid_senders_list = self._valid_senders_list_pp
         minimum_fields = ['msg_type', 'value', 'value_data_type', 'units',
@@ -367,11 +371,9 @@ class BuildingController(Agent):
         validate_fields = ['value', 'units', 'price_id', 'isoptimal',
                            'duration', 'ttl']
         valid_price_ids = []
-        (success, pp_msg) = valid_bustopic_msg(sender, valid_senders_list
-                                               , minimum_fields
-                                               , validate_fields
-                                               , valid_price_ids
-                                               , message)
+        (success, pp_msg) = valid_bustopic_msg(sender, valid_senders_list,
+                                               minimum_fields, validate_fields,
+                                               valid_price_ids, message)
         if not success or pp_msg is None:
             return
         else:
@@ -403,16 +405,19 @@ class BuildingController(Agent):
     # this is a periodic function that keeps trying to apply the new pp till
     # success
     def process_opt_pp(self):
-        if self._process_opt_pp_success: return
+        if self._process_opt_pp_success:
+            return
 
         # any process that failed to apply pp sets this flag False
         self._process_opt_pp_success = True
 
         self._apply_pricing_policy()
         if not self._process_opt_pp_success:
-            _log.debug('unable to process_opt_pp()'
-                       + ' , will try again in {} sec!!!'.format(
-                self._period_process_pp))
+            _log.debug(
+                'unable to process_opt_pp()'
+                + ' , will try again in {} sec!!!'.format(
+                    self._period_process_pp)
+            )
             return
 
         _log.info('New Price Point processed.')
@@ -429,8 +434,8 @@ class BuildingController(Agent):
         if not isclose(new_pp, bms_pp, EPSILON):
             self._process_opt_pp_success = False
 
-        # TODO: control the energy demand of devices at building level
-        #  accordingly
+        # control the energy demand of devices at building level
+        # accordingly
         #      use self._opt_pp_msg_latest
         #      if applying self._price_point_latest failed,
         #      set self._process_opt_pp_success = False
@@ -514,14 +519,16 @@ class BuildingController(Agent):
     # calculate the local total energy demand for bid_pp
     # the bid energy is for self._bid_pp_duration (default 1hr)
     # and this msg is valid for self._period_read_data (ttl - default 30s)
-    def _calc_total_energy_demand(self):
-        pp_msg = self._bid_pp_msg_latest
-        bid_pp = pp_msg.get_value()  # type: float
-        duration = pp_msg.get_duration()
-
-        # for testing
-        bid_ted = random() * 1000
-        return bid_ted
+    @staticmethod
+    def _calc_total_energy_demand():
+        # pp_msg = self._bid_pp_msg_latest
+        # bid_pp = pp_msg.get_value()  # type: float
+        # duration = pp_msg.get_duration()
+        #
+        # # for testing
+        # bid_ted = random() * 1000
+        # return bid_ted
+        return 0.0
 
 
 def main(argv=sys.argv):
