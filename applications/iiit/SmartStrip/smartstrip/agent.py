@@ -32,7 +32,7 @@ from applications.iiit.Utils.ispace_utils import (calc_energy_wh,
                                                   get_task_schdl,
                                                   cancel_task_schdl,
                                                   publish_to_bus,
-                                                  retrive_details_from_vb,
+                                                  retrieve_details_from_vb,
                                                   register_with_bridge,
                                                   register_rpc_route,
                                                   unregister_with_bridge)
@@ -142,7 +142,7 @@ class SmartStrip(Agent):
         # retrieve self._device_id, self._ip_addr, self._discovery_address
         # from the bridge
         # retrieve_details_from_vb is a blocking call
-        retrive_details_from_vb(self, 5)
+        retrieve_details_from_vb(self, 5)
 
         # register rpc routes with MASTER_WEB
         # register_rpc_route is a blocking call

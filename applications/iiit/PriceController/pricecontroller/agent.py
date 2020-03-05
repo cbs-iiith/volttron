@@ -29,7 +29,7 @@ from applications.iiit.Utils.ispace_msg_utils import (get_default_pp_msg,
                                                       valid_bustopic_msg,
                                                       tap_helper)
 from applications.iiit.Utils.ispace_utils import (publish_to_bus,
-                                                  retrive_details_from_vb,
+                                                  retrieve_details_from_vb,
                                                   register_rpc_route)
 from volttron.platform import jsonrpc
 from volttron.platform.agent import utils
@@ -200,7 +200,7 @@ class PriceController(Agent):
 
         # retrieve self._device_id, self._ip_addr, self._discovery_address
         # from the bridge. this fn is a blocking call
-        retrive_details_from_vb(self, 5)
+        retrieve_details_from_vb(self, 5)
 
         # register rpc routes with MASTER_WEB
         # register_rpc_route is a blocking call

@@ -139,7 +139,7 @@ def register_rpc_route(self, name, handle, sleep_time=10):
 
 # try to retrieve self._device_id, self._ip_addr, self._discovery_address
 # from bridge agent
-def retrive_details_from_vb(self, sleep_time=10):
+def retrieve_details_from_vb(self, sleep_time=10):
     device_id = self._device_id
     discovery_address = self._discovery_address
     vb_vip_identity = self._vb_vip_identity

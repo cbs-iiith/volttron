@@ -18,7 +18,7 @@ from applications.iiit.Utils.ispace_msg import (MessageType)
 from applications.iiit.Utils.ispace_msg_utils import (parse_jsonrpc_msg,
                                                       check_msg_type)
 from applications.iiit.Utils.ispace_utils import (publish_to_bus,
-                                                  retrive_details_from_vb,
+                                                  retrieve_details_from_vb,
                                                   register_rpc_route)
 from volttron.platform import jsonrpc
 from volttron.platform.agent import utils
@@ -82,7 +82,7 @@ class PricePoint(Agent):
         # retrieve self._device_id, self._ip_addr, self._discovery_address
         # from the bridge
         # retrieve_details_from_vb is a blocking call
-        retrive_details_from_vb(self, 5)
+        retrieve_details_from_vb(self, 5)
 
         # register rpc routes with MASTER_WEB
         # register_rpc_route is a blocking call
