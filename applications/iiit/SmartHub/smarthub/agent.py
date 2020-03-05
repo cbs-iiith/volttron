@@ -144,7 +144,7 @@ class SmartHub(Agent):
     def startup(self, sender, **kwargs):
         _log.info('Starting SmartHub...')
 
-        # retrive self._device_id, self._ip_addr, self._discovery_address
+        # retrieve self._device_id, self._ip_addr, self._discovery_address
         # from the bridge
         # retrive_details_from_vb is a blocking call
         retrive_details_from_vb(self, 5)

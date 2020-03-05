@@ -70,7 +70,7 @@ def volttronbridge(config_path, **kwargs):
 
 class VolttronBridge(Agent):
     ''' Voltron Bridge
-    Retrive the data from volttron bus and publish it to upstream or downstream
+    Retrieve the data from volttron bus and publish it to upstream or downstream
     volttron instance. If posting to downstream, then the data is pricepoint
     and if posting to upstream then the data is energy demand or active power
 
