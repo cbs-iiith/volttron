@@ -22,9 +22,8 @@ from applications.iiit.Utils.ispace_utils import publish_to_bus, \
     register_rpc_route
 from volttron.platform import jsonrpc
 from volttron.platform.agent import utils
-from volttron.platform.agent.known_identities import (
-    MASTER_WEB)
-from volttron.platform.vip.agent import Agent, Core, RPC
+from volttron.platform.agent.known_identities import MASTER_WEB
+from volttron.platform.vip.agent import Agent, Core
 
 utils.setup_logging()
 _log = logging.getLogger(__name__)
@@ -120,16 +119,15 @@ class PricePoint(Agent):
                                                   'zone/pricepoint')
         return
 
-    @RPC.export
     def rpc_from_net(self, header, message):
         """
 
         :type header: jsonstr
         :type message: jsonstr
         """
+        rpcdata = jsonrpc.JsonRpcData(None, None, None, None, None)
         try:
-            rpcdata = jsonrpc.JsonRpcData.parse(
-                message)  # type: jsonrpc.JsonRpcData
+            rpcdata = jsonrpc.JsonRpcData.parse(message)
 
             _log.debug('rpc_from_net()...'
                        # + 'header: {}'.format(header)
