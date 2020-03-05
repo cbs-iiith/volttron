@@ -1049,7 +1049,7 @@ class SmartHub(Agent):
         self.process_opt_pp()
         return
 
-    # this is a perodic function that keeps trying to apply the new pp till
+    # this is a periodic function that keeps trying to apply the new pp till
     # success
     def process_opt_pp(self):
         if self._process_opt_pp_success:
@@ -1147,7 +1147,7 @@ class SmartHub(Agent):
         speed = a * pp ** 2 + b * pp + c
         return mround(speed, roundup)
 
-    # perodic function to publish active power
+    # periodic function to publish active power
     def publish_opt_tap(self):
         pp_msg = self._opt_pp_msg_current
         price_id = pp_msg.get_price_id()
