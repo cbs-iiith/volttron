@@ -40,8 +40,8 @@ _log = logging.getLogger(__name__)
 #             building/zone/sh/rc/ss register with bridge to post tap/ted
 # at times bridge agent may not respond, it would be busy or crashed
 # the agents can check bridge is active before making active calls to better
-# handle rpc exceptions a perodic process can be scheduled that checks the
-# bridge is active and reregisters if necessary
+# handle rpc exceptions a periodic process can be scheduled that checks the
+# bridge is active and re-registers if necessary
 def ping_vb_failed(self):
     try:
         success = self.vip.rpc.call(
@@ -59,7 +59,7 @@ def ping_vb_failed(self):
     return True
 
 
-# register agent with local vb, blocking fucntion
+# register agent with local vb, blocking function
 # register this agent with vb as local device for posting active power & bid
 # energy demand pca picks up the active power & energy demand bids only if
 # registered with vb as local device
@@ -93,11 +93,8 @@ def register_with_bridge(self, sleep_time=10):
 def unregister_with_bridge(self):
     try:
         _log.info('Unregistering with the bridge...')
-        success = self.vip.rpc.call(
-            self._vb_vip_identity,
-            'unregister_local_ed_agent',
-            self.core.identity
-        ).get(timeout=10)
+        self.vip.rpc.call(self._vb_vip_identity, 'unregister_local_ed_agent',
+                          self.core.identity).get(timeout=10)
 
         # _log.debug ('self.vip.rpc.call() result: {}'.format(success))
     except Exception as e:
@@ -127,9 +124,7 @@ def register_rpc_route(self, name, handle, sleep_time=10):
                 _log.info('done.')
                 break
         except gevent.Timeout:
-            _log.warning('maybe the Volttron instance is not yet ready!!!'
-                         + ' message: {}'.format(e.message)
-                         )
+            _log.warning('gevent.Timeout in register_rpc_route()')
             pass
         except Exception as e:
             # print(e)
@@ -142,7 +137,7 @@ def register_rpc_route(self, name, handle, sleep_time=10):
     return
 
 
-# try to retrive self._device_id, self._ip_addr, self._discovery_address
+# try to retrieve self._device_id, self._ip_addr, self._discovery_address
 # from bridge agent
 def retrive_details_from_vb(self, sleep_time=10):
     device_id = self._device_id
@@ -150,7 +145,7 @@ def retrive_details_from_vb(self, sleep_time=10):
     vb_vip_identity = self._vb_vip_identity
     while True:
         try:
-            _log.info('Retrive details from vb...')
+            _log.info('Retrieve details from vb...')
             if device_id is None:
                 device_id = self.vip.rpc.call(
                     vb_vip_identity,
@@ -167,11 +162,11 @@ def retrive_details_from_vb(self, sleep_time=10):
                 _log.debug('discovery_address as per vb{0}'.format(
                     ' : {}'.format(discovery_address))
                 )
-            if (device_id is not None and discovery_address is not None):
+            if device_id is not None and discovery_address is not None:
                 _log.info('done.')
                 break
         except Exception as e:
-            _log.warning('unable to retrive details from bridge'
+            _log.warning('unable to retrieve details from bridge'
                          + ', message: {}.'.format(e.message)
                          )
             pass
@@ -186,11 +181,7 @@ def publish_to_bus(self, topic, msg):
     headers = {headers_mod.DATE: now}
     # Publish messages
     try:
-        self.vip.pubsub.publish('pubsub'
-                                , topic
-                                , headers
-                                , msg
-                                ).get(timeout=10)
+        self.vip.pubsub.publish('pubsub', topic, headers, msg).get(timeout=10)
     except gevent.Timeout:
         _log.warning('gevent.Timeout in publish_to_bus()')
         return
@@ -237,6 +228,7 @@ def get_task_schdl(self, task_id, device, time_ms=None):
 
 def cancel_task_schdl(self, task_id):
     # _log.debug('cancel_task_schdl()')
+    result = {}
     try:
         result = self.vip.rpc.call(
             'platform.actuator',
@@ -251,9 +243,10 @@ def cancel_task_schdl(self, task_id):
     return result
 
 
-def mround(num, multipleOf):
+def mround(num, multiple_of):
     # _log.debug('mround()')
-    return (math.floor((num + multipleOf / 2) / multipleOf) * multipleOf)
+    value = math.floor((num + multiple_of / 2) / multiple_of) * multiple_of
+    return value
 
 
 # refer to https://bit.ly/3beuacI
@@ -261,31 +254,30 @@ def mround(num, multipleOf):
 # comparing floats is mess
 def isclose(a, b, rel_tol=1e-09, abs_tol=0.0):
     # _log.debug('isclose()')
-    return (abs(a - b) <= max(rel_tol * max(abs(a), abs(b)), abs_tol))
+    value = abs(a - b) <= max(rel_tol * max(abs(a), abs(b)), abs_tol)
+    return value
 
 
 # return energy in kWh for the given duration
 def calc_energy_kwh(pwr_wh, duration_sec):
-    return ((pwr_wh * duration_sec) / 3600000)
+    value = (pwr_wh * duration_sec) / 3600000
+    return value
 
 
 # return energy in Wh for the given duration
 def calc_energy_wh(pwr_wh, duration_sec):
-    return ((pwr_wh * duration_sec) / 3600)
+    value = (pwr_wh * duration_sec) / 3600
+    return value
 
 
-# TODO: do_rpc is synchrous, using requests which is a blocking operation
-# need to convert to async operations, maybe can use gevent
-# (volttron inherently supports gevents)
-def do_rpc(id, url_root, method, params=None, request_method='POST'):
+def do_rpc(msg_id, url_root, method, params=None, request_method='POST'):
     # global authentication
     # _log.debug('do_rpc()')
     result = False
-    json_package = {
-        'jsonrpc': '2.0',
-        'id': id,
-        'method': method,
-    }
+    json_package = {'jsonrpc': '2.0',
+                    'id': msg_id,
+                    'method': method,
+                    }
 
     # refer to examples\WebRPC\volttronwebrpc\volttronwebrpc.py
     # if authentication is not None:
@@ -331,7 +323,7 @@ def do_rpc(id, url_root, method, params=None, request_method='POST'):
                     # )
                     result = True
                 else:
-                    _log.debug('respone - ok'
+                    _log.debug('response - ok'
                                + ', {} result success: {}'.format(method,
                                                                   success)
                                )
@@ -341,7 +333,7 @@ def do_rpc(id, url_root, method, params=None, request_method='POST'):
                              + ', Error: {}'.format(error)
                              )
         else:
-            _log.warning('no respone, url_root:{}'.format(url_root)
+            _log.warning('no response, url_root:{}'.format(url_root)
                          + ' method:{}'.format(method)
                          + ' response: {}'.format(response)
                          )
@@ -451,7 +443,7 @@ class Runningstats:
     """
     The code is an extension of the method of Knuth and Welford for computing
     standard deviation in one pass through the data. It computes skewness and
-    kurtosis as well with a similar interface.
+    Kurtosis as well with a similar interface.
 
     "https://en.wikipedia.org/wiki/Algorithms_for_calculating_variance#Welford's
     _online_algorithm"
@@ -500,8 +492,8 @@ class Runningstats:
 
         combined.M1 = (self.n * self.M1 + other.n * other.M1) / combined.n
 
-        combined.M2 = self.M2 + other.M2 + delta2 * self.n * other.n / \
-                      combined.n
+        combined.M2 = self.M2 + other.M2 + (
+                    delta2 * self.n * other.n) / combined.n
 
         combined.M3 = self.M3 + other.M3 + delta3 * self.n * other.n * (
                 self.n - other.n) / (combined.n * combined.n)
@@ -511,12 +503,12 @@ class Runningstats:
         combined.M4 = self.M4 + other.M4 + delta4 * self.n * other.n * (
                 self.n * self.n - self.n * other.n + other.n * other.n) / (
                               combined.n * combined.n * combined.n)
-        combined.M4 += 6.0 * delta2 * (
-                self.n * self.n * other.M2 + other.n * other.n * self.M2) \
-                       / (
-                               combined.n * combined.n) + 4.0 * delta * (
-                               self.n * other.M3 - other.n * self.M3) / \
-                       combined.n
+        combined.M4 += (
+            6.0 * delta2 * (
+                    self.n * self.n * other.M2 + other.n * other.n * self.M2
+            ) / (combined.n * combined.n) +
+            4.0 * delta * (self.n * other.M3 - other.n * self.M3) / combined.n
+        )
 
         combined.exp_avg = (min(self.n, self.factor) * self.exp_avg + min(
             other.n, other.factor) * other.exp_avg) / combined.n
@@ -531,19 +523,14 @@ class Runningstats:
         self.M1 = self.M2 = self.M3 = self.M4 = 0.0
 
     def push(self, x=0.0):
-        delta = 0.0  # type: float
-        delta_n = 0.0  # type: float
-        delta_n2 = 0.0  # type: float
-        term1 = 0.0  # type: float
-
         n1 = self.n
 
         self.n += 1
 
-        delta = x - self.M1
-        delta_n = delta / self.n
-        delta_n2 = delta_n * delta_n
-        term1 = delta * delta_n * n1
+        delta = x - self.M1  # type: float
+        delta_n = delta / self.n  # type: float
+        delta_n2 = delta_n * delta_n  # type: float
+        term1 = delta * delta_n * n1  # type: float
 
         self.M1 += delta_n
 
