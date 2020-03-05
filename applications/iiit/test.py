@@ -15,11 +15,11 @@ from collections import defaultdict
 
 
 # https://www.geeksforgeeks.org/python-creating-multidimensional-dictionary/
-def multi_dict(K, type):
-    if K == 1:
-        d = defaultdict(type)
+def multi_dict(dimensions, data_type):
+    if dimensions == 1:
+        d = defaultdict(data_type)
     else:
-        d = defaultdict(lambda: multi_dict(K - 1, type))
+        d = defaultdict(lambda: multi_dict(dimensions - 1, data_type))
     return d
 
 
@@ -35,16 +35,6 @@ d_5 = 'device-5'
 ap_cat_1 = 'cooling'
 ap_cat_2 = 'lighting'
 ap_cat_3 = 'electrical'
-
-
-def get_idx_device_id(device_id):
-    if device_id not in h_opt_tap_idx:
-        h_opt_tap_idx.append(device_id)
-    return h_opt_tap_idx.index(device_id)
-
-
-# Initialize dictionary
-h_opt_tap = {}
 
 # printing original dictionary 
 print("The original dictionary : " + str(h_opt_tap))

@@ -14,18 +14,18 @@
 import math
 
 
-def mround(num, multipleOf):
-    return math.floor((num + multipleOf / 2) / multipleOf) * multipleOf
+def mround(num, multiple_of):
+    return math.floor((num + multiple_of / 2) / multiple_of) * multiple_of
 
 
-# def mround(num, multipleOf):
-#    return math.ceil((num + multipleOf / 2) / multipleOf) * multipleOf
+# def mround(num, multiple_of):
+#    return math.ceil((num + multiple_of / 2) / multiple_of) * multiple_of
 
-# def mround(num, multipleOf):
-#    return int((num + multipleOf - 1) / multipleOf) * multipleOf
+# def mround(num, multiple_of):
+#    return int((num + multiple_of - 1) / multiple_of) * multipleOf
 
-# def mround(num, multipleOf):
-#    return math.floor((num + multipleOf - 1) / multipleOf) * multipleOf
+# def mround(num, multiple_of):
+#    return math.floor((num + multiple_of - 1) / multiple_of) * multiple_of
 
 def i_tsp(a, b, c, v):
     pp = 0
