@@ -21,7 +21,6 @@ from random import randint
 
 import dateutil
 from enum import IntEnum
-from typing import Dict, Any, Union
 
 from volttron.platform.agent import utils
 
@@ -59,9 +58,9 @@ def empty_copy(obj):
         def __init__(self): pass
 
 
-    newcopy = Empty()
-    newcopy.__class__ = obj.__class__
-    return newcopy
+    new_copy = Empty()
+    new_copy.__class__ = obj.__class__
+    return new_copy
 
 
 # available in ispace_utils, copied here to remove dependecny on ispace_utils
@@ -176,25 +175,25 @@ class ISPACE_Msg:
         return json.dumps(params)
 
     def __copy__(self):
-        newcopy = empty_copy(self)
+        new_copy = empty_copy(self)
 
-        newcopy.msg_type = copy(self.msg_type)
-        newcopy.one_to_one = copy(self.one_to_one)
-        newcopy.value = copy(self.value)
-        newcopy.value_data_type = copy(self.value_data_type)
-        newcopy.units = copy(self.units)
-        newcopy.price_id = copy(self.price_id)
-        newcopy.isoptimal = copy(self.isoptimal)
-        newcopy.src_ip = copy(self.src_ip)
-        newcopy.src_device_id = copy(self.src_device_id)
-        newcopy.dst_ip = copy(self.dst_ip)
-        newcopy.dst_device_id = copy(self.dst_device_id)
-        newcopy.duration = copy(self.duration)
-        newcopy.ttl = copy(self.ttl)
-        newcopy.ts = copy(self.ts)
-        newcopy.tz = copy(self.tz)
+        new_copy.msg_type = copy(self.msg_type)
+        new_copy.one_to_one = copy(self.one_to_one)
+        new_copy.value = copy(self.value)
+        new_copy.value_data_type = copy(self.value_data_type)
+        new_copy.units = copy(self.units)
+        new_copy.price_id = copy(self.price_id)
+        new_copy.isoptimal = copy(self.isoptimal)
+        new_copy.src_ip = copy(self.src_ip)
+        new_copy.src_device_id = copy(self.src_device_id)
+        new_copy.dst_ip = copy(self.dst_ip)
+        new_copy.dst_device_id = copy(self.dst_device_id)
+        new_copy.duration = copy(self.duration)
+        new_copy.ttl = copy(self.ttl)
+        new_copy.ts = copy(self.ts)
+        new_copy.tz = copy(self.tz)
 
-        return newcopy
+        return new_copy
 
     ''' overload methods for self and other
     '''
@@ -227,7 +226,7 @@ class ISPACE_Msg:
     def __lt__(self, other):
         result = True if (
                 not isclose(self.value, other.value, EPSILON)
-                and (self.value < other.value))\
+                and (self.value < other.value)) \
             else False
         return result
 
@@ -246,7 +245,7 @@ class ISPACE_Msg:
     def __gt__(self, other):
         result = True if (
                 not isclose(self.value, other.value, EPSILON)
-                and (self.value > other.value))\
+                and (self.value > other.value)) \
             else False
         return result
 
@@ -258,8 +257,8 @@ class ISPACE_Msg:
     # overload == operator
     def __eq__(self, other):
         result = True if (
-                    self.price_id == other.price_id
-                    and isclose(self.value, other.value, EPSILON))\
+                self.price_id == other.price_id
+                and isclose(self.value, other.value, EPSILON)) \
             else False
         return result
 
@@ -299,7 +298,7 @@ class ISPACE_Msg:
     def __lt__(self, value):
         result = True if (
                 not isclose(self.value, value, EPSILON)
-                and (self.value < value))\
+                and (self.value < value)) \
             else False
         return result
 
@@ -317,7 +316,7 @@ class ISPACE_Msg:
     def __gt__(self, value):
         result = True if (
                 not isclose(self.value, value, EPSILON)
-                and (self.value > value))\
+                and (self.value > value)) \
             else False
         return result
 
@@ -330,7 +329,7 @@ class ISPACE_Msg:
     def __eq__(self, value):
         result = True if (
                 self.price_id == value
-                and isclose(self.value, value, EPSILON))\
+                and isclose(self.value, value, EPSILON)) \
             else False
         return result
 
@@ -393,8 +392,11 @@ class ISPACE_Msg:
             return False
 
     # check for mandatory fields in the message
-    def valid_msg(self, validate_fields=[]):
+    def valid_msg(self, validate_fields=None):
         # _log.debug('valid_msg(): {}'.format(validate_fields))
+        if validate_fields is None:
+            validate_fields = []
+
         for attrib in validate_fields:
             # _log.debug('checking attrib: {}'.format(attrib))
             # null value check
@@ -518,7 +520,7 @@ class ISPACE_Msg:
                 and (
                         device_id != self.dst_device_id
                         or ip_addr != self.dst_ip
-                ))\
+                )) \
             else True
         return result
 
@@ -679,7 +681,8 @@ class ISPACE_Msg_PricePoint(ISPACE_Msg):
 class ISPACE_Msg_OptPricePoint(ISPACE_Msg_PricePoint):
 
     def __init__(self,
-                 msg_type, one_to_one=False, isoptimal=True,
+                 msg_type=MessageType.active_power, one_to_one=False,
+                 isoptimal=True,
                  value=None, value_data_type=None, units=None,
                  price_id=None,
                  src_ip=None, src_device_id=None,
@@ -687,7 +690,7 @@ class ISPACE_Msg_OptPricePoint(ISPACE_Msg_PricePoint):
                  duration=None, ttl=None, ts=None, tz=None
                  ):
         ISPACE_Msg_PricePoint.__init__(self,
-                                       MessageType.active_power, one_to_one,
+                                       msg_type, one_to_one,
                                        isoptimal,
                                        value, value_data_type, units,
                                        price_id,
@@ -703,7 +706,8 @@ class ISPACE_Msg_OptPricePoint(ISPACE_Msg_PricePoint):
 class ISPACE_Msg_BidPricePoint(ISPACE_Msg_PricePoint):
 
     def __init__(self,
-                 msg_type, one_to_one=False, isoptimal=False,
+                 msg_type=MessageType.active_power, one_to_one=False,
+                 isoptimal=False,
                  value=None, value_data_type=None, units=None,
                  price_id=None,
                  src_ip=None, src_device_id=None,
@@ -711,7 +715,7 @@ class ISPACE_Msg_BidPricePoint(ISPACE_Msg_PricePoint):
                  duration=None, ttl=None, ts=None, tz=None
                  ):
         ISPACE_Msg_PricePoint.__init__(self,
-                                       MessageType.active_power, one_to_one,
+                                       msg_type, one_to_one,
                                        isoptimal,
                                        value, value_data_type, units,
                                        price_id,
