@@ -17,10 +17,9 @@ import logging
 from copy import copy
 from random import randint
 
-from ispace_msg import (
-    ISPACE_Msg, MessageType, ISPACE_MSG_ATTRIB_LIST, ISPACE_Msg_ActivePower,
-    EnergyCategory, ISPACE_Msg_Energy
-)
+from ispace_msg import (ISPACE_Msg, MessageType, ISPACE_MSG_ATTRIB_LIST,
+                        ISPACE_Msg_ActivePower, EnergyCategory,
+                        ISPACE_Msg_Energy)
 from volttron.platform import jsonrpc
 from volttron.platform.agent import utils
 
@@ -33,7 +32,7 @@ ROUNDOFF_ACTIVE_POWER = 0.0001
 ROUNDOFF_ENERGY = 0.0001
 
 
-# validate incomming bus topic message
+# validate incoming bus topic message
 def valid_bustopic_msg(
         sender, valid_senders_list, minimum_fields,
         validate_fields, valid_price_ids, message
@@ -318,7 +317,7 @@ def _parse_data(data, minimum_fields=None):
     _update_value(new_msg, 'msg_type', msg_type)
 
     # if list is empty, parse for all attributes, 
-    # if any attrib not found throw keynot found error
+    # if any attrib not found throw key not found error
     if not minimum_fields:
         # if the attrib is not found in the data, throws a keyerror exception
         _log.warning('minimum_fields to check against is empty!!!')
