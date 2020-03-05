@@ -31,7 +31,7 @@ from volttron.platform import jsonrpc
 from volttron.platform.agent import utils
 from volttron.platform.agent.known_identities import (
     MASTER_WEB)
-from volttron.platform.vip.agent import Agent, Core, RPC
+from volttron.platform.vip.agent import Agent, Core
 
 utils.setup_logging()
 _log = logging.getLogger(__name__)
@@ -64,11 +64,17 @@ class PriceController(Agent):
     _topic_energy_demand_ds = None
     _topic_energy_demand = None
 
+    _pp_optimize_option = None
+
     _pca_state = None  # ['ONLINE', 'STANDALONE', 'STANDBY']
     _pca_standby = False
     _pca_standalone = False
     _pca_online = True
     _pca_mode = None  # ['PASS_ON_PP', 'DEFAULT_OPT', 'EXTERN_OPT']
+
+    _mode_pass_on_params = None
+    _mode_default_opt_params = None
+    _mode_extrn_opt_params = None
 
     _device_id = None
     _discovery_address = None
@@ -82,9 +88,22 @@ class PriceController(Agent):
     # ds device ids registered with the bridge
     _ds_device_ids = None
 
-    _mode_pass_on_params = None
-    _mode_default_opt_params = None
-    _mode_extrn_opt_params = None
+    _us_senders_list = None
+    _ds_senders_list = None
+
+    discovery_address = None
+    device_id = None
+    us_opt_pp_msg = None  # type: ISPACE_Msg
+    us_bid_pp_msg = None  # type: ISPACE_Msg
+    lc_opt_pp_msg = None  # type: ISPACE_Msg
+    lc_bid_pp_msg = None  # type: ISPACE_Msg
+
+    lc_bid_pp_msg_list = None  # type: list
+
+    external_vip_identity = None
+
+    _target_achieved = False
+
 
     def __init__(self, config_path, **kwargs):
         super(PriceController, self).__init__(**kwargs)
@@ -189,8 +208,8 @@ class PriceController(Agent):
         self._us_senders_list = ['iiit.volttronbridge', 'iiit.pricepoint']
         self._ds_senders_list = ['iiit.volttronbridge']
 
-        # TODO: check if there is a need to retrieve these details at a 
-        # regular interval. currently the details are retrieved on a new ed msg
+        # check if there is a need to retrieve these details at a regular
+        # interval. currently the details are retrieved on a new ed msg
         # i.e, on_ds_ed() self._topic_energy_demand_ds
         self._local_ed_agents = []
         self._local_device_ids = []
@@ -284,9 +303,8 @@ class PriceController(Agent):
         _log.debug('onfinish()')
         return
 
-    @RPC.export
     def rpc_from_net(self, header, message):
-        rpcdata = jsonrpc.JsonRpcData()
+        rpcdata = jsonrpc.JsonRpcData(None, None, None, None, None)
         try:
             rpcdata = jsonrpc.JsonRpcData.parse(message)
             _log.debug('rpc_from_net()... '
@@ -369,7 +387,7 @@ class PriceController(Agent):
         if external_vip_identity is None:
             return jsonrpc.json_error(
                 rpcdata_id,
-                PARSE_ERROR,
+                jsonrpc.PARSE_ERROR,
                 'Invalid option!!!'
             )
         self.external_vip_identity = external_vip_identity
@@ -379,13 +397,14 @@ class PriceController(Agent):
         _log.debug('on_new_us_pp()')
         if self._pp_optimize_option != 'EXTERN_OPT':
             return
-        # check if this agent is not diabled
+        # check if this agent is not disabled
         if self._pca_standby:
             _log.debug('[LOG] PCA mode: STANDBY, do nothing')
             return
 
         # check message type before parsing
-        if not check_msg_type(message, MessageType.price_point): return
+        if not check_msg_type(message, MessageType.price_point):
+            return
 
         valid_senders_list = [self.external_vip_identity]
         minimum_fields = ['value', 'price_id']
@@ -406,9 +425,8 @@ class PriceController(Agent):
                 'New pp msg on the local-bus, topic: {}'.format(topic)
             )
 
-        self.act_pp_msg = copy(pp_msg)
         if pp_msg.get_isoptimal():
-            # TODO: relook at this scenario
+            # TODO: re-look at this scenario
             # self.lc_opt_pp_msg = copy(pp_msg)
             pass
         else:
@@ -426,15 +444,17 @@ class PriceController(Agent):
 
     def on_new_us_pp(self, peer, sender, bus, topic, headers, message):
         _log.debug('on_new_us_pp()')
-        if self._pca_mode not in ['PASS_ON_PP', 'DEFAULT_OPT']: return
+        if self._pca_mode not in ['PASS_ON_PP', 'DEFAULT_OPT']:
+            return
 
-        # check if this agent is not diabled
+        # check if this agent is not disabled
         if self._pca_standby:
             _log.debug('[LOG] PCA mode: STANDBY, do nothing')
             return
 
         # check message type before parsing
-        if not check_msg_type(message, MessageType.price_point): return
+        if not check_msg_type(message, MessageType.price_point):
+            return
 
         valid_senders_list = self._us_senders_list
         minimum_fields = ['value', 'price_id']
@@ -494,11 +514,11 @@ class PriceController(Agent):
             _log.info('[LOG] PCA mode: DEFAULT_OPT')
             # list for pp_msg
             _log.debug('Compute new price points...')
-            new_pp_msg_list = self._computeNewPrice()
+            new_pp_msg_list = self._compute_new_price()
             self.lc_bid_pp_msg_list = copy(new_pp_msg_list)
             # _log.info('new bid pp_msg_list: {}'.format(new_pp_msg_list))
 
-            # TODO: maybe publish a list of the pp messages 
+            # maybe publish a list of the pp messages
             # and let the bridge do_rpc concurrently
             for new_pp_msg in new_pp_msg_list:
                 # _log.info('new msg: {}'.format(msg))
@@ -544,7 +564,7 @@ class PriceController(Agent):
                 , if priorities are disabled (i.e, equal priorities)
 
         TODO: implement the algorithm to compute the new price
-             based on walras algorithm.
+             based on Walras algorithm.
               config.get (optimization cost function)
               based on some initial condition like ed, us_new_pp, etc, 
               compute new_pp
@@ -567,7 +587,7 @@ class PriceController(Agent):
            
           pp_opt = pp_new
         
-              iterate till optimization condition satistifed
+              iterate till optimization condition satisfied
               when new pp is published, the new ed for all devices is 
                 accumulated by on_new_ed()
               once all the eds are received call this function again
@@ -611,10 +631,17 @@ class PriceController(Agent):
         bids_timeout = self._mode_default_opt_params['bids_timeout']
         wt_factors = self._mode_default_opt_params['weight_factors']
 
-        self._target_acheived = False
+        _log.debug('alpha: {}, gamma: {}, epsilon: {}, max_iters: {}, '
+                   'bids_timeout: {}, wt_factors: {}'.format(alpha, gamma,
+                                                             epsilon,
+                                                             max_iters,
+                                                             bids_timeout,
+                                                             wt_factors))
+
+        self._target_achieved = False
         new_pricepoint = self._some_cost_fn(old_pricepoint, old_ted, target)
 
-        if self._target_acheived and self._pca_state == 'ONLINE':
+        if self._target_achieved and self._pca_state == 'ONLINE':
             # local optimal reached, publish this as bid to the us pp_msg
             # publish bid total energy demand to local/energydemand
             # 
@@ -632,17 +659,16 @@ class PriceController(Agent):
             return
 
         isoptimal = (
-            True if (self._target_acheived and self._pca_state == 'STANDALONE')
+            True if (self._target_achieved and self._pca_state == 'STANDALONE')
             else False)
 
         pp_messages = []
         for device_idx in device_list:
-            pp_msg = ISPACE_Msg(msg_type, one_to_one
-                                , isoptimal, new_pricepoint[device_idx],
-                                value_data_type, units, price_id
-                                , src_ip, src_device_id, dst_ip[device_idx],
-                                dst_device_id[device_idx]
-                                , duration, ttl, ts, tz)
+            pp_msg = ISPACE_Msg(msg_type, one_to_one, isoptimal,
+                                new_pricepoint[device_idx], value_data_type,
+                                units, price_id, src_ip, src_device_id,
+                                dst_ip[device_idx], dst_device_id[device_idx],
+                                duration, ttl, ts, tz)
             pp_messages.insert(pp_msg)
         return pp_messages
 
@@ -725,7 +751,7 @@ class PriceController(Agent):
 
     def on_ds_ed(self, peer, sender, bus, topic, headers, message):
         _log.debug('on_ds_ed()')
-        # check if this agent is not diabled
+        # check if this agent is not disabled
         if self._pca_standby:
             _log.debug('[LOG] PCA mode: STANDBY, do nothing')
             return
