@@ -63,7 +63,7 @@ def empty_copy(obj):
     return new_copy
 
 
-# available in ispace_utils, copied here to remove dependecny on ispace_utils
+# available in ispace_utils, copied here to remove dependency on ispace_utils
 def mround(num, multiple_of):
     # _log.debug('mround()')
     value = math.floor((num + multiple_of / 2) / multiple_of) * multiple_of
@@ -105,7 +105,7 @@ class ISPACE_Msg:
     iSPACE Message base class
     """
     # TODO: enhancement - need to add a msg uuid,
-    # also convert price_id to use uuid instead for radint
+    # also convert price_id to use uuid instead of radint
     msg_type = None
     one_to_one = None
     isoptimal = None
@@ -506,7 +506,7 @@ class ISPACE_Msg:
         # _log.debug('done.')
 
         # _log.debug('check if ttl timeout...')
-        # process msg only if msg is alive (didnot timeout)
+        # process msg only if msg is alive (did not timeout)
         if self.ttl_timeout():
             _log.warning('msg ttl expired, do nothing!!!')
             return False
