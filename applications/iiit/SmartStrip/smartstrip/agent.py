@@ -21,20 +21,25 @@ from random import randint
 import gevent
 import gevent.event
 
-from applications.iiit.Utils.ispace_msg import MessageType, EnergyCategory
-from applications.iiit.Utils.ispace_msg_utils import check_msg_type, tap_helper, \
-    ted_helper, get_default_pp_msg, valid_bustopic_msg
-from applications.iiit.Utils.ispace_utils import calc_energy_wh, get_task_schdl, \
-    cancel_task_schdl, publish_to_bus, retrive_details_from_vb, \
-    register_with_bridge, register_rpc_route, unregister_with_bridge
+from applications.iiit.Utils.ispace_msg import (MessageType, EnergyCategory,
+                                                ISPACE_Msg)
+from applications.iiit.Utils.ispace_msg_utils import (check_msg_type,
+                                                      tap_helper,
+                                                      ted_helper,
+                                                      get_default_pp_msg,
+                                                      valid_bustopic_msg)
+from applications.iiit.Utils.ispace_utils import (calc_energy_wh,
+                                                  get_task_schdl,
+                                                  cancel_task_schdl,
+                                                  publish_to_bus,
+                                                  retrive_details_from_vb,
+                                                  register_with_bridge,
+                                                  register_rpc_route,
+                                                  unregister_with_bridge)
 from volttron.platform import jsonrpc
 from volttron.platform.agent import utils
-from volttron.platform.agent.known_identities import (
-    MASTER_WEB)
-from volttron.platform.jsonrpc import (
-    METHOD_NOT_FOUND,
-    UNHANDLED_EXCEPTION, INVALID_PARAMS)
-from volttron.platform.vip.agent import Agent, Core, RPC
+from volttron.platform.agent.known_identities import (MASTER_WEB)
+from volttron.platform.vip.agent import Agent, Core
 
 utils.setup_logging()
 _log = logging.getLogger(__name__)
@@ -78,41 +83,49 @@ def smartstrip(config_path, **kwargs):
 
 
 class SmartStrip(Agent):
-    '''Smart Strip
-    '''
+    """
+    Smart Strip
+    """
     # initialized  during __init__ from config
-    _period_read_data = None
-    _period_process_pp = None
-    _price_point_latest = None
+    _period_read_data = None  # type: int
+    _period_process_pp = None  # type: int
+    _price_point_latest = None  # type: int
 
-    _vb_vip_identity = None
-    _root_topic = None
-    _topic_energy_demand = None
-    _topic_price_point = None
+    _vb_vip_identity = None  # type: str
+    _root_topic = None  # type: str
+    _topic_energy_demand = None  # type: str
+    _topic_price_point = None  # type: str
 
-    _device_id = None
-    _discovery_address = None
+    _device_id = None  # type: str
+    _discovery_address = None  # type: str
 
     # any process that failed to apply pp sets this flag False
-    _process_opt_pp_success = False
+    _process_opt_pp_success = False  # type: bool
 
-    _volt_state = 0
+    _volt_state = 0  # type: int
 
     _led_debug_state = 0
-    _plugs_relay_state = [0, 0, 0, 0]
-    _plugs_connected = [0, 0, 0, 0]
-    _plugs_voltage = [0.0, 0.0, 0.0, 0.0]
-    _plugs_current = [0.0, 0.0, 0.0, 0.0]
-    _plugs_active_pwr = [0.0, 0.0, 0.0, 0.0]
+    _plugs_relay_state = [0, 0, 0, 0]  # type: list
+    _plugs_connected = [0, 0, 0, 0]  # type: list
+    _plugs_voltage = [0.0, 0.0, 0.0, 0.0]  # type: list
+    _plugs_current = [0.0, 0.0, 0.0, 0.0]  # type: list
+    _plugs_active_pwr = [0.0, 0.0, 0.0, 0.0]  # type: list
     _plugs_tag_id = [DEFAULT_TAG_ID, DEFAULT_TAG_ID, DEFAULT_TAG_ID,
-                     DEFAULT_TAG_ID]
-    _plugs_th_pp = [0.35, 0.5, 0.75, 0.95]
+                     DEFAULT_TAG_ID]  # type: list
+    _plugs_th_pp = [0.35, 0.5, 0.75, 0.95]  # type: list
+
+    _valid_senders_list_pp = None  # type: list
+    _opt_pp_msg_current = None  # type: ISPACE_Msg
+    _opt_pp_msg_latest = None  # type: ISPACE_Msg
+    _bid_pp_msg_latest = None  # type: ISPACE_Msg
 
     def __init__(self, config_path, **kwargs):
         super(SmartStrip, self).__init__(**kwargs)
         _log.debug('vip_identity: ' + self.core.identity)
 
         self.config = utils.load_config(config_path)
+        self._agent_id = self.config['agentid']
+
         self._config_get_points()
         self._config_get_init_values()
         return
@@ -120,7 +133,6 @@ class SmartStrip(Agent):
     @Core.receiver('onsetup')
     def setup(self, sender, **kwargs):
         _log.info(self.config['message'])
-        self._agent_id = self.config['agentid']
         return
 
     @Core.receiver('onstart')
@@ -129,7 +141,7 @@ class SmartStrip(Agent):
 
         # retrieve self._device_id, self._ip_addr, self._discovery_address
         # from the bridge
-        # retrive_details_from_vb is a blocking call
+        # retrieve_details_from_vb is a blocking call
         retrive_details_from_vb(self, 5)
 
         # register rpc routes with MASTER_WEB
@@ -166,8 +178,6 @@ class SmartStrip(Agent):
         # get the latest values (states/levels) from h/w
         self._get_initial_hw_state()
 
-        # TODO: apply pricing policy for default values
-
         # publish initial data from hw to volttron bus
         # self.publish_hw_data()
 
@@ -184,7 +194,7 @@ class SmartStrip(Agent):
         # time.sleep(5) #yeild
 
         # periodically publish total active power to volttron bus
-        # active power is comupted at regular interval (_period_read_data
+        # active power is computed at regular interval (_period_read_data
         # default(30s))
         # this power corresponds to current opt pp
         # tap --> total active power (Wh)
@@ -230,9 +240,9 @@ class SmartStrip(Agent):
         _log.debug('onfinish() -  do nothing!!!')
         return
 
-    @RPC.export
+    @staticmethod
     def rpc_from_net(self, header, message):
-        result = False
+        rpcdata = jsonrpc.JsonRpcData(None, None, None, None, None)
         try:
             rpcdata = jsonrpc.JsonRpcData.parse(message)
             _log.debug('rpc_from_net()...'
@@ -242,15 +252,15 @@ class SmartStrip(Agent):
                        )
             if rpcdata.method == 'ping':
                 result = True
-            elif rpcdata.method == 'plug-th-pp' and header[
-                'REQUEST_METHOD'].upper() == 'GET':
+            elif (rpcdata.method == 'plug-th-pp'
+                  and header['REQUEST_METHOD'].upper() == 'GET'):
                 if not self._valid_plug_id(rpcdata.params['plug_id']):
                     raise KeyError('invalid plug id')
                 args = {'plug_id': rpcdata.params['plug_id']
                         }
                 result = self.get_th_pp(**args)
-            elif rpcdata.method == 'plug-th-pp' and header[
-                'REQUEST_METHOD'].upper() == 'POST':
+            elif (rpcdata.method == 'plug-th-pp'
+                  and header['REQUEST_METHOD'].upper() == 'POST'):
                 if not self._valid_plug_id(rpcdata.params['plug_id']):
                     raise KeyError('invalid plug id')
                 args = {'plug_id': rpcdata.params['plug_id'],
@@ -258,29 +268,31 @@ class SmartStrip(Agent):
                         }
                 result = self.set_th_pp(**args)
             else:
-                return jsonrpc.json_error(rpcdata.id, METHOD_NOT_FOUND,
+                return jsonrpc.json_error(rpcdata.id, jsonrpc.METHOD_NOT_FOUND,
                                           'Invalid method {}'.format(
                                               rpcdata.method))
-        except KeyError as ke:
+        except KeyError:
             # print(ke)
-            return jsonrpc.json_error(rpcdata.id, INVALID_PARAMS,
+            return jsonrpc.json_error(rpcdata.id, jsonrpc.INVALID_PARAMS,
                                       'Invalid params {}'.format(
                                           rpcdata.params))
         except Exception as e:
             # print(e)
-            return jsonrpc.json_error(rpcdata.id, UNHANDLED_EXCEPTION, e)
-        return (jsonrpc.json_result(rpcdata.id, result) if result else result)
+            return jsonrpc.json_error(rpcdata.id, jsonrpc.UNHANDLED_EXCEPTION,
+                                      e)
 
-    @RPC.export
-    def ping(self):
+        if result:
+            result = jsonrpc.json_result(rpcdata.id, result)
+        return result
+
+    @staticmethod
+    def ping():
         return True
 
-    @RPC.export
     def get_th_pp(self, plug_id):
         _log.debug('get_th_pp()')
         return self._plugs_th_pp[plug_id]
 
-    @RPC.export
     def set_th_pp(self, plug_id, new_th_pp):
         _log.debug('set_th_pp()')
         if self._plugs_th_pp[plug_id] != new_th_pp:
@@ -297,9 +309,10 @@ class SmartStrip(Agent):
         success = get_task_schdl(self, task_id, 'iiit/cbs/smartstrip')
         if success:
             for plug_id, state in enumerate(self._plugs_relay_state):
-                if (plug_id == self._sh_plug_id
-                        or state == RELAY_OFF
-                ): continue
+                if (state == RELAY_OFF
+                        or plug_id == self._sh_plug_id  # don't switch off sh
+                        or False):
+                    continue
                 self._rpcset_plug_relay_state(plug_id, RELAY_OFF)
 
             self._rpcset_led_debug_state(LED_OFF)
@@ -349,12 +362,12 @@ class SmartStrip(Agent):
         return
 
     def _test_relays(self):
-        result = {}
         # get schedule for testing relays
         task_id = str(randint(0, 99999999))
         # _log.debug('task_id: ' + task_id)
         success = get_task_schdl(self, task_id, 'iiit/cbs/smartstrip')
-        if not success: return
+        if not success:
+            return
 
         # test all four relays
         _log.debug('switch on relay 1')
@@ -423,7 +436,8 @@ class SmartStrip(Agent):
         success = get_task_schdl(self, task_id, 'iiit/cbs/smartstrip', 500)
         if success:
             for plug_id, state in enumerate(self._plugs_relay_state):
-                if state != RELAY_ON: continue
+                if state != RELAY_ON:
+                    continue
                 self._rpcget_meter_data(plug_id)
             cancel_task_schdl(self, task_id)
         else:
@@ -432,7 +446,8 @@ class SmartStrip(Agent):
 
         # publish meter data to msg bus
         for plug_id, state in enumerate(self._plugs_relay_state):
-            if state != RELAY_ON: continue
+            if state != RELAY_ON:
+                continue
             voltage = self._plugs_voltage[plug_id]
             current = self._plugs_current[plug_id]
             active_pwr = self._plugs_active_pwr[plug_id]
@@ -454,7 +469,7 @@ class SmartStrip(Agent):
         if not success:
             _log.warning(
                 'no task schdl in process_plugs_tag_id() to read tag ids')
-            time.sleep(1)  # yeild a sec
+            time.sleep(1)  # yield a sec
             return
 
         log_msg = '[LOG] tag_ids -'
@@ -486,23 +501,23 @@ class SmartStrip(Agent):
         return
 
     def _get_plug_relay_state(self, plug_id, schd_exist):
-        if not self._valid_plug_id(plug_id): return E_UNKNOWN_STATE
-
         state = E_UNKNOWN_STATE
+        if not self._valid_plug_id(plug_id):
+            return state
+
         if schd_exist == SCHEDULE_AVLB:
-            state = self._rpcget_plug_relay_state(plug_id);
+            state = self._rpcget_plug_relay_state(plug_id)
         elif schd_exist == SCHEDULE_NOT_AVLB:
             task_id = str(randint(0, 99999999))
             success = get_task_schdl(self, task_id, 'iiit/cbs/smartstrip')
             if not success:
                 _log.warning('no task schdl for getting plug relay state')
-                return E_UNKNOWN_STATE
-            state = self._rpcget_plug_relay_state(plug_id);
+                return state
+            state = self._rpcget_plug_relay_state(plug_id)
             cancel_task_schdl(self, task_id)
         else:
             _log.warning(
                 'Error: not a valid param - schd_exist: {}'.format(schd_exist))
-            return E_UNKNOWN_STATE
         return state
 
     def _process_new_tag_id(self, plug_id, new_tag_id):
@@ -564,26 +579,25 @@ class SmartStrip(Agent):
             tag = tag + format(i, '02x')
         return tag.upper()
 
-    def _convert_to_byte_array(self, f1_tag_id, f2_tag_id):
+    @staticmethod
+    def _convert_to_byte_array(f1_tag_id, f2_tag_id):
         id_lsb = bytearray(struct.pack('f', f1_tag_id))
         # for id in id_lsb:
         #    print 'id: {:02x}'.format(id)
         id_msb = bytearray(struct.pack('f', f2_tag_id))
+        return id_msb + id_lsb
 
-        id_msb = bytearray(struct.pack('f', f2_tag_id))
-        return (id_msb + id_lsb)
-
-    def _switch_led_debug(self, state, schdExist):
+    def _switch_led_debug(self, state, schd_exist):
         # _log.debug('_switch_led_debug()')
 
         if self._led_debug_state == state:
             _log.info('same state, do nothing')
             return
 
-        if schdExist == SCHEDULE_AVLB:
+        if schd_exist == SCHEDULE_AVLB:
             self._rpcset_led_debug_state(state)
             self._update_led_debug_state(state)
-        elif schdExist == SCHEDULE_NOT_AVLB:
+        elif schd_exist == SCHEDULE_NOT_AVLB:
             # get schedule to _switch_led_debug
             task_id = str(randint(0, 99999999))
             success = get_task_schdl(self, task_id, 'iiit/cbs/smartstrip')
@@ -597,20 +611,20 @@ class SmartStrip(Agent):
             # do nothing
             _log.warning(
                 '_switch_led_debug(), not a valid param schdExist: {}'.format(
-                    schdExist))
+                    schd_exist))
         return
 
-    def _switch_relay(self, plug_id, state, schdExist):
+    def _switch_relay(self, plug_id, state, schd_exist):
         # _log.debug('switchPlug1Relay()')
 
         if self._plugs_relay_state[plug_id] == state:
             _log.debug('same state, do nothing')
             return
 
-        if schdExist == SCHEDULE_AVLB:
-            self._rpcset_plug_relay_state(plug_id, state);
+        if schd_exist == SCHEDULE_AVLB:
+            self._rpcset_plug_relay_state(plug_id, state)
             self._update_plug_relay_state(plug_id, state)
-        elif schdExist == SCHEDULE_NOT_AVLB:
+        elif schd_exist == SCHEDULE_NOT_AVLB:
             # get schedule to _switch_relay
             task_id = str(randint(0, 99999999))
             # _log.debug('task_id: ' + task_id)
@@ -622,22 +636,18 @@ class SmartStrip(Agent):
             self._update_plug_relay_state(plug_id, state)
             cancel_task_schdl(self, task_id)
         else:
-            # do notthing
+            # do nothing
             _log.warning(
                 '_switch_relay(), not a valid param schdExist: {}'.format(
-                    schdExist))
+                    schd_exist))
         return
 
     def _rpcset_led_debug_state(self, state):
         end_point = 'LEDDebug'
         try:
-            # _log.debug('schl avlb')
-            result = self.vip.rpc.call('platform.actuator'
-                                       , 'set_point'
-                                       , self._agent_id
-                                       , 'iiit/cbs/smartstrip/' + end_point
-                                       , state
-                                       ).get(timeout=10)
+            point = self._root_topic + end_point
+            self.vip.rpc.call('platform.actuator', 'set_point', self._agent_id,
+                              point, state).get(timeout=10)
 
             # self._update_led_debug_state(state)
         except gevent.Timeout:
@@ -651,16 +661,14 @@ class SmartStrip(Agent):
         return
 
     def _rpcset_plug_relay_state(self, plug_id, state):
-        if not self._valid_plug_id(plug_id): return
+        if not self._valid_plug_id(plug_id):
+            return
 
         end_point = 'Plug' + str(plug_id + 1) + 'Relay'
         try:
-            result = self.vip.rpc.call('platform.actuator'
-                                       , 'set_point'
-                                       , self._agent_id
-                                       , 'iiit/cbs/smartstrip/' + end_point
-                                       , state
-                                       ).get(timeout=10)
+            point = self._root_topic + end_point
+            self.vip.rpc.call('platform.actuator', 'set_point', self._agent_id,
+                              point, state).get(timeout=10)
         except gevent.Timeout:
             _log.exception('gevent.Timeout in _rpcset_plug_relay_state()')
             # return E_UNKNOWN_STATE
@@ -678,10 +686,9 @@ class SmartStrip(Agent):
         end_point = 'LEDDebug'
         relay_state = E_UNKNOWN_STATE
         try:
-            state = self.vip.rpc.call('platform.actuator'
-                                      , 'get_point'
-                                      , 'iiit/cbs/smartstrip/' + end_point
-                                      ).get(timeout=10)
+            point = self._root_topic + end_point
+            state = self.vip.rpc.call('platform.actuator', 'get_point',
+                                      point).get(timeout=10)
             relay_state = int(state)
         except gevent.Timeout:
             _log.exception('gevent.Timeout in _rpcget_plug_relay_state()')
@@ -694,15 +701,15 @@ class SmartStrip(Agent):
         return relay_state
 
     def _rpcget_plug_relay_state(self, plug_id):
-        if not self._valid_plug_id(plug_id): return E_UNKNOWN_STATE
+        relay_state = E_UNKNOWN_STATE
+        if not self._valid_plug_id(plug_id):
+            return relay_state
 
         end_point = 'Plug' + str(plug_id + 1) + 'Relay'
-        relay_state = E_UNKNOWN_STATE
         try:
-            state = self.vip.rpc.call('platform.actuator'
-                                      , 'get_point'
-                                      , 'iiit/cbs/smartstrip/' + end_point
-                                      ).get(timeout=10)
+            point = self._root_topic + end_point
+            state = self.vip.rpc.call('platform.actuator', 'get_point',
+                                      point).get(timeout=10)
             relay_state = int(state)
         except gevent.Timeout:
             _log.exception('gevent.Timeout in _rpcget_plug_relay_state()')
@@ -716,31 +723,25 @@ class SmartStrip(Agent):
 
     def _rpcget_meter_data(self, plug_id):
         # _log.debug ('_rpcget_meter_data(), plug_id: ' + str(plug_id))
-        if not self._valid_plug_id(plug_id): return
+        if not self._valid_plug_id(plug_id):
+            return
 
-        point_voltage = 'Plug' + str(plug_id + 1) + 'Voltage'
-        point_current = 'Plug' + str(plug_id + 1) + 'Current'
-        point_active_power = 'Plug' + str(plug_id + 1) + 'ActivePower'
+        root_topic = self._root_topic
+        point_voltage = root_topic + 'Plug' + str(plug_id + 1) + 'Voltage'
+        point_current = root_topic + 'Plug' + str(plug_id + 1) + 'Current'
+        point_act_pwr = root_topic + 'Plug' + str(plug_id + 1) + 'ActivePower'
 
         try:
-            f_voltage = self.vip.rpc.call('platform.actuator'
-                                          , 'get_point'
-                                          ,
-                                          'iiit/cbs/smartstrip/' + point_voltage
-                                          ).get(timeout=10)
+            f_voltage = self.vip.rpc.call('platform.actuator', 'get_point',
+                                          point_voltage).get(timeout=10)
             # _log.debug('voltage: {:.2f}'.format(f_voltage))
-            f_current = self.vip.rpc.call('platform.actuator'
-                                          , 'get_point'
-                                          ,
-                                          'iiit/cbs/smartstrip/' + point_current
-                                          ).get(timeout=10)
+
+            f_current = self.vip.rpc.call('platform.actuator', 'get_point',
+                                          point_current).get(timeout=10)
             # _log.debug('current: {:.2f}'.format(f_current))
-            f_active_power = self.vip.rpc.call('platform.actuator'
-                                               , 'get_point'
-                                               ,
-                                               'iiit/cbs/smartstrip/' +
-                                               point_active_power
-                                               ).get(timeout=10)
+
+            f_active_power = self.vip.rpc.call('platform.actuator', 'get_point',
+                                               point_act_pwr).get(timeout=10)
             # _log.debug('active: {:.2f}'.format(f_active_power))
 
             # keep track of plug meter data
@@ -758,24 +759,22 @@ class SmartStrip(Agent):
         return
 
     def _rpcget_plug_tag_id(self, plug_id):
-        '''
-            Smart Strip bacnet server splits the 64 bit tag id 
-            into two parts and sends them accros as two float values.
+        """
+            Smart Strip bacnet server splits the 64 bit tag id
+            into two parts and sends them across as two float values.
             Hence need to get both the points (floats value)
             and recover the actual tag id
-        '''
+        """
         tag_id = DEFAULT_TAG_ID
-        end_point_1 = 'TagID' + str(plug_id + 1) + '_1'
-        end_point_2 = 'TagID' + str(plug_id + 1) + '_2'
+
+        root_topic = self._root_topic
+        point_1 = root_topic + 'TagID' + str(plug_id + 1) + '_1'
+        point_2 = root_topic + 'TagID' + str(plug_id + 1) + '_2'
         try:
-            f1_tag_id = self.vip.rpc.call('platform.actuator'
-                                          , 'get_point'
-                                          , 'iiit/cbs/smartstrip/' + end_point_1
-                                          ).get(timeout=10)
-            f2_tag_id = self.vip.rpc.call('platform.actuator'
-                                          , 'get_point'
-                                          , 'iiit/cbs/smartstrip/' + end_point_2
-                                          ).get(timeout=10)
+            f1_tag_id = self.vip.rpc.call('platform.actuator', 'get_point',
+                                          point_1).get(timeout=10)
+            f2_tag_id = self.vip.rpc.call('platform.actuator', 'get_point',
+                                          point_2).get(timeout=10)
             tag_id = self._construct_tag_id(f1_tag_id, f2_tag_id)
         except gevent.Timeout:
             _log.exception('gevent.Timeout in _rpcget_tag_ids()')
@@ -790,7 +789,8 @@ class SmartStrip(Agent):
         # _log.debug('_update_led_debug_state()')
 
         led_debug_state = self._rpcget_led_debug_state()
-        if state == led_debug_state: self._led_debug_state = state
+        if state == led_debug_state:
+            self._led_debug_state = state
 
         if state == LED_ON:
             _log.info('Current State: LED Debug is ON!!!')
@@ -819,13 +819,14 @@ class SmartStrip(Agent):
                 plug_id + 1) + ' Relay STATE UNKNOWN!!!')
         return
 
-    def _publish_meter_data(self, plug_id, fVolatge, fCurrent, fActivePower):
-        if not self._valid_plug_id(plug_id): return
+    def _publish_meter_data(self, plug_id, voltage, current, active_power):
+        if not self._valid_plug_id(plug_id):
+            return
 
         pub_topic = self._root_topic + '/plug' + str(
             plug_id + 1) + '/meterdata/all'
-        pub_msg = [{'voltage': fVolatge, 'current': fCurrent,
-                    'active_power': fActivePower},
+        pub_msg = [{'voltage': voltage, 'current': current,
+                    'active_power': active_power},
                    {'voltage': {'units': 'V', 'tz': 'UTC', 'type': 'float'},
                     'current': {'units': 'A', 'tz': 'UTC', 'type': 'float'},
                     'active_power': {'units': 'W', 'tz': 'UTC', 'type': 'float'}
@@ -837,7 +838,8 @@ class SmartStrip(Agent):
         return
 
     def _publish_tag_id(self, plug_id, new_tag_id):
-        if not self._valid_plug_id(plug_id): return
+        if not self._valid_plug_id(plug_id):
+            return
 
         pub_topic = self._root_topic + '/plug' + str(plug_id + 1) + '/tagid'
         pub_msg = [new_tag_id, {'units': '', 'tz': 'UTC', 'type': 'string'}]
@@ -848,7 +850,8 @@ class SmartStrip(Agent):
         return
 
     def _publish_plug_relay_state(self, plug_id, state):
-        if not self._valid_plug_id(plug_id): return
+        if not self._valid_plug_id(plug_id):
+            return
 
         pub_topic = self._root_topic + '/plug' + str(
             plug_id + 1) + '/relaystate'
@@ -859,11 +862,12 @@ class SmartStrip(Agent):
         # _log.debug('done.')
         return
 
-    def _publish_threshold_pp(self, plug_id, thresholdPP):
-        if not self._valid_plug_id(plug_id): return
+    def _publish_threshold_pp(self, plug_id, th_pp):
+        if not self._valid_plug_id(plug_id):
+            return
 
         pub_topic = self._root_topic + '/plug' + str(plug_id + 1) + '/threshold'
-        pub_msg = [thresholdPP,
+        pub_msg = [th_pp,
                    {'units': 'cents', 'tz': 'UTC', 'type': 'float'}]
         # _log.info('[LOG] SS plug threshold price, Msg: {}'.format(pub_msg))
         # _log.debug('Publishing to local bus topic: {}'.format(pub_topic))
@@ -872,10 +876,12 @@ class SmartStrip(Agent):
         return
 
     def _authorised_tag_id(self, tag_id):
-        return (True if tag_id in self._tag_ids else False)
+        result = True if tag_id in self._tag_ids else False
+        return result
 
     def _valid_plug_id(self, plug_id):
-        return (True if plug_id < len(self._plugs_th_pp) else False)
+        result = True if plug_id < len(self._plugs_th_pp) else False
+        return result
 
     '''
         Functionality related to the market mechanisms
@@ -888,10 +894,12 @@ class SmartStrip(Agent):
     '''
 
     def on_new_price(self, peer, sender, bus, topic, headers, message):
-        if sender not in self._valid_senders_list_pp: return
+        if sender not in self._valid_senders_list_pp:
+            return
 
         # check message type before parsing
-        if not check_msg_type(message, MessageType.price_point): return False
+        if not check_msg_type(message, MessageType.price_point):
+            return False
 
         valid_senders_list = self._valid_senders_list_pp
         minimum_fields = ['msg_type', 'value', 'value_data_type', 'units',
@@ -899,11 +907,9 @@ class SmartStrip(Agent):
         validate_fields = ['value', 'units', 'price_id', 'isoptimal',
                            'duration', 'ttl']
         valid_price_ids = []
-        (success, pp_msg) = valid_bustopic_msg(sender, valid_senders_list
-                                               , minimum_fields
-                                               , validate_fields
-                                               , valid_price_ids
-                                               , message)
+        (success, pp_msg) = valid_bustopic_msg(sender, valid_senders_list,
+                                               minimum_fields, validate_fields,
+                                               valid_price_ids, message)
         if not success or pp_msg is None:
             return
         else:
@@ -932,10 +938,11 @@ class SmartStrip(Agent):
         self.process_opt_pp()
         return
 
-    # this is a perodic function that keeps trying to apply the new pp till
+    # this is a periodic function that keeps trying to apply the new pp till
     # success
     def process_opt_pp(self):
-        if self._process_opt_pp_success: return
+        if self._process_opt_pp_success:
+            return
 
         # any process that failed to apply pp sets this flag False
         self._process_opt_pp_success = True
@@ -943,9 +950,10 @@ class SmartStrip(Agent):
         task_id = str(randint(0, 99999999))
         success = get_task_schdl(self, task_id, 'iiit/cbs/smartstrip', 1000)
         if not success:
-            _log.debug('unable to process_opt_pp()'
-                       + ', will try again in {} sec'.format(
-                self._period_process_pp))
+            _log.debug(
+                'unable to process_opt_pp()'
+                + ', will try again in {} sec'.format(self._period_process_pp)
+            )
             self._process_opt_pp_success = False
             return
 
@@ -953,9 +961,11 @@ class SmartStrip(Agent):
             self._apply_pricing_policy(plug_id, SCHEDULE_AVLB)
             if not self._process_opt_pp_success:
                 cancel_task_schdl(self, task_id)
-                _log.debug('unable to process_opt_pp()'
-                           + ', will try again in {} sec'.format(
-                    self._period_process_pp))
+                _log.debug(
+                    'unable to process_opt_pp()'
+                    + ', will try again in'
+                    + ' {} sec'.format(self._period_process_pp)
+                )
                 return
 
         cancel_task_schdl(self, task_id)
@@ -971,16 +981,17 @@ class SmartStrip(Agent):
         self._opt_pp_msg_current = copy(self._opt_pp_msg_latest)
         return
 
-    def _apply_pricing_policy(self, plug_id, schdExist):
+    def _apply_pricing_policy(self, plug_id, schd_exist):
         plug_pp_th = self._plugs_th_pp[plug_id]
         if self._price_point_latest > plug_pp_th:
             if self._plugs_relay_state[plug_id] == RELAY_ON:
-                _log.info(('Plug {:d}: '.format(plug_id + 1)
-                           , 'Current price point > threshold'
-                           , '({:.2f}), '.format(plug_pp_th)
-                           , 'Switching-Off Power'
-                           ))
-                self._switch_relay(plug_id, RELAY_OFF, schdExist)
+                _log.info(
+                    'Plug {:d}: '.format(plug_id + 1)
+                    + 'Current price point > threshold'
+                    + '({:.2f}), '.format(plug_pp_th)
+                    + 'Switching-Off Power'
+                )
+                self._switch_relay(plug_id, RELAY_OFF, schd_exist)
                 if self._plugs_relay_state[plug_id] != RELAY_OFF:
                     self._process_opt_pp_success = False
 
@@ -989,19 +1000,20 @@ class SmartStrip(Agent):
         else:
             if self._plugs_connected[plug_id] == 1 and self._authorised_tag_id(
                     self._plugs_tag_id[plug_id]):
-                _log.info(('Plug {:d}: '.format(plug_id + 1)
-                           , 'Current price point < threshold'
-                           , '({:.2f}), '.format(plug_pp_th)
-                           , 'Switching-On Power'
-                           ))
-                self._switch_relay(plug_id, RELAY_ON, schdExist)
+                _log.info(
+                    'Plug {:d}: '.format(plug_id + 1)
+                    + 'Current price point < threshold'
+                    + '({:.2f}), '.format(plug_pp_th)
+                    + 'Switching-On Power'
+                )
+                self._switch_relay(plug_id, RELAY_ON, schd_exist)
                 if self._plugs_relay_state[plug_id] != RELAY_ON:
                     self._process_opt_pp_success = False
             # else:
             # do nothing
         return
 
-    # perodic function to publish active power
+    # periodic function to publish active power
     def publish_opt_tap(self):
         pp_msg = self._opt_pp_msg_current
         price_id = pp_msg.get_price_id()
@@ -1039,10 +1051,11 @@ class SmartStrip(Agent):
 
         # connected plugs active power
         for plug_id, state in enumerate(self._plugs_relay_state):
-            if (state == RELAY_ON
-                    and plug_id != self._sh_plug_id
-            ):
-                tap += self._plugs_active_pwr[plug_id]
+            if (state == RELAY_OFF
+                    or plug_id == self._sh_plug_id  # exclude sh power
+                    or False):
+                continue
+            tap += self._plugs_active_pwr[plug_id]
 
         return tap
 
@@ -1051,7 +1064,7 @@ class SmartStrip(Agent):
         self.process_bid_pp()
         return
 
-    # this is a perodic function that keeps trying to apply the new pp till
+    # this is a periodic function that keeps trying to apply the new pp till
     # success
     def process_bid_pp(self):
         self.publish_bid_ted()
@@ -1103,16 +1116,15 @@ class SmartStrip(Agent):
         for plug_id, th_pp in enumerate(self._plugs_th_pp):
             if (bid_pp > th_pp
                     or plug_id == self._sh_plug_id
-            ):
-                pass
-            else:
-                ted += calc_energy_wh(self._plugs_active_pwr[plug_id], duration)
+                    or False):
+                continue
+            ted += calc_energy_wh(self._plugs_active_pwr[plug_id], duration)
 
         return ted
 
 
 def main(argv=sys.argv):
-    '''Main method called by the eggsecutable.'''
+    """Main method called by the eggsecutable."""
     try:
         utils.vip_main(smartstrip)
     except Exception as e:
