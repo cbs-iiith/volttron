@@ -22,18 +22,22 @@ from typing import List
 import gevent
 import gevent.event
 
-from applications.iiit.Utils.ispace_msg import MessageType, EnergyCategory, \
-    ISPACE_Msg
-from applications.iiit.Utils.ispace_msg_utils import check_msg_type, \
-    tap_helper, ted_helper, get_default_pp_msg, valid_bustopic_msg
-from applications.iiit.Utils.ispace_utils import isclose, get_task_schdl, \
-    cancel_task_schdl, publish_to_bus, retrive_details_from_vb, \
-    register_with_bridge, register_rpc_route, unregister_with_bridge
+from applications.iiit.Utils.ispace_msg import (MessageType, EnergyCategory,
+                                                ISPACE_Msg)
+from applications.iiit.Utils.ispace_msg_utils import (check_msg_type,
+                                                      tap_helper, ted_helper,
+                                                      get_default_pp_msg,
+                                                      valid_bustopic_msg)
+from applications.iiit.Utils.ispace_utils import (isclose, get_task_schdl,
+                                                  cancel_task_schdl,
+                                                  publish_to_bus,
+                                                  retrive_details_from_vb,
+                                                  register_with_bridge,
+                                                  register_rpc_route,
+                                                  unregister_with_bridge)
 from volttron.platform import jsonrpc
 from volttron.platform.agent import utils
-from volttron.platform.agent.known_identities import (
-    MASTER_WEB)
-from volttron.platform.jsonrpc import JsonRpcData
+from volttron.platform.agent.known_identities import MASTER_WEB
 from volttron.platform.vip.agent import Agent, Core, RPC
 
 utils.setup_logging()

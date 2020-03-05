@@ -14,12 +14,12 @@
 import logging
 import sys
 
-from applications.iiit.Utils.ispace_msg import MessageType
-from applications.iiit.Utils.ispace_msg_utils import parse_jsonrpc_msg, \
-    check_msg_type
-from applications.iiit.Utils.ispace_utils import publish_to_bus, \
-    retrive_details_from_vb, \
-    register_rpc_route
+from applications.iiit.Utils.ispace_msg import (MessageType)
+from applications.iiit.Utils.ispace_msg_utils import (parse_jsonrpc_msg,
+                                                      check_msg_type)
+from applications.iiit.Utils.ispace_utils import (publish_to_bus,
+                                                  retrive_details_from_vb,
+                                                  register_rpc_route)
 from volttron.platform import jsonrpc
 from volttron.platform.agent import utils
 from volttron.platform.agent.known_identities import MASTER_WEB
