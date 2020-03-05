@@ -31,9 +31,6 @@ from volttron.platform import jsonrpc
 from volttron.platform.agent import utils
 from volttron.platform.agent.known_identities import (
     MASTER_WEB)
-from volttron.platform.jsonrpc import (
-    METHOD_NOT_FOUND, PARSE_ERROR,
-    UNHANDLED_EXCEPTION, INVALID_PARAMS)
 from volttron.platform.vip.agent import Agent, Core, RPC
 
 utils.setup_logging()
@@ -53,8 +50,10 @@ def pricecontroller(config_path, **kwargs):
 
 
 class PriceController(Agent):
-    '''Price Controller
-    '''
+    """
+    Price Controller
+    """
+    _bids_timeout = None  # type: int
     # initialized  during __init__ from config
     _period_read_data = None
     _period_process_loop = None
@@ -92,12 +91,28 @@ class PriceController(Agent):
         _log.debug('vip_identity: ' + self.core.identity)
 
         self.config = utils.load_config(config_path)
+        self._agent_id = self.config['agentid']
+
+        # local device_ids
+        self._us_local_opt_ap = {}
+        self._us_local_bid_ed = {}
+        self._local_bid_ed = {}
+
+        # ds device ids
+        #   opt_ap --> act_pwr@opt_pp, bid_ed --> bid_energy_demand@bid_pp
+        self._us_ds_opt_ap = {}
+        self._us_ds_bid_ed = {}
+        self._ds_bid_ed = {}
+
+        self._device_id = None
+        self._ip_addr = None
+        self._discovery_address = None
+
         return
 
     @Core.receiver('onsetup')
     def setup(self, sender, **kwargs):
         _log.info(self.config['message'])
-        self._agent_id = self.config['agentid']
 
         self._period_read_data = self.config.get('period_read_data', 30)
         self._period_process_loop = self.config.get('period_process_loop', 1)
@@ -137,21 +152,6 @@ class PriceController(Agent):
         else:
             self._bids_timeout = 900
 
-        # local device_ids
-        self._us_local_opt_ap = {}
-        self._us_local_bid_ed = {}
-        self._local_bid_ed = {}
-
-        # ds device ids
-        #   opt_ap --> act_pwr@opt_pp, bid_ed --> bid_energy_demand@bid_pp
-        self._us_ds_opt_ap = {}
-        self._us_ds_bid_ed = {}
-        self._ds_bid_ed = {}
-
-        self._device_id = None
-        self._ip_addr = None
-        self._discovery_address = None
-
         self._vb_vip_identity = self.config.get(
             'vb_vip_identity',
             'iiit.volttronbridge'
@@ -178,7 +178,7 @@ class PriceController(Agent):
     def startup(self, sender, **kwargs):
         _log.info('Starting PriceController...')
 
-        # retrive self._device_id, self._ip_addr, self._discovery_address
+        # retrieve self._device_id, self._ip_addr, self._discovery_address
         # from the bridge. this fn is a blocking call
         retrive_details_from_vb(self, 5)
 
@@ -220,7 +220,7 @@ class PriceController(Agent):
             self.on_ds_ed
         )
 
-        # perodically publish total active power (tap) to local/energydemand
+        # periodically publish total active power (tap) to local/energydemand
         # vb RPCs this value to the next level. since time period is much
         # larger (default 30s, i.e, 2 reading per min), need not wait to
         # receive from all devices. any ways this is used for monitoring
@@ -286,7 +286,7 @@ class PriceController(Agent):
 
     @RPC.export
     def rpc_from_net(self, header, message):
-        result = False
+        rpcdata = jsonrpc.JsonRpcData()
         try:
             rpcdata = jsonrpc.JsonRpcData.parse(message)
             _log.debug('rpc_from_net()... '
@@ -300,12 +300,12 @@ class PriceController(Agent):
                     rpcdata.method == 'state'
                     and header['REQUEST_METHOD'].upper() == 'POST'
             ):
-                result = self._pca_mode(rpcdata.id, message)
+                result = self._get_pca_mode(rpcdata.id, message)
             elif (
                     rpcdata.method == 'mode'
                     and header['REQUEST_METHOD'].upper() == 'POST'
             ):
-                result = self._pca_mode(rpcdata.id, message)
+                result = self._get_pca_mode(rpcdata.id, message)
             elif (
                     rpcdata.method == 'external-optimizer'
                     and header['REQUEST_METHOD'].upper() == 'POST'
@@ -317,20 +317,24 @@ class PriceController(Agent):
             else:
                 return jsonrpc.json_error(
                     rpcdata.id,
-                    METHOD_NOT_FOUND,
+                    jsonrpc.METHOD_NOT_FOUND,
                     'Invalid method {}'.format(rpcdata.method)
                 )
         except KeyError as ke:
-            msg = 'Invalid params {}'.format(rpcdata.params)
-            error = jsonrpc.json_error(rpcdata.id, INVALID_PARAMS, msg)
+            msg = 'Invalid params {}, error: {}'.format(rpcdata.params,
+                                                        ke.message)
+            error = jsonrpc.json_error(rpcdata.id, jsonrpc.INVALID_PARAMS, msg)
             return error
         except Exception as e:
             msg = 'Oops!!! Unhandled exception {}'.format(e.message)
-            error = jsonrpc.json_error(rpcdata.id, UNHANDLED_EXCEPTION, msg)
+            error = jsonrpc.json_error(rpcdata.id, jsonrpc.UNHANDLED_EXCEPTION,
+                                       msg)
             return error
-        return (jsonrpc.json_result(rpcdata.id, result) if result else result)
+        if result:
+            result = jsonrpc.json_result(rpcdata.id, result)
+        return result
 
-    def _pca_state(self, rpcdata_id, message):
+    def _get_pca_state(self, rpcdata_id, message):
         state = jsonrpc.JsonRpcData.parse(message).params['state']
         if state not in [
             'ONLINE',
@@ -338,13 +342,13 @@ class PriceController(Agent):
             'STANDBY'
         ]:
             return jsonrpc.json_error(rpcdata_id,
-                                      PARSE_ERROR,
+                                      jsonrpc.PARSE_ERROR,
                                       'Invalid option!!!'
                                       )
         self._pca_state = state
         return True
 
-    def _pca_mode(self, rpcdata_id, message):
+    def _get_pca_mode(self, rpcdata_id, message):
         mode = jsonrpc.JsonRpcData.parse(message).params['mode']
         if mode not in [
             'PASS_ON_PP',
@@ -353,7 +357,7 @@ class PriceController(Agent):
         ]:
             return jsonrpc.json_error(
                 rpcdata_id,
-                PARSE_ERROR,
+                jsonrpc.PARSE_ERROR,
                 'Invalid option!!!'
             )
         self._pca_mode = mode
