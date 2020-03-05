@@ -30,10 +30,7 @@ from volttron.platform import jsonrpc
 from volttron.platform.agent import utils
 from volttron.platform.agent.known_identities import (
     MASTER_WEB)
-from volttron.platform.jsonrpc import (
-    METHOD_NOT_FOUND, PARSE_ERROR,
-    UNHANDLED_EXCEPTION, INVALID_PARAMS)
-from volttron.platform.vip.agent import Agent, Core, RPC
+from volttron.platform.vip.agent import Agent, Core
 
 # from gevent import monkey
 # monkey.patch_all() #not required grequests does it for us
@@ -69,7 +66,7 @@ def volttronbridge(config_path, **kwargs):
 
 
 class VolttronBridge(Agent):
-    ''' Voltron Bridge
+    """ Volttron Bridge
     Retrieve the data from volttron bus and publish it to upstream or downstream
     volttron instance. If posting to downstream, then the data is pricepoint
     and if posting to upstream then the data is energy demand or active power
@@ -88,27 +85,71 @@ class VolttronBridge(Agent):
     the upstream bridges.
 
     Whereas the the bridge does not know the downstream devices upfront.
-    As and when the downstram bridges register to the bridge, the bridge starts
+    As and when the downstream bridges register to the bridge, the bridge starts
     posting the messages (pricepoint) to them.
-    '''
+    """
     # initialized  during __init__ from config
-    _topic_energy_demand = None
-    _topic_energy_demand_ds = None
-    _topic_price_point_us = None
-    _topic_price_point = None
+    _topic_energy_demand = None  # type: str
+    _topic_energy_demand_ds = None  # type: str
+    _topic_price_point_us = None  # type: str
+    _topic_price_point = None  # type: str
+
+    _usConnected = None  # type: bool
+    _bridge_host = None  # type: str
+    _device_id = None  # type: str
+
+    _this_ip_addr = None  # type: str
+    _this_port = None  # type: int
+
+    _period_process_pp = None  # type: int
+    _period_process_ed = None  # type: int
+
+    # register to keep track of local agents
+    # posting active power or energy demand
+    _local_devices_register = None  # type: list
+    _local_device_ids = None  # type: list
+
+    # queues to store us price and ds energy messages
+    _us_pp_messages = None
+    _ds_ed_messages = None
+
+    _post_ds_new_pp_event = None
+    _post_us_new_ed_event = None
+
+    _ds_register = None  # type: list
+    _ds_device_ids = None  # type: list
+    _ds_retry_count = None  # type: list
+
+    _us_ip_addr = None  # type: str
+    _us_port = None  # type: int
+
+    _discovery_address = None  # type: str
+
+    _valid_senders_list_pp = None  # type: list
+
+    _all_ds_posts_success = None  # type: bool
+    _all_us_posts_success = None  # type: bool
+    _us_retry_count = None  # type: int
+
+    us_opt_pp_id = None  # type: int
+    us_bid_pp_id = None  # type: int
+
+    local_opt_pp_id = None  # type: int
+    local_bid_pp_id = None  # type: int
 
     def __init__(self, config_path, **kwargs):
         super(VolttronBridge, self).__init__(**kwargs)
         _log.debug('vip_identity: ' + self.core.identity)
 
         self.config = utils.load_config(config_path)
+        self._agent_id = self.config['agentid']
+
         self._config_get_points()
         return
 
     @Core.receiver('onsetup')
     def setup(self, sender, **kwargs):
         _log.info(self.config['message'])
-        self._agent_id = self.config['agentid']
 
         self._usConnected = False
         self._bridge_host = self.config.get('bridge_host', 'LEVEL_HEAD')
@@ -140,7 +181,7 @@ class VolttronBridge(Agent):
             # post price point to these instances
             self._ds_register = []  # ds discovery_addresses
             self._ds_device_ids = []  # ds device_ids
-            self._ds_retrycount = []
+            self._ds_retry_count = []
 
         if self._bridge_host != 'LEVEL_HEAD':
             _log.debug(self._bridge_host)
@@ -151,8 +192,8 @@ class VolttronBridge(Agent):
             _log.debug('self._us_ip_addr: {}'.format(self._us_ip_addr) +
                        ' self._us_port: '.format(self._us_port))
 
-        self._discovery_address = '{}:{}'.format(self._this_ip_addr
-                                                 , self._this_port)
+        self._discovery_address = '{}:{}'.format(self._this_ip_addr,
+                                                 self._this_port)
         _log.debug('self._discovery_address:'
                    + ' {}'.format(self._discovery_address))
         return
@@ -171,7 +212,7 @@ class VolttronBridge(Agent):
 
         self._all_ds_posts_success = True
         self._all_us_posts_success = True
-        self._us_retrycount = 0
+        self._us_retry_count = 0
 
         self.local_opt_pp_id = randint(0, 99999999)
         self.local_bid_pp_id = randint(0, 99999999)
@@ -180,13 +221,11 @@ class VolttronBridge(Agent):
         if self._bridge_host != 'LEVEL_TAILEND':
             _log.debug('subscribing to _topic_price_point:'
                        + ' {}'.format(self._topic_price_point))
-            self.vip.pubsub.subscribe('pubsub'
-                                      , self._topic_price_point
-                                      , self.on_new_pp
-                                      )
+            self.vip.pubsub.subscribe('pubsub', self._topic_price_point,
+                                      self.on_new_pp)
             self._ds_register[:] = []
             self._ds_device_ids[:] = []
-            self._ds_retrycount[:] = []
+            self._ds_retry_count[:] = []
 
         # subscribe to energy demand so that it can be posted to upstream
         if self._bridge_host != 'LEVEL_HEAD':
@@ -222,15 +261,13 @@ class VolttronBridge(Agent):
 
         # periodically keeps trying to post ed to us
         if self._bridge_host != 'LEVEL_HEAD':
-            self.core.periodic(self._period_process_pp
-                               , self.post_us_new_ed
-                               , wait=None)
+            self.core.periodic(self._period_process_pp, self.post_us_new_ed,
+                               wait=None)
 
         # periodically keeps trying to post pp to ds
         if self._bridge_host != 'LEVEL_TAILEND':
-            self.core.periodic(self._period_process_pp
-                               , self.post_ds_new_pp
-                               , wait=None)
+            self.core.periodic(self._period_process_pp, self.post_ds_new_pp,
+                               wait=None)
 
         _log.info('startup() - Done. Agent is ready')
         return
@@ -238,7 +275,7 @@ class VolttronBridge(Agent):
     @Core.receiver('onstop')
     def onstop(self, sender, **kwargs):
         _log.debug('onstop()')
-        self._us_retrycount = 0
+        self._us_retry_count = 0
 
         del self._local_devices_register[:]
         del self._local_device_ids[:]
@@ -246,7 +283,7 @@ class VolttronBridge(Agent):
         if self._bridge_host != 'LEVEL_TAILEND':
             del self._ds_register[:]
             del self._ds_device_ids[:]
-            del self._ds_retrycount[:]
+            del self._ds_retry_count[:]
 
         if self._bridge_host != 'LEVEL_HEAD':
             _log.debug(self._bridge_host)
@@ -256,13 +293,9 @@ class VolttronBridge(Agent):
                     url_root = 'http://' + self._us_ip_addr \
                                + ':' + str(self._us_port) \
                                + '/bridge'
-                    args = {'discovery_address': self._discovery_address
-                        , 'device_id': self._device_id
-                            }
-                    result = do_rpc(self._agent_id, url_root, 'dsbridge',
-                                    args,
-                                    'DELETE'
-                                    )
+                    args = {'discovery_address': self._discovery_address,
+                            'device_id': self._device_id}
+                    do_rpc(self._agent_id, url_root, 'dsbridge', args, 'DELETE')
                 except Exception as e:
                     _log.exception('Failed to unregister with upstream'
                                    + ', message: {}'.format(e.message))
@@ -270,27 +303,26 @@ class VolttronBridge(Agent):
                 self._usConnected = False
 
         _log.debug('un registering rpc routes')
-        self.vip.rpc.call(MASTER_WEB
-                          , 'unregister_all_agent_routes').get(timeout=30)
+        self.vip.rpc.call(MASTER_WEB, 'unregister_all_agent_routes').get(
+            timeout=30)
 
         _log.debug('done!!!')
         return
 
     def _config_get_points(self):
         # default config point for zone vb
-        self._topic_energy_demand = self.config.get('energyDemand_topic'
-                                                    , 'zone/energydemand')
-        self._topic_energy_demand_ds = self.config.get('energyDemand_topic_ds'
-                                                       , 'ds/energydemand')
-        self._topic_price_point_us = self.config.get('pricePoint_topic_us'
-                                                     , 'us/pricepoint')
-        self._topic_price_point = self.config.get('pricePoint_topic'
-                                                  , 'zone/pricepoint')
+        self._topic_energy_demand = self.config.get('energyDemand_topic',
+                                                    'zone/energydemand')
+        self._topic_energy_demand_ds = self.config.get('energyDemand_topic_ds',
+                                                       'ds/energydemand')
+        self._topic_price_point_us = self.config.get('pricePoint_topic_us',
+                                                     'us/pricepoint')
+        self._topic_price_point = self.config.get('pricePoint_topic',
+                                                  'zone/pricepoint')
         return
 
-    @RPC.export
     def rpc_from_net(self, header, message):
-        result = False
+        rpcdata = jsonrpc.JsonRpcData(None, None, None, None, None)
         try:
             rpcdata = jsonrpc.JsonRpcData.parse(message)
             _log.debug('rpc_from_net()...'
@@ -302,13 +334,13 @@ class VolttronBridge(Agent):
                 result = True
             elif (rpcdata.method == 'dsbridge'
                   and header['REQUEST_METHOD'].upper() == 'GET'):
-                result = self._get_ds_bridge_status(rpcdata.id, message)
+                result = self._get_ds_bridge_status(message)
             elif (rpcdata.method == 'dsbridge'
                   and header['REQUEST_METHOD'].upper() == 'POST'):
-                result = self._register_ds_bridge(rpcdata.id, message)
+                result = self._register_ds_bridge(message)
             elif (rpcdata.method == 'dsbridge'
                   and header['REQUEST_METHOD'].upper() == 'DELETE'):
-                result = self._unregister_ds_bridge(rpcdata.id, message)
+                result = self._unregister_ds_bridge(message)
             elif (rpcdata.method == 'energy'
                   and header['REQUEST_METHOD'].upper() == 'POST'):
                 # post the new energy demand from ds to the local bus
@@ -319,62 +351,58 @@ class VolttronBridge(Agent):
                 result = self._post_pp(rpcdata.id, message)
             else:
                 msg = 'Invalid params {}'.format(rpcdata.method)
-                error = jsonrpc.json_error(rpcdata.id, METHOD_NOT_FOUND, msg)
+                error = jsonrpc.json_error(rpcdata.id, jsonrpc.METHOD_NOT_FOUND,
+                                           msg)
                 return error
-        except KeyError as ke:
+        except KeyError:
             msg = 'Invalid params {}'.format(rpcdata.params)
-            error = jsonrpc.json_error(rpcdata.id, INVALID_PARAMS, msg)
+            error = jsonrpc.json_error(rpcdata.id, jsonrpc.INVALID_PARAMS, msg)
             return error
         except Exception as e:
             msg = 'Oops!!! Unhandled exception {}'.format(e.message)
-            error = jsonrpc.json_error(rpcdata.id, UNHANDLED_EXCEPTION, msg)
+            error = jsonrpc.json_error(rpcdata.id, jsonrpc.UNHANDLED_EXCEPTION,
+                                       msg)
             return error
-        return (jsonrpc.json_result(rpcdata.id, result) if result else result)
+        if result:
+            result = jsonrpc.json_result(rpcdata.id, result)
+        return result
 
-    @RPC.export
-    def ping(self):
+    @staticmethod
+    def ping():
         return True
 
-    @RPC.export
     def get_ds_device_ids(self):
         return (self._ds_device_ids
                 if self._bridge_host != 'LEVEL_TAILEND'
                 else [])
 
-    @RPC.export
     def local_ed_agents(self):
         # return local ed agents vip_identities
         return self._local_devices_register
 
-    @RPC.export
     def get_local_device_ids(self):
         return self._local_device_ids
 
-    @RPC.export
     def count_ds_devices(self):
         return (len(self._ds_device_ids)
                 if self._bridge_host != 'LEVEL_TAILEND'
                 else 0)
 
-    @RPC.export
     def count_local_devices(self):
         return len(self._local_device_ids)
 
-    @RPC.export
     def device_id(self):
         return self._device_id
 
-    @RPC.export
     def ip_addr(self):
         return self._this_ip_addr
 
-    @RPC.export
     def discovery_address(self):
         return self._discovery_address
 
-    @RPC.export
     def register_local_ed_agent(self, sender, device_id):
-        if device_id is None: return False
+        if device_id is None:
+            return False
 
         _log.debug('register_local_ed_agent(), sender: ' + sender
                    + ' device_id: ' + device_id
@@ -382,13 +410,13 @@ class VolttronBridge(Agent):
         if sender in self._local_devices_register:
             _log.debug('already registered!!!')
             return True
+
         self._local_devices_register.append(sender)
         index = self._local_devices_register.index(sender)
         self._local_device_ids.insert(index, device_id)
         _log.debug('registered!!!')
         return True
 
-    @RPC.export
     def unregister_local_ed_agent(self, sender):
         _log.debug('unregister_local_ed_agent(), sender: '.format(sender))
         if sender not in self._local_devices_register:
@@ -402,7 +430,8 @@ class VolttronBridge(Agent):
 
     # price point on local bus published, post it to all downstream bridges
     def on_new_pp(self, peer, sender, bus, topic, headers, message):
-        if self._bridge_host == 'LEVEL_TAILEND': return
+        if self._bridge_host == 'LEVEL_TAILEND':
+            return
 
         # handle only pp type message
         if check_msg_type(message, MessageType.price_point):
@@ -415,11 +444,9 @@ class VolttronBridge(Agent):
         minimum_fields = ['value', 'price_id']
         validate_fields = ['value', 'price_id', 'isoptimal']
         valid_price_ids = []
-        (success, pp_msg) = valid_bustopic_msg(sender, valid_senders_list
-                                               , minimum_fields
-                                               , validate_fields
-                                               , valid_price_ids
-                                               , message)
+        (success, pp_msg) = valid_bustopic_msg(sender, valid_senders_list,
+                                               minimum_fields, validate_fields,
+                                               valid_price_ids, message)
         if not success or pp_msg is None:
             return
         else:
@@ -448,7 +475,7 @@ class VolttronBridge(Agent):
         self._all_ds_posts_success = False
 
         '''
-            DONT call post_ds_new_pp() directly at this stage.
+            DON'T call post_ds_new_pp() directly at this stage.
             It is blocking us do_rpc connection that in turn is timed out
             '''
         # initiate ds post
@@ -458,7 +485,8 @@ class VolttronBridge(Agent):
 
     # energy demand on local bus published, post it to upstream bridge
     def on_new_ed(self, peer, sender, bus, topic, headers, message):
-        if self._bridge_host == 'LEVEL_HEAD': return
+        if self._bridge_host == 'LEVEL_HEAD':
+            return
 
         # handle only ap or ed type messages
         if check_msg_type(message, MessageType.active_power):
@@ -475,11 +503,9 @@ class VolttronBridge(Agent):
         valid_price_ids = ([self.us_opt_pp_id, self.us_bid_pp_id]
                            if self._bridge_host != 'LEVEL_HEAD'
                            else [])
-        (success, ed_msg) = valid_bustopic_msg(sender, valid_senders_list
-                                               , minimum_fields
-                                               , validate_fields
-                                               , valid_price_ids
-                                               , message)
+        (success, ed_msg) = valid_bustopic_msg(sender, valid_senders_list,
+                                               minimum_fields, validate_fields,
+                                               valid_price_ids, message)
         if not success or ed_msg is None:
             _log.warning('valid_bustopic_msg success: {}'.format(success)
                          + ', is ed_msg None? ed_msg: {}'.format(ed_msg))
@@ -494,7 +520,7 @@ class VolttronBridge(Agent):
         self._ds_ed_messages.append(copy(ed_msg))
 
         # reset counters & flags
-        self._us_retrycount = 0
+        self._us_retry_count = 0
         # this flag activates post_us_new_ed()
         self._all_us_posts_success = False
 
@@ -504,7 +530,8 @@ class VolttronBridge(Agent):
 
     # periodically keeps trying to post ed to us
     def post_us_new_ed(self):
-        if self._all_us_posts_success: return
+        if self._all_us_posts_success:
+            return
 
         # assume all us post success, if any failed set to False
         self._all_us_posts_success = True
@@ -513,8 +540,7 @@ class VolttronBridge(Agent):
         if self._post_us_new_ed_event is not None:
             self._post_us_new_ed_event.cancel()
 
-        url_root = 'http://{}:{}/bridge'.format(self._us_ip_addr
-                                                , self._us_port)
+        url_root = 'http://{}:{}/bridge'.format(self._us_ip_addr, self._us_port)
         # check for upstream connection, if not retry once
         _log.debug('check us connection...')
         if not self._usConnected:
@@ -561,24 +587,24 @@ class VolttronBridge(Agent):
                 del self._ds_ed_messages[idx - del_count]
                 del_count += 1
                 _log.debug('Success!!!')
-                self._us_retrycount = 0
+                self._us_retry_count = 0
                 continue  # with next msg if any
             else:
                 self._all_us_posts_success = False
-                self._us_retrycount = self._us_retrycount + 1
+                self._us_retry_count = self._us_retry_count + 1
                 _log.debug('Failed to post ed to us'
                            + ', url_root: {}'.format(url_root)
                            + ', failed count:'
-                           + ' {:d}'.format(self._us_retrycount)
+                           + ' {:d}'.format(self._us_retry_count)
                            + ', will try again in'
                            + ' {} sec!!!'.format(self._period_process_pp)
                            + ', result: {}'.format(success))
-                if self._us_retrycount > MAX_RETRIES:
+                if self._us_retry_count > MAX_RETRIES:
                     _log.debug('Failed too many times to post ed to up stream'
                                + ', reset counters and yeild till next ed msg.')
                     self._all_us_posts_success = True  # yeild
                     self._usConnected = False
-                    self._us_retrycount = 0
+                    self._us_retry_count = 0
                     break
 
         if not self._all_us_posts_success:
@@ -591,7 +617,8 @@ class VolttronBridge(Agent):
     # periodically keeps trying to post pp to ds
     # ensure that only failed in previous iterations and the new msg are sent
     def post_ds_new_pp(self):
-        if self._all_ds_posts_success: return
+        if self._all_ds_posts_success:
+            return
 
         # assume all ds post success, if any failed set to False
         self._all_ds_posts_success = True
@@ -641,9 +668,9 @@ class VolttronBridge(Agent):
                 # reset the retry counter for success ds msg
                 if not pp_msg.get_one_to_one():
                     _log.debug('reset the retry counter for success ds msg')
-                    for index, retry_count in enumerate(self._ds_retrycount):
+                    for index, retry_count in enumerate(self._ds_retry_count):
                         if retry_count == -1:
-                            self._ds_retrycount[index] = 0
+                            self._ds_retry_count[index] = 0
 
             self._clean_ds_registry()
 
@@ -672,7 +699,7 @@ class VolttronBridge(Agent):
             device_id = self._ds_device_ids[index]
             _log.debug('failed to post pp to ds ({})'.format(device_id)
                        + ', failed count:'
-                       + ' {:d}'.format(self._ds_retrycount[index])
+                       + ' {:d}'.format(self._ds_retry_count[index])
                        + ', will try again in'
                        + ' {} sec!!!'.format(self._period_process_pp)
                        + ', result: {}'.format(success))
@@ -691,7 +718,8 @@ class VolttronBridge(Agent):
             index = self._ds_register.index(discovery_address)
 
             # if already posted, do nothing
-            if self._ds_retrycount[index] == -1: continue
+            if self._ds_retry_count[index] == -1:
+                continue
 
             url_roots.append('http://' + discovery_address + '/bridge')
             # keep track of main index
@@ -713,17 +741,18 @@ class VolttronBridge(Agent):
             if success:
                 # success, reset retry count
                 # no need to retry on the next run
-                self._ds_retrycount[index] = -1
-                _log.debug('post pp to ds ({})'.format(device_id)
+                self._ds_retry_count[index] = -1
+                _log.debug('post pp to ds ({} - {})'.format(device_id,
+                                                            discovery_address)
                            + ', result: success!!!')
             else:
                 # failed to post
                 # set the failed flag and also increment retry count
                 self._all_ds_posts_success = False
-                self._ds_retrycount[index] = self._ds_retrycount[index] + 1
+                self._ds_retry_count[index] = self._ds_retry_count[index] + 1
                 _log.debug('failed to post pp to ds ({})'.format(device_id)
                            + ', failed count:'
-                           + ' {:d}'.format(self._ds_retrycount[index])
+                           + ' {:d}'.format(self._ds_retry_count[index])
                            + ', will try again in'
                            + ' {} sec!!!'.format(self._period_process_pp)
                            + ', result: {}'.format(success))
@@ -732,7 +761,7 @@ class VolttronBridge(Agent):
 
     def _clean_ds_registry(self):
         # check & cleanup the ds registery
-        for index, retry_count in enumerate(self._ds_retrycount):
+        for index, retry_count in enumerate(self._ds_retry_count):
             if retry_count < MAX_RETRIES:
                 continue
             # else failed too many times, unregister the ds device
@@ -745,12 +774,12 @@ class VolttronBridge(Agent):
                        )
             del self._ds_register[index]
             del self._ds_device_ids[index]
-            del self._ds_retrycount[index]
+            del self._ds_retry_count[index]
             _log.debug('{} unregistered!!!'.format(device_id))
         return
 
     # check if the ds is registered with this bridge
-    def _get_ds_bridge_status(self, rpcdata_id, message):
+    def _get_ds_bridge_status(self, message):
         # TODO: catch jsonrpc parse exception
         params = jsonrpc.JsonRpcData.parse(message).params
         discovery_address = params['discovery_address']
@@ -758,10 +787,10 @@ class VolttronBridge(Agent):
         if discovery_address in self._ds_register:
             index = self._ds_register.index(discovery_address)
             if device_id == self._ds_device_ids[index]:
-                result = True
+                return True
         return False
 
-    def _register_ds_bridge(self, rpcdata_id, message):
+    def _register_ds_bridge(self, message):
         # TODO: catch jsonrpc parse exception
         params = jsonrpc.JsonRpcData.parse(message).params
         discovery_address = params['discovery_address']
@@ -773,18 +802,18 @@ class VolttronBridge(Agent):
         if discovery_address in self._ds_register:
             index = self._ds_register.index(discovery_address)
             # the ds is alive, reset retry counter if any
-            self._ds_retrycount[index] = 0
+            self._ds_retry_count[index] = 0
             _log.debug('already registered!!!')
             return True
 
         self._ds_register.append(discovery_address)
         index = self._ds_register.index(discovery_address)
         self._ds_device_ids.insert(index, device_id)
-        self._ds_retrycount.insert(index, 0)
+        self._ds_retry_count.insert(index, 0)
         _log.debug('registered!!!')
         return True
 
-    def _unregister_ds_bridge(self, rpcdata_id, message):
+    def _unregister_ds_bridge(self, message):
         params = jsonrpc.JsonRpcData.parse(message).params
         discovery_address = params['discovery_address']
         device_id = params['device_id']
@@ -799,20 +828,19 @@ class VolttronBridge(Agent):
         index = self._ds_register.index(discovery_address)
         self._ds_register.remove(discovery_address)
         del self._ds_device_ids[index]
-        del self._ds_retrycount[index]
+        del self._ds_retry_count[index]
         _log.debug('unregistered!!!')
         return True
 
     def _reset_ds_retrycount(self):
         for discovery_address in self._ds_register:
             index = self._ds_register.index(discovery_address)
-            self._ds_retrycount[index] = 0
+            self._ds_retry_count[index] = 0
         return
 
     # post the new price point from us to the local-us-bus
     def _post_pp(self, rpcdata_id, message):
         _log.debug('New pp msg from us...')
-        pp_msg = None
         rpcdata = jsonrpc.JsonRpcData.parse(message)
 
         # Note: this is on a rpc message do the check here ONLY
@@ -821,19 +849,20 @@ class VolttronBridge(Agent):
             pass
         else:
             msg = 'Invalid params {}'.format(rpcdata.params)
-            error = jsonrpc.json_error(rpcdata_id, INVALID_PARAMS, msg)
+            error = jsonrpc.json_error(rpcdata_id, jsonrpc.INVALID_PARAMS, msg)
             return error
 
         try:
             minimum_fields = ['value', 'price_id']
             pp_msg = parse_jsonrpc_msg(message, minimum_fields)
-        except KeyError as ke:
+        except KeyError:
             msg = 'Invalid params {}'.format(rpcdata.params)
-            error = jsonrpc.json_error(rpcdata_id, INVALID_PARAMS, msg)
+            error = jsonrpc.json_error(rpcdata_id, jsonrpc.INVALID_PARAMS, msg)
             return error
         except Exception as e:
             msg = e.message
-            error = jsonrpc.json_error(rpcdata_id, UNHANDLED_EXCEPTION, msg)
+            error = jsonrpc.json_error(rpcdata_id, jsonrpc.UNHANDLED_EXCEPTION,
+                                       msg)
             return error
 
         # sanity measure like, valid fields, valid pp ids, ttl expiry, etc.,
@@ -845,7 +874,7 @@ class VolttronBridge(Agent):
         else:
             _log.warning('Msg sanity checks failed!!!')
             msg = 'Msg sanity checks failed!!!'
-            error = jsonrpc.json_error(rpcdata_id, PARSE_ERROR, msg)
+            error = jsonrpc.json_error(rpcdata_id, jsonrpc.PARSE_ERROR, msg)
             return error
 
         # keep a track of us pp_ids
@@ -870,7 +899,6 @@ class VolttronBridge(Agent):
 
     # post the new energy demand from ds to the local-ds-bus
     def _post_ed(self, rpcdata_id, message):
-        ed_msg = None
         _log.debug('New ap/ed msg from ds...')
         rpcdata = jsonrpc.JsonRpcData.parse(message)
 
@@ -883,19 +911,20 @@ class VolttronBridge(Agent):
             pass
         else:
             msg = 'Invalid params {}'.format(rpcdata.params)
-            error = jsonrpc.json_error(rpcdata_id, INVALID_PARAMS, msg)
+            error = jsonrpc.json_error(rpcdata_id, jsonrpc.INVALID_PARAMS, msg)
             return error
 
         try:
             minimum_fields = ['value', 'price_id']
             ed_msg = parse_jsonrpc_msg(message, minimum_fields)
-        except KeyError as ke:
+        except KeyError:
             msg = 'Invalid params {}'.format(rpcdata.params)
-            error = jsonrpc.json_error(rpcdata_id, INVALID_PARAMS, msg)
+            error = jsonrpc.json_error(rpcdata_id, jsonrpc.INVALID_PARAMS, msg)
             return error
         except Exception as e:
             msg = e.message
-            error = jsonrpc.json_error(rpcdata_id, UNHANDLED_EXCEPTION, msg)
+            error = jsonrpc.json_error(rpcdata_id, jsonrpc.UNHANDLED_EXCEPTION,
+                                       msg)
             return error
 
         # sanity measure like, valid fields, valid pp ids, ttl expiry, etc.,
@@ -903,24 +932,27 @@ class VolttronBridge(Agent):
                 if ed_msg.get_msg_type() == MessageType.active_power
                 else 'Energy Demand')
         validate_fields = ['value', 'price_id', 'isoptimal', 'ttl']
-        valid_price_ids = ([self.us_opt_pp_id
-                               , self.us_bid_pp_id
-                               , self.local_opt_pp_id, self.local_bid_pp_id]
-                           if self._bridge_host != 'LEVEL_HEAD'
-                           else [self.local_opt_pp_id
-            , self.local_bid_pp_id])
+        valid_price_ids = (
+            [self.us_opt_pp_id,
+             self.us_bid_pp_id,
+             self.local_opt_pp_id,
+             self.local_bid_pp_id]
+            if self._bridge_host != 'LEVEL_HEAD'
+            else [
+                self.local_opt_pp_id,
+                self.local_bid_pp_id]
+        )
         if ed_msg.sanity_check_ok(hint, validate_fields, valid_price_ids):
             pass
         else:
             _log.warning('Msg sanity checks failed!!!')
             msg = 'Msg sanity checks failed!!!'
-            error = jsonrpc.json_error(rpcdata_id, PARSE_ERROR, msg)
+            error = jsonrpc.json_error(rpcdata_id, jsonrpc.PARSE_ERROR, msg)
             return error
 
         # check if from registered ds
-        if self._msg_from_registered_ds(ed_msg.get_src_ip()
-                , ed_msg.get_src_device_id()
-                                        ):
+        if self._msg_from_registered_ds(ed_msg.get_src_ip(),
+                                        ed_msg.get_src_device_id()):
             pass
         else:
             # either the post to ds failed in previous iteration
@@ -931,7 +963,7 @@ class VolttronBridge(Agent):
             # after registering once again
             _log.warning('Msg not from registered ds!!!')
             msg = 'Msg not from registered ds!!!'
-            error = jsonrpc.json_error(rpcdata_id, PARSE_ERROR, msg)
+            error = jsonrpc.json_error(rpcdata_id, jsonrpc.PARSE_ERROR, msg)
             return error
 
         # post to bus
@@ -943,7 +975,7 @@ class VolttronBridge(Agent):
         _log.debug('done.')
 
         # ds is alive at this stage, reset the counters, if any
-        self._ds_retrycount[self._ds_register.index(ed_msg.get_src_ip())] = 0
+        self._ds_retry_count[self._ds_register.index(ed_msg.get_src_ip())] = 0
         return True
 
     def _msg_from_registered_ds(self, discovery_addr, device_id):
@@ -982,7 +1014,7 @@ class VolttronBridge(Agent):
 
 
 def main(argv=sys.argv):
-    '''Main method called by the eggsecutable.'''
+    """Main method called by the eggsecutable."""
     try:
         utils.vip_main(volttronbridge)
     except Exception as e:
