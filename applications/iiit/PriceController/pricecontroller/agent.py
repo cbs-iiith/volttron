@@ -676,10 +676,11 @@ class PriceController(Agent):
         new_pricepoints = []
         return new_pricepoints
 
-    # perodically run this function to check if ted from all ds received or
+    # periodically run this function to check if ted from all ds received or
     # ted_timed_out
     def process_loop(self):
-        if not self._pp_optimize_option == 'DEFAULT_OPT': return
+        if not self._pp_optimize_option == 'DEFAULT_OPT':
+            return
 
         # check if all the bids are received from both local & ds devices
         # rcvd_all_lc = local(lc) bids for local(lc) bid price
@@ -757,7 +758,7 @@ class PriceController(Agent):
             return
 
         # 1. validate message
-        # 2. check againt valid pp ids
+        # 2. check against valid pp ids
         # 3. if (src_id_add == self._ip_addr) and opt_pp:
         # 5.         local_opt_tap      # local opt active power
         # 6. elif (src_id_add == self._ip_addr) and not opt_pp:
@@ -833,13 +834,13 @@ class PriceController(Agent):
         sort energy packet to respective buckets 
             
                            |--> _us_local_opt_ap    |
-        us_opt_tap---------|                        |--> aggregator publishs 
+        us_opt_tap---------|                        |--> aggregator publishes 
         tap to us/energydemand
                            |--> _us_ds_opt_ap       |       at regular interval 
 
 
                            |--> _us_local_bid_ed    |
-        us_bid_ted---------|                        |--> aggregator publishs 
+        us_bid_ted---------|                        |--> aggregator publishes 
         ted to us/energydemand 
                            |--> _us_ds_bid_ed       |       if received from 
                            all or timeout
@@ -929,7 +930,7 @@ class PriceController(Agent):
                 return
         return
 
-    # perodically publish total active power (tap) to local/energydemand
+    # periodically publish total active power (tap) to local/energydemand
     def aggregator_us_tap(self):
         # since time period much larger (default 30s, i.e, 2 reading per min)
         # need not wait to receive active power from all devices
@@ -1006,7 +1007,7 @@ class PriceController(Agent):
         us_bids_timeout = self._us_bids_timeout()
         # us_bids_timeout = False               # never timeout
 
-        if (not (rcvd_all_lc and rcvd_all_ds)):
+        if not (rcvd_all_lc and rcvd_all_ds):
             price_id = self.us_bid_pp_msg.get_price_id()
             if not us_bids_timeout:
                 retry_time = self._period_process_loop
