@@ -11,8 +11,9 @@
 
 # Sam
 
-''' Test script to send random opt and bid prices at regurlar interval
-'''
+"""
+Test script to send random opt and bid prices at regular interval
+"""
 import datetime
 import json
 import math
@@ -69,6 +70,7 @@ class ProgramKilled(Exception):
 
 
 def signal_handler(signum, frame):
+    print('signum: {}, frame: {}'.format(signum, frame))
     raise ProgramKilled
 
 
@@ -88,7 +90,6 @@ def do_rpc(method, params=None):
     if params:
         json_package['params'] = params
 
-    data = json.dumps(json_package)
     return requests.post(url_root, data=json.dumps(json_package))
 
 
@@ -108,22 +109,17 @@ def post_random_price(isoptimal=True, duration=3600, ttl=10):
 
     now = datetime.datetime.utcnow().isoformat(' ') + 'Z'
     try:
-        response = do_rpc('new-pp', {'msg_type': 0
-            , 'one_to_one': False
-            , 'value': pp
-            , 'value_data_type': 'float'
-            , 'units': 'cents'
-            , 'price_id': price_id
-            , 'isoptimal': isoptimal
-            , 'src_ip': None
-            , 'src_device_id': None
-            , 'dst_ip': None
-            , 'dst_device_id': None
-            , 'duration': duration
-            , 'ttl': ttl
-            , 'ts': now
-            , 'tz': 'UTC'
-                                     })
+        response = do_rpc(
+            'new-pp',
+            {
+                'msg_type': 0, 'one_to_one': False, 'isoptimal': isoptimal,
+                'value': pp, 'value_data_type': 'float', 'units': 'cents',
+                'price_id': price_id,
+                'src_ip': None, 'src_device_id': None,
+                'dst_ip': None, 'dst_device_id': None,
+                'duration': duration, 'ttl': ttl, 'ts': now, 'tz': 'UTC'
+            }
+        )
         # print "response: " +str(response),
         if response.ok:
             if 'result' in response.json().keys():
@@ -173,14 +169,18 @@ if __name__ == '__main__':
     signal.signal(signal.SIGINT, signal_handler)
 
     # job to post opt prices at regular interval
-    job_opt = Job(interval=datetime.timedelta(seconds=OPT_WAIT_TIME_SEC)
-                  , execute=post_random_price
-                  , args=(True, OPT_DUR_TIME_SEC, 30,))
+    job_opt = Job(
+        interval=datetime.timedelta(seconds=OPT_WAIT_TIME_SEC),
+        execute=post_random_price,
+        args=(True, OPT_DUR_TIME_SEC, 30,)
+    )
 
     # job to post bid prices at regular interval
-    job_bid = Job(interval=datetime.timedelta(seconds=BID_WAIT_TIME_SEC)
-                  , execute=post_random_price
-                  , args=(False, BID_DUR_TIME_SEC, 30,))
+    job_bid = Job(
+        interval=datetime.timedelta(seconds=BID_WAIT_TIME_SEC),
+        execute=post_random_price,
+        args=(False, BID_DUR_TIME_SEC, 30,)
+    )
 
     print get_timestamp() + ' ROOT_URL: ' + str(ROOT_URL),
     print ', OPT_WAIT_TIME_SEC: ' + str(OPT_WAIT_TIME_SEC),

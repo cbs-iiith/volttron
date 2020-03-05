@@ -42,6 +42,7 @@ class ProgramKilled(Exception):
 
 
 def signal_handler(signum, frame):
+    print('signum: {}, frame: {}'.format(signum, frame))
     raise ProgramKilled
 
 
@@ -61,8 +62,6 @@ def do_rpc(method, params=None):
     if params:
         json_package['params'] = params
 
-    data = json.dumps(json_package)
-
     return requests.post(url_root, data=json.dumps(json_package))
 
 
@@ -74,22 +73,17 @@ def post_random_price():
     print get_timestamp() + ' PricePoint: ' + str(pp) + ',',
     now = datetime.datetime.utcnow().isoformat(' ') + 'Z'
     try:
-        response = do_rpc('new-pp', {'msg_type': 0
-            , 'one_to_one': False
-            , 'value': pp
-            , 'value_data_type': 'float'
-            , 'units': 'cents'
-            , 'price_id': randint(0, 99999999)
-            , 'isoptimal': True
-            , 'src_ip': None
-            , 'src_device_id': None
-            , 'dst_ip': None
-            , 'dst_device_id': None
-            , 'duration': WAIT_TIME_SECONDS
-            , 'ttl': 10
-            , 'ts': now
-            , 'tz': 'UTC'
-                                     })
+        response = do_rpc(
+            'new-pp',
+            {
+                'msg_type': 0, 'one_to_one': False, 'isoptimal': True,
+                'value': pp, 'value_data_type': 'float', 'units': 'cents',
+                'price_id': randint(0, 99999999),
+                'src_ip': None, 'src_device_id': None,
+                'dst_ip': None, 'dst_device_id': None,
+                'duration': WAIT_TIME_SECONDS, 'ttl': 10, 'ts': now, 'tz': 'UTC'
+            }
+        )
         # print "response: " +str(response),
         if response.ok:
             if 'result' in response.json().keys():
@@ -137,8 +131,10 @@ if __name__ == '__main__':
         __file__) + ' ...'
     signal.signal(signal.SIGTERM, signal_handler)
     signal.signal(signal.SIGINT, signal_handler)
-    job = Job(interval=datetime.timedelta(seconds=WAIT_TIME_SECONDS),
-              execute=post_random_price)
+    job = Job(
+        interval=datetime.timedelta(seconds=WAIT_TIME_SECONDS),
+        execute=post_random_price
+    )
     print get_timestamp() + ' ROOT_URL: ' + str(
         ROOT_URL) + ', WAIT_TIME_SECONDS: ' + str(WAIT_TIME_SECONDS)
     print get_timestamp() + ' Starting a repetitive job...'
