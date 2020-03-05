@@ -21,6 +21,7 @@ from random import randint
 
 import dateutil
 from enum import IntEnum
+from typing import Dict, Any, Union
 
 from volttron.platform.agent import utils
 
@@ -41,12 +42,12 @@ AP_DECIMAL_DIGITS = decimal.Decimal(
 ED_DECIMAL_DIGITS = decimal.Decimal(
     str(ROUNDOFF_ENERGY_DEMAND)).as_tuple().exponent * -1
 
-ISPACE_MSG_ATTRIB_LIST = ['msg_type', 'one_to_one', 'isoptimal'
-    , 'value', 'value_data_type', 'units'
-    , 'price_id'
-    , 'src_ip', 'src_device_id'
-    , 'dst_ip', 'dst_device_id'
-    , 'duration', 'ttl', 'ts', 'tz'
+ISPACE_MSG_ATTRIB_LIST = ['msg_type', 'one_to_one', 'isoptimal',
+                          'value', 'value_data_type', 'units',
+                          'price_id',
+                          'src_ip', 'src_device_id',
+                          'dst_ip', 'dst_device_id',
+                          'duration', 'ttl', 'ts', 'tz'
                           ]
 
 
@@ -63,10 +64,11 @@ def empty_copy(obj):
     return newcopy
 
 
-# avaliable in ispace_utils, copied here to remove dependecny on ispace_utils
-def mround(num, multipleOf):
+# available in ispace_utils, copied here to remove dependecny on ispace_utils
+def mround(num, multiple_of):
     # _log.debug('mround()')
-    return (math.floor((num + multipleOf / 2) / multipleOf) * multipleOf)
+    value = math.floor((num + multiple_of / 2) / multiple_of) * multiple_of
+    return value
 
 
 # refer to https://bit.ly/3beuacI
@@ -74,7 +76,8 @@ def mround(num, multipleOf):
 # comparing floats is mess
 def isclose(a, b, rel_tol=1e-09, abs_tol=0.0):
     # _log.debug('isclose()')
-    return (abs(a - b) <= max(rel_tol * max(abs(a), abs(b)), abs_tol))
+    value = abs(a - b) <= max(rel_tol * max(abs(a), abs(b)), abs_tol)
+    return value
 
 
 # checking if a floating point value is 'numerically zero'
@@ -99,9 +102,10 @@ class EnergyCategory(IntEnum):
 
 
 class ISPACE_Msg:
-    ''' iSPACE Message base class
-    '''
-    # TODO: enchancement - need to add a msg uuid,
+    """
+    iSPACE Message base class
+    """
+    # TODO: enhancement - need to add a msg uuid,
     # also convert price_id to use uuid instead for radint
     msg_type = None
     one_to_one = None
@@ -124,29 +128,43 @@ class ISPACE_Msg:
 
     _params = {}
 
-    def __init__(self, msg_type, one_to_one=None, isoptimal=None
-                 , value=None, value_data_type=None, units=None
-                 , price_id=None
-                 , src_ip=None, src_device_id=None
-                 , dst_ip=None, dst_device_id=None
-                 , duration=None, ttl=None, ts=None, tz=None
+    def __init__(self, msg_type, one_to_one=None, isoptimal=None,
+                 value=None, value_data_type=None, units=None,
+                 price_id=None,
+                 src_ip=None, src_device_id=None,
+                 dst_ip=None, dst_device_id=None,
+                 duration=None, ttl=None, ts=None, tz=None
                  ):
-        if msg_type is not None: self.set_msg_type(msg_type)
-        if one_to_one is not None: self.set_one_to_one(one_to_one)
-        if value is not None: self.set_value(value)
-        if value_data_type is not None: self.set_value_data_type(
-            value_data_type)
-        if units is not None: self.set_units(units)
-        if price_id is not None: self.set_price_id(price_id)
-        if isoptimal is not None: self.set_isoptimal(isoptimal)
-        if src_ip is not None: self.set_src_ip(src_ip)
-        if src_device_id is not None: self.set_src_device_id(src_device_id)
-        if dst_ip is not None: self.set_dst_ip(dst_ip)
-        if dst_device_id is not None: self.set_dst_device_id(dst_device_id)
-        if duration is not None: self.set_duration(duration)
-        if ttl is not None: self.set_ttl(ttl)
-        if ts is not None: self.set_ts(ts)
-        if tz is not None: self.set_tz(tz)
+        if msg_type is not None:
+            self.set_msg_type(msg_type)
+        if one_to_one is not None:
+            self.set_one_to_one(one_to_one)
+        if value is not None:
+            self.set_value(value)
+        if value_data_type is not None:
+            self.set_value_data_type(value_data_type)
+        if units is not None:
+            self.set_units(units)
+        if price_id is not None:
+            self.set_price_id(price_id)
+        if isoptimal is not None:
+            self.set_isoptimal(isoptimal)
+        if src_ip is not None:
+            self.set_src_ip(src_ip)
+        if src_device_id is not None:
+            self.set_src_device_id(src_device_id)
+        if dst_ip is not None:
+            self.set_dst_ip(dst_ip)
+        if dst_device_id is not None:
+            self.set_dst_device_id(dst_device_id)
+        if duration is not None:
+            self.set_duration(duration)
+        if ttl is not None:
+            self.set_ttl(ttl)
+        if ts is not None:
+            self.set_ts(ts)
+        if tz is not None:
+            self.set_tz(tz)
         pass
 
     ''' str overload to return class attributes as json params
@@ -183,56 +201,67 @@ class ISPACE_Msg:
 
     # overload + operator
     def __add__(self, other):
-        return (self.value + other.value)
+        """
+
+        :type other: ISPACE_Msg
+        """
+        return self.value + other.value
 
     # overload - operator
     def __sub__(self, other):
-        return (self.value - other.value)
+        return self.value - other.value
 
     # overload * operator
     def __mul__(self, other):
-        return (self.value * other.value)
+        return self.value * other.value
 
     # overload / operator
     def __truediv__(self, other):
-        return (self.value / other.value)
+        return self.value / other.value
 
     # overload % operator
     def __mod__(self, other):
-        return (self.value % other.value)
+        return self.value % other.value
 
     # overload < operator
     def __lt__(self, other):
-        return (True if (not isclose(self.value, other.value, EPSILON)
-                         and (self.value < other.value))
-                else False)
+        result = True if (
+                not isclose(self.value, other.value, EPSILON)
+                and (self.value < other.value))\
+            else False
+        return result
 
     # overload <= operator
     def __le__(self, other):
-        return (True if (self.value <= other.value)
-                else False)
+        result = True if (self.value <= other.value) else False
+        return result
 
     # overload != operator
     def __ne__(self, other):
-        return (True if not isclose(self.value, other.value, EPSILON)
-                else False)
+        result = True if not isclose(self.value, other.value,
+                                     EPSILON) else False
+        return result
 
     # overload > operator
     def __gt__(self, other):
-        return (True if (not isclose(self.value, other.value, EPSILON)
-                         and (self.value > other.value))
-                else False)
+        result = True if (
+                not isclose(self.value, other.value, EPSILON)
+                and (self.value > other.value))\
+            else False
+        return result
 
     # overload >= operator
     def __ge__(self, other):
-        return (True if (self.value <= other.value)
-                else False)
+        result = True if (self.value <= other.value) else False
+        return result
 
     # overload == operator
     def __eq__(self, other):
-        return (True if (self.price_id == other.price_id
-                         and isclose(self.value, other.value, EPSILON))
-                else False)
+        result = True if (
+                    self.price_id == other.price_id
+                    and isclose(self.value, other.value, EPSILON))\
+            else False
+        return result
 
     ''' ENDOF overload methods for self and other
     '''
@@ -242,6 +271,10 @@ class ISPACE_Msg:
 
     # overload + operator
     def __add__(self, value):
+        """
+
+        :type value: float
+        """
         self.set_value(self.get_value() + value)
         return self
 
@@ -252,48 +285,54 @@ class ISPACE_Msg:
 
     # overload * operator
     def __mul__(self, value):
-        return (self.value * value)
+        return self.value * value
 
     # overload / operator
     def __truediv__(self, value):
-        return (self.value / value)
+        return self.value / value
 
     # overload % operator
     def __mod__(self, value):
-        return (self.value % value)
+        return self.value % value
 
     # overload < operator
     def __lt__(self, value):
-        return (True if (not isclose(self.value, value, EPSILON)
-                         and (self.value < value))
-                else False)
+        result = True if (
+                not isclose(self.value, value, EPSILON)
+                and (self.value < value))\
+            else False
+        return result
 
     # overload <= operator
     def __le__(self, value):
-        return (True if (self.value <= value)
-                else False)
+        result = True if (self.value <= value) else False
+        return result
 
     # overload != operator
     def __ne__(self, value):
-        return (True if not isclose(self.value, value, EPSILON)
-                else False)
+        result = True if not isclose(self.value, value, EPSILON) else False
+        return result
 
     # overload > operator
     def __gt__(self, value):
-        return (True if (not isclose(self.value, value, EPSILON)
-                         and (self.value > value))
-                else False)
+        result = True if (
+                not isclose(self.value, value, EPSILON)
+                and (self.value > value))\
+            else False
+        return result
 
     # overload >= operator
     def __ge__(self, value):
-        return (True if (self.value <= value)
-                else False)
+        result = True if (self.value <= value) else False
+        return result
 
     # overload == operator
     def __eq__(self, value):
-        return (True if (self.price_id == value
-                         and isclose(self.value, value, EPSILON))
-                else False)
+        result = True if (
+                self.price_id == value
+                and isclose(self.value, value, EPSILON))\
+            else False
+        return result
 
     ''' ENDOF overload methods for self and value
     '''
@@ -370,7 +409,7 @@ class ISPACE_Msg:
         if attrib == 'msg_type':
             self.set_msg_type(value)
         elif attrib == 'one_to_one':
-            self.set_(value)
+            self.set_one_to_one(value)
         elif attrib == 'value':
             self.set_value(value)
         elif attrib == 'value_data_type':
@@ -436,13 +475,19 @@ class ISPACE_Msg:
 
     # validate various sanity measure like, valid fields, valid pp ids,
     # ttl expire, etc.,
-    def sanity_check_ok(self, hint=None, validate_fields=[],
-                        valid_price_ids=[]):
+    def sanity_check_ok(self, hint=None, validate_fields=None,
+                        valid_price_ids=None):
         # _log.debug('sanity_check_ok()')
+        if valid_price_ids is None:
+            valid_price_ids = []
+        if validate_fields is None:
+            validate_fields = []
+
         if not self.valid_msg(validate_fields):
             _log.warning(
-                'rcvd a invalid msg, message: {}, do nothing!!!'.format(
-                    self))
+                'rcvd a invalid msg,'
+                + ' hint: {}, message: {}, do nothing!!!'.format(hint, self)
+            )
             return False
 
         # log the received msg
@@ -468,22 +513,25 @@ class ISPACE_Msg:
         return True
 
     def check_dst_addr(self, device_id, ip_addr):
-        return (False if self.one_to_one and
-                         (
-                                 device_id != self.dst_device_id or
-                                 ip_addr != self.dst_ip)
-                else True)
+        result = False if (
+                self.one_to_one
+                and (
+                        device_id != self.dst_device_id
+                        or ip_addr != self.dst_ip
+                ))\
+            else True
+        return result
 
     # return class attributes as json params that can be passed to do_rpc()
     def get_json_params(self):
         # return json.dumps(self._get_params_dict())
         return self._get_params_dict()
 
-    def get_json_message(self, id=randint(0, 99999999), method='bus_topic'):
+    def get_json_message(self, msg_id=randint(0, 99999999), method='bus_topic'):
         json_package = {
             'jsonrpc': '2.0',
-            'id': id,
-            'method': 'bus_topic',
+            'id': msg_id,
+            'method': method,
         }
         json_package['params'] = self._get_params_dict()
         data = json.dumps(json_package)
