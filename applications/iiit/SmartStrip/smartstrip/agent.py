@@ -647,7 +647,7 @@ class SmartStrip(Agent):
     def _rpcset_led_debug_state(self, state):
         end_point = 'LEDDebug'
         try:
-            point = self._root_topic + end_point
+            point = 'iiit/cbs/smartstrip/' + end_point
             self.vip.rpc.call('platform.actuator', 'set_point', self._agent_id,
                               point, state).get(timeout=10)
 
@@ -668,7 +668,7 @@ class SmartStrip(Agent):
 
         end_point = 'Plug' + str(plug_id + 1) + 'Relay'
         try:
-            point = self._root_topic + end_point
+            point = 'iiit/cbs/smartstrip/' + end_point
             self.vip.rpc.call('platform.actuator', 'set_point', self._agent_id,
                               point, state).get(timeout=10)
         except gevent.Timeout:
@@ -688,7 +688,7 @@ class SmartStrip(Agent):
         end_point = 'LEDDebug'
         relay_state = E_UNKNOWN_STATE
         try:
-            point = self._root_topic + end_point
+            point = 'iiit/cbs/smartstrip/' + end_point
             state = self.vip.rpc.call('platform.actuator', 'get_point',
                                       point).get(timeout=10)
             relay_state = int(state)
@@ -709,7 +709,7 @@ class SmartStrip(Agent):
 
         end_point = 'Plug' + str(plug_id + 1) + 'Relay'
         try:
-            point = self._root_topic + end_point
+            point = 'iiit/cbs/smartstrip/' + end_point
             state = self.vip.rpc.call('platform.actuator', 'get_point',
                                       point).get(timeout=10)
             relay_state = int(state)
@@ -728,7 +728,7 @@ class SmartStrip(Agent):
         if not self._valid_plug_id(plug_id):
             return
 
-        root_topic = self._root_topic
+        root_topic = 'iiit/cbs/smartstrip/'
         point_voltage = root_topic + 'Plug' + str(plug_id + 1) + 'Voltage'
         point_current = root_topic + 'Plug' + str(plug_id + 1) + 'Current'
         point_act_pwr = root_topic + 'Plug' + str(plug_id + 1) + 'ActivePower'
@@ -769,7 +769,7 @@ class SmartStrip(Agent):
         """
         tag_id = DEFAULT_TAG_ID
 
-        root_topic = self._root_topic
+        root_topic = 'iiit/cbs/smartstrip/'
         point_1 = root_topic + 'TagID' + str(plug_id + 1) + '_1'
         point_2 = root_topic + 'TagID' + str(plug_id + 1) + '_2'
         try:
