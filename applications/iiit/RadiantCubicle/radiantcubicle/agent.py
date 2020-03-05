@@ -20,20 +20,24 @@ from random import random, randint
 import gevent
 import gevent.event
 
-from applications.iiit.Utils.ispace_msg import MessageType, EnergyCategory
-from applications.iiit.Utils.ispace_msg_utils import check_msg_type, tap_helper, \
-    ted_helper, get_default_pp_msg, valid_bustopic_msg
-from applications.iiit.Utils.ispace_utils import isclose, get_task_schdl, \
-    cancel_task_schdl, publish_to_bus, mround, retrive_details_from_vb, \
-    register_with_bridge, register_rpc_route, unregister_with_bridge
+from applications.iiit.Utils.ispace_msg import (MessageType, EnergyCategory,
+                                                ISPACE_Msg)
+from applications.iiit.Utils.ispace_msg_utils import (check_msg_type,
+                                                      tap_helper,
+                                                      ted_helper,
+                                                      get_default_pp_msg,
+                                                      valid_bustopic_msg)
+from applications.iiit.Utils.ispace_utils import (isclose, get_task_schdl,
+                                                  cancel_task_schdl,
+                                                  publish_to_bus, mround,
+                                                  retrive_details_from_vb,
+                                                  register_with_bridge,
+                                                  register_rpc_route,
+                                                  unregister_with_bridge)
 from volttron.platform import jsonrpc
 from volttron.platform.agent import utils
-from volttron.platform.agent.known_identities import (
-    MASTER_WEB)
-from volttron.platform.jsonrpc import (
-    METHOD_NOT_FOUND,
-    UNHANDLED_EXCEPTION, INVALID_PARAMS)
-from volttron.platform.vip.agent import Agent, Core, RPC
+from volttron.platform.agent.known_identities import (MASTER_WEB)
+from volttron.platform.vip.agent import Agent, Core
 
 utils.setup_logging()
 _log = logging.getLogger(__name__)
@@ -66,8 +70,9 @@ def radiantcubicle(config_path, **kwargs):
 
 
 class RadiantCubicle(Agent):
-    '''Radiant Cubicle
-    '''
+    """
+    Radiant Cubicle
+    """
     # initialized  during __init__ from config
     _period_read_data = None
     _period_process_pp = None
@@ -89,32 +94,38 @@ class RadiantCubicle(Agent):
 
     _pf_rc = None
 
+    _valid_senders_list_pp = None  # type: list
+    _opt_pp_msg_current = None  # type: ISPACE_Msg
+    _opt_pp_msg_latest = None  # type: ISPACE_Msg
+    _bid_pp_msg_latest = None  # type: ISPACE_Msg
+
     def __init__(self, config_path, **kwargs):
         super(RadiantCubicle, self).__init__(**kwargs)
         _log.debug('vip_identity: ' + self.core.identity)
 
         self.config = utils.load_config(config_path)
+        self._agent_id = self.config['agentid']
+
         self._config_get_points()
         self._config_get_init_values()
-        self._config_get_price_fucntions()
+        self._config_get_price_functions()
         return
 
     @Core.receiver('onsetup')
     def setup(self, sender, **kwargs):
         _log.info(self.config['message'])
-        self._agent_id = self.config['agentid']
         return
 
     @Core.receiver('onstart')
     def startup(self, sender, **kwargs):
         _log.info('Starting RadiantCubicle...')
 
-        # we need to retain the device_id, retrive_details_from_vb()
+        # we need to retain the device_id, retrieve_details_from_vb()
         # overwrite with vb device_id
         device_id = self._device_id
         # retrieve self._device_id, self._ip_addr, self._discovery_address
         # from the bridge
-        # retrive_details_from_vb is a blocking call
+        # retrieve_details_from_vb is a blocking call
         retrive_details_from_vb(self, 5)
         self._device_id = device_id
 
@@ -154,7 +165,7 @@ class RadiantCubicle(Agent):
         # TODO: publish initial data to volttron bus
 
         # periodically publish total active power to volttron bus
-        # active power is comupted at regular interval (_period_read_data
+        # active power is computed at regular interval (_period_read_data
         # default(30s))
         # this power corresponds to current opt pp
         # tap --> total active power (Wh)
@@ -192,9 +203,9 @@ class RadiantCubicle(Agent):
         _log.debug('onfinish()')
         return
 
-    @RPC.export
-    def rpc_from_net(self, header, message):
-        result = False
+    @staticmethod
+    def rpc_from_net(header, message):
+        rpcdata = jsonrpc.JsonRpcData(None, None, None, None, None)
         try:
             rpcdata = jsonrpc.JsonRpcData.parse(message)
             _log.debug('rpc_from_net()...'
@@ -205,21 +216,23 @@ class RadiantCubicle(Agent):
             if rpcdata.method == 'ping':
                 result = True
             else:
-                return jsonrpc.json_error(rpcdata.id, METHOD_NOT_FOUND,
+                return jsonrpc.json_error(rpcdata.id, jsonrpc.METHOD_NOT_FOUND,
                                           'Invalid method {}'.format(
                                               rpcdata.method))
-        except KeyError as ke:
-            # print(ke)
-            return jsonrpc.json_error(rpcdata.id, INVALID_PARAMS,
+        except KeyError:
+            return jsonrpc.json_error(rpcdata.id, jsonrpc.INVALID_PARAMS,
                                       'Invalid params {}'.format(
                                           rpcdata.params))
         except Exception as e:
-            # print(e)
-            return jsonrpc.json_error(rpcdata.id, UNHANDLED_EXCEPTION, e)
-        return (jsonrpc.json_result(rpcdata.id, result) if result else result)
+            return jsonrpc.json_error(rpcdata.id, jsonrpc.UNHANDLED_EXCEPTION,
+                                      e)
 
-    @RPC.export
-    def ping(self):
+        if result:
+            result = jsonrpc.json_result(rpcdata.id, result)
+        return result
+
+    @staticmethod
+    def ping():
         return True
 
     def _config_get_init_values(self):
@@ -239,8 +252,8 @@ class RadiantCubicle(Agent):
                                                     'ds/energydemand')
         return
 
-    def _config_get_price_fucntions(self):
-        _log.debug('_config_get_price_fucntions()')
+    def _config_get_price_functions(self):
+        _log.debug('_config_get_price_functions()')
         self._pf_rc = self.config.get('pf_rc')
         return
 
@@ -248,19 +261,19 @@ class RadiantCubicle(Agent):
         _log.debug('Running: _run_rc_test()...')
 
         _log.debug('change level 26')
-        self._rcpset_rc_tsp(26.0)
+        self._rpcset_rc_tsp(26.0)
         time.sleep(1)
 
         _log.debug('change level 27')
-        self._rcpset_rc_tsp(27.0)
+        self._rpcset_rc_tsp(27.0)
         time.sleep(1)
 
         _log.debug('change level 28')
-        self._rcpset_rc_tsp(28.0)
+        self._rpcset_rc_tsp(28.0)
         time.sleep(1)
 
         _log.debug('change level 29')
-        self._rcpset_rc_tsp(29.0)
+        self._rpcset_rc_tsp(29.0)
         time.sleep(1)
 
         _log.debug('switch ON RC_AUTO_CNTRL')
@@ -286,8 +299,8 @@ class RadiantCubicle(Agent):
     '''
 
     # change rc surface temperature set point
-    def _rcpset_rc_tsp(self, tsp):
-        # _log.debug('_rcpset_rc_tsp()')
+    def _rpcset_rc_tsp(self, tsp):
+        # _log.debug('_rpcset_rc_tsp()')
 
         if isclose(tsp, self._rc_tsp, EPSILON):
             _log.debug('same level, do nothing')
@@ -295,17 +308,16 @@ class RadiantCubicle(Agent):
 
         task_id = str(randint(0, 99999999))
         success = get_task_schdl(self, task_id, 'iiit/cbs/radiantcubicle')
-        if not success: return
+        if not success:
+            return
+
         try:
-            result = self.vip.rpc.call('platform.actuator'
-                                       , 'set_point'
-                                       , self._agent_id
-                                       , 'iiit/cbs/radiantcubicle/RC_TSP'
-                                       , tsp
-                                       ).get(timeout=10)
+            self.vip.rpc.call('platform.actuator', 'set_point', self._agent_id,
+                              'iiit/cbs/radiantcubicle/RC_TSP', tsp).get(
+                timeout=10)
             self._update_rc_tsp(tsp)
         except gevent.Timeout:
-            _log.exception('gevent.Timeout in _rcpset_rc_tsp()')
+            _log.exception('gevent.Timeout in _rpcset_rc_tsp()')
         except Exception as e:
             _log.exception('changing rc tsp, message: {}'.format(e.message))
             # print(e)
@@ -325,15 +337,13 @@ class RadiantCubicle(Agent):
         task_id = str(randint(0, 99999999))
         # _log.debug('task_id: ' + task_id)
         success = get_task_schdl(self, task_id, 'iiit/cbs/radiantcubicle')
-        if not success: return
+        if not success:
+            return
+
         try:
-            # _log.debug('schl avlb')
-            result = self.vip.rpc.call('platform.actuator'
-                                       , 'set_point'
-                                       , self._agent_id
-                                       , 'iiit/cbs/radiantcubicle/RC_AUTO_CNTRL'
-                                       , state
-                                       ).get(timeout=10)
+            self.vip.rpc.call('platform.actuator', 'set_point', self._agent_id,
+                              'iiit/cbs/radiantcubicle/RC_AUTO_CNTRL',
+                              state).get(timeout=10)
 
             self._update_rc_auto_cntrl(state)
         except gevent.Timeout:
@@ -367,32 +377,32 @@ class RadiantCubicle(Agent):
         if new_state == rc_auto_cntrl_state:
             self._rc_auto_cntrl_state = new_state
             self._publish_rc_auto_cntrl_state(new_state)
-        _log.debug('Current State: RC Auto Cntrl is {}!!!'.format('ON'
-                                                                  if
-                                                                  new_state
-                                                                  ==
-                                                                  RC_AUTO_CNTRL_ON
-                                                                  else 'OFF'))
+        _log.debug(
+            'Current State: RC Auto Cntrl is'
+            + ' {}!!!'.format('ON' if new_state == RC_AUTO_CNTRL_ON else 'OFF'))
         return
 
     def _rpcget_rc_active_power(self):
         task_id = str(randint(0, 99999999))
         success = get_task_schdl(self, task_id, 'iiit/cbs/radiantcubicle')
-        if not success: return E_UNKNOWN_CCE
+        if not success:
+            return E_UNKNOWN_CCE
+
         try:
-            coolingEnergy = self.vip.rpc.call('platform.actuator'
-                                              , 'get_point'
-                                              ,
-                                              'iiit/cbs/radiantcubicle/RC_CCE_ELEC'
-                                              ).get(timeout=10)
-            return coolingEnergy
+            point = 'iiit/cbs/radiantcubicle/RC_CCE_ELEC'
+            cooling_energy = self.vip.rpc.call('platform.actuator', 'get_point',
+                                               point).get(imeout=10)
+            return cooling_energy
         except gevent.Timeout:
             _log.exception('gevent.Timeout in _rpcget_rc_active_power()')
-            return E_UNKNOWN_CCE
+            pass
         except Exception as e:
-            _log.exception('Could not contact actuator. Is it running?')
+            _log.exception(
+                'Could not contact actuator. Is it running? Message:'
+                + ' {}'.format(e.message)
+            )
             # print(e)
-            return E_UNKNOWN_CCE
+            pass
         finally:
             # cancel the schedule
             cancel_task_schdl(self, task_id)
@@ -400,33 +410,38 @@ class RadiantCubicle(Agent):
 
     def _rpcget_rc_tsp(self):
         try:
-            device_level = self.vip.rpc.call(
-                'platform.actuator', 'get_point',
-                'iiit/cbs/radiantcubicle/RC_TSP').get(timeout=10)
+            point = 'iiit/cbs/radiantcubicle/RC_TSP'
+            device_level = self.vip.rpc.call('platform.actuator', 'get_point',
+                                             point).get(timeout=10)
             return device_level
         except gevent.Timeout:
             _log.exception('gevent.Timeout in rpc_getShDeviceLevel()')
-            return E_UNKNOWN_LEVEL
+            pass
         except Exception as e:
-            _log.exception('Could not contact actuator. Is it running?')
+            _log.exception(
+                'Could not contact actuator. Is it running? Message:'
+                + ' {}'.format(e.message)
+            )
             # print(e)
-            return E_UNKNOWN_LEVEL
+            pass
         return E_UNKNOWN_LEVEL
 
     def _rpcget_rc_auto_cntrl_state(self):
         try:
-            state = self.vip.rpc.call('platform.actuator'
-                                      , 'get_point'
-                                      , 'iiit/cbs/radiantcubicle/RC_AUTO_CNTRL'
-                                      ).get(timeout=10)
+            point = 'iiit/cbs/radiantcubicle/RC_AUTO_CNTRL'
+            state = self.vip.rpc.call('platform.actuator', 'get_point',
+                                      point).get(timeout=10)
             return int(state)
         except gevent.Timeout:
             _log.exception('gevent.Timeout in rpc_getShDeviceLevel()')
-            return E_UNKNOWN_STATE
+            pass
         except Exception as e:
-            _log.exception('Could not contact actuator. Is it running?')
+            _log.exception(
+                'Could not contact actuator. Is it running? Message:'
+                + ' {}'.format(e.message)
+            )
             # print(e)
-            return E_UNKNOWN_STATE
+            pass
         return E_UNKNOWN_STATE
 
     def _publish_rc_tsp(self, level):
@@ -459,10 +474,12 @@ class RadiantCubicle(Agent):
     '''
 
     def on_new_price(self, peer, sender, bus, topic, headers, message):
-        if sender not in self._valid_senders_list_pp: return
+        if sender not in self._valid_senders_list_pp:
+            return
 
         # check message type before parsing
-        if not check_msg_type(message, MessageType.price_point): return False
+        if not check_msg_type(message, MessageType.price_point):
+            return False
 
         valid_senders_list = self._valid_senders_list_pp
         minimum_fields = ['msg_type', 'value', 'value_data_type', 'units',
@@ -470,11 +487,9 @@ class RadiantCubicle(Agent):
         validate_fields = ['value', 'units', 'price_id', 'isoptimal',
                            'duration', 'ttl']
         valid_price_ids = []
-        (success, pp_msg) = valid_bustopic_msg(sender, valid_senders_list
-                                               , minimum_fields
-                                               , validate_fields
-                                               , valid_price_ids
-                                               , message)
+        (success, pp_msg) = valid_bustopic_msg(sender, valid_senders_list,
+                                               minimum_fields, validate_fields,
+                                               valid_price_ids, message)
         if not success or pp_msg is None:
             return
         else:
@@ -503,19 +518,21 @@ class RadiantCubicle(Agent):
         self.process_opt_pp()
         return
 
-    # this is a perodic function that keeps trying to apply the new pp till
+    # this is a periodic function that keeps trying to apply the new pp till
     # success
     def process_opt_pp(self):
-        if self._process_opt_pp_success: return
+        if self._process_opt_pp_success:
+            return
 
         # any process that failed to apply pp sets this flag False
         self._process_opt_pp_success = True
 
         self._apply_pricing_policy()
         if not self._process_opt_pp_success:
-            _log.debug('unable to process_opt_pp()'
-                       + ', will try again in {} sec'.format(
-                self._period_process_pp))
+            _log.debug(
+                'unable to process_opt_pp()'
+                + ', will try again in {} sec'.format(
+                    self._period_process_pp))
             return
 
         _log.info('New Price Point processed.')
@@ -527,8 +544,8 @@ class RadiantCubicle(Agent):
     def _apply_pricing_policy(self):
         _log.debug('_apply_pricing_policy()')
         new_rc_tsp = self._compute_rc_new_tsp(self._price_point_latest)
-        _log.debug('New Setpoint: {:0.1f}'.format(new_rc_tsp))
-        self._rcpset_rc_tsp(new_rc_tsp)
+        _log.debug('New set point: {:0.1f}'.format(new_rc_tsp))
+        self._rpcset_rc_tsp(new_rc_tsp)
         if not isclose(new_rc_tsp, self._rc_tsp, EPSILON):
             self._process_opt_pp_success = False
         return
@@ -548,7 +565,7 @@ class RadiantCubicle(Agent):
         tsp = a * pp ** 2 + b * pp + c
         return mround(tsp, roundup)
 
-    # perodic function to publish active power
+    # periodic function to publish active power
     def publish_opt_tap(self):
         pp_msg = self._opt_pp_msg_current
         price_id = pp_msg.get_price_id()
@@ -580,7 +597,6 @@ class RadiantCubicle(Agent):
     # calculate total active power (tap)
     def _calc_total_act_pwr(self):
         # active pwr should be measured in realtime from the connected plug
-        tap = 0
         rc_active_power = self._rpcget_rc_active_power()
         tap = rc_active_power if rc_active_power != E_UNKNOWN_CCE else 0
         return tap
@@ -590,7 +606,7 @@ class RadiantCubicle(Agent):
         self.process_bid_pp()
         return
 
-    # this is a perodic function that keeps trying to apply the new pp till
+    # this is a periodic function that keeps trying to apply the new pp till
     # success
     def process_bid_pp(self):
         self.publish_bid_ted()
@@ -630,9 +646,9 @@ class RadiantCubicle(Agent):
     # the bid energy is for self._bid_pp_duration (default 1hr)
     # and this msg is valid for self._period_read_data (ttl - default 30s)
     def _calc_total_energy_demand(self):
-        pp_msg = self._bid_pp_msg_latest
-        bid_pp = pp_msg.get_value()
-        duration = pp_msg.get_duration()
+        # pp_msg = self._bid_pp_msg_latest
+        # bid_pp = pp_msg.get_value()
+        # duration = pp_msg.get_duration()
 
         # TODO: ted should be computed based on some  predictive modeling
         # get actual tsp from energy functions
@@ -645,7 +661,7 @@ class RadiantCubicle(Agent):
 
 
 def main(argv=sys.argv):
-    '''Main method called by the eggsecutable.'''
+    """Main method called by the eggsecutable."""
     try:
         utils.vip_main(radiantcubicle)
     except Exception as e:
