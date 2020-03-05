@@ -143,7 +143,7 @@ class SmartHub(Agent):
 
         self._config_get_points()
         self._config_get_init_values()
-        self._config_get_price_fucntions()
+        self._config_get_price_functions()
         return
 
     @Core.receiver('onsetup')
@@ -203,7 +203,7 @@ class SmartHub(Agent):
                            wait=None)
 
         # periodically publish total active power to volttron bus
-        # active power is comupted at regular interval (_period_read_data
+        # active power is computed at regular interval (_period_read_data
         # default(30s))
         # this power corresponds to current opt pp
         # tap --> total active power (Wh)
@@ -334,8 +334,8 @@ class SmartHub(Agent):
                                                     'ds/energydemand')
         return
 
-    def _config_get_price_fucntions(self):
-        _log.debug('_config_get_price_fucntions()')
+    def _config_get_price_functions(self):
+        _log.debug('_config_get_price_functions()')
         self._pf_sh_fan = self.config.get('pf_sh_fan')
         return
 

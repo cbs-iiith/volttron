@@ -447,7 +447,7 @@ class RadiantCubicle(Agent):
     def _publish_rc_tsp(self, level):
         # _log.debug('_publish_rc_tsp()')
         pub_topic = self._root_topic + '/rc_tsp_level'
-        pub_msg = [level, {'units': 'celcius', 'tz': 'UTC', 'type': 'float'}]
+        pub_msg = [level, {'units': 'celsius', 'tz': 'UTC', 'type': 'float'}]
         _log.info('[LOG] RC TSP, Msg: {}'.format(pub_msg))
         _log.debug('Publishing to local bus topic: {}'.format(pub_topic))
         publish_to_bus(self, pub_topic, pub_msg)

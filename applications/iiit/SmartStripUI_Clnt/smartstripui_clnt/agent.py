@@ -35,7 +35,7 @@ def smartstripui_clnt(config_path, **kwargs):
 
     class SmartStripUI_Clnt(Agent):
         '''
-        retrive the data from volttron and pushes it to the BLE UI Server
+        retrieve the data from volttron and pushes it to the BLE UI Server
         '''
 
         def __init__(self, **kwargs):

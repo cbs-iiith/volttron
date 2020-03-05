@@ -48,7 +48,7 @@ if the rpc connection fails to post for more than MAX_RETRIES, then it is
 assumed that the dest is down. In case of ds posts, the retry count is reset
 when the ds registers again or on a new price point. In case of us posts, the
 retry count is reset when change in ed. Also if failed too many times to post
-ed, retry count is reset and yeild till next ed msg.
+ed, retry count is reset and yield till next ed msg.
 '''
 MAX_RETRIES = 5
 
@@ -469,7 +469,7 @@ class VolttronBridge(Agent):
         self._us_pp_messages.append(copy(pp_msg))
 
         # reset counters & flags
-        self._reset_ds_retrycount()
+        self._reset_ds_retry_count()
         # this flag activates post_ds_new_pp()
         self._all_ds_posts_success = False
 
@@ -600,8 +600,8 @@ class VolttronBridge(Agent):
                            + ', result: {}'.format(success))
                 if self._us_retry_count > MAX_RETRIES:
                     _log.debug('Failed too many times to post ed to up stream'
-                               + ', reset counters and yeild till next ed msg.')
-                    self._all_us_posts_success = True  # yeild
+                               + ', reset counters and yield till next ed msg.')
+                    self._all_us_posts_success = True  # yield
                     self._usConnected = False
                     self._us_retry_count = 0
                     break
@@ -636,12 +636,12 @@ class VolttronBridge(Agent):
             # ttl <= -1 --> live forever
             # ttl == 0 --> ttl timed out
             # decrement_status == False, if ttl <= -1 or unknown tz
-            # before posting to ds, dcrement ttl and update ts
+            # before posting to ds, decrement ttl and update ts
             # decrement the ttl by time consumed to process till now + 1 sec
             decrement_status = pp_msg.decrement_ttl()
             if decrement_status and pp_msg.get_ttl() == 0:
                 _log.warning('msg ttl expired on decrement_ttl()'
-                             + ', droping the message!!!')
+                             + ', dropping the message!!!')
                 # remove msg from the queue
                 del self._us_pp_messages[idx - del_count]
                 del_count += 1
@@ -759,7 +759,7 @@ class VolttronBridge(Agent):
         return
 
     def _clean_ds_registry(self):
-        # check & cleanup the ds registery
+        # check & cleanup the ds register
         for index, retry_count in enumerate(self._ds_retry_count):
             if retry_count < MAX_RETRIES:
                 continue
@@ -831,7 +831,7 @@ class VolttronBridge(Agent):
         _log.debug('unregistered!!!')
         return True
 
-    def _reset_ds_retrycount(self):
+    def _reset_ds_retry_count(self):
         for discovery_address in self._ds_register:
             index = self._ds_register.index(discovery_address)
             self._ds_retry_count[index] = 0

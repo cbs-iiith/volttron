@@ -251,7 +251,7 @@ class PriceController(Agent):
             wait=None
         )
 
-        # subscribing to topic_price_point_extr
+        # subscribing to external pp topic
         if self._pca_state == 'EXTERN_OPT':
             self.vip.pubsub.subscribe('pubsub',
                                       self._mode_extrn_opt_params['pp_topic'],
@@ -571,7 +571,7 @@ class PriceController(Agent):
               compute new_pp
               publish to bus
         
-        optimization algo
+        optimization algorithm
           ed_target = r% x ed_optimal
           EPSILON = 10       # deadband
           gamma = stepsize
@@ -697,7 +697,7 @@ class PriceController(Agent):
         #           # local optimal reached
         #           publish_ed(local/ed, _ed, us_bid_pp_id)
         #           # if next level accepts this bid, the new target is this ed
-        #       based on opt conditon _computeNewPrice can publish new bid_pp
+        #       based on opt condition _computeNewPrice can publish new bid_pp
         #       or
         # and save data to self._ds_bid_ed
 
