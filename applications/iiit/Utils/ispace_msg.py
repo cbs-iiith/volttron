@@ -528,12 +528,11 @@ class ISPACE_Msg:
         return self._get_params_dict()
 
     def get_json_message(self, msg_id=randint(0, 99999999), method='bus_topic'):
-        json_package = {
-            'jsonrpc': '2.0',
-            'id': msg_id,
-            'method': method,
-        }
-        json_package['params'] = self._get_params_dict()
+        json_package = {'jsonrpc': '2.0',
+                        'id': msg_id,
+                        'method': method,
+                        'params': self._get_params_dict()
+                        }
         data = json.dumps(json_package)
         return data
 
@@ -666,14 +665,13 @@ class ISPACE_Msg_PricePoint(ISPACE_Msg):
                  duration=None, ttl=None, ts=None, tz=None
                  ):
         ISPACE_Msg.__init__(self,
-                            MessageType.price_point, one_to_one, isoptimal,
+                            msg_type, one_to_one, isoptimal,
                             value, value_data_type, units,
                             price_id,
                             src_ip, src_device_id,
                             dst_ip, dst_device_id,
                             duration, ttl, ts, tz
                             )
-        pass
 
     pass
 
@@ -747,15 +745,15 @@ class ISPACE_Msg_ActivePower(ISPACE_Msg):
                             dst_ip, dst_device_id,
                             duration, ttl, ts, tz
                             )
-        if energy_category is not None: self.set_energy_category(
-            energy_category)
+        if energy_category is not None:
+            self.set_energy_category(energy_category)
         pass
 
     def __copy__(self):
-        # newcopy = super(ISPACE_Msg_ActivePower, self).__copy__(self)
-        newcopy = ISPACE_Msg.__copy__(self)
-        newcopy.energy_category = self.energy_category
-        return newcopy
+        # new_copy = super(ISPACE_Msg_ActivePower, self).__copy__(self)
+        new_copy = ISPACE_Msg.__copy__(self)
+        new_copy.energy_category = self.energy_category
+        return new_copy
 
     def _get_params_dict(self):
         self._params['energy_category'] = self.energy_category
@@ -772,7 +770,6 @@ class ISPACE_Msg_ActivePower(ISPACE_Msg):
         return
 
     def _is_attrib_null(self, attrib):
-        is_null = False
         if attrib == 'energy_category' and self.energy_category is None:
             is_null = True
         else:
