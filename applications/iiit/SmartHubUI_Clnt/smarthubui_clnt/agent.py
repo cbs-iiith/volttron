@@ -15,8 +15,8 @@ import logging
 import sys
 
 from applications.iiit.Utils.ispace_msg import MessageType
-from applications.iiit.Utils.ispace_msg_utils import check_msg_type, \
-    valid_bustopic_msg
+from applications.iiit.Utils.ispace_msg_utils import (check_msg_type,
+                                                      valid_bustopic_msg)
 from applications.iiit.Utils.ispace_utils import do_rpc
 from volttron.platform.agent import utils
 from volttron.platform.vip.agent import Agent, Core
@@ -44,22 +44,26 @@ def smarthubui_clnt(config_path, **kwargs):
 
 
 class SmartHubUI_Clnt(Agent):
-    '''
-    retrive the data from volttron and post(jsonrpc) it to the BLE UI Server
-    '''
+    """
+    retrieve the data from volttron and post(jsonrpc) it to the BLE UI Server
+    """
+    _url_root = None  # type: str
+
+    _valid_senders_list_pp = None # type list
 
     def __init__(self, config_path, **kwargs):
         _log.debug('__init__()')
         super(SmartHubUI_Clnt, self).__init__(**kwargs)
 
         self.config = utils.load_config(config_path)
+        self._agent_id = self.config['agentid']
+
         self._config_get_points()
         return
 
     @Core.receiver('onsetup')
     def setup(self, sender, **kwargs):
         _log.info(self.config['message'])
-        self._agent_id = self.config['agentid']
 
         ble_ui_srv_address = self.config.get('ble_ui_server_address',
                                              '127.0.0.1')
@@ -172,18 +176,15 @@ class SmartHubUI_Clnt(Agent):
         validate_fields = ['value', 'units', 'price_id', 'isoptimal',
                            'duration', 'ttl']
         valid_price_ids = []
-        (success, pp_msg) = valid_bustopic_msg(sender, valid_senders_list
-                                               , minimum_fields
-                                               , validate_fields
-                                               , valid_price_ids
-                                               , message)
+        (success, pp_msg) = valid_bustopic_msg(sender, valid_senders_list,
+                                               minimum_fields, validate_fields,
+                                               valid_price_ids, message)
         if not success or pp_msg is None: return
         if not pp_msg.get_isoptimal(): return
 
         current_pp = pp_msg.get_value()
-        do_rpc(self._agent_id, self._url_root
-               , 'current-price', {'value': current_pp}
-               , 'POST')
+        do_rpc(self._agent_id, self._url_root, 'current-price',
+               {'value': current_pp}, 'POST')
         return
 
     def _rpc_sensors_data(self, sender, headers, message):
@@ -249,7 +250,7 @@ class SmartHubUI_Clnt(Agent):
 
 
 def main(argv=sys.argv):
-    '''Main method called by the eggsecutable.'''
+    """Main method called by the eggsecutable."""
     try:
         utils.vip_main(smarthubui_clnt)
     except Exception as e:
