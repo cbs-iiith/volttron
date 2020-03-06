@@ -318,7 +318,7 @@ class PriceController(Agent):
         _log.debug('onfinish()')
         return
 
-    @RPC.export()
+    @RPC.export
     def rpc_from_net(self, header, message):
         rpcdata = jsonrpc.JsonRpcData(None, None, None, None, None)
         try:
@@ -378,26 +378,26 @@ class PriceController(Agent):
             result = jsonrpc.json_result(rpcdata.id, result)
         return result
 
-    @RPC.export()
+    @RPC.export
     def ping(self):
         return True
 
-    @RPC.export()
+    @RPC.export
     def get_pca_state(self):
         return self._pca_state
 
-    @RPC.export()
+    @RPC.export
     def set_pca_state(self, state):
         if state not in PcaState:
             return False
         self._pca_state = PcaState(state)
         return True
 
-    @RPC.export()
+    @RPC.export
     def get_pca_mode(self):
         return self._pca_mode
 
-    @RPC.export()
+    @RPC.export
     def set_pca_mode(self, mode):
         if mode not in PcaMode:
             return False

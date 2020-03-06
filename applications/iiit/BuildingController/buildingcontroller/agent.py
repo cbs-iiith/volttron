@@ -190,7 +190,7 @@ class BuildingController(Agent):
         _log.debug('onfinish()')
         return
 
-    @RPC.export()
+    @RPC.export
     def rpc_from_net(self, header, message):
         """
 
@@ -226,7 +226,7 @@ class BuildingController(Agent):
             result = jsonrpc.json_result(rpcdata.id, result)
         return result
 
-    @RPC.export()
+    @RPC.export
     def ping(self):
         return True
 
