@@ -807,7 +807,7 @@ class PriceController(Agent):
     def on_ds_ed(self, peer, sender, bus, topic, headers, message):
         _log.debug('on_ds_ed()')
         # check if this agent is not disabled
-        if self._pca_standby:
+        if self._pca_state == PcaState.standby:
             _log.debug('[LOG] PCA mode: STANDBY, do nothing')
             return
 
