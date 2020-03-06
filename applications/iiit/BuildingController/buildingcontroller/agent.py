@@ -380,11 +380,12 @@ class BuildingController(Agent):
                                                valid_price_ids, message)
         if not success or pp_msg is None:
             return
-        elif pp_msg.get_price_id() in [
-            self._opt_pp_msg_latest.get_price_id(),
-            self._bid_pp_msg_latest.get_price_id()
+        elif pp_msg in [
+            self._bid_pp_msg_latest,
+            self._opt_pp_msg_latest
         ]:
             _log.warning('received a duplicate pp_msg!!!')
+            return
         else:
             _log.debug('New pp msg on the local-bus, topic: {}'.format(topic))
 

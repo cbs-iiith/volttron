@@ -459,6 +459,9 @@ class VolttronBridge(Agent):
                                                valid_price_ids, message)
         if not success or pp_msg is None:
             return
+        elif pp_msg in self._us_pp_messages:
+            _log.warning('received a duplicate pp_msg!!!')
+            return
         else:
             hint = 'New price point (pp)'
             _log.debug('{} msg on the local-bus'.format(hint)
