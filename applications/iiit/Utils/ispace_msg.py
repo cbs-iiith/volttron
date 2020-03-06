@@ -256,6 +256,8 @@ class ISPACE_Msg:
 
     # overload == operator
     def __eq__(self, other):
+        if self.price_id is None or other.price_id is None:
+            return False
         result = True if (
                 self.price_id == other.price_id
                 and isclose(self.value, other.value, EPSILON)) \

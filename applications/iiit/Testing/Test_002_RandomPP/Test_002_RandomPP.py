@@ -26,7 +26,10 @@ from random import random, randint
 
 import requests
 
-from applications.iiit.Utils.test_utils import get_timestamp
+if sys.platform == 'win32':
+    from applications.iiit.Utils.test_utils import get_timestamp
+else:
+    from test_utils import get_timestamp
 
 authentication = None
 
