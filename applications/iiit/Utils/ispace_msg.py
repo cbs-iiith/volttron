@@ -197,14 +197,23 @@ class ISPACE_Msg:
 
     ''' overload methods for self and other
     '''
+    # overload += operator
+    def __iadd__(self, other):
+        new_msg = copy(self)
+        if isinstance(other, float):
+            new_msg.value += other
+        elif isinstance(other, ISPACE_Msg):
+            new_msg.value += other.value
+        else:
+            raise TypeError
+        return new_msg
 
     # overload + operator
     def __add__(self, other):
-        """
+        return self.__iadd__(other)
 
-        :type other: ISPACE_Msg
-        """
-        return self.value + other.value
+    def __radd__(self, other):
+        return self.__iadd__(other)
 
     # overload - operator
     def __sub__(self, other):
@@ -224,6 +233,8 @@ class ISPACE_Msg:
 
     # overload < operator
     def __lt__(self, other):
+        if other is None or self.price_id is None or other.price_id is None:
+            return False
         result = True if (
                 not isclose(self.value, other.value, EPSILON)
                 and (self.value < other.value)) \
@@ -232,36 +243,39 @@ class ISPACE_Msg:
 
     # overload <= operator
     def __le__(self, other):
+        if other is None or self.price_id is None or other.price_id is None:
+            return False
         result = True if (self.value <= other.value) else False
         return result
 
     # overload != operator
     def __ne__(self, other):
-        result = True if not isclose(self.value, other.value,
-                                     EPSILON) else False
+        result = True if not self.__eq__(other) else False
         return result
 
     # overload > operator
     def __gt__(self, other):
-        result = True if (
-                not isclose(self.value, other.value, EPSILON)
-                and (self.value > other.value)) \
-            else False
+        result = True if not self.__le__(other) else False
         return result
 
     # overload >= operator
     def __ge__(self, other):
-        result = True if (self.value <= other.value) else False
+        result = True if not self.__lt__(other) else False
         return result
 
     # overload == operator
     def __eq__(self, other):
-        if self.price_id is None or other.price_id is None:
+        if other is None:
             return False
-        result = True if (
+
+        result = (
+            True
+            if (    # check for price id and value
                 self.price_id == other.price_id
-                and isclose(self.value, other.value, EPSILON)) \
+                and isclose(self.value, other.value, EPSILON)
+            )
             else False
+        )
         return result
 
     ''' ENDOF overload methods for self and other
@@ -269,27 +283,17 @@ class ISPACE_Msg:
 
     ''' overload methods for self and value
     '''
-
-    # overload + operator
-    def __add__(self, value):
-        """
-
-        :type value: float
-        """
-        self.set_value(self.get_value() + value)
-        return self
-
-    # overload - operator
-    def __sub__(self, value):
+    # overload -= operator
+    def __isub__(self, value):
         self.value -= value
         return self
 
-    # overload * operator
-    def __mul__(self, value):
+    # overload *= operator
+    def __imul__(self, value):
         return self.value * value
 
-    # overload / operator
-    def __truediv__(self, value):
+    # overload /= operator
+    def __itruediv__(self, value):
         return self.value / value
 
     # overload % operator
