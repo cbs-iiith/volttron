@@ -514,11 +514,11 @@ class PriceController(Agent):
         )
         if not success or pp_msg is None:
             return
-        elif pp_msg in [
-            self.us_opt_pp_msg,
-            self.us_bid_pp_msg
-        ]:
-            _log.warning('received a duplicate pp_msg!!!')
+        elif pp_msg in [self.us_opt_pp_msg, self.us_bid_pp_msg]:
+            _log.warning(
+                'received a duplicate pp_msg'
+                + ', price_id: {}!!!'.format(pp_msg.get_price_id())
+            )
             return
         else:
             _log.debug('New pp msg on the us-bus, topic: {}'.format(topic))

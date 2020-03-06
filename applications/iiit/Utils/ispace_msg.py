@@ -296,6 +296,7 @@ class ISPACE_Msg:
     def __itruediv__(self, value):
         return self.value / value
 
+    '''
     # overload % operator
     def __mod__(self, value):
         return self.value % value
@@ -338,6 +339,7 @@ class ISPACE_Msg:
                 and isclose(self.value, value, EPSILON)) \
             else False
         return result
+    '''
 
     ''' ENDOF overload methods for self and value
     '''

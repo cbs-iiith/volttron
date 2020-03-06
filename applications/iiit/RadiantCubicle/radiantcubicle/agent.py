@@ -492,11 +492,11 @@ class RadiantCubicle(Agent):
                                                valid_price_ids, message)
         if not success or pp_msg is None:
             return
-        elif pp_msg in [
-            self._bid_pp_msg_latest,
-            self._opt_pp_msg_latest
-        ]:
-            _log.warning('received a duplicate pp_msg!!!')
+        elif pp_msg in [self._bid_pp_msg_latest, self._opt_pp_msg_latest]:
+            _log.warning(
+                'received a duplicate pp_msg'
+                + ', price_id: {}!!!'.format(pp_msg.get_price_id())
+            )
             return
         else:
             _log.debug('New pp msg on the local-bus, topic: {}'.format(topic))
