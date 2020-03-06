@@ -391,7 +391,7 @@ class RadiantCubicle(Agent):
         try:
             point = 'iiit/cbs/radiantcubicle/RC_CCE_ELEC'
             cooling_energy = self.vip.rpc.call('platform.actuator', 'get_point',
-                                               point).get(imeout=10)
+                                               point).get(timeout=10)
             return cooling_energy
         except gevent.Timeout:
             _log.exception('gevent.Timeout in _rpcget_rc_active_power()')
