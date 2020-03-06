@@ -119,7 +119,7 @@ class PricePoint(Agent):
                                                   'zone/pricepoint')
         return
 
-    @RPC.export
+    @RPC.export('pricepoint')
     def rpc_from_net(self, header, message):
         """
 
@@ -164,7 +164,7 @@ class PricePoint(Agent):
             result = (jsonrpc.json_result(rpcdata.id, result))
         return result
 
-    @RPC.export
+    @RPC.export('ping')
     def ping(self):
         return True
 
