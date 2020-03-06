@@ -264,7 +264,6 @@ class VolttronBridge(Agent):
             self.us_opt_pp_id = randint(0, 99999999)
             self.us_bid_pp_id = randint(0, 99999999)
 
-        '''            
         # periodically keeps trying to post ed to us
         if self._bridge_host != 'LEVEL_HEAD':
             self._schdl_post_us_new_ed(10000)   # yield for all agents to start
@@ -276,7 +275,7 @@ class VolttronBridge(Agent):
             self._schdl_post_ds_new_pp(10000)   # yield for all agents to start
             # self.core.periodic(self._period_process_pp, self.post_ds_new_pp,
             #                   wait=None)
-        '''
+
         _log.info('startup() - Done. Agent is ready')
         return
 
