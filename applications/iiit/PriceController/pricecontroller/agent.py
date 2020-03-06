@@ -20,6 +20,7 @@ from random import randint
 import dateutil
 import gevent
 import gevent.event
+from enum import IntEnum
 
 from applications.iiit.Utils.ispace_msg import (ISPACE_Msg, MessageType,
                                                 EnergyCategory)
@@ -52,6 +53,20 @@ def pricecontroller(config_path, **kwargs):
     return PriceController(config_path, identity=vip_identity, **kwargs)
 
 
+class PcaState(IntEnum):
+    online = 0
+    standalone = 1
+    standby = 2
+    pass
+
+
+class PcaMode(IntEnum):
+    pass_on_pp = 0
+    default_opt = 1
+    extern_opt = 2
+    pass
+
+
 class PriceController(Agent):
     """
     Price Controller
@@ -67,12 +82,8 @@ class PriceController(Agent):
     _topic_energy_demand_ds = None
     _topic_energy_demand = None
 
-    _pca_state = None  # ['ONLINE', 'STANDALONE', 'STANDBY']
-    _pca_standby = False
-    _pca_standalone = False
-    _pca_online = True
-    _pca_mode = None  # ['PASS_ON_PP', 'DEFAULT_OPT', 'EXTERN_OPT']
-    _pp_optimize_option = None
+    _pca_state = None  # type: PcaState
+    _pca_mode = None    # type: PcaMode
 
     _mode_pass_on_params = None
     _mode_default_opt_params = None
@@ -137,8 +148,11 @@ class PriceController(Agent):
         self._period_read_data = self.config.get('period_read_data', 30)
         self._period_process_loop = self.config.get('period_process_loop', 1)
 
-        self._pca_state = self.config.get('pca_state', 'ONLINE')
-        self._pca_mode = self.config.get('pca_mode', 'PASS_ON_PP')
+        pca_state_s = self.config.get('pca_state', 'online')
+        self._pca_state = PcaState[pca_state_s.lower()]
+
+        pca_mode_s = self.config.get('pca_mode', 'pass_on_pp')
+        self._pca_mode = PcaMode[pca_mode_s.lower()]
 
         self._mode_pass_on_params = self.config.get(
             'mode_pass_on_params', {
@@ -165,9 +179,9 @@ class PriceController(Agent):
             }
         )
 
-        if self._pca_state == 'ONLINE':
+        if self._pca_state == PcaState.online:
             self._bids_timeout = self._mode_pass_on_params['bids_timeout']
-        elif self._pca_state == 'DEFAULT_OPT':
+        elif self._pca_mode == PcaMode.default_opt:
             self._bids_timeout = self._mode_default_opt_params['bids_timeout']
         else:
             self._bids_timeout = 900
@@ -252,7 +266,7 @@ class PriceController(Agent):
         )
 
         # subscribing to external pp topic
-        if self._pca_state == 'EXTERN_OPT':
+        if self._pca_mode == PcaMode.extern_opt:
             self.vip.pubsub.subscribe('pubsub',
                                       self._mode_extrn_opt_params['pp_topic'],
                                       self.on_new_extrn_pp
@@ -304,8 +318,7 @@ class PriceController(Agent):
         _log.debug('onfinish()')
         return
 
-    @staticmethod
-    @RPC.export
+    @RPC.export('rpc_from_net', 'pca')
     def rpc_from_net(self, header, message):
         rpcdata = jsonrpc.JsonRpcData(None, None, None, None, None)
         try:
@@ -319,14 +332,24 @@ class PriceController(Agent):
                 result = True
             elif (
                     rpcdata.method == 'state'
+                    and header['REQUEST_METHOD'].upper() == 'GET'
+            ):
+                result = self.get_pca_state()
+            elif (
+                    rpcdata.method == 'state'
                     and header['REQUEST_METHOD'].upper() == 'POST'
             ):
-                result = self._get_pca_mode(rpcdata.id, message)
+                result = self._set_pca_state(rpcdata.id, message)
+            elif (
+                    rpcdata.method == 'mode'
+                    and header['REQUEST_METHOD'].upper() == 'GET'
+            ):
+                result = self.get_pca_mode()
             elif (
                     rpcdata.method == 'mode'
                     and header['REQUEST_METHOD'].upper() == 'POST'
             ):
-                result = self._get_pca_mode(rpcdata.id, message)
+                result = self._set_pca_mode(rpcdata.id, message)
             elif (
                     rpcdata.method == 'external-optimizer'
                     and header['REQUEST_METHOD'].upper() == 'POST'
@@ -355,37 +378,51 @@ class PriceController(Agent):
             result = jsonrpc.json_result(rpcdata.id, result)
         return result
 
-    @RPC.export
+    @RPC.export('ping', 'ping')
     def ping(self):
         return True
 
-    def _get_pca_state(self, rpcdata_id, message):
+    @RPC.export('get_pca_state', 'get_pca_state')
+    def get_pca_state(self):
+        return self._pca_state
+
+    @RPC.export('set_pca_state', 'set_pca_state')
+    def set_pca_state(self, state):
+        if state not in PcaState:
+            return False
+        self._pca_state = PcaState(state)
+        return True
+
+    @RPC.export('get_pca_mode', 'get_pca_mode')
+    def get_pca_mode(self):
+        return self._pca_mode
+
+    @RPC.export('set_pca_mode', 'set_pca_mode')
+    def set_pca_mode(self, mode):
+        if mode not in PcaMode:
+            return False
+        self._pca_mode = PcaMode(mode)
+        return True
+
+    def _set_pca_state(self, rpcdata_id, message):
         state = jsonrpc.JsonRpcData.parse(message).params['state']
-        if state not in [
-            'ONLINE',
-            'STANDALONE',
-            'STANDBY'
-        ]:
+        success = self.set_pca_state(state)
+        if not success:
             return jsonrpc.json_error(rpcdata_id,
                                       jsonrpc.PARSE_ERROR,
                                       'Invalid option!!!'
                                       )
-        self._pca_state = state
         return True
 
-    def _get_pca_mode(self, rpcdata_id, message):
+    def _set_pca_mode(self, rpcdata_id, message):
         mode = jsonrpc.JsonRpcData.parse(message).params['mode']
-        if mode not in [
-            'PASS_ON_PP',
-            'DEFAULT_OPT',
-            'EXTERN_OPT'
-        ]:
+        success = self.set_pca_mode(self, mode)
+        if not success:
             return jsonrpc.json_error(
                 rpcdata_id,
                 jsonrpc.PARSE_ERROR,
                 'Invalid option!!!'
             )
-        self._pca_mode = mode
         return True
 
     def _register_external_opt_agent(self, rpcdata_id, message):
@@ -402,10 +439,10 @@ class PriceController(Agent):
 
     def on_new_extrn_pp(self, peer, sender, bus, topic, headers, message):
         _log.debug('on_new_us_pp()')
-        if self._pp_optimize_option != 'EXTERN_OPT':
+        if self._pca_mode != PcaMode.extern_opt:
             return
         # check if this agent is not disabled
-        if self._pca_standby:
+        if self._pca_state == PcaState.standby:
             _log.debug('[LOG] PCA mode: STANDBY, do nothing')
             return
 
@@ -451,12 +488,12 @@ class PriceController(Agent):
 
     def on_new_us_pp(self, peer, sender, bus, topic, headers, message):
         _log.debug('on_new_us_pp()')
-        if self._pca_mode not in ['PASS_ON_PP', 'DEFAULT_OPT']:
+        if self._pca_mode not in [PcaMode.pass_on_pp, PcaMode.default_opt]:
             return
 
         # check if this agent is not disabled
-        if self._pca_standby:
-            _log.debug('[LOG] PCA mode: STANDBY, do nothing')
+        if self._pca_state == PcaState.standby:
+            _log.debug('[LOG] PCA state: STANDBY, do nothing')
             return
 
         # check message type before parsing
@@ -504,7 +541,7 @@ class PriceController(Agent):
         if not pp_msg.get_isoptimal():
             self._published_us_bid_ted = False
 
-        if self._pca_mode == 'PASS_ON_PP':
+        if self._pca_mode == PcaMode.pass_on_pp:
             _log.info('[LOG] PCA mode: PASS_ON_PP')
             pub_topic = self._topic_price_point
             pub_msg = pp_msg.get_json_message(self._agent_id, 'bus_topic')
@@ -517,7 +554,7 @@ class PriceController(Agent):
             _log.debug('done.')
             return
 
-        if self._pca_mode == 'DEFAULT_OPT':
+        if self._pca_mode == PcaMode.default_opt:
             _log.info('[LOG] PCA mode: DEFAULT_OPT')
             # list for pp_msg
             _log.debug('Compute new price points...')
@@ -550,7 +587,7 @@ class PriceController(Agent):
                 _log.debug('done.')
             return
 
-        if self._pca_mode == 'EXTERN_OPT':
+        if self._pca_mode == PcaMode.extern_opt:
             _log.info('[LOG] PCA mode: DEFAULT_OPT')
             _log.warning('not yet implemented!!!')
             return
@@ -648,7 +685,7 @@ class PriceController(Agent):
         self._target_achieved = False
         new_pricepoint = self._some_cost_fn(old_pricepoint, old_ted, target)
 
-        if self._target_achieved and self._pca_state == 'ONLINE':
+        if self._target_achieved and self._pca_state == PcaState.online:
             # local optimal reached, publish this as bid to the us pp_msg
             # publish bid total energy demand to local/energydemand
             # 
@@ -666,7 +703,7 @@ class PriceController(Agent):
             return
 
         isoptimal = (
-            True if (self._target_achieved and self._pca_state == 'STANDALONE')
+            True if (self._target_achieved and self._pca_state == PcaState.standalone)
             else False)
 
         pp_messages = []
@@ -686,7 +723,7 @@ class PriceController(Agent):
     # periodically run this function to check if ted from all ds received or
     # ted_timed_out
     def process_loop(self):
-        if not self._pp_optimize_option == 'DEFAULT_OPT':
+        if not self._pca_mode == PcaMode.default_opt:
             return
 
         # check if all the bids are received from both local & ds devices
@@ -941,12 +978,11 @@ class PriceController(Agent):
         # need not wait to receive active power from all devices
         # any ways this is used for monitoring purpose
         # and the readings are averaged over a period
-        if (self._pca_state != 'ONLINE'
-                or self._pca_mode not in ['PASS_ON_PP', 'DEFAULT_OPT',
-                                          'EXTERN_OPT']):
+        if (self._pca_state != PcaState.online
+                or self._pca_mode not in PcaMode):
             if self._pca_state in [
-                'STANDALONE',
-                # 'STANDBY'
+                PcaState.standalone,
+                # PcaState.standby
             ]:
                 return
             else:
@@ -975,22 +1011,13 @@ class PriceController(Agent):
         if self._published_us_bid_ted:
             return
 
-        if (self._pca_state in
-                [
-                    'STANDALONE',
-                    'STANDBY'
-                ]):
+        if self._pca_state in [
+            PcaState.standalone,
+            PcaState.standby
+        ]:
             return
 
-        if (
-                self._pca_state != 'ONLINE'
-                or self._pca_mode not in
-                [
-                    'PASS_ON_PP',
-                    'DEFAULT_OPT',
-                    'EXTERN_OPT'
-                ]
-        ):
+        if self._pca_state != PcaState.online or self._pca_mode not in PcaMode:
             # not implemented
             _log.warning('aggregator_us_tap() not implemented'
                          + ' pca_state: {}'.format(self._pca_state)
@@ -1043,7 +1070,7 @@ class PriceController(Agent):
         # this function is not required. 
         # process_loop pickup the local individual bids
         # refer to process_loop()
-        if self._pp_optimize_option != 'DEFAULT_OPT':
+        if self._pca_mode != PcaMode.default_opt:
             return
         return
 
@@ -1108,7 +1135,7 @@ class PriceController(Agent):
 
     def _get_valid_price_ids(self):
         price_ids = []
-        if self._pca_mode == 'PASS_ON_PP':
+        if self._pca_mode == PcaMode.pass_on_pp:
             opt_price_id = (
                 self.us_opt_pp_msg.get_price_id()
                 if self.us_opt_pp_msg is not None

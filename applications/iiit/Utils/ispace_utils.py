@@ -109,6 +109,13 @@ def unregister_with_bridge(self):
 
 # register rpc routes with MASTER_WEB
 def register_rpc_route(self, name, handle, sleep_time=10):
+    """
+
+    :param self: method name    # type: str
+    :param name: method name    # type: str
+    :param handle: call back function
+    :param sleep_time: retry interval in sec    #type: int
+    """
     while True:
         try:
             _log.info('Registering agent route...')

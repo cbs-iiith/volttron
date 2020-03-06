@@ -320,7 +320,7 @@ class VolttronBridge(Agent):
                                                   'zone/pricepoint')
         return
 
-    @RPC.export
+    @RPC.export('rpc_from_net', 'bridge')
     def rpc_from_net(self, header, message):
         rpcdata = jsonrpc.JsonRpcData(None, None, None, None, None)
         try:
@@ -367,48 +367,48 @@ class VolttronBridge(Agent):
             result = jsonrpc.json_result(rpcdata.id, result)
         return result
 
-    @RPC.export
+    @RPC.export('ping', 'ping')
     def ping(self):
         return True
 
-    @RPC.export
+    @RPC.export('get_ds_device_ids', 'get_ds_device_ids')
     def get_ds_device_ids(self):
         return (self._ds_device_ids
                 if self._bridge_host != 'LEVEL_TAILEND'
                 else [])
 
-    @RPC.export
+    @RPC.export('local_ed_agents', 'local_ed_agents')
     def local_ed_agents(self):
         # return local ed agents vip_identities
         return self._local_devices_register
 
-    @RPC.export
+    @RPC.export('get_local_device_ids', 'get_local_device_ids')
     def get_local_device_ids(self):
         return self._local_device_ids
 
-    @RPC.export
+    @RPC.export('count_ds_devices', 'count_ds_devices')
     def count_ds_devices(self):
         return (len(self._ds_device_ids)
                 if self._bridge_host != 'LEVEL_TAILEND'
                 else 0)
 
-    @RPC.export
+    @RPC.export('count_local_devices', 'count_local_devices')
     def count_local_devices(self):
         return len(self._local_device_ids)
 
-    @RPC.export
+    @RPC.export('device_id', 'device_id')
     def device_id(self):
         return self._device_id
 
-    @RPC.export
+    @RPC.export('ip_addr', 'ip_addr')
     def ip_addr(self):
         return self._this_ip_addr
 
-    @RPC.export
+    @RPC.export('discovery_address', 'discovery_address')
     def discovery_address(self):
         return self._discovery_address
 
-    @RPC.export
+    @RPC.export('register_local_ed_agent', 'register_local_ed_agent')
     def register_local_ed_agent(self, sender, device_id):
         if device_id is None:
             return False
@@ -426,7 +426,7 @@ class VolttronBridge(Agent):
         _log.debug('registered!!!')
         return True
 
-    @RPC.export
+    @RPC.export('unregister_local_ed_agent', 'unregister_local_ed_agent')
     def unregister_local_ed_agent(self, sender):
         _log.debug('unregister_local_ed_agent(), sender: '.format(sender))
         if sender not in self._local_devices_register:
