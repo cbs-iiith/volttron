@@ -267,16 +267,25 @@ class VolttronBridge(Agent):
         # periodically keeps trying to post ed to us
         if self._bridge_host != 'LEVEL_HEAD':
             self._all_us_posts_success = False
-            self._schdl_post_us_new_ed(10000)   # yield for all agents to start
-            # self.core.periodic(self._period_process_pp, self.post_us_new_ed,
-            #                   wait=None)
+
+            # schedule event is not working on edison, however it work on pi
+            # self._schdl_post_us_new_ed(10000)   # yield for agents to start
+            self.core.periodic(
+                self._period_process_ed,
+                self.post_us_new_ed,
+                wait=None
+            )
 
         # periodically keeps trying to post pp to ds
         if self._bridge_host != 'LEVEL_TAILEND':
             self._all_ds_posts_success = False
-            self._schdl_post_ds_new_pp(10000)   # yield for all agents to start
-            # self.core.periodic(self._period_process_pp, self.post_ds_new_pp,
-            #                   wait=None)
+            # schedule event is not working on edison, however it work on pi
+            # self._schdl_post_ds_new_pp(10000)   # yield for agents to start
+            self.core.periodic(
+                self._period_process_pp,
+                self.post_ds_new_pp,
+                wait=None
+            )
 
         _log.info('startup() - Done. Agent is ready')
         return
@@ -520,7 +529,7 @@ class VolttronBridge(Agent):
             '''
         # initiate ds post
         # schedule the task
-        self._schdl_post_ds_new_pp(10)
+        # self._schdl_post_ds_new_pp(10)
         return
 
     # energy demand on local bus published, post it to upstream bridge
@@ -565,7 +574,7 @@ class VolttronBridge(Agent):
         self._all_us_posts_success = False
 
         # schedule the task
-        self._schdl_post_us_new_ed(10)
+        # self._schdl_post_us_new_ed(10)
         return
 
     # periodically keeps trying to post ed to us
@@ -602,7 +611,7 @@ class VolttronBridge(Agent):
                     + ', may be upstream bridge is not running!!!'
                 )
                 self._all_us_posts_success = False
-                self._schdl_post_us_new_ed(self._period_process_ed * 1000)
+                # self._schdl_post_us_new_ed(self._period_process_ed * 1000)
                 return
         _log.debug('_usConnected: {}'.format(self._usConnected))
 
@@ -650,7 +659,8 @@ class VolttronBridge(Agent):
 
         if not self._all_us_posts_success:
             # schedule the next run
-            self._schdl_post_us_new_ed(self._period_process_ed * 1000)
+            # self._schdl_post_us_new_ed(self._period_process_ed * 1000)
+            pass
 
         _log.debug('post_us_new_ed()...done')
         return
@@ -721,7 +731,8 @@ class VolttronBridge(Agent):
 
         if not self._all_us_posts_success:
             # schedule the next run
-            self._schdl_post_ds_new_pp(self._period_process_pp * 1000)
+            # self._schdl_post_ds_new_pp(self._period_process_pp * 1000)
+            pass
 
         _log.debug('post_ds_new_pp()...done')
         return
