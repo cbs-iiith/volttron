@@ -579,7 +579,7 @@ class VolttronBridge(Agent):
 
     # periodically keeps trying to post ed to us
     def post_us_new_ed(self):
-        _log.debug('post_us_new_ed()')
+        #_log.debug('post_us_new_ed()')
         if self._all_us_posts_success:
             return
 
