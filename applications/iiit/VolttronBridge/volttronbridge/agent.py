@@ -266,12 +266,14 @@ class VolttronBridge(Agent):
 
         # periodically keeps trying to post ed to us
         if self._bridge_host != 'LEVEL_HEAD':
+            self._all_us_posts_success = False
             self._schdl_post_us_new_ed(10000)   # yield for all agents to start
             # self.core.periodic(self._period_process_pp, self.post_us_new_ed,
             #                   wait=None)
 
         # periodically keeps trying to post pp to ds
         if self._bridge_host != 'LEVEL_TAILEND':
+            self._all_ds_posts_success = False
             self._schdl_post_ds_new_pp(10000)   # yield for all agents to start
             # self.core.periodic(self._period_process_pp, self.post_ds_new_pp,
             #                   wait=None)
@@ -1066,6 +1068,9 @@ class VolttronBridge(Agent):
         )
 
     def _schdl_post_ds_new_pp(self, delta_in_ms):
+        _log.debug(
+            '_schdl_post_ds_new_pp(), delta_in_ms: {}'.format(delta_in_ms)
+        )
         try:
             nxt_schdl = (datetime.datetime.now()
                          + datetime.timedelta(milliseconds=delta_in_ms))
@@ -1080,6 +1085,9 @@ class VolttronBridge(Agent):
         return
 
     def _schdl_post_us_new_ed(self, delta_in_ms):
+        _log.debug(
+            '_schdl_post_us_new_ed(), delta_in_ms: {}'.format(delta_in_ms)
+        )
         try:
             nxt_schdl = (datetime.datetime.now()
                          + datetime.timedelta(milliseconds=delta_in_ms))
