@@ -1089,11 +1089,18 @@ class VolttronBridge(Agent):
         _log.debug(
             '_schdl_post_us_new_ed(), delta_in_ms: {}'.format(delta_in_ms)
         )
+        _log.debug(
+            'self._all_us_posts_success: {}'.format(self._all_us_posts_success)
+        )
         try:
             nxt_schdl = (datetime.datetime.now()
                          + datetime.timedelta(milliseconds=delta_in_ms))
             self._post_us_new_ed_event = self.core.schedule(
                 nxt_schdl, self.post_us_new_ed)
+            _log.debug(
+                'self._post_us_new_ed_event:'
+                + ' {}'.format(self._post_us_new_ed_event)
+            )
         except Exception as e:
             _log.warning(
                 'unhandled exception in _schdl_post_us_new_ed'
