@@ -19,7 +19,8 @@ from random import randint
 
 from ispace_msg import (ISPACE_Msg, MessageType, ISPACE_MSG_ATTRIB_LIST,
                         ISPACE_Msg_ActivePower, EnergyCategory,
-                        ISPACE_Msg_Energy)
+                        ISPACE_Msg_Energy, ISPACE_Msg_OptPricePoint,
+                        ISPACE_Msg_BidPricePoint)
 from volttron.platform import jsonrpc
 from volttron.platform.agent import utils
 
@@ -312,11 +313,22 @@ def _parse_data(data, minimum_fields=None):
         minimum_fields = []
     msg_type = data['msg_type']
 
-    # TODO: select class msg_type based on msg_type, instead of base class
-    new_msg = ISPACE_Msg(msg_type)
-    _update_value(new_msg, 'msg_type', msg_type)
+    # select class msg_type based on msg_type, instead of base class
+    if msg_type == MessageType.price_point:
+        isoptimal = data['isoptimal']
+        if isoptimal:
+            new_msg = ISPACE_Msg_OptPricePoint()
+        else:
+            new_msg = ISPACE_Msg_BidPricePoint()
+    elif msg_type == MessageType.active_power:
+        new_msg = ISPACE_Msg_ActivePower()
+    elif msg_type == MessageType.energy_demand:
+        new_msg = ISPACE_Msg_Energy()
+    else:
+        new_msg = ISPACE_Msg(msg_type)
+        _update_value(new_msg, 'msg_type', msg_type)
 
-    # if list is empty, parse for all attributes, 
+        # if list is empty, parse for all attributes,
     # if any attrib not found throw key not found error
     if not minimum_fields:
         # if the attrib is not found in the data, throws a keyerror exception
