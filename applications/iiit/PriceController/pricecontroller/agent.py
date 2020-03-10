@@ -129,6 +129,7 @@ class PriceController(Agent):
     external_vip_identity = None
 
     _target_achieved = False
+    _us_bid_ready = False
 
     # opt_ap --> act_pwr@opt_pp, bid_ed --> bid_energy_demand@bid_pp
     # various buckets
@@ -264,8 +265,8 @@ class PriceController(Agent):
         # register_rpc_route is a blocking call
         register_rpc_route(self, 'pca', 'rpc_from_net', 5)
 
-        self._us_senders_list = ['iiit.volttronbridge', 'iiit.pricepoint']
-        self._ds_senders_list = ['iiit.volttronbridge']
+        self._us_senders_list = [self._vb_vip_identity, 'iiit.pricepoint']
+        self._ds_senders_list = [self._vb_vip_identity]
 
         # check if there is a need to retrieve these details at a regular
         # interval. currently the details are retrieved on a new ed msg
@@ -785,28 +786,17 @@ class PriceController(Agent):
         self._target_achieved = False
         new_pricepoint = self._some_cost_fn(old_pricepoint, old_ted, target)
 
+        # case _pca_state == PcaState.online
         if self._target_achieved and self._pca_state == PcaState.online:
             # local optimal reached, publish this as bid to the us pp_msg
-            # publish bid total energy demand to local/energydemand
-            # 
-            # compute total bid energy demand and publish to local/energydemand
-            # (vb RPCs this value to the next level)
-            bid_ted = self._calc_total(self._local_bid_ed, self._ds_bid_ed)
+            self._us_bid_ready = True
+            return []
 
-            # publish to local/energyDemand (vb pushes(RPC) this value to the
-            # next level)
-            self._published_us_bid_ted = True  # since directly publishing
-            self._publish_bid_ted(pp_msg, bid_ted)
-
-            # need to reset the corresponding buckets to zero
-            self._local_bid_ed.clear()
-            self._ds_bid_ed.clear()
-            return
-
+        # case _pca_state == PcaState.standalone
         isoptimal = (
             True if (
                     self._target_achieved
-                    and self._pca_state == PcaState.standalone  # ???
+                    and self._pca_state == PcaState.standalone
             )
             else False
         )
@@ -942,7 +932,7 @@ class PriceController(Agent):
         self._ds_device_ids = self._rpcget_ds_device_ids()
 
         # unique senders list
-        valid_senders_list = self._ds_senders_list + self._local_ed_agents
+        valid_senders_list = self._get_valid_senders()
         minimum_fields = ['value', 'price_id']
         validate_fields = ['value', 'price_id', 'isoptimal']
         valid_price_ids = self._get_valid_price_ids()
@@ -974,6 +964,32 @@ class PriceController(Agent):
         self._sort_ed_msg(ed_msg)
         _log.debug('done.')
         return
+
+    def _get_valid_senders(self):
+        if self._pca_mode == PcaMode.pass_on_pp:
+            valid_senders_list = (
+                    self._ds_senders_list
+                    + self._local_ed_agents
+            )
+        elif self._pca_mode == PcaMode.default_opt:
+            valid_senders_list = (
+                    self._ds_senders_list
+                    + self._local_ed_agents
+                    + self.core.identity
+            )
+        elif self._pca_mode == PcaMode.extern_opt:
+            valid_senders_list = (
+                    self._ds_senders_list
+                    + self._local_ed_agents
+                    + self._mode_extrn_opt_params['vip_identity']
+            )
+        else:
+            _log.warning(
+                '_get_valid_senders(), not implemented'
+                + ' for pca_mode: {}'.format(self._pca_mode)
+            )
+            valid_senders_list = []
+        return valid_senders_list
 
     def _sort_ed_msg(self, ed_msg):
         price_id = ed_msg.get_price_id()
@@ -1131,10 +1147,7 @@ class PriceController(Agent):
 
         if (
                 self._pca_state != PcaState.online
-                or self._pca_mode not in [
-            PcaMode.pass_on_pp,
-            PcaMode.extern_opt
-        ]
+                or self._pca_mode not in PcaMode
         ):
             # not implemented
             _log.warning('aggregator_us_tap() not implemented'
@@ -1145,6 +1158,8 @@ class PriceController(Agent):
 
         if self._pca_mode == PcaMode.pass_on_pp:
             success, bid_ted = self.aggr_mode_pass_on()
+        elif self._pca_mode == PcaMode.default_opt:
+            success, bid_ted = self.aggr_mode_default_opt()
         else:
             success, bid_ted = self.aggr_mode_extern_opt()
 
@@ -1156,42 +1171,82 @@ class PriceController(Agent):
         # vb pushes(RPC) this value to the next level
         self._publish_bid_ted(self.us_bid_pp_msg, bid_ted)
 
-        # need to reset the corresponding buckets to zero
-        self._us_local_bid_ed.clear()
-        self._us_ds_bid_ed.clear()
         self.us_bid_pp_msg = ISPACE_Msg(MessageType.price_point)
         self._published_us_bid_ted = True
         return
 
     def aggr_mode_pass_on(self):
-        success = True
+        _log.debug('aggr_mode_pass_on(): {}'.format(self._pca_mode))
+
         # check if all the bids are received from both local & ds devices
         # rcvd_all_lc = local(lc) bids for upstream(us) bid price
         rcvd_all_lc = self._rcvd_all_us_bid_ed_lc(self._local_device_ids)
         # rcvd_all_ds = downstream(ds) bids for upstream(us) bid price
         rcvd_all_ds = self._rcvd_all_us_bid_ed_ds(self._ds_device_ids)
+
         # check timeout
         us_bids_timeout = self._us_bids_timeout()
+
         if not (rcvd_all_lc and rcvd_all_ds):
             price_id = self.us_bid_pp_msg.get_price_id()
             if not us_bids_timeout:
                 retry_time = self._period_process_loop
-                _log.debug('not all bids received and not yet timeout'
-                           + ', bid price_id: {}!!!'.format(price_id)
-                           + ' rcvd all us bid ed lc: {}'.format(rcvd_all_lc)
-                           + ' rcvd_all us bid ed ds: {}'.format(rcvd_all_ds)
-                           + ' us_bids_timeout: {}'.format(us_bids_timeout)
-                           + ', will try again in {} sec'.format(retry_time)
-                           )
-                success = False
-                # return
+                _log.debug(
+                    'not all bids received and not yet timed out'
+                    + ', bid price_id: {}!!!'.format(price_id)
+                    + ' rcvd all us bid ed lc: {}'.format(rcvd_all_lc)
+                    + ' rcvd_all us bid ed ds: {}'.format(rcvd_all_ds)
+                    + ' us_bids_timeout: {}'.format(us_bids_timeout)
+                    + ', will try again in {} sec'.format(retry_time)
+                )
+                return False
+
             else:
                 _log.warning('!!! us bid pp timed out'
                              + ', bid price_id: {}!!!'.format(price_id)
                              )
+
         # compute total energy demand (ted)
         bid_ted = self._calc_total(self._us_local_bid_ed, self._us_ds_bid_ed)
-        return success, bid_ted
+
+        # need to reset the corresponding buckets to zero
+        self._us_local_bid_ed.clear()
+        self._us_ds_bid_ed.clear()
+
+        return True, bid_ted
+
+    def aggr_mode_default_opt(self):
+        _log.debug('aggr_mode_default_opt(): {}'.format(self._pca_mode))
+
+        # check timeout
+        us_bids_timeout = self._us_bids_timeout()
+
+        if not self._us_bid_ready:
+            price_id = self.us_bid_pp_msg.get_price_id()
+            if not us_bids_timeout:
+                retry_time = self._period_process_loop
+                _log.debug(
+                    'not all bids received and not yet timed out'
+                    + ', bid price_id: {}!!!'.format(price_id)
+                    + ' us bid ready: {}'.format(self._us_bid_ready)
+                    + ' us_bids_timeout: {}'.format(us_bids_timeout)
+                    + ', will try again in {} sec'.format(retry_time)
+                )
+                return False
+
+            else:
+                _log.warning('!!! us bid pp timed out'
+                             + ', bid price_id: {}!!!'.format(price_id)
+                             )
+
+        # compute total energy demand (ted)
+        bid_ted = self._calc_total(self._local_bid_ed, self._ds_bid_ed)
+
+        # need to reset the corresponding buckets to zero
+        self._local_bid_ed.clear()
+        self._ds_bid_ed.clear()
+
+        return True, bid_ted
 
     def aggr_mode_extern_opt(self):
         _log.debug('aggr_mode_extern_opt(): {}'.format(self._pca_mode))
