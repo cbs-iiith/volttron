@@ -84,8 +84,11 @@ class PriceController(Agent):
     """
     Price Controller
     """
-    _bids_timeout = None  # type: int
     # initialized  during __init__ from config
+
+    _us_bid_timeout = None  # type: int
+    _lc_bid_timeout = None  # type: int
+
     _period_read_data = None
     _period_process_loop = None
 
@@ -119,6 +122,7 @@ class PriceController(Agent):
 
     discovery_address = None
     device_id = None
+
     us_opt_pp_msg = None  # type: ISPACE_Msg
     us_bid_pp_msg = None  # type: ISPACE_Msg
     lc_opt_pp_msg = None  # type: ISPACE_Msg
@@ -198,14 +202,15 @@ class PriceController(Agent):
 
         self._mode_pass_on_params = self.config.get(
             'mode_pass_on_params', {
-                "bids_timeout": 120
+                "bid_timeout": 20
             }
         )
 
         self._mode_default_opt_params = self.config.get(
             'mode_default_opt_params', {
-                "bids_timeout": 120,
-                "max_iterations": 5,
+                "us_bid_timeout": 900,
+                "lc_bid_timeout": 180,
+                "max_iterations": 10,
                 "epsilon": 100,
                 "gamma": 0.0001,
                 "alpha": 0.0035,
@@ -221,12 +226,20 @@ class PriceController(Agent):
             }
         )
 
-        if self._pca_state == PcaState.online:
-            self._bids_timeout = self._mode_pass_on_params['bids_timeout']
+        if self._pca_mode == PcaMode.pass_on_pp:
+            self._us_bid_timeout = self._mode_pass_on_params[
+                'bid_timeout'
+            ]
         elif self._pca_mode == PcaMode.default_opt:
-            self._bids_timeout = self._mode_default_opt_params['bids_timeout']
+            self._us_bid_timeout = self._mode_default_opt_params[
+                'us_bid_timeout'
+            ]
+            self._lc_bid_timeout = self._mode_default_opt_params[
+                'lc_bid_timeout'
+            ]
         else:
-            self._bids_timeout = 900
+            self._us_bid_timeout = 900
+            self._lc_bid_timeout = 120
 
         self._rc_factor = self.config.get('rc_factor', 120)
         self._rs = running_stats_multi_dict(3, list, self._rc_factor)
@@ -363,6 +376,7 @@ class PriceController(Agent):
         _log.debug('onfinish()')
         return
 
+    # noinspection PyArgumentList
     @RPC.export
     def rpc_from_net(self, header, message):
         rpcdata = jsonrpc.JsonRpcData(None, None, None, None, None)
@@ -423,14 +437,17 @@ class PriceController(Agent):
             result = jsonrpc.json_result(rpcdata.id, result)
         return result
 
+    # noinspection PyArgumentList
     @RPC.export
     def ping(self):
         return True
 
+    # noinspection PyArgumentList
     @RPC.export
     def get_pca_state(self):
         return self._pca_state
 
+    # noinspection PyArgumentList
     @RPC.export
     def set_pca_state(self, state):
         if state not in PcaState:
@@ -438,10 +455,12 @@ class PriceController(Agent):
         self._pca_state = PcaState(state)
         return True
 
+    # noinspection PyArgumentList
     @RPC.export
     def get_pca_mode(self):
         return self._pca_mode
 
+    # noinspection PyArgumentList
     @RPC.export
     def set_pca_mode(self, mode):
         if mode not in PcaMode:
@@ -646,8 +665,8 @@ class PriceController(Agent):
         if not self._pca_mode == PcaMode.default_opt:
             return
 
-        lc_bid_pp_timeout = self._lc_bid_pp_timeout()
-        if lc_bid_pp_timeout:
+        lc_bid_timed_out = self._lc_bid_timed_out()
+        if lc_bid_timed_out:
             _log.warning(
                 '!!! local bid pp timed out'
                 # + ', bid price_id: {}!!!'.format(price_id)
@@ -773,15 +792,17 @@ class PriceController(Agent):
         gamma = self._mode_default_opt_params['gamma']
         epsilon = self._mode_default_opt_params['epsilon']
         max_iters = self._mode_default_opt_params['max_iterations']
-        bids_timeout = self._mode_default_opt_params['bids_timeout']
+        uc_bid_timeout = self._mode_default_opt_params['uc_bid_timeout']
+        lc_bid_timeout = self._mode_default_opt_params['lc_bid_timeout']
         wt_factors = self._mode_default_opt_params['weight_factors']
 
-        _log.debug('alpha: {}, gamma: {}, epsilon: {}, max_iters: {}, '
-                   'bids_timeout: {}, wt_factors: {}'.format(alpha, gamma,
-                                                             epsilon,
-                                                             max_iters,
-                                                             bids_timeout,
-                                                             wt_factors))
+        _log.debug(
+            'alpha: {}, gamma: {}, epsilon: {}, max_iters: {}, ' +
+            'us_bid_timeout: {}, lc_bid_timeout: {}, wt_factors: {}'.format(
+                alpha, gamma, epsilon, max_iters, uc_bid_timeout,
+                lc_bid_timeout, wt_factors
+            )
+        )
 
         self._target_achieved = False
         new_pricepoint = self._some_cost_fn(old_pricepoint, old_ted, target)
@@ -828,8 +849,7 @@ class PriceController(Agent):
         rcvd_all_ds = self._rcvd_all_lc_bid_ed_ds(self._ds_device_ids)
 
         # TODO: timeout check -- visit later
-        # lc_bid_pp_timeout = self._lc_bid_pp_timeout()
-        lc_bid_pp_timeout = False  # never timeout
+        lc_bid_timed_out = self._lc_bid_timed_out()
 
         #       if new_pp_isopt
         #           # local optimal reached
@@ -847,17 +867,33 @@ class PriceController(Agent):
         self._ds_bid_ed.clear()
         return
 
-    def _us_bids_timeout(self):
+    def _lc_bid_timed_out(self):
         """
 
         :rtype: bool
         """
-        if self._bids_timeout == 0: return False
+        if self._lc_bid_timeout == 0:
+            return False
+        s_now = datetime.datetime.utcnow().isoformat(' ') + 'Z'
+        now = dateutil.parser.parse(s_now)
+        ts = dateutil.parser.parse(self.lc_bid_pp_msg.get_ts())
+        return (True
+                if (now - ts).total_seconds() > self._lc_bid_timeout
+                else False
+                )
+
+    def _us_bid_timed_out(self):
+        """
+
+        :rtype: bool
+        """
+        if self._us_bid_timeout == 0:
+            return False
         s_now = datetime.datetime.utcnow().isoformat(' ') + 'Z'
         now = dateutil.parser.parse(s_now)
         ts = dateutil.parser.parse(self.us_bid_pp_msg.get_ts())
         return (True
-                if (now - ts).total_seconds() > self._bids_timeout
+                if (now - ts).total_seconds() > self._us_bid_timeout
                 else False
                 )
 
@@ -1185,18 +1221,18 @@ class PriceController(Agent):
         rcvd_all_ds = self._rcvd_all_us_bid_ed_ds(self._ds_device_ids)
 
         # check timeout
-        us_bids_timeout = self._us_bids_timeout()
+        us_bid_timed_out = self._us_bid_timed_out()
 
         if not (rcvd_all_lc and rcvd_all_ds):
             price_id = self.us_bid_pp_msg.get_price_id()
-            if not us_bids_timeout:
+            if not us_bid_timed_out:
                 retry_time = self._period_process_loop
                 _log.debug(
                     'not all bids received and not yet timed out'
                     + ', bid price_id: {}!!!'.format(price_id)
                     + ' rcvd all us bid ed lc: {}'.format(rcvd_all_lc)
                     + ' rcvd_all us bid ed ds: {}'.format(rcvd_all_ds)
-                    + ' us_bids_timeout: {}'.format(us_bids_timeout)
+                    + ' us_bid_timed_out: {}'.format(us_bid_timed_out)
                     + ', will try again in {} sec'.format(retry_time)
                 )
                 return False
@@ -1219,7 +1255,7 @@ class PriceController(Agent):
         _log.debug('aggr_mode_default_opt(): {}'.format(self._pca_mode))
 
         # check timeout
-        us_bids_timeout = self._us_bids_timeout()
+        us_bids_timeout = self._us_bid_timed_out()
 
         if not self._us_bid_ready:
             price_id = self.us_bid_pp_msg.get_price_id()
@@ -1424,8 +1460,11 @@ class PriceController(Agent):
         return total
 
 
-def main(argv=sys.argv):
+def main(argv=None):
     """Main method called by the eggsecutable."""
+    if argv is None:
+        argv = sys.argv
+    _log.debug('main(), argv: {}'.format(argv))
     try:
         utils.vip_main(pricecontroller)
     except Exception as e:

@@ -30,15 +30,16 @@
 
     # the following params are used if pca_mode = PASS_ON_PP
     "mode_pass_on_params": {
-        "bids_timeout": 120
+        "bid_timeout": 20
     },
 
     # the following params are used if pca_mode = DEFAULT_OPT
     "mode_default_opt_params": {
         # time to wait for devices to submit their bids.
         # 0 --> wait-for-ever, default 900s (15min)
-        "bids_timeout": 120,
-        "max_iterations": 5,
+        "us_bid_timeout": 900,
+        "lc_bid_timeout": 180,
+        "max_iterations": 10,
         #deadband (Wh)
         "epsilon": 100,
         # step size, gamma = (pp_max - pp_min) / (ed_max - ed_min)
