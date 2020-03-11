@@ -114,6 +114,7 @@ class VolttronBridge(Agent):
 
     _post_ds_new_pp_event = None
     _post_us_new_ed_event = None
+    _post_ds_latest_pp_event = None
 
     _ds_register = None  # type: list
     _ds_device_ids = None  # type: list
@@ -579,7 +580,7 @@ class VolttronBridge(Agent):
 
     # periodically keeps trying to post ed to us
     def post_us_new_ed(self):
-        #_log.debug('post_us_new_ed()')
+        # _log.debug('post_us_new_ed()')
         if self._all_us_posts_success:
             return
 
