@@ -125,13 +125,14 @@ class PriceController(Agent):
 
     us_opt_pp_msg = None  # type: ISPACE_Msg
     us_bid_pp_msg = None  # type: ISPACE_Msg
-    lc_opt_pp_msg = None  # type: ISPACE_Msg
-    lc_bid_pp_msg = None  # type: ISPACE_Msg
 
+    lc_opt_pp_msg_list = None  # type: list
     lc_bid_pp_msg_list = None  # type: list
 
     external_vip_identity = None
 
+    _run__local_bidding_process = False
+    _run_process_loop = False
     _target_achieved = False
     _us_bid_ready = False
 
@@ -292,8 +293,6 @@ class PriceController(Agent):
         device_id = self._device_id
         self.us_opt_pp_msg = get_default_pp_msg(discovery_address, device_id)
         self.us_bid_pp_msg = get_default_pp_msg(discovery_address, device_id)
-        self.lc_opt_pp_msg = get_default_pp_msg(discovery_address, device_id)
-        self.lc_bid_pp_msg = get_default_pp_msg(discovery_address, device_id)
 
         self.external_vip_identity = None
 
@@ -343,11 +342,11 @@ class PriceController(Agent):
         # default_opt process loop, i.e, each iteration's periodicity
         # if the cycle time (time consumed for each iteration) is more than
         # periodicity, the next iterations gets delayed.
-        # self.core.periodic(
-        # self._period_process_loop,
-        # self.process_loop,
-        # wait=None
-        # )
+        self.core.periodic(
+            self._period_process_loop,
+            self.process_loop,
+            wait=None
+        )
 
         _log.info('startup() - Done. Agent is ready')
         return
@@ -632,7 +631,7 @@ class PriceController(Agent):
                 self._pca_mode == PcaMode.default_opt
                 and pp_msg.get_isoptimal()
         ):
-            _log.info('[LOG] PCA mode: DEFAULT_OPT')
+            _log.info('[LOG] PCA mode: DEFAULT_OPT & pp_msg is opt price')
             pub_topic = self._topic_price_point
             pub_msg = pp_msg.get_json_message(self._agent_id, 'bus_topic')
             _log.info(
@@ -644,12 +643,14 @@ class PriceController(Agent):
             _log.debug('done.')
             return
 
-        elif self._pca_mode == PcaMode.default_opt:
-            _log.info('[LOG] PCA mode: DEFAULT_OPT')
+        elif (
+                self._pca_mode == PcaMode.default_opt
+                and not pp_msg.get_isoptimal()
+        ):
+            _log.info('[LOG] PCA mode: DEFAULT_OPT & pp_msg is bid price')
 
-            # setup local bidding process
-
-            # start local bidding process
+            # init bidding process
+            self._init_bidding_process()
 
             _log.debug('done.')
             return
@@ -661,45 +662,35 @@ class PriceController(Agent):
 
         return
 
-    def _local_bidding_process(self):
-        if not self._pca_mode == PcaMode.default_opt:
-            return
+    def _init_bidding_process(self):
 
-        lc_bid_timed_out = self._lc_bid_timed_out()
-        if lc_bid_timed_out:
-            _log.warning(
-                '!!! local bid pp timed out'
-                # + ', bid price_id: {}!!!'.format(price_id)
-            )
-            # publish the latest bid
-            self._published_us_bid_ted = False
-            return
-
-        # check if all the bids are received from both local & ds devices
-        # rcvd_all_lc = local(lc) bids for local(lc) bid price
-        rcvd_all_lc = self._rcvd_all_lc_bid_ed_lc(self._local_device_ids)
-        # rcvd_all_ds = downstream(ds) bids for upstream(us) bid price
-        rcvd_all_ds = self._rcvd_all_lc_bid_ed_ds(self._ds_device_ids)
-
-        # if not (rcvd_all_lc and rcvd_all_ds):
+        self._iter_count = 0
 
         # list for pp_msg
         _log.debug('Compute new price points...')
-        new_pp_msg_list = self._compute_new_price()
+        target_achieved, new_pp_msg_list = self._compute_new_prices()
+
         self.lc_bid_pp_msg_list = copy(new_pp_msg_list)
         # _log.info('new bid pp_msg_list: {}'.format(new_pp_msg_list))
 
+        self._pub_pp_messages(new_pp_msg_list)
+
+        # activate process_loop(), iterate for new bids from ds devices
+        self._run_process_loop = True
+        return
+
+    def _pub_pp_messages(self, pp_messages):
         # maybe publish a list of the pp messages
         # and let the bridge do_rpc concurrently
-        for new_pp_msg in new_pp_msg_list:
+        for pp_msg in pp_messages:
             # _log.info('new msg: {}'.format(msg))
             pub_topic = self._topic_price_point
-            pub_msg = new_pp_msg.get_json_message(
+            pub_msg = pp_msg.get_json_message(
                 self._agent_id,
                 'bus_topic'
             )
-            device_id = (new_pp_msg.get_dst_device_id()
-                         if new_pp_msg.get_one_to_one()
+            device_id = (pp_msg.get_dst_device_id()
+                         if pp_msg.get_one_to_one()
                          else 'local/ds devices'
                          )
             _log.info(
@@ -711,11 +702,10 @@ class PriceController(Agent):
                 + ' {}'.format(pub_topic)
             )
             publish_to_bus(self, pub_topic, pub_msg)
-        return
 
     # compute new bid price point for every local device and ds devices
     # return list for pp_msg
-    def _compute_new_price(self):
+    def _compute_new_prices(self):
         _log.debug('_computeNewPrice()')
         '''
         computes the new prices
@@ -788,6 +778,38 @@ class PriceController(Agent):
         old_ted = []
         target = 0
 
+        target_achieved, new_pricepoint = self._gradient_descent(old_pricepoint,
+                                                                 old_ted,
+                                                                 target
+                                                                 )
+
+        # case _pca_state == PcaState.online
+        if target_achieved and self._pca_state == PcaState.online:
+            # local optimal reached, publish this as bid to the us pp_msg
+            self._us_bid_ready = True
+            return True, []
+
+        # case _pca_state == PcaState.standalone
+        isoptimal = (
+            True if (
+                    target_achieved
+                    and self._pca_state == PcaState.standalone
+            )
+            else False
+        )
+
+        pp_messages = []
+        for device_idx in device_list:
+            pp_msg = ISPACE_Msg(msg_type, one_to_one, isoptimal,
+                                new_pricepoint[device_idx], value_data_type,
+                                units, price_id, src_ip, src_device_id,
+                                dst_ip[device_idx], dst_device_id[device_idx],
+                                duration, ttl, ts, tz)
+            pp_messages.insert(pp_msg)
+
+        return target_achieved, pp_messages
+
+    def _gradient_descent(self, pp_old, ed_prev, target):
         alpha = self._mode_default_opt_params['alpha']
         gamma = self._mode_default_opt_params['gamma']
         epsilon = self._mode_default_opt_params['epsilon']
@@ -804,37 +826,45 @@ class PriceController(Agent):
             )
         )
 
-        self._target_achieved = False
-        new_pricepoint = self._some_cost_fn(old_pricepoint, old_ted, target)
+        _log.debug(
+            'old_pricepoint: {}'.format(pp_old)
+            + ', old_ted: {}'.format(ed_prev)
+            + ', target: {}'.format(target)
+        )
 
-        # case _pca_state == PcaState.online
-        if self._target_achieved and self._pca_state == PcaState.online:
-            # local optimal reached, publish this as bid to the us pp_msg
-            self._us_bid_ready = True
-            return []
+        ed_current = None
+        ed_prev = None
 
-        # case _pca_state == PcaState.standalone
-        isoptimal = (
-            True if (
-                    self._target_achieved
-                    and self._pca_state == PcaState.standalone
+        total_ed_current = wt_factors * ed_current
+        total_ed_prev = wt_factors * ed_prev
+
+        delta = total_ed_current - total_ed_prev
+
+        pp_new = (
+                pp_old
+                + gamma * delta
+                + alpha * self._delta_omega       # momentum
+        )
+
+        # remember the update delta_omega at each iteration
+        self._delta_omega = pp_new - pp_old
+
+        # target achieved is true,
+        #   if us bid timed out
+        #       or self._iter_count > max_iters
+        #       or delta <= epsilon
+        us_bid_timed_out = self._us_bid_timed_out()
+        target_achieved = (
+            True
+            if (
+                        us_bid_timed_out
+                        or self._iter_count > max_iters
+                        or delta <= epsilon
             )
             else False
         )
 
-        pp_messages = []
-        for device_idx in device_list:
-            pp_msg = ISPACE_Msg(msg_type, one_to_one, isoptimal,
-                                new_pricepoint[device_idx], value_data_type,
-                                units, price_id, src_ip, src_device_id,
-                                dst_ip[device_idx], dst_device_id[device_idx],
-                                duration, ttl, ts, tz)
-            pp_messages.insert(pp_msg)
-        return pp_messages
-
-    def _some_cost_fn(self, old_pricepoint, old_ted, target):
-        new_pricepoints = []
-        return new_pricepoints
+        return target_achieved, pp_new
 
     # periodically run this function to check if ted from all ds received or
     # ted_timed_out
@@ -842,14 +872,41 @@ class PriceController(Agent):
         if not self._pca_mode == PcaMode.default_opt:
             return
 
+        if not self._run_process_loop:
+            return
+
+        new_pp_msg_list = []
+
         # check if all the bids are received from both local & ds devices
         # rcvd_all_lc = local(lc) bids for local(lc) bid price
         rcvd_all_lc = self._rcvd_all_lc_bid_ed_lc(self._local_device_ids)
         # rcvd_all_ds = downstream(ds) bids for upstream(us) bid price
         rcvd_all_ds = self._rcvd_all_lc_bid_ed_ds(self._ds_device_ids)
 
-        # TODO: timeout check -- visit later
         lc_bid_timed_out = self._lc_bid_timed_out()
+
+        if not (rcvd_all_lc and rcvd_all_ds):
+            price_id = self.lc_bid_pp_msg.get_price_id()
+            if not lc_bid_timed_out:
+                retry_time = self._period_process_loop
+                _log.debug(
+                    'not all bids received and not yet timed out'
+                    + ', bid price_id: {}!!!'.format(price_id)
+                    + ' rcvd all lc bid ed lc: {}'.format(rcvd_all_lc)
+                    + ' rcvd_all lc bid ed ds: {}'.format(rcvd_all_ds)
+                    + ' lc_bid_timed_out: {}'.format(lc_bid_timed_out)
+                    + ', will try again in {} sec'.format(retry_time)
+                )
+                return
+
+            else:
+                _log.warning('!!! us bid pp timed out'
+                             + ', bid price_id: {}!!!'.format(price_id)
+                             )
+                target_achieved = True
+        else:
+            _log.debug('Compute new price points...')
+            target_achieved, new_pp_msg_list = self._compute_new_prices()
 
         #       if new_pp_isopt
         #           # local optimal reached
@@ -859,12 +916,23 @@ class PriceController(Agent):
         #       or
         # and save data to self._ds_bid_ed
 
-        pp_messages = self._compute_new_price()
-        # publish these pp_messages
+        if target_achieved and self._pca_state == PcaState.online:
+            # local optimal reached, publish this as bid to the us pp_msg
+            self._us_bid_ready = True
+        elif target_achieved and self._pca_state == PcaState.standalone:
+            self.lc_opt_pp_msg_list = copy(new_pp_msg_list)
+        else:
+            self.lc_bid_pp_msg_list = copy(new_pp_msg_list)
+            # publish these pp_messages
+            self._pub_pp_messages(new_pp_msg_list)
 
         # clear corresponding buckets
         self._local_bid_ed.clear()
         self._ds_bid_ed.clear()
+
+        if target_achieved:
+            # stop the process loop
+            self._run_process_loop = False
         return
 
     def _lc_bid_timed_out(self):
@@ -1291,7 +1359,7 @@ class PriceController(Agent):
         return success, bid_ted
 
     def aggregator_local_bid_ted(self):
-        # this function is not required. 
+        # this function is not required.
         # process_loop pickup the local individual bids
         # refer to process_loop()
         if self._pca_mode != PcaMode.default_opt:
