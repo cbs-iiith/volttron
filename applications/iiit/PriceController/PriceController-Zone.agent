@@ -41,15 +41,16 @@
         "lc_bid_timeout": 35,
         "max_iterations": 10,
         #deadband (Wh)
-        "epsilon": 100,
+        "deadband": 100,
+        "epsilon": [100, 100],
         # step size, gamma = (pp_max - pp_min) / (ed_max - ed_min)
         # assume pp_max = 1, pp_min = 0, ed_max = 5000, ed_min = 400
         # Google Drive IIIT\FDD_LAB_VOLT_LOGS\Analysis\Book2.xlsx
         # sheet "both rms random pp"
         # https://drive.google.com/open?id=1KdbZ0ZLO7jDwyRhpAlOMzddSiJOYtL-6
-        "gamma": 0.0002,
+        "gamma": [0.0002, 0.0002],
         # momentum factor
-        "alpha": 0.0035,
+        "alpha": [0.0035, 0.0035],
         # weight factors >= 0 that may be different for each smarthub
         "weight_factors": [0.5, 0.5]
     },
