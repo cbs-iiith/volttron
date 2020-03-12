@@ -1408,7 +1408,7 @@ class PriceController(Agent):
                              )
 
         # compute total energy demand (ted)
-        bid_ted = self._calc_total(self._us_local_bid_ed, {})
+        bid_ted = self._calc_total(self._us_local_bid_ed, self._us_ds_bid_ed)
 
         # need to reset the corresponding buckets to zero
         self._us_local_bid_ed.clear()
