@@ -817,7 +817,7 @@ class PriceController(Agent):
         if pp_old is None:
             pp_old = self._pp_old
         if ed_current is None:
-            ed_current = self._get_ed_current(
+            ed_current = self._get_active_ed_msgs(
                 self._local_bid_ed,
                 self._ds_bid_ed
             )
@@ -916,6 +916,7 @@ class PriceController(Agent):
             ed_current_msg = ed_current[idx]    # type: ISPACE_Msg_Energy
             _ed_current = ed_current_msg.get_value()
 
+            # bug: the device may have just joined and ed_prev not available
             ed_prev_msg = ed_prev[idx]  # type: ISPACE_Msg_Energy
             _ed_prev = ed_prev_msg.get_value()
 
@@ -1630,7 +1631,7 @@ class PriceController(Agent):
                 total += ds_bucket[device_id]
         return total
 
-    def _get_ed_current(self, local_bucket, ds_bucket):
+    def _get_active_ed_msgs(self, local_bucket, ds_bucket):
 
         ds_device_ids, local_device_ids = self._get_active_device_ids(
             ds_bucket, local_bucket)
