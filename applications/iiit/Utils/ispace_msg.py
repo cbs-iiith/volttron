@@ -829,7 +829,7 @@ class ISPACE_Msg_Energy(ISPACE_Msg_ActivePower):
 class ISPACE_Msg_Budget(ISPACE_Msg_Energy):
 
     def __init__(self,
-                 msg_type=MessageType.energy_demand,
+                 msg_type=MessageType.budget,
                  one_to_one=False, isoptimal=False,
                  value=None, value_data_type=None, units=None,
                  price_id=None,

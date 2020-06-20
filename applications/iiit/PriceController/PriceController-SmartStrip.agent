@@ -18,8 +18,8 @@
 
     # pca state -->  ONLINE, STANDALONE, STANDBY
     #   ONLINE --> actively receive pp_msg from us and submit bids
-    #   STANDALONE --> move to this conditon if pp_msg_opt_durations elapsed 
-    #       and no further commuication from us
+    #   STANDALONE --> move to this condition if pp_msg_opt_durations elapsed
+    #       and no further communication from us
     #       Also, publish opt_pp so as to bring the device to a predefined state
     #       (valid pca_mode --> DEFAULT_OPT, EXTERN_OPT)
     #   STANDBY --> no optimization, but report active power at regular interval
@@ -31,6 +31,8 @@
     # the following params are used if pca_mode = PASS_ON_PP
     "mode_pass_on_params": {
         "bid_timeout": 5
+        # weight factors >= 0 that may be different for each plug
+        "weight_factors": [0.25, 0.25, 0.25, 0.25]
     },
 
     # the following params are used if pca_mode = DEFAULT_OPT

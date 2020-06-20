@@ -20,7 +20,7 @@ from random import randint
 from ispace_msg import (ISPACE_Msg, MessageType, ISPACE_MSG_ATTRIB_LIST,
                         ISPACE_Msg_ActivePower, EnergyCategory,
                         ISPACE_Msg_Energy, ISPACE_Msg_OptPricePoint,
-                        ISPACE_Msg_BidPricePoint)
+                        ISPACE_Msg_BidPricePoint, ISPACE_Msg_Budget)
 from volttron.platform import jsonrpc
 from volttron.platform.agent import utils
 
@@ -324,6 +324,8 @@ def _parse_data(data, minimum_fields=None):
         new_msg = ISPACE_Msg_ActivePower()
     elif msg_type == MessageType.energy_demand:
         new_msg = ISPACE_Msg_Energy()
+    elif msg_type == MessageType.budget:
+        new_msg = ISPACE_Msg_Budget()
     else:
         new_msg = ISPACE_Msg(msg_type)
         _update_value(new_msg, 'msg_type', msg_type)

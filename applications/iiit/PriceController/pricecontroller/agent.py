@@ -128,14 +128,21 @@ class PriceController(Agent):
     discovery_address = None
     device_id = None
 
-    us_opt_pp_msg = None  # type: ISPACE_Msg
-    us_bid_pp_msg = None  # type: ISPACE_Msg
+    us_opt_pp_msg = None  # type: ISPACE_Msg_OptPricePoint
+    us_bid_pp_msg = None  # type: ISPACE_Msg_OptPricePoint
 
     lc_opt_pp_msg = None    # type: ISPACE_Msg_OptPricePoint
     lc_bid_pp_msg = None    # type: ISPACE_Msg_BidPricePoint
 
     lc_opt_pp_msg_list = None  # type: dict
     lc_bid_pp_msg_list = None  # type: dict
+
+    # bd -- budget
+    us_opt_bd_msg = None  # type: ISPACE_Msg_OptPricePoint
+    us_bid_bd_msg = None  # type: ISPACE_Msg_OptPricePoint
+
+    lc_opt_bd_msg = None    # type: ISPACE_Msg_OptPricePoint
+    lc_bid_bd_msg = None    # type: ISPACE_Msg_BidPricePoint
 
     external_vip_identity = None
 
@@ -572,8 +579,14 @@ class PriceController(Agent):
             _log.debug('[LOG] PCA state: STANDBY, do nothing')
             return
 
+        pp_msg_type = True
         # check message type before parsing
-        if not check_msg_type(message, MessageType.price_point):
+        if check_msg_type(message, MessageType.price_point):
+            pass
+        elif check_msg_type(message, MessageType.budget):
+            pp_msg_type = False
+            pass
+        else:
             return
 
         valid_senders_list = self._us_senders_list
@@ -590,7 +603,11 @@ class PriceController(Agent):
         )
         if not success or pp_msg is None:
             return
-        elif pp_msg in [self.us_opt_pp_msg, self.us_bid_pp_msg]:
+        elif pp_msg in [self.us_opt_pp_msg,
+                        self.us_bid_pp_msg,
+                        self.us_opt_bd_msg,
+                        self.us_bid_bd_msg
+                        ]:
             _log.warning(
                 'received a duplicate pp_msg'
                 + ', price_id: {}!!!'.format(pp_msg.get_price_id())
@@ -603,19 +620,35 @@ class PriceController(Agent):
         price_id = pp_msg.get_price_id()
         price = pp_msg.get_value()
         if pp_msg.get_isoptimal():
-            self.us_opt_pp_msg = copy(pp_msg)
-            _log.debug(
-                '***** New optimal price point from us:'
-                + ' {:0.2f}'.format(price)
-                + ' , price_id: {}'.format(price_id)
-            )
+            if pp_msg_type:
+                self.us_opt_pp_msg = copy(pp_msg)
+                _log.debug(
+                    '***** New optimal price point from us:'
+                    + ' {:0.2f}'.format(price)
+                    + ' , price_id: {}'.format(price_id)
+                )
+            else:
+                self.us_opt_bd_msg = copy(pp_msg)
+                _log.debug(
+                    '***** New optimal price point from us:'
+                    + ' {:0.2f}'.format(price)
+                    + ' , price_id: {}'.format(price_id)
+                )
         else:
-            self.us_bid_pp_msg = copy(pp_msg)
-            _log.debug(
-                '***** New bid price point from us:'
-                + ' {:0.2f}'.format(price)
-                + ' , price_id: {}'.format(price_id)
-            )
+            if pp_msg_type:
+                self.us_bid_pp_msg = copy(pp_msg)
+                _log.debug(
+                    '***** New bid price point from us:'
+                    + ' {:0.2f}'.format(price)
+                    + ' , price_id: {}'.format(price_id)
+                )
+            else:
+                self.us_bid_bd_msg = copy(pp_msg)
+                _log.debug(
+                    '***** New bid price point from us:'
+                    + ' {:0.2f}'.format(price)
+                    + ' , price_id: {}'.format(price_id)
+                )
         # log this msg
         # _log.info('[LOG] pp msg from us: {}'.format(pp_msg))
 
@@ -627,8 +660,11 @@ class PriceController(Agent):
             # re-initialize aggregator_us_bid_ted
             self._published_us_bid_ted = False
 
-        if self._pca_mode == PcaMode.pass_on_pp:
-            _log.info('[LOG] PCA mode: PASS_ON_PP')
+        if (
+                self._pca_mode == PcaMode.pass_on_pp
+                and pp_msg_type
+        ):
+            _log.info('[LOG] PCA mode: PASS_ON_PP, Received Price Point')
             pub_topic = self._topic_price_point
             pub_msg = pp_msg.get_json_message(self._agent_id, 'bus_topic')
             _log.info(
@@ -638,6 +674,16 @@ class PriceController(Agent):
             _log.debug('Publishing to local bus topic: {}'.format(pub_topic))
             publish_to_bus(self, pub_topic, pub_msg)
             _log.debug('done.')
+            return
+
+        elif (
+                self._pca_mode == PcaMode.pass_on_pp
+                and not pp_msg_type
+        ):
+            # received budget
+            # compute new budgets
+            _log.info('[LOG] PCA mode: PASS_ON_PP, Received Budget')
+
             return
 
         elif (
