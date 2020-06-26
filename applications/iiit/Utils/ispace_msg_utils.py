@@ -78,6 +78,8 @@ def valid_bustopic_msg(
         if pp_msg.get_msg_type() == MessageType.active_power
         else 'Energy Demand'
         if pp_msg.get_msg_type() == MessageType.energy_demand
+        else 'Budget'
+        if pp_msg.get_msg_type() == MessageType.budget
         else 'Unknown Msg Type'
     )
 

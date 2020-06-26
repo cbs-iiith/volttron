@@ -223,7 +223,8 @@ class PriceController(Agent):
 
         self._mode_pass_on_params = self.config.get(
             'mode_pass_on_params', {
-                "bid_timeout": 20
+                "bid_timeout": 20,
+                "weight_factors": [0.5, 0.5]
             }
         )
 
@@ -579,12 +580,14 @@ class PriceController(Agent):
             _log.debug('[LOG] PCA state: STANDBY, do nothing')
             return
 
-        pp_msg_type = True
+        pp_msg_type = False
+        bd_msg_type = False
         # check message type before parsing
         if check_msg_type(message, MessageType.price_point):
+            pp_msg_type = True
             pass
         elif check_msg_type(message, MessageType.budget):
-            pp_msg_type = False
+            bd_msg_type = True
             pass
         else:
             return
@@ -604,8 +607,8 @@ class PriceController(Agent):
         if not success or pp_msg is None:
             return
         elif pp_msg in [self.us_opt_pp_msg,
-                        self.us_bid_pp_msg,
                         self.us_opt_bd_msg,
+                        self.us_bid_pp_msg,
                         self.us_bid_bd_msg
                         ]:
             _log.warning(
@@ -617,10 +620,50 @@ class PriceController(Agent):
             _log.debug('New pp msg on the us-bus, topic: {}'.format(topic))
 
         # keep a track of us pp_msg
+        self._keep_track_msg(pp_msg, pp_msg_type, bd_msg_type)
+
+        # log this msg
+        # _log.info('[LOG] pp msg from us: {}'.format(pp_msg))
+
+        if pp_msg_type and pp_msg.get_isoptimal():
+            # reset running stats
+            # self._rs = running_stats_multi_dict(3, list, self._rc_factor)
+            pass
+        elif pp_msg_type and not pp_msg.get_isoptimal():
+            # re-initialize aggregator_us_bid_ted
+            self._published_us_bid_ted = False
+            pass
+        else:
+            pass
+
+        if self._pca_mode == PcaMode.pass_on_pp:
+            if pp_msg_type:
+                self._handle_pp_msg_pass_on(pp_msg)
+            elif bd_msg_type:
+                self._handle_bd_msg_pass_on(pp_msg)
+
+        elif self._pca_mode == PcaMode.default_opt:
+            if pp_msg.get_isoptimal():
+                self._handle_pp_msg_default_opt_optimal_pp(pp_msg)
+            else:
+                self._handle_pp_msg_default_opt_not_optimal_pp(pp_msg)
+
+        elif self._pca_mode == PcaMode.extern_opt:
+            _log.info('[LOG] PCA mode: DEFAULT_OPT')
+            _log.warning('not yet implemented!!!')
+
+        else:
+            _log.info('[LOG] PCA mode: %s'.format(self._pca_mode))
+            _log.warning('not yet implemented!!!')
+
+        return
+
+    def _keep_track_msg(self, pp_msg, pp_msg_type, bd_msg_type):
         price_id = pp_msg.get_price_id()
         price = pp_msg.get_value()
-        if pp_msg.get_isoptimal():
-            if pp_msg_type:
+        if pp_msg_type:
+            # message type price point
+            if pp_msg.get_isoptimal():
                 self.us_opt_pp_msg = copy(pp_msg)
                 _log.debug(
                     '***** New optimal price point from us:'
@@ -628,17 +671,18 @@ class PriceController(Agent):
                     + ' , price_id: {}'.format(price_id)
                 )
             else:
-                self.us_opt_bd_msg = copy(pp_msg)
-                _log.debug(
-                    '***** New optimal price point from us:'
-                    + ' {:0.2f}'.format(price)
-                    + ' , price_id: {}'.format(price_id)
-                )
-        else:
-            if pp_msg_type:
                 self.us_bid_pp_msg = copy(pp_msg)
                 _log.debug(
                     '***** New bid price point from us:'
+                    + ' {:0.2f}'.format(price)
+                    + ' , price_id: {}'.format(price_id)
+                )
+        elif bd_msg_type:
+            # message type budget
+            if pp_msg.get_isoptimal():
+                self.us_opt_bd_msg = copy(pp_msg)
+                _log.debug(
+                    '***** New optimal price point from us:'
                     + ' {:0.2f}'.format(price)
                     + ' , price_id: {}'.format(price_id)
                 )
@@ -649,76 +693,73 @@ class PriceController(Agent):
                     + ' {:0.2f}'.format(price)
                     + ' , price_id: {}'.format(price_id)
                 )
-        # log this msg
-        # _log.info('[LOG] pp msg from us: {}'.format(pp_msg))
-
-        if pp_msg.get_isoptimal():
-            # reset running stats
-            # self._rs = running_stats_multi_dict(3, list, self._rc_factor)
-            pass
         else:
-            # re-initialize aggregator_us_bid_ted
-            self._published_us_bid_ted = False
+            pass
 
-        if (
-                self._pca_mode == PcaMode.pass_on_pp
-                and pp_msg_type
-        ):
-            _log.info('[LOG] PCA mode: PASS_ON_PP, Received Price Point')
+        return
+
+    def _handle_pp_msg_default_opt_not_optimal_pp(self, pp_msg):
+        _log.info('[LOG] PCA mode: DEFAULT_OPT & pp_msg is bid price')
+        # init bidding process
+        self._init_bidding_process(pp_msg)
+        _log.debug('done.')
+        return
+
+    def _handle_pp_msg_default_opt_optimal_pp(self, pp_msg):
+        _log.info('[LOG] PCA mode: DEFAULT_OPT & pp_msg is opt price')
+        pub_topic = self._topic_price_point
+        pub_msg = pp_msg.get_json_message(self._agent_id, 'bus_topic')
+        _log.info(
+            '[LOG] Price Point for local/ds devices, Msg:'
+            + ' {}'.format(pub_msg)
+        )
+        _log.debug('Publishing to local bus topic: {}'.format(pub_topic))
+        publish_to_bus(self, pub_topic, pub_msg)
+        _log.debug('done.')
+        return
+
+    def _handle_bd_msg_pass_on(self, pp_msg):
+        # received budget
+        # compute new budgets
+        _log.info('[LOG] PCA mode: PASS_ON_PP, Received Budget')
+
+        wt_factors = self._mode_pass_on_params['weight_factors']
+        sum_wt_factors = sum(wt_factors)
+        t_budget = pp_msg.get_value()
+
+        ds_device_ids, local_device_ids = self._get_active_device_ids(
+            self._us_ds_opt_ap, self._us_local_opt_ap)
+
+        index = 0  # fix this, need to change to device ids or category ids
+        for device_id in (local_device_ids + ds_device_ids):
+            c = wt_factors[index] / sum_wt_factors
+            budget = c * t_budget
+            pp_msg.set_value(budget)
+
             pub_topic = self._topic_price_point
             pub_msg = pp_msg.get_json_message(self._agent_id, 'bus_topic')
             _log.info(
-                '[LOG] Price Point for local/ds devices, Msg:'
-                + ' {}'.format(pub_msg)
+                '[LOG] Budget for device - {}'.format(device_id)
+                + ', Msg: {}'.format(pub_msg)
             )
             _log.debug('Publishing to local bus topic: {}'.format(pub_topic))
             publish_to_bus(self, pub_topic, pub_msg)
-            _log.debug('done.')
-            return
+            index += 1
 
-        elif (
-                self._pca_mode == PcaMode.pass_on_pp
-                and not pp_msg_type
-        ):
-            # received budget
-            # compute new budgets
-            _log.info('[LOG] PCA mode: PASS_ON_PP, Received Budget')
+        _log.debug('done.')
+        return
 
-            return
-
-        elif (
-                self._pca_mode == PcaMode.default_opt
-                and pp_msg.get_isoptimal()
-        ):
-            _log.info('[LOG] PCA mode: DEFAULT_OPT & pp_msg is opt price')
-            pub_topic = self._topic_price_point
-            pub_msg = pp_msg.get_json_message(self._agent_id, 'bus_topic')
-            _log.info(
-                '[LOG] Price Point for local/ds devices, Msg:'
-                + ' {}'.format(pub_msg)
-            )
-            _log.debug('Publishing to local bus topic: {}'.format(pub_topic))
-            publish_to_bus(self, pub_topic, pub_msg)
-            _log.debug('done.')
-            return
-
-        elif (
-                self._pca_mode == PcaMode.default_opt
-                and not pp_msg.get_isoptimal()
-        ):
-            _log.info('[LOG] PCA mode: DEFAULT_OPT & pp_msg is bid price')
-
-            # init bidding process
-            self._init_bidding_process(pp_msg)
-
-            _log.debug('done.')
-            return
-
-        elif self._pca_mode == PcaMode.extern_opt:
-            _log.info('[LOG] PCA mode: DEFAULT_OPT')
-            _log.warning('not yet implemented!!!')
-            return
-
+    def _handle_pp_msg_pass_on(self, pp_msg):
+        _log.info('[LOG] PCA mode: PASS_ON_PP, Received Price Point')
+        pub_topic = self._topic_price_point
+        pub_msg = pp_msg.get_json_message(self._agent_id, 'bus_topic')
+        _log.info(
+            '[LOG] Price Point for local/ds devices, Msg:'
+            + ' {}'.format(pub_msg)
+        )
+        _log.debug('Publishing to local bus topic: {}'.format(pub_topic))
+        publish_to_bus(self, pub_topic, pub_msg)
+        _log.debug('done.')
         return
 
     def _init_bidding_process(self, new_pp_msg):

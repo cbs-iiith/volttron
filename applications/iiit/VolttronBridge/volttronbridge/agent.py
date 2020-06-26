@@ -477,8 +477,14 @@ class VolttronBridge(Agent):
         if self._bridge_host == 'LEVEL_TAILEND':
             return
 
+        pp_msg_type = False
+        bd_msg_type = False
         # handle only pp type message
         if check_msg_type(message, MessageType.price_point):
+            pp_msg_type = True
+            pass
+        elif check_msg_type(message, MessageType.budget):
+            bd_msg_type = True
             pass
         else:
             return
