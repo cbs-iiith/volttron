@@ -32,7 +32,7 @@
     "mode_pass_on_params": {
         "bid_timeout": 10
         # weight factors >= 0 that may be different for each energy category
-        "weight_factors": [0.3, 0.3, 0.3]
+        "weight_factors": [0.3, 0.5, 0.2]
     },
 
     # the following params are used if pca_mode = DEFAULT_OPT

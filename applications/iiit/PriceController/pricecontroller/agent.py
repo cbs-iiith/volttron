@@ -779,7 +779,7 @@ class PriceController(Agent):
         ds_device_ids, local_device_ids = self._get_active_device_ids(
             self._us_ds_opt_ap, self._us_local_opt_ap)
 
-        for device_id in (local_device_ids + ds_device_ids):
+        for index, device_id in enumerate(local_device_ids + ds_device_ids):
             pp_msg = self.lc_opt_pp_msg_list[device_id]
 
             if device_id in local_device_ids:
@@ -791,7 +791,8 @@ class PriceController(Agent):
                 device_id,
                 new_pp_msg,
                 pp_msg,
-                ap_msg
+                ap_msg,
+                index
             )
 
             pp_old[device_id] = old_pp_msg
@@ -815,7 +816,14 @@ class PriceController(Agent):
         self._run_process_loop = True
         return
 
-    def _default_opt_init_msg(self, device_id, new_pp_msg, pp_msg, ap_msg):
+    def _default_opt_init_msg(
+            self,
+            device_id,
+            new_pp_msg,
+            pp_msg,
+            ap_msg,
+            index=0
+    ):
         old_pp_msg = copy(pp_msg)  # type: ISPACE_Msg_OptPricePoint
         old_ap_msg = copy(ap_msg)  # type: ISPACE_Msg_ActivePower
         # noinspection PyTypeChecker
@@ -824,13 +832,26 @@ class PriceController(Agent):
         new_ed_msg = copy(old_ap_msg)  # type: ISPACE_Msg_Energy
         category = new_ed_msg.get_energy_category() or EnergyCategory.mixed
         old_price = old_pp_msg.get_value()
-        new_price = new_pp_msg.get_value()
+
         old_act_pwr = self._rs[device_id][category].exp_wt_mv_avg()
-        new_act_pwr = old_act_pwr * old_price / new_price
         old_dur_sec = old_pp_msg.get_duration()
         new_dur_sec = new_pp_msg.get_duration()
         old_energy_demand = calc_energy_wh(old_act_pwr, old_dur_sec)
-        new_energy_demand = calc_energy_wh(new_act_pwr, new_dur_sec)
+
+        new_energy_demand = 0
+        if check_msg_type(new_pp_msg, MessageType.price_point):
+            # received new price point
+            new_price = new_pp_msg.get_value()
+            new_act_pwr = old_act_pwr * old_price / new_price
+            new_energy_demand = calc_energy_wh(new_act_pwr, new_dur_sec)
+        elif check_msg_type(new_pp_msg, MessageType.budget):
+            # received new budget
+            wt_factors = self._mode_pass_on_params['weight_factors']
+            sum_wt_factors = sum(wt_factors)
+
+            c = wt_factors[index] / sum_wt_factors
+            new_energy_demand = c * new_pp_msg.get_value()
+
         old_ed_msg.set_msg_type(MessageType.energy_demand)
         old_ed_msg.set_value(old_energy_demand)
         new_ed_msg.set_msg_type(MessageType.energy_demand)
