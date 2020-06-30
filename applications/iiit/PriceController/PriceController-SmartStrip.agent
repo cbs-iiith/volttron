@@ -30,7 +30,7 @@
 
     # the following params are used if pca_mode = PASS_ON_PP
     "mode_pass_on_params": {
-        "bid_timeout": 5
+        "bid_timeout": 5,
         # weight factors >= 0 that may be different for each plug
         "weight_factors": [0.25, 0.25, 0.25, 0.25]
     },
