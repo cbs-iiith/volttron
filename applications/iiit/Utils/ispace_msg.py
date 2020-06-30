@@ -107,9 +107,9 @@ class ISPACE_Msg:
     # TODO: enhancement - need to add a msg uuid,
     # also convert price_id to use uuid instead of radint
     msg_type = None
-    one_to_one = None
-    isoptimal = None
-    value = None
+    one_to_one = None   # type: bool
+    isoptimal = None    # type: bool
+    value = None        # type: float
     value_data_type = None
     units = None
     price_id = None

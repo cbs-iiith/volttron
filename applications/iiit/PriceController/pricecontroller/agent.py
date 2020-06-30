@@ -28,7 +28,8 @@ from applications.iiit.Utils.ispace_msg import (ISPACE_Msg, MessageType,
                                                 ISPACE_Msg_BidPricePoint,
                                                 ISPACE_Msg_Energy,
                                                 ISPACE_Msg_OptPricePoint,
-                                                ISPACE_Msg_ActivePower)
+                                                ISPACE_Msg_ActivePower,
+                                                ISPACE_Msg_Budget)
 from applications.iiit.Utils.ispace_msg_utils import (get_default_pp_msg,
                                                       check_msg_type,
                                                       ted_helper,
@@ -732,12 +733,16 @@ class PriceController(Agent):
 
         index = 0  # fix this, need to change to device ids or category ids
         for device_id in (local_device_ids + ds_device_ids):
+            new_bd_msg = copy(pp_msg)   # type: ISPACE_Msg_Budget
+            new_bd_msg.set_one_to_one(True)
+            new_bd_msg.set_dst_device_id(device_id)
+
             c = wt_factors[index] / sum_wt_factors
             budget = c * t_budget
-            pp_msg.set_value(budget)
+            new_bd_msg.set_value(budget)
 
             pub_topic = self._topic_price_point
-            pub_msg = pp_msg.get_json_message(self._agent_id, 'bus_topic')
+            pub_msg = new_bd_msg.get_json_message(self._agent_id, 'bus_topic')
             _log.info(
                 '[LOG] Budget for device - {}'.format(device_id)
                 + ', Msg: {}'.format(pub_msg)

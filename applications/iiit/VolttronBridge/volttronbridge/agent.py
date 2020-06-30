@@ -747,6 +747,16 @@ class VolttronBridge(Agent):
     def _ds_rpc_1_to_1(self, pp_msg):
         _log.debug('_ds_rpc_1_to_1()...')
         discovery_address = pp_msg.get_dst_ip()
+        device_id = pp_msg.get_dst_device_id()
+
+        if not discovery_address:
+            idx = self._ds_device_ids.index(device_id)
+            discovery_address = self._ds_register[idx]
+        index = self._ds_register.index(discovery_address)
+
+        if not device_id:
+            device_id = self._ds_device_ids[index]
+
         url_root = 'http://' + discovery_address + '/bridge'
         args = pp_msg.get_json_params()
         success = do_rpc(self._agent_id, url_root, 'pricepoint',
@@ -754,17 +764,18 @@ class VolttronBridge(Agent):
                          'POST'
                          )
 
-        if not success:
-            index = self._ds_register.index(discovery_address)
-            device_id = self._ds_device_ids[index]
+        if success:
+            # success, reset retry count
+            # no need to retry on the next run
+            self._ds_pp_msg_retry_count[index] = -1
+            _log.debug('post pp to ds ({} - {})'.format(device_id,
+                                                        discovery_address)
+                       + ', result: success!!!')
+
+        else:
             retry_count = self._ds_pp_msg_retry_count[index] + 1
             self._ds_pp_msg_retry_count[index] = retry_count
-            _log.debug('failed to post pp to ds ({})'.format(device_id)
-                       + ', failed count:'
-                       + ' {:d}'.format(self._ds_pp_msg_retry_count[index])
-                       + ', will try again in'
-                       + ' {} sec!!!'.format(self._period_process_pp)
-                       + ', result: {}'.format(success))
+
             if retry_count >= MAX_RETRIES:
                 # failed more than max retries, unregister the ds device
                 _log.debug('post pp to ds: {}'.format(device_id)
@@ -774,6 +785,14 @@ class VolttronBridge(Agent):
                            )
                 self._unregister_ds_device(index)
                 _log.debug('{} unregistered!!!'.format(device_id))
+                success = True
+            else:
+                _log.debug('failed to post pp to ds ({})'.format(device_id)
+                           + ', failed count:'
+                           + ' {:d}'.format(self._ds_pp_msg_retry_count[index])
+                           + ', will try again in'
+                           + ' {} sec!!!'.format(self._period_process_pp)
+                           + ', result: {}'.format(success))
 
         self._all_ds_posts_success = success
         _log.debug('_ds_rpc_1_to_1()...done')
