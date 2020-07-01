@@ -137,8 +137,12 @@ class PricePoint(Agent):
                        )
             if rpcdata.method == 'ping':
                 result = True
-            elif rpcdata.method == 'new-pp':
+            elif (rpcdata.method == 'new-pp'
+                  and header['REQUEST_METHOD'].upper() == 'POST'):
                 result = self.update_price_point(rpcdata.id, header, message)
+            elif (rpcdata.method == 'budget'
+                  and header['REQUEST_METHOD'].upper() == 'POST'):
+                result = self.update_budget(rpcdata.id, header, message)
             else:
                 _log.error('method not found!!!')
                 return jsonrpc.json_error(rpcdata.id, jsonrpc.METHOD_NOT_FOUND,

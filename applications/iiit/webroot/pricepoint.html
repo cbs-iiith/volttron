@@ -1,7 +1,6 @@
 <!DOCTYPE html>
 <!--HTML5 doctype-->
 <html>
-
 <head>
 
     <title>PricePoint</title>
@@ -9,11 +8,14 @@
     <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=0, minimal-ui"
           name="viewport">
     <meta content="yes" name="apple-mobile-web-app-capable"/>
-    <META CONTENT="no-cache" HTTP-EQUIV="Pragma">
+    <meta content="no-cache"  http-equiv="pragma" />
     <meta content="IE=edge" http-equiv="X-UA-Compatible"/>
 
     <script language="javascript"
             src="http://code.jquery.com/jquery-2.1.4.min.js"></script>
+
+    <link rel="stylesheet" href="https://www.w3schools.com/w3css/4/w3.css">
+
     <style>
         .switch {
             position: relative;
@@ -91,119 +93,191 @@
             border-radius: 50%;
         }
 
-
-
-
-
-
-
     </style>
 </head>
 
 <body>
-<div class="view">
-    <header>
-        <h1>Price Point V4.1</h1>
-    </header>
+    <div class="view">
+        <header>
+            <h1>Price Point V4.1</h1>
+        </header>
 
-    <div class="pages">
+        <div class="pages">
+            <div class="w3-panel w3-border w3-border-blue" data-title="Publish New PricePoint"
+                 id="setPricePoint">
 
-        <div class="panel" data-title="Publish New PricePoint"
-             id="setPricePoint">
+                <h3>New Price Point</h3>
+                <div class="row">
+                    <div class="large-2 columns">
+                        <h5>Price:</h5>
+                    </div>
+                    <div class="large-2 columns">
+                        <input id="slider_pp" max="1.1" min="0.01"
+                               onchange="printValuePP1('slider_pp','new_pp_value')"
+                               step="0.01" type="range"
+                               value="0.5"/>
+                    </div>
+                    <div class="large-2 columns">
+                        <input id="new_pp_value"
+                               onchange="printValuePP2('new_pp_value', 'slider_pp')"
+                               size="4" type="text"/>
+                    </div>
+                </div>
 
-            <p>New Price Point</p>
-            <div class="row">
-                <div class="large-2 columns">
-                    &nbsp;
+                <div class="row">
+                    <div class="large-2 columns">
+                        <h5>Is this optimal?</h5>
+                    </div>
+                    <!-- Rounded switch -->
+                    <div class="large-2 columns">
+                        <label class="switch">
+                            <input checked id="new_pp_isoptimal"
+                                   onchange="clearPubPPStatus()" type="checkbox"
+                                   value="True">
+                            <div class="slider round"></div>
+                        </label>
+                    </div>
                 </div>
-                <div class="large-2 columns">
-                    <input id="slider_pp" max="1.1" min="0.01"
-                           onchange="printValue('slider_pp','new_pp_value')"
-                           step="0.01" type="range"
-                           value="0.5"/>
-                </div>
-                <div class="large-2 columns">
-                    <input id="new_pp_value"
-                           onchange="printValue2('new_pp_value', 'slider_pp')"
-                           size="4" type="text"/>
-                </div>
-                <div class="large-2 columns">
-                    &nbsp;
-                </div>
-            </div>
 
-            <p>Is this optimal Price Point?</p>
-            <div class="row">
-                <!-- Rounded switch -->
-                <div class="large-2 columns">
-                    <label class="switch">
-                        <input checked id="new_pp_isoptimal"
-                               onchange="clearPubStatus()" type="checkbox"
-                               value="True">
-                        <div class="slider round"></div>
-                    </label>
+                <div class="row">
+                    <div class="large-2 columns">
+                        <h5>Price Point TTL (Time-To-Live):</h5>
+                    </div>
+                    <div class="large-2 columns">
+                        <input id="slider_pp_ttl" max="3600" min="0"
+                               onchange="printValuePP1('slider_pp_ttl','new_pp_ttl')"
+                               step="5" type="range"
+                               value="3600"/>
+                    </div>
+                    <div class="large-2 columns">
+                        <input id="new_pp_ttl"
+                               onchange="printValuePP2('new_pp_ttl', 'slider_pp_ttl')"
+                               size="4" type="text"/>
+                    </div>
                 </div>
-            </div>
 
-            <p>Price Point TTL (Time-To-Live)</p>
-            <div class="row">
-                <div class="large-2 columns">
-                    &nbsp;
+                <div class="row">
+                    <div class="large-2 columns">
+                        <h5>Duration:</h5>
+                    </div>
+                    <div class="large-2 columns">
+                        <input id="slider_pp_dur" max="3600" min="0"
+                               onchange="printValuePP1('slider_pp_dur','new_pp_dur')"
+                               step="5" type="range"
+                               value="3600"/>
+                    </div>
+                    <div class="large-2 columns">
+                        <input id="new_pp_dur"
+                               onchange="printValuePP2('new_pp_dur', 'slider_pp_dur')"
+                               size="4" type="text"/>
+                    </div>
                 </div>
-                <div class="large-2 columns">
-                    <input id="slider_pp_ttl" max="3600" min="0"
-                           onchange="printValue('slider_pp_ttl','new_pp_ttl')"
-                           step="5" type="range"
-                           value="3600"/>
-                </div>
-                <div class="large-2 columns">
-                    <input id="new_pp_ttl"
-                           onchange="printValue2('new_pp_ttl', 'slider_pp_ttl')"
-                           size="4" type="text"/>
-                </div>
-                <div class="large-2 columns">
-                    &nbsp;
-                </div>
-            </div>
 
-            <p>Duration</p>
-            <div class="row">
-                <div class="large-2 columns">
-                    &nbsp;
+                <div class="row">
+                    <div class="large-2 columns">
+                        <h4>Publish:</h4>
+                    </div>
+                    <button id="publishPricePoint">Price</button>
+                <div class="row">
+                    <div class="large-2 columns">
+                        &nbsp;
+                    </div>
+                    <label>Result: </label><span id='publish_pp_status'></span>
                 </div>
-                <div class="large-2 columns">
-                    <input id="slider_pp_dur" max="3600" min="0"
-                           onchange="printValue('slider_pp_dur','new_pp_dur')"
-                           step="5" type="range"
-                           value="3600"/>
-                </div>
-                <div class="large-2 columns">
-                    <input id="new_pp_dur"
-                           onchange="printValue2('new_pp_dur', 'slider_pp_dur')"
-                           size="4" type="text"/>
-                </div>
-                <div class="large-2 columns">
-                    &nbsp;
-                </div>
-            </div>
-
-            <div class="row">
-                <div class="large-2 columns">
-                    &nbsp;
-                </div>
-                <button id="publishPricePoint">Publish New PricePoint</button>
-            </div>
-            <div class="row">
-                <div class="large-2 columns">
-                    &nbsp;
-                </div>
-                <label>Publish Result: </label><span id='publish_status'></span>
             </div>
         </div>
+            <div class="w3-panel w3-border w3-border-green" data-title="Publish New Budget"
+                 id="setBudget">
+
+                <h3>New Budget</h3>
+                <div class="row">
+                    <div class="large-2 columns">
+                        <h5>Budget:</h5>
+                    </div>
+                    <div class="large-2 columns">
+                        <input id="slider_bd" max="10000" min="1000"
+                               onchange="printValueBD1('slider_bd','new_bd_value')"
+                               step="100" type="range"
+                               value="5000"/>
+                    </div>
+                    <div class="large-2 columns">
+                        <input id="new_bd_value"
+                               onchange="printValueBD2('new_bd_value', 'slider_bd')"
+                               size="4" type="text"/>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="large-2 columns">
+                        <h5>Is this optimal?</h5>
+                    </div>
+                    <!-- Rounded switch -->
+                    <div class="large-2 columns">
+                        <label class="switch">
+                            <input checked id="new_bd_isoptimal"
+                                   onchange="clearPubBDStatus()" type="checkbox"
+                                   value="True">
+                            <div class="slider round"></div>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="large-2 columns">
+                        <h5>TTL (Time-To-Live):</h5>
+                    </div>
+                    <div class="large-2 columns">
+                        <input id="slider_bd_ttl" max="3600" min="0"
+                               onchange="printValueBD1('slider_bd_ttl','new_bd_ttl')"
+                               step="5" type="range"
+                               value="3600"/>
+                    </div>
+                    <div class="large-2 columns">
+                        <input id="new_bd_ttl"
+                               onchange="printValueBD2('new_bd_ttl', 'slider_bd_ttl')"
+                               size="4" type="text"/>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="large-2 columns">
+                        <h5>Duration:</h5>
+                    </div>
+                    <div class="large-2 columns">
+                        <input id="slider_bd_dur" max="3600" min="0"
+                               onchange="printValueBD1('slider_bd_dur','new_bd_dur')"
+                               step="5" type="range"
+                               value="3600"/>
+                    </div>
+                    <div class="large-2 columns">
+                        <input id="new_bd_dur"
+                               onchange="printValueBD2('new_bd_dur', 'slider_bd_dur')"
+                               size="4" type="text"/>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="large-2 columns">
+                        <h4>Publish:</h4>
+                    </div>
+                    <button id="publishBudget">Budget</button>
+                <div class="row">
+                    <div class="large-2 columns">
+                        &nbsp;
+                    </div>
+                    <label>Result: </label><span id='publish_bd_status'></span>
+                </div>
+            </div>
+        </div>
+        </div>
     </div>
-</div>
-<script>
-    $('#publishPricePoint').click(function () {
+
+    <script>
+        //global variable
+        var pub_pp = true;
+        var result_elem_id = 'publish_pp_status';
+
+        var post_method = "new-pp";
         var new_pp_type = 0;
         var one_to_one = false;
         var new_pp_value = parseFloat($('#new_pp_value').val());
@@ -220,93 +294,149 @@
         var new_pp_ts = null;
         var new_pp_tz = null;
 
-        var pdata = {
-            jsonrpc: '2.0',
-            method: "new-pp",
-            params: {
-                msg_type: new_pp_type,
-                one_to_one: one_to_one,
-                value: new_pp_value,
-                value_data_type: new_pp_value_data_type,
-                units: new_pp_units,
-                price_id: new_pp_price_id,
-                isoptimal: new_pp_isoptimal,
-                src_ip: new_pp_src_ip,
-                src_device_id: new_pp_src_device_id,
-                dst_ip: new_pp_dst_ip,
-                dst_device_id: new_pp_dst_device_id,
-                duration: new_pp_dur,
-                ttl: new_pp_ttl,
-                ts: new_pp_ts,
-                tz: new_pp_tz,
-            },
-            id: '72581-4'
-        };
-        $.ajax({
-            type: 'POST',
-            url: '/pricepoint',
-            data: JSON.stringify(pdata),
-            dataType: 'json',
-            success: function (data) {
-                if ((data.result != null) && (data.result.toString() == 'true')) {
-                    document.getElementById('publish_status').innerHTML = 'Success!!!';
-                } else {
-                    document.getElementById('publish_status').innerHTML
-                        = 'Failed!!! (' + data.error.message.toString() + ')';
-                }
-            },
-            failure: function (data) {
-                document.getElementById('publish_status').innerHTML = data.result.toString();
-            },
-            error: function (error) {
-                document.getElementById('publish_status').innerHTML
-                    = error.responseText + '(' + error.status + ')';
-            }
+        $('#publishPricePoint').click(function () {
+            result_elem_id = 'publish_pp_status';
+
+            post_method = "new-pp";
+            new_pp_type = 0;
+            one_to_one = false;
+            new_pp_value = parseFloat($('#new_pp_value').val());
+            new_pp_value_data_type = 'float';
+            new_pp_units = 'cents';
+            new_pp_price_id = getRndInteger(0, 99999999);
+            new_pp_isoptimal = document.getElementById("new_pp_isoptimal").checked;
+            new_pp_src_ip = null;
+            new_pp_src_device_id = null;
+            new_pp_dst_ip = null;
+            new_pp_dst_device_id = null;
+            new_pp_dur = parseFloat($('#new_pp_dur').val());
+            new_pp_ttl = parseFloat($('#new_pp_ttl').val());
+            new_pp_ts = null;
+            new_pp_tz = null;
+
+            publish_data();
         });
-    });
 
+        $('#publishBudget').click(function () {
+            result_elem_id = 'publish_bd_status';
 
+            post_method = "budget";
+            new_pp_type = 1;
+            one_to_one = false;
+            new_pp_value = parseFloat($('#new_bd_value').val());
+            new_pp_value_data_type = 'float';
+            new_pp_units = 'kWh';
+            new_pp_price_id = getRndInteger(0, 99999999);
+            new_pp_isoptimal = document.getElementById("new_bd_isoptimal").checked;
+            new_pp_src_ip = null;
+            new_pp_src_device_id = null;
+            new_pp_dst_ip = null;
+            new_pp_dst_device_id = null;
+            new_pp_dur = parseFloat($('#new_bd_dur').val());
+            new_pp_ttl = parseFloat($('#new_bd_ttl').val());
+            new_pp_ts = null;
+            new_pp_tz = null;
 
+            publish_data();
+        });
 
+        function publish_data() {
+            var pdata = {
+                jsonrpc: '2.0',
+                method: post_method,
+                params: {
+                    msg_type: new_pp_type,
+                    one_to_one: one_to_one,
+                    value: new_pp_value,
+                    value_data_type: new_pp_value_data_type,
+                    units: new_pp_units,
+                    price_id: new_pp_price_id,
+                    isoptimal: new_pp_isoptimal,
+                    src_ip: new_pp_src_ip,
+                    src_device_id: new_pp_src_device_id,
+                    dst_ip: new_pp_dst_ip,
+                    dst_device_id: new_pp_dst_device_id,
+                    duration: new_pp_dur,
+                    ttl: new_pp_ttl,
+                    ts: new_pp_ts,
+                    tz: new_pp_tz,
+                },
+                id: '72581-4'
+            };
+            $.ajax({
+                type: 'POST',
+                url: '/pricepoint',
+                data: JSON.stringify(pdata),
+                dataType: 'json',
+                success: function (data) {
+                    if ((data.result != null) && (data.result.toString() == 'true')) {
+                        document.getElementById(result_elem_id).innerHTML = 'Success!!!';
+                    } else {
+                        document.getElementById(result_elem_id).innerHTML
+                            = 'Failed!!! (' + data.error.message.toString() + ')';
+                    }
+                },
+                failure: function (data) {
+                    document.getElementById(result_elem_id).innerHTML = data.result.toString();
+                },
+                error: function (error) {
+                    document.getElementById(result_elem_id).innerHTML
+                        = error.responseText + '(' + error.status + ')';
+                }
+            });
+        }
 
+        function clearPubPPStatus() {
+            document.getElementById('publish_pp_status').innerHTML = '';
+        }
 
+        function clearPubBDStatus() {
+            document.getElementById('publish_bd_status').innerHTML = '';
+        }
 
-</script>
-<script>
-    function clearPubStatus() {
-        document.getElementById('publish_status').innerHTML = '';
-    }
+        function printValuePP1(sliderID, textbox) {
+            var x = document.getElementById(textbox);
+            var y = document.getElementById(sliderID);
+            x.value = y.value;
+            document.getElementById('publish_pp_status').innerHTML = '';
+        }
 
-    function printValue(sliderID, textbox) {
-        var x = document.getElementById(textbox);
-        var y = document.getElementById(sliderID);
-        x.value = y.value;
-        document.getElementById('publish_status').innerHTML = '';
-    }
+        function printValuePP2(textbox, sliderID) {
+            var x = document.getElementById(textbox);
+            var y = document.getElementById(sliderID);
+            y.value = x.value;
+            document.getElementById('publish_pp_status').innerHTML = '';
+        }
 
-    function printValue2(textbox, sliderID) {
-        var x = document.getElementById(textbox);
-        var y = document.getElementById(sliderID);
-        y.value = x.value;
-        document.getElementById('publish_status').innerHTML = '';
-    }
+        function printValueBD1(sliderID, textbox) {
+            var x = document.getElementById(textbox);
+            var y = document.getElementById(sliderID);
+            x.value = y.value;
+            document.getElementById('publish_bd_status').innerHTML = '';
+        }
 
-    function getRndInteger(min, max) {
-        return Math.floor(Math.random() * (max - min)) + min;
-    }
+        function printValueBD2(textbox, sliderID) {
+            var x = document.getElementById(textbox);
+            var y = document.getElementById(sliderID);
+            y.value = x.value;
+            document.getElementById('publish_bd_status').innerHTML = '';
+        }
 
-    window.onload = function () {
-        printValue('slider_pp', 'new_pp_value');
-        printValue('slider_pp_ttl', 'new_pp_ttl');
-        printValue('slider_pp_dur', 'new_pp_dur');
-    }
+        function getRndInteger(min, max) {
+            return Math.floor(Math.random() * (max - min)) + min;
+        }
 
+        window.onload = function () {
+            printValuePP1('slider_pp', 'new_pp_value');
+            printValuePP1('slider_pp_ttl', 'new_pp_ttl');
+            printValuePP1('slider_pp_dur', 'new_pp_dur');
 
+            printValueBD1('slider_bd', 'new_bd_value');
+            printValueBD1('slider_bd_ttl', 'new_bd_ttl');
+            printValueBD1('slider_bd_dur', 'new_bd_dur');
+        }
 
+    </script>
 
-
-
-
-</script>
 </body>
 </html>
