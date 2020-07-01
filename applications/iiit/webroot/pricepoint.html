@@ -99,7 +99,7 @@
 <body>
     <div class="view">
         <header>
-            <h1>Price Point V4.1</h1>
+            <h1>iSPACE - intelligent System for Personal Ambient Control and energy Efficiency. V5.1</h1>
         </header>
 
         <div class="pages">
@@ -176,8 +176,9 @@
                 <div class="row">
                     <div class="large-2 columns">
                         <h4>Publish:</h4>
+                        <button id="publishPricePoint">Price</button>
                     </div>
-                    <button id="publishPricePoint">Price</button>
+
                 <div class="row">
                     <div class="large-2 columns">
                         &nbsp;
@@ -269,103 +270,310 @@
                 </div>
             </div>
         </div>
+            <div class="w3-panel w3-border w3-border-red" data-title="Configure PCA"
+                 id="setPCA">
+
+                <h3>Configure PCA</h3>
+
+                <div class="row">
+                    <div class="large-2 columns">
+                        <label for="pca_option_state">State:</label>
+                        <select id="pca_option_state"
+                                onchange="clearPubParamStatus()">
+                          <option value=0>online</option>
+                          <option value=1>standalone</option>
+                          <option value=2>standby</option>
+                        </select>
+                        &nbsp;<button id="publishPcaState">Submit</button>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="large-2 columns">
+                        <label for="pca_option_mode">Mode:</label>
+                        <select id="pca_option_mode"
+                                onchange="clearPubParamStatus()">
+                          <option value=0>pass_on_pp</option>
+                          <option value=1>default_opt</option>
+                          <option value=2>extern_opt</option>
+                        </select>
+                        &nbsp;<button id="publishPcaMode">Submit</button>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="large-2 columns">
+                        <h5>Pass on Params:</h5>
+                    </div>
+                    <p style="text-indent: 20px">
+                        <label>Bids Timeout:</label>
+                        <input id="pass_on_params_bid_timeout"
+                               onchange="clearPubParamStatus()"
+                               type="number" value="20"> <br>
+                    </p>
+                    <p style="text-indent: 20px">
+                        <label>Weight Factors: </label>
+                        <input id="pass_on_params_wt_factor"
+                               onchange="clearPubParamStatus()"
+                               type="text" value="[0.5, 0.5]">
+                    </p>
+                    <p style="text-indent: 20px">
+                        <button id="publishPcaPassOnParams">Submit</button>
+                    </p>
+                </div>
+
+                <div class="row">
+                    <div class="large-2 columns">
+                        <h5>Default Opt Params:</h5>
+                    </div>
+                    <p style="text-indent: 20px">
+                        <label>Upstream bids timeout:</label>
+                        <input id="df_opt_params_us_bid_timeout"
+                               onchange="clearPubParamStatus()"
+                               type="number" value="900"> <br>
+                    </p>
+                    <p style="text-indent: 20px">
+                        <label>Local bids timeout:</label>
+                        <input id="df_opt_params_ls_bids_timeout"
+                               onchange="clearPubParamStatus()"
+                               type="number" value="180"> <br>
+                    </p>
+                    <p style="text-indent: 20px">
+                        <label>Max iterations:</label>
+                        <input id="df_opt_params_max_iterations"
+                               onchange="clearPubParamStatus()"
+                               type="number" value="10"> <br>
+                    </p>
+                    <p style="text-indent: 20px">
+                        <label>Epsilon:</label>
+                        <input id="df_opt_params_epsilon"
+                               onchange="clearPubParamStatus()"
+                               type="number" value="100"> <br>
+                    </p>
+                    <p style="text-indent: 20px">
+                        <label>Gamma:</label>
+                        <input id="df_opt_params_gamma"
+                               onchange="clearPubParamStatus()"
+                               type="number" value="0.0001"> <br>
+                    </p>
+                    <p style="text-indent: 20px">
+                        <label>Alpha:</label>
+                        <input id="df_opt_params_alpha"
+                               onchange="clearPubParamStatus()"
+                               type="number" value="0.35"> <br>
+                    </p>
+                    <p style="text-indent: 20px">
+                        <label>Weight Factors: </label>
+                        <input id="df_opt_params_weight_factors"
+                               onchange="clearPubParamStatus()"
+                               type="text" value="[0.5, 0.5]">
+                    </p>
+                    <p style="text-indent: 20px">
+                        <button id="publishPcaDefOptParams">Submit</button>
+                    </p>
+                </div>
+
+                <div class="row">
+                    <div class="large-2 columns">
+                        <h5>External Opt Params:</h5>
+                    </div>
+                    <p style="text-indent: 20px">
+                        <label>VIP Identity: </label>
+                        <input id="ex_opt_params_vip_identity"
+                               onchange="clearPubParamStatus()"
+                               type="text" value="iiit.external_optimizer">
+                    </p>
+                    <p style="text-indent: 20px">
+                        <label>Price Point Topic: </label>
+                        <input id="ex_opt_params_pp_topic"
+                               onchange="clearPubParamStatus()"
+                               type="text" value="pca/pricepoint">
+                    </p>
+                    <p style="text-indent: 20px">
+                        <label>Energy Demand Topic: </label>
+                        <input id="ex_opt_params_ed_topic"
+                               onchange="clearPubParamStatus()"
+                               type="text" value="pca/energydemand">
+                    </p>
+                    <p style="text-indent: 20px">
+                        <button id="publishPcaExtOptParams">Submit</button>
+                    </p>
+                </div>
+
+                <div class="row">
+                    <div class="large-2 columns">
+                        <h5>Other Params:</h5>
+                    </div>
+                    <p style="text-indent: 20px">
+                        <label>Read Data Period:</label>
+                        <input id="others_period_read_data"
+                               onchange="clearPubParamStatus()"
+                               type="number" value="30"> <br>
+                    </p>
+                    <p style="text-indent: 20px">
+                        <label>Process Loop Period:</label>
+                        <input id="others_period_process_loop"
+                               onchange="clearPubParamStatus()"
+                               type="number" value="1"> <br>
+                    </p>
+                    <p style="text-indent: 20px">
+                        <button id="publishPcaOtherParams">Submit</button>
+                    </p>
+                </div>
+
+                <div class="row">
+                    <div class="large-2 columns">
+                        &nbsp;
+                    </div>
+                    <label>Result: </label><span id='publish_params_status'></span>
+                </div>
+
+            </div>
         </div>
     </div>
 
     <script>
         //global variable
-        var pub_pp = true;
-        var result_elem_id = 'publish_pp_status';
-
-        var post_method = "new-pp";
-        var new_pp_type = 0;
-        var one_to_one = false;
-        var new_pp_value = parseFloat($('#new_pp_value').val());
-        var new_pp_value_data_type = 'float';
-        var new_pp_units = 'cents';
-        var new_pp_price_id = getRndInteger(0, 99999999);
-        var new_pp_isoptimal = document.getElementById("new_pp_isoptimal").checked;
-        var new_pp_src_ip = null;
-        var new_pp_src_device_id = null;
-        var new_pp_dst_ip = null;
-        var new_pp_dst_device_id = null;
-        var new_pp_dur = parseFloat($('#new_pp_dur').val());
-        var new_pp_ttl = parseFloat($('#new_pp_ttl').val());
-        var new_pp_ts = null;
-        var new_pp_tz = null;
+        var rpc_path = ''; // '/pca' or '/pricepoint'
+        var post_method = '';
+        var post_params = {};
+        var result_elem_id = ''; // 'publish_pp_status' or 'publish_params_status'
 
         $('#publishPricePoint').click(function () {
-            result_elem_id = 'publish_pp_status';
+            var new_pp_type = 0;
+            var one_to_one = false;
+            var new_pp_value = parseFloat($('#new_pp_value').val());
+            var new_pp_value_data_type = 'float';
+            var new_pp_units = 'cents';
+            var new_pp_price_id = getRndInteger(0, 99999999);
+            var new_pp_isoptimal = document.getElementById("new_pp_isoptimal").checked;
+            var new_pp_src_ip = null;
+            var new_pp_src_device_id = null;
+            var new_pp_dst_ip = null;
+            var new_pp_dst_device_id = null;
+            var new_pp_dur = parseFloat($('#new_pp_dur').val());
+            var new_pp_ttl = parseFloat($('#new_pp_ttl').val());
+            var new_pp_ts = null;
+            var new_pp_tz = null;
 
-            post_method = "new-pp";
-            new_pp_type = 0;
-            one_to_one = false;
-            new_pp_value = parseFloat($('#new_pp_value').val());
-            new_pp_value_data_type = 'float';
-            new_pp_units = 'cents';
-            new_pp_price_id = getRndInteger(0, 99999999);
-            new_pp_isoptimal = document.getElementById("new_pp_isoptimal").checked;
-            new_pp_src_ip = null;
-            new_pp_src_device_id = null;
-            new_pp_dst_ip = null;
-            new_pp_dst_device_id = null;
-            new_pp_dur = parseFloat($('#new_pp_dur').val());
-            new_pp_ttl = parseFloat($('#new_pp_ttl').val());
-            new_pp_ts = null;
-            new_pp_tz = null;
+            rpc_path = '/pricepoint'
+            post_method = 'new-pp';
+            post_params = {
+                msg_type: new_pp_type,
+                one_to_one: one_to_one,
+                value: new_pp_value,
+                value_data_type: new_pp_value_data_type,
+                units: new_pp_units,
+                price_id: new_pp_price_id,
+                isoptimal: new_pp_isoptimal,
+                src_ip: new_pp_src_ip,
+                src_device_id: new_pp_src_device_id,
+                dst_ip: new_pp_dst_ip,
+                dst_device_id: new_pp_dst_device_id,
+                duration: new_pp_dur,
+                ttl: new_pp_ttl,
+                ts: new_pp_ts,
+                tz: new_pp_tz,
+            }
+
+            result_elem_id = 'publish_pp_status';
 
             publish_data();
         });
 
         $('#publishBudget').click(function () {
+            var new_pp_type = 1;
+            var one_to_one = false;
+            var new_pp_value = parseFloat($('#new_bd_value').val());
+            var new_pp_value_data_type = 'float';
+            var new_pp_units = 'kWh';
+            var new_pp_price_id = getRndInteger(0, 99999999);
+            var new_pp_isoptimal = document.getElementById("new_bd_isoptimal").checked;
+            var new_pp_src_ip = null;
+            var new_pp_src_device_id = null;
+            var new_pp_dst_ip = null;
+            var new_pp_dst_device_id = null;
+            var new_pp_dur = parseFloat($('#new_bd_dur').val());
+            var new_pp_ttl = parseFloat($('#new_bd_ttl').val());
+            var new_pp_ts = null;
+            var new_pp_tz = null;
+
+            rpc_path = '/pricepoint'
+            post_method = 'budget';
+            post_params = {
+                msg_type: new_pp_type,
+                one_to_one: one_to_one,
+                value: new_pp_value,
+                value_data_type: new_pp_value_data_type,
+                units: new_pp_units,
+                price_id: new_pp_price_id,
+                isoptimal: new_pp_isoptimal,
+                src_ip: new_pp_src_ip,
+                src_device_id: new_pp_src_device_id,
+                dst_ip: new_pp_dst_ip,
+                dst_device_id: new_pp_dst_device_id,
+                duration: new_pp_dur,
+                ttl: new_pp_ttl,
+                ts: new_pp_ts,
+                tz: new_pp_tz,
+            }
             result_elem_id = 'publish_bd_status';
 
-            post_method = "budget";
-            new_pp_type = 1;
-            one_to_one = false;
-            new_pp_value = parseFloat($('#new_bd_value').val());
-            new_pp_value_data_type = 'float';
-            new_pp_units = 'kWh';
-            new_pp_price_id = getRndInteger(0, 99999999);
-            new_pp_isoptimal = document.getElementById("new_bd_isoptimal").checked;
-            new_pp_src_ip = null;
-            new_pp_src_device_id = null;
-            new_pp_dst_ip = null;
-            new_pp_dst_device_id = null;
-            new_pp_dur = parseFloat($('#new_bd_dur').val());
-            new_pp_ttl = parseFloat($('#new_bd_ttl').val());
-            new_pp_ts = null;
-            new_pp_tz = null;
+            publish_data();
+        });
+
+        $('#publishPcaState').click(function () {
+            var new_state = document.getElementById("pca_option_state").value
+
+            rpc_path = '/pca'
+            post_method = 'state';
+            post_params = {
+                state: new_state,
+            }
+            result_elem_id = 'publish_params_status';
 
             publish_data();
+        });
+
+        $('#publishPcaMode').click(function () {
+            var new_mode = document.getElementById("pca_option_mode").value
+
+            rpc_path = '/pca'
+            post_method = 'mode';
+            post_params = {
+                mode: new_mode,
+            }
+            result_elem_id = 'publish_params_status';
+
+            publish_data();
+        });
+
+        $('#publishPcaPassOnParams').click(function () {
+
+        });
+
+        $('#publishPcaDefOptParams').click(function () {
+
+        });
+
+        $('#publishPcaExtOptParams').click(function () {
+
+        });
+
+        $('#publishPcaOtherParams').click(function () {
+
         });
 
         function publish_data() {
             var pdata = {
                 jsonrpc: '2.0',
                 method: post_method,
-                params: {
-                    msg_type: new_pp_type,
-                    one_to_one: one_to_one,
-                    value: new_pp_value,
-                    value_data_type: new_pp_value_data_type,
-                    units: new_pp_units,
-                    price_id: new_pp_price_id,
-                    isoptimal: new_pp_isoptimal,
-                    src_ip: new_pp_src_ip,
-                    src_device_id: new_pp_src_device_id,
-                    dst_ip: new_pp_dst_ip,
-                    dst_device_id: new_pp_dst_device_id,
-                    duration: new_pp_dur,
-                    ttl: new_pp_ttl,
-                    ts: new_pp_ts,
-                    tz: new_pp_tz,
-                },
+                params: post_params,
                 id: '72581-4'
             };
             $.ajax({
                 type: 'POST',
-                url: '/pricepoint',
+                url: rpc_path,
                 data: JSON.stringify(pdata),
                 dataType: 'json',
                 success: function (data) {
@@ -392,6 +600,10 @@
 
         function clearPubBDStatus() {
             document.getElementById('publish_bd_status').innerHTML = '';
+        }
+
+        function clearPubParamStatus() {
+            document.getElementById('publish_params_status').innerHTML = '';
         }
 
         function printValuePP1(sliderID, textbox) {
