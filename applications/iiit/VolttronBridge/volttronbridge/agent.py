@@ -523,6 +523,13 @@ class VolttronBridge(Agent):
                        )
             self.local_bid_pp_id = pp_msg.get_price_id()
 
+        if (
+                pp_msg.get_one_to_one()
+                and pp_msg.get_dst_device_id in self._local_device_ids
+        ):
+            # do nothing
+            return
+
         self._us_pp_messages.append(copy(pp_msg))
 
         # reset counters & flags
