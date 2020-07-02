@@ -491,7 +491,7 @@ class PriceController(Agent):
 
     def _set_pca_state(self, rpcdata_id, message):
         str_state = jsonrpc.JsonRpcData.parse(message).params['state']
-        _log.debug('str_state type: {}'.format(type(str_state)))
+        _log.debug('str_state: {}'.format(str_state))
 
         success = self.set_pca_state(str_state)
         if not success:
@@ -499,11 +499,12 @@ class PriceController(Agent):
                                       jsonrpc.PARSE_ERROR,
                                       'Invalid option!!!'
                                       )
+        _log.debug('changed to new state!!!')
         return True
 
     def _set_pca_mode(self, rpcdata_id, message):
         str_mode = jsonrpc.JsonRpcData.parse(message).params['mode']
-        _log.debug('str_state type: {}'.format(type(str_mode)))
+        _log.debug('str_state: {}'.format(str_mode))
 
         success = self.set_pca_mode(str_mode)
         if not success:
@@ -512,6 +513,7 @@ class PriceController(Agent):
                 jsonrpc.PARSE_ERROR,
                 'Invalid option!!!'
             )
+        _log.debug('changed to new mode!!!')
         return True
 
     def _register_external_opt_agent(self, rpcdata_id, message):
