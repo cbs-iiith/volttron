@@ -473,7 +473,7 @@ class PriceController(Agent):
     def set_pca_state(self, str_state):
         if str_state.lower() not in PcaState.__dict__.keys():
             return False
-        self._pca_state = PcaState(str_state.lower())
+        self._pca_state = PcaState[str_state.lower()]
         return True
 
     # noinspection PyArgumentList
@@ -486,11 +486,13 @@ class PriceController(Agent):
     def set_pca_mode(self, str_mode):
         if str_mode not in PcaMode.__dict__.keys():
             return False
-        self._pca_mode = PcaMode(str_mode.lower())
+        self._pca_mode = PcaMode[str_mode.lower()]
         return True
 
     def _set_pca_state(self, rpcdata_id, message):
         str_state = jsonrpc.JsonRpcData.parse(message).params['state']
+        _log.debug('str_state type: {}'.format(type(str_state)))
+
         success = self.set_pca_state(str_state)
         if not success:
             return jsonrpc.json_error(rpcdata_id,
@@ -501,7 +503,9 @@ class PriceController(Agent):
 
     def _set_pca_mode(self, rpcdata_id, message):
         str_mode = jsonrpc.JsonRpcData.parse(message).params['mode']
-        success = self.set_pca_mode(self, str_mode)
+        _log.debug('str_state type: {}'.format(type(str_mode)))
+
+        success = self.set_pca_mode(str_mode)
         if not success:
             return jsonrpc.json_error(
                 rpcdata_id,
