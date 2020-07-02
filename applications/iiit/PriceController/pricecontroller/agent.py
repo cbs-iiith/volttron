@@ -470,10 +470,10 @@ class PriceController(Agent):
 
     # noinspection PyArgumentList
     @RPC.export
-    def set_pca_state(self, state):
-        if state not in PcaState:
+    def set_pca_state(self, str_state):
+        if str_state.lower() not in PcaState.__dict__.keys():
             return False
-        self._pca_state = PcaState(state)
+        self._pca_state = PcaState(str_state.lower())
         return True
 
     # noinspection PyArgumentList
@@ -483,15 +483,15 @@ class PriceController(Agent):
 
     # noinspection PyArgumentList
     @RPC.export
-    def set_pca_mode(self, mode):
-        if mode not in PcaMode:
+    def set_pca_mode(self, str_mode):
+        if str_mode not in PcaMode.__dict__.keys():
             return False
-        self._pca_mode = PcaMode(mode)
+        self._pca_mode = PcaMode(str_mode.lower())
         return True
 
     def _set_pca_state(self, rpcdata_id, message):
-        state = jsonrpc.JsonRpcData.parse(message).params['state']
-        success = self.set_pca_state(state)
+        str_state = jsonrpc.JsonRpcData.parse(message).params['state']
+        success = self.set_pca_state(str_state)
         if not success:
             return jsonrpc.json_error(rpcdata_id,
                                       jsonrpc.PARSE_ERROR,
@@ -500,8 +500,8 @@ class PriceController(Agent):
         return True
 
     def _set_pca_mode(self, rpcdata_id, message):
-        mode = jsonrpc.JsonRpcData.parse(message).params['mode']
-        success = self.set_pca_mode(self, mode)
+        str_mode = jsonrpc.JsonRpcData.parse(message).params['mode']
+        success = self.set_pca_mode(self, str_mode)
         if not success:
             return jsonrpc.json_error(
                 rpcdata_id,
@@ -720,6 +720,7 @@ class PriceController(Agent):
         return
 
     def _handle_bd_msg_pass_on(self, pp_msg):
+        _log.debug('_handle_bd_msg_pass_on()...')
         # received budget
         # compute new budgets
         _log.info('[LOG] PCA mode: PASS_ON_PP, Received Budget')
@@ -730,6 +731,9 @@ class PriceController(Agent):
 
         ds_device_ids, local_device_ids = self._get_active_device_ids(
             self._us_ds_opt_ap, self._us_local_opt_ap)
+
+        _log.debug('local_device_ids: {}'.format(local_device_ids))
+        _log.debug('ds_device_ids: {}'.format(ds_device_ids))
 
         for index, device_id in enumerate(local_device_ids + ds_device_ids):
             new_bd_msg = copy(pp_msg)  # type: ISPACE_Msg_Budget
