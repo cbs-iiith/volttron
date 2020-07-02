@@ -91,6 +91,49 @@
             border-radius: 50%;
         }
 
+        /* Style the tab */
+        .tab {
+          overflow: hidden;
+          border: 1px solid #ccc;
+          background-color: #f1f1f1;
+        }
+
+        /* Style the buttons that are used to open the tab content */
+        .tab button {
+          background-color: inherit;
+          float: left;
+          border: none;
+          outline: none;
+          cursor: pointer;
+          padding: 14px 16px;
+          transition: 0.3s;
+        }
+
+        /* Change background color of buttons on hover */
+        .tab button:hover {
+          background-color: #ddd;
+        }
+
+        /* Create an active/current tablinks class */
+        .tab button.active {
+          background-color: #ccc;
+        }
+
+        /* Style the tab content */
+        .main-tab-content {
+          display: none;
+          padding: 6px 12px;
+          border: 1px solid #ccc;
+          border-top: none;
+        }
+
+        /* Style the tab content */
+        .pca-tab-content {
+          display: none;
+          padding: 6px 12px;
+          border: 1px solid #ccc;
+          border-top: none;
+        }
 
     </style>
 </head>
@@ -103,24 +146,24 @@
     </header>
 
     <div class="pages">
-        <div class="w3-bar w3-grey">
-            <button class="w3-bar-item w3-button w3-mobile"
+        <div class="w3-bar w3-white tab">
+            <button class="w3-bar-item w3-button w3-mobile main-tab-links"
                     id="ButtonPubPrice"
-                    onclick="openMainTab('PubPrice')">
+                    onclick="openTab(event, 'PubPrice', 0)">
                 Publish Price
             </button>
-            <button class="w3-bar-item w3-button w3-mobile"
+            <button class="w3-bar-item w3-button w3-mobile main-tab-links"
                     id="ButtonPubBudget"
-                    onclick="openMainTab('PubBudget')">
+                    onclick="openTab(event, 'PubBudget', 0)">
                 Publish Budget
             </button>
-            <button class="w3-bar-item w3-button w3-mobile"
+            <button class="w3-bar-item w3-button w3-mobile main-tab-links"
                     id="ButtonConfigPCA"
-                    onclick="openMainTab('ConfigPCA')">
+                    onclick="openPcaTab(event, 'ConfigPCA', 0)">
                 Config PCA
             </button>
         </div>
-        <div class="w3-container w3-border w3-border-blue main-tab"
+        <div class="w3-container w3-border w3-border-blue main-tab-content"
              data-title="Publish New PricePoint"
              id="PubPrice">
 
@@ -194,7 +237,10 @@
             <div class="row">
                 <div class="large-2 columns">
                     <h4>Publish:</h4>
-                    <button id="publishPricePoint">Price</button>
+                    <button id="publishPricePoint"
+                            class="w3-button w3-grey">
+                        Price
+                    </button>
                 </div>
 
                 <div class="row">
@@ -205,7 +251,7 @@
                 </div>
             </div>
         </div>
-        <div class="w3-container w3-border w3-border-green main-tab"
+        <div class="w3-container w3-border w3-border-green main-tab-content"
              data-title="Publish New Budget"
              id="PubBudget">
 
@@ -280,7 +326,10 @@
                 <div class="large-2 columns">
                     <h4>Publish:</h4>
                 </div>
-                <button id="publishBudget">Budget</button>
+                <button id="publishBudget"
+                        class="w3-button w3-grey">
+                    Budget
+                </button>
                 <div class="row">
                     <div class="large-2 columns">
                         &nbsp;
@@ -290,7 +339,7 @@
                 </div>
             </div>
         </div>
-        <div class="w3-container w3-border w3-border-red main-tab"
+        <div class="w3-container w3-border w3-border-red main-tab-content"
              data-title="Configure PCA"
              id="ConfigPCA">
 
@@ -305,7 +354,11 @@
                         <option value=1>standalone</option>
                         <option value=2>standby</option>
                     </select>
-                    &nbsp;<button id="publishPcaState">Submit</button>
+                    &nbsp;
+                    <button id="publishPcaState"
+                            class="w3-button w3-grey">
+                        Submit
+                    </button>
                 </div>
             </div>
 
@@ -318,11 +371,40 @@
                         <option value=1>default_opt</option>
                         <option value=2>extern_opt</option>
                     </select>
-                    &nbsp;<button id="publishPcaMode">Submit</button>
+                    &nbsp;
+                    <button id="publishPcaMode"
+                            class="w3-button w3-grey">
+                        Submit
+                    </button>
                 </div>
             </div>
 
-            <div class="row">
+            <div class="w3-bar w3-white tab">
+                <button class="w3-bar-item w3-button w3-mobile pca-tab-links"
+                        id="ButtonParamsPassOn"
+                        onclick="openTab(event, 'ParamsPassOn', 1)">
+                    Pass on
+                </button>
+                <button class="w3-bar-item w3-button w3-mobile pca-tab-links"
+                        id="ButtonParamsDefaultOpt"
+                        onclick="openTab(event, 'ParamsDefaultOpt', 1)">
+                    Default Optimizer
+                </button>
+                <button class="w3-bar-item w3-button w3-mobile pca-tab-links"
+                        id="ButtonParamsExtOpt"
+                        onclick="openTab(event, 'ParamsExtOpt', 1)">
+                    External Optimizer
+                </button>
+                <button class="w3-bar-item w3-button w3-mobile pca-tab-links"
+                        id="ButtonParamsOther"
+                        onclick="openTab(event, 'ParamsOther', 1)">
+                    Others
+                </button>
+            </div>
+
+            <div class="w3-container w3-border w3-border-blue pca-tab-content"
+                 data-title="Pass on Params"
+                 id="ParamsPassOn">
                 <div class="large-2 columns">
                     <h5>Pass on Params:</h5>
                 </div>
@@ -339,11 +421,16 @@
                            type="text" value="[0.5, 0.5]">
                 </p>
                 <p style="text-indent: 20px">
-                    <button id="publishPcaPassOnParams">Submit</button>
+                    <button id="publishPcaPassOnParams"
+                            class="w3-button w3-grey">
+                        Submit
+                    </button>
                 </p>
             </div>
 
-            <div class="row">
+            <div class="w3-container w3-border w3-border-green pca-tab-content"
+                 data-title="Default Opt Params"
+                 id="ParamsDefaultOpt">
                 <div class="large-2 columns">
                     <h5>Default Opt Params:</h5>
                 </div>
@@ -390,11 +477,16 @@
                            type="text" value="[0.5, 0.5]">
                 </p>
                 <p style="text-indent: 20px">
-                    <button id="publishPcaDefOptParams">Submit</button>
+                    <button id="publishPcaDefOptParams"
+                            class="w3-button w3-grey">
+                        Submit
+                    </button>
                 </p>
             </div>
 
-            <div class="row">
+            <div class="w3-container w3-border w3-border-red pca-tab-content"
+                 data-title="External Opt Params"
+                 id="ParamsExtOpt">
                 <div class="large-2 columns">
                     <h5>External Opt Params:</h5>
                 </div>
@@ -417,11 +509,16 @@
                            type="text" value="pca/energydemand">
                 </p>
                 <p style="text-indent: 20px">
-                    <button id="publishPcaExtOptParams">Submit</button>
+                    <button id="publishPcaExtOptParams"
+                            class="w3-button w3-grey">
+                        Submit
+                    </button>
                 </p>
             </div>
 
-            <div class="row">
+            <div class="w3-container w3-border w3-border-brown pca-tab-content"
+                 data-title="Other Params"
+                 id="ParamsOther">
                 <div class="large-2 columns">
                     <h5>Other Params:</h5>
                 </div>
@@ -459,6 +556,9 @@
         var post_method = '';
         var post_params = {};
         var result_elem_id = ''; // 'publish_pp_status' or 'publish_params_status'
+
+        var main_last_opened_tab = 'PubPrice';
+        var pca_last_opened_tab = 'ParamsPassOn';
 
         $('#publishPricePoint').click(function () {
             var new_pp_type = 0;
@@ -659,14 +759,57 @@
             return Math.floor(Math.random() * (max - min)) + min;
         }
 
-        function openMainTab(mainTabName) {
-            var i;
-            var x = document.getElementsByClassName("main-tab");
-            for (i = 0; i < x.length; i++) {
-                x[i].style.display = "none";
+        function openTab(evt, tabName, tabType) {
+            // Declare all variables
+            var i, tabcontent, tablinks;
+
+            var tabClassName = '';
+            var tablinksName = '';
+
+            var lastTab;
+
+            switch (tabType) {
+                case 0:
+                    tabClassName = 'main-tab-content';
+                    tablinksName = 'main-tab-links';
+                    lastTab = document.getElementById("Button"+main_last_opened_tab)
+                    lastTab.className = lastTab.className.replace(" active", "");
+                    // hard coding -- bug
+                    lastTab = document.getElementById("ButtonConfigPCA")
+                    lastTab.className = lastTab.className.replace(" active", "");
+
+                    main_last_opened_tab = tabName;
+                    break;
+                case 1:
+                    tabClassName = 'pca-tab-content';
+                    tablinksName = 'pca-tab-links';
+                    lastTab = document.getElementById("Button"+pca_last_opened_tab)
+                    lastTab.className = lastTab.className.replace(" active", "");
+                    pca_last_opened_tab = tabName;
+                    break;
             }
-            document.getElementById(mainTabName).style.display = "block";
-            document.getElementById("Button"+mainTabName).autousfocus = true;
+
+            // Get all elements with class=tabClassName and hide them
+            var tabcontent = document.getElementsByClassName(tabClassName);
+            for (i = 0; i < tabcontent.length; i++) {
+                tabcontent[i].style.display = "none";
+            }
+
+            // Get all elements with class=tablinksName and remove the class "active"
+            tablinks = document.getElementsByClassName(tablinksName);
+            for (i = 0; i < tablinks.length; i++) {
+                tablinks[i].className = tablinks[i].className.replace(" active", "");
+            }
+
+            // Show the current tab, and add an "active" class to the button that opened the tab
+            document.getElementById(tabName).style.display = "block";
+            evt.currentTarget.className += " active";
+            document.getElementById("Button"+tabName).className += " active";
+        }
+
+        function openPcaTab(evt, tabName, tabType) {
+            openTab(evt, tabName, tabType);
+            openTab(evt, pca_last_opened_tab, 1);
         }
 
         window.onload = function () {
@@ -678,7 +821,7 @@
             printValueBD1('slider_bd_ttl', 'new_bd_ttl');
             printValueBD1('slider_bd_dur', 'new_bd_dur');
 
-            openMainTab('PubPrice');
+            openTab(event, 'PubPrice', 0);
         }
 
 
