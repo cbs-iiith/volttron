@@ -38,13 +38,19 @@
     #                   x --> set point,
     #                   roundup --> roundup, and 
     #                   idx --> default edf coefficients
+    # file path: "Google Drive IIIT\FDD_LAB_VOLT_LOGS\Analysis\Book2.xlsx"
+    # file name: "Book2.xlsx"
+    # sheet name: 'Zone-SP-ED'
     "edf_zn_ac": {
         "roundup":0.5,
         "idx":0,
         "coefficients": [
-            {"a": 7.5, "b": -1.5, "c": 24}
+            {"a": 102.94, "b": -6128, "c": 91699}
         ]
     },
+    # file path: "Google Drive\PhD\FDD\20191227 - price point - setpoint - rm - rc"
+    # file name: "rm lighting energy.xlsx"
+    # sheet name: 'RM_LightingEnergy'
     "edf_zn_light": {
         "roundup":5,
         "idx":0,
