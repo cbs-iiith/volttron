@@ -66,4 +66,23 @@
     "price_point_latest": 0.2,
     "plug_pricepoint_th": [0.35, 0.5, 0.75, 0.95],
     "smarthub_plug": 4
+
+    # gradient descent params to compute new pp from a budget
+    "gd_params": {
+        "max_iterations": 1000,
+        "epsilon": 5,
+        "gamma": {
+            "plug1": 0.0333,
+            "plug2": 0.0067,
+            "plug3": 0.0067,
+            "plug4": 1.0000
+        },
+        "weight_factors": {
+            "plug1": 0.25,
+            "plug2": 0.25,
+            "plug3": 0.25,
+            "plug4": 0.25
+        }
+    }
+
 }

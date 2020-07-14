@@ -63,9 +63,6 @@
     "gd_params": {
         "max_iterations": 1000,
         "epsilon": 100,
-        # step size, gamma = (pp_max - pp_min) / (ed_max - ed_min)
-        # AC assume pp_max = 1, pp_min = 0, ed_max = 5000, ed_min = 400
-        # Light assume pp_max = 1, pp_min = 0, ed_max = 145, ed_min = 65
         "gamma": {
             "ac": 0.0002,
             "light": 0.0125
@@ -75,4 +72,5 @@
             "light": 0.5
         }
     }
+
 }

@@ -27,4 +27,19 @@
             {"a": 35, "b": 29.75, "c": 40}
         ]
     }
+
+    # gradient descent params to compute new pp from a budget
+    "gd_params": {
+        "max_iterations": 1000,
+        "epsilon": 5,
+        "gamma": {
+            "fan": 0.1786,
+            "light": 0.1429
+        },
+        "weight_factors": {
+            "fan": 0.5,
+            "light": 0.5
+        }
+    }
+
 }

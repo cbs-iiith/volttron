@@ -225,7 +225,7 @@ class PriceController(Agent):
         self._mode_pass_on_params = self.config.get(
             'mode_pass_on_params', {
                 "bid_timeout": 20,
-                "weight_factors": [0.5, 0.5]
+                "weight_factors": [0.0, 0.5, 0.5]
             }
         )
 
@@ -234,10 +234,10 @@ class PriceController(Agent):
                 "us_bid_timeout": 900,
                 "lc_bid_timeout": 180,
                 "max_iterations": 10,
-                "epsilon": 100,
-                "gamma": 0.0001,
-                "alpha": 0.0035,
-                "weight_factors": [0.5, 0.5]
+                "epsilon": [100, 100, 100],
+                "gamma": [0.0, 0.0001, 0.0001],
+                "alpha": [0.0, 0.0035, 0.0035],
+                "weight_factors": [0.0, 0.5, 0.5]
             }
         )
 

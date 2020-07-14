@@ -31,29 +31,18 @@
     # the following params are used if pca_mode = PASS_ON_PP
     "mode_pass_on_params": {
         "bid_timeout": 5,
-        # weight factors >= 0 that may be different for each plug
         "weight_factors": [0.25, 0.25, 0.25, 0.25]
     },
 
     # the following params are used if pca_mode = DEFAULT_OPT
     "mode_default_opt_params": {
-        # time to wait for devices to submit their bids.
-        # 0 --> wait-for-ever, default 900s (15min)
         "us_bid_timeout": 5,
         "lc_bid_timeout": 2,
         "max_iterations": 10,
-        #deadband (wh)
         "deadband": 5,
         "epsilon": [5, 5, 5, 5],
-        # step size, gamma = (pp_max - pp_min) / (ed_max - ed_min)
-        # assume pp_max = 1, pp_min = 0, ed_max = 300, ed_min = 10
-        # Google Drive IIIT\FDD_LAB_VOLT_LOGS\Analysis\Book4.xlsx
-        # sheet "both rms random pp"
-        # https://drive.google.com/open?id=1KdbZ0ZLO7jDwyRhpAlOMzddSiJOYtL-6
-        "gamma": [0.0035, 0.0035, 0.0035, 0.0035],
-        # momentum factor
+        "gamma": [0.0333, 0.0067, 0.0067, 1.0000],
         "alpha": [0.0035, 0.0035, 0.0035, 0.0035],
-        # weight factors >= 0 that may be different for each plug
         "weight_factors": [0.25, 0.25, 0.25, 0.25]
     },
 
