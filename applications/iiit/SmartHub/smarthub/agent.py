@@ -1409,6 +1409,7 @@ class SmartHub(Agent):
         _log.debug('...done')
         return new_pp
 
+
 def main(argv=sys.argv):
     """Main method called by the eggsecutable."""
     try:
