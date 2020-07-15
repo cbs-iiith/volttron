@@ -21,7 +21,7 @@ import gevent
 import gevent.event
 
 from applications.iiit.Utils.ispace_msg import (MessageType, EnergyCategory,
-                                                ISPACE_Msg)
+                                                ISPACE_Msg, ISPACE_Msg_Budget)
 from applications.iiit.Utils.ispace_msg_utils import (check_msg_type,
                                                       tap_helper,
                                                       ted_helper,
@@ -76,7 +76,7 @@ class RadiantCubicle(Agent):
     # initialized  during __init__ from config
     _period_read_data = None
     _period_process_pp = None
-    _price_point_latest = None
+    _price_point_latest = None  # type: float
 
     _vb_vip_identity = None
     _root_topic = None
@@ -94,10 +94,16 @@ class RadiantCubicle(Agent):
 
     _pf_rc = None
 
+    _edf_rc = None
+
     _valid_senders_list_pp = None  # type: list
     _opt_pp_msg_current = None  # type: ISPACE_Msg
     _opt_pp_msg_latest = None  # type: ISPACE_Msg
     _bid_pp_msg_latest = None  # type: ISPACE_Msg
+
+    _bud_msg_latest = None  # type: ISPACE_Msg_Budget
+
+    _gd_params = None
 
     def __init__(self, config_path, **kwargs):
         super(RadiantCubicle, self).__init__(**kwargs)
@@ -114,6 +120,21 @@ class RadiantCubicle(Agent):
     @Core.receiver('onsetup')
     def setup(self, sender, **kwargs):
         _log.info(self.config['message'])
+        self._gd_params = self.config.get(
+            'gd_params', {
+                "max_iterations": 1000,
+                "epsilon": 100,
+                "gamma": {
+                    "fan": 0.1786,
+                    "light": 0.1429
+                },
+                "weight_factors": {
+                    "fan": 0.50,
+                    "light": 0.50
+                }
+            }
+        )
+
         return
 
     @Core.receiver('onstart')
@@ -255,6 +276,8 @@ class RadiantCubicle(Agent):
     def _config_get_price_functions(self):
         _log.debug('_config_get_price_functions()')
         self._pf_rc = self.config.get('pf_rc')
+        self._edf_rc = self.config.get('edf_rc')
+
         return
 
     def _run_rc_test(self):
@@ -477,9 +500,17 @@ class RadiantCubicle(Agent):
         if sender not in self._valid_senders_list_pp:
             return
 
+        pp_msg_type = False
+        bd_msg_type = False
         # check message type before parsing
         if not check_msg_type(message, MessageType.price_point):
-            return False
+            pp_msg_type = True
+            pass
+        elif check_msg_type(message, MessageType.budget):
+            bd_msg_type = True
+            pass
+        else:
+            return
 
         valid_senders_list = self._valid_senders_list_pp
         minimum_fields = ['msg_type', 'value', 'value_data_type', 'units',
@@ -501,22 +532,30 @@ class RadiantCubicle(Agent):
         else:
             _log.debug('New pp msg on the local-bus, topic: {}'.format(topic))
 
-        if pp_msg.get_isoptimal():
+        if pp_msg_type and pp_msg.get_isoptimal():
             _log.debug('***** New optimal price point from pca: {:0.2f}'.format(
                 pp_msg.get_value())
                        + ' , price_id: {}'.format(pp_msg.get_price_id()))
             self._process_opt_pp(pp_msg)
-        else:
+        elif pp_msg_type and not pp_msg.get_isoptimal():
             _log.debug('***** New bid price point from pca: {:0.2f}'.format(
                 pp_msg.get_value())
                        + ' , price_id: {}'.format(pp_msg.get_price_id()))
             self._process_bid_pp(pp_msg)
+        elif bd_msg_type:
+            _log.debug('***** New budget from pca: {:0.4f}'.format(
+                pp_msg.get_value())
+                       + ' , price_id: {}'.format(pp_msg.get_price_id()))
+            self._process_opt_pp(pp_msg)
 
         return
 
     def _process_opt_pp(self, pp_msg):
-        self._opt_pp_msg_latest = copy(pp_msg)
-        self._price_point_latest = pp_msg.get_value()
+        if pp_msg.get_msg_type() == MessageType.price_point:
+            self._opt_pp_msg_latest = copy(pp_msg)
+            self._price_point_latest = pp_msg.get_value()
+        elif pp_msg.get_msg_type() == MessageType.budget:
+            self._bud_msg_latest = copy(pp_msg)
 
         # any process that failed to apply pp sets this flag False
         self._process_opt_pp_success = False
@@ -532,6 +571,15 @@ class RadiantCubicle(Agent):
 
         # any process that failed to apply pp sets this flag False
         self._process_opt_pp_success = True
+
+        if self._opt_pp_msg_latest.get_msg_type() == MessageType.budget:
+            # compute new_pp for the budget and then apply pricing policy
+            new_pp = self._compute_new_opt_pp()
+            self._opt_pp_msg_latest = copy(self._bud_msg_latest)
+            self._opt_pp_msg_latest.set_msg_type(MessageType.price_point)
+            self._opt_pp_msg_latest.set_value(new_pp)
+            self._opt_pp_msg_latest.set_isoptimal(True)
+            self._price_point_latest = new_pp
 
         self._apply_pricing_policy()
         if not self._process_opt_pp_success:
@@ -570,6 +618,19 @@ class RadiantCubicle(Agent):
 
         tsp = a * pp ** 2 + b * pp + c
         return mround(tsp, roundup)
+
+    # compute ed ac from ed functions given tsp
+    def _compute_ed_rc(self, bid_tsp):
+        idx = self._edf_rc['idx']
+        roundup = self._edf_rc['roundup']
+        coefficients = self._edf_rc['coefficients']
+
+        a = coefficients[idx]['a']
+        b = coefficients[idx]['b']
+        c = coefficients[idx]['c']
+
+        ed_ac = a * bid_tsp ** 2 + b * bid_tsp + c
+        return mround(ed_ac, roundup)
 
     # periodic function to publish active power
     def publish_opt_tap(self):
@@ -652,18 +713,75 @@ class RadiantCubicle(Agent):
     # the bid energy is for self._bid_pp_duration (default 1hr)
     # and this msg is valid for self._period_read_data (ttl - default 30s)
     def _calc_total_energy_demand(self):
-        # pp_msg = self._bid_pp_msg_latest
-        # bid_pp = pp_msg.get_value()
-        # duration = pp_msg.get_duration()
+        # _log.debug('_calc_total_energy_demand()')
+        pp_msg = self._bid_pp_msg_latest
+        bid_pp = pp_msg.get_value()
+        duration = pp_msg.get_duration()
 
-        # TODO: ted should be computed based on some  predictive modeling
-        # get actual tsp from energy functions
-        # bid_tsp = self._compute_rc_new_tsp(bid_pp)
-        # bid_ed = 
+        bid_tsp = self._compute_rc_new_tsp(bid_pp)
+        ed_rc = self._compute_ed_rc(bid_tsp) * duration / 3600
 
-        ted = random() * 300
-
+        ted = ed_rc
         return ted
+
+    # compute new opt pp for a given budget using gradient descent
+    def _compute_new_opt_pp(self):
+        _log.debug('_compute_new_opt_pp()...')
+
+        # configuration
+        gamma = self._gd_params['gamma']
+        epsilon = self._gd_params['epsilon']
+        max_iters = self._gd_params['max_iterations']
+        wt_factors = self._gd_params['weight_factors']
+
+        budget = self._bud_msg_latest.get_value()
+        duration = self._bud_msg_latest.get_duration()
+
+        _log.debug(
+            '***** New budget: {:0.4f}'.format(budget)
+            + ' , price_id: {}'.format(self._bud_msg_latest.get_price_id())
+        )
+
+        # Starting point
+        i = 0
+        new_pp = 0
+        new_ed = budget
+
+        old_pp = self._price_point_latest
+
+        bid_tsp = self._compute_rc_new_tsp(old_pp)
+        old_ed = self._compute_ed_rc(bid_tsp) * duration / 3600
+
+        # Gradient descent iteration
+        for i in range(max_iters):
+            new_pp = (
+                    old_pp
+                    + gamma['rc'] * (new_ed - old_ed)
+            )
+
+            bid_tsp = self._compute_rc_new_tsp(new_pp)
+            new_ed = self._compute_ed_rc(bid_tsp) * duration / 3600
+
+            _log.debug(
+                'iter: {}'.format(i)
+                + ', bid_pp: {0.2f}'.format(new_pp)
+                + ', new_ed: {0.4f}'.format(new_ed)
+            )
+
+            if isclose(budget, new_ed, epsilon):
+                _log.debug('opt pp achieved !')
+                break
+
+            old_pp = new_pp
+
+        _log.debug(
+            'iter count: {}'.format(i)
+            + ', new_pp: {0.2f}'.format(new_pp)
+            + ', expected_ed: {0.4f}'.format(new_ed)
+        )
+
+        _log.debug('...done')
+        return new_pp
 
 
 def main(argv=sys.argv):
