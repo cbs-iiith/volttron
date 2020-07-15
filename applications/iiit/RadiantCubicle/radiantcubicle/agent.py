@@ -120,6 +120,7 @@ class RadiantCubicle(Agent):
     @Core.receiver('onsetup')
     def setup(self, sender, **kwargs):
         _log.info(self.config['message'])
+
         self._gd_params = self.config.get(
             'gd_params', {
                 "max_iterations": 1000,

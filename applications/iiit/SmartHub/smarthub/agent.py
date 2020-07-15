@@ -1356,6 +1356,9 @@ class SmartHub(Agent):
             + ' , price_id: {}'.format(self._bud_msg_latest.get_price_id())
         )
 
+        base_ed = calc_energy_wh(SH_BASE_POWER, duration)
+        budget = budget - base_ed
+
         # Starting point
         i = 0
         new_pp = 0
@@ -1366,8 +1369,6 @@ class SmartHub(Agent):
         old_pp = self._price_point_latest
         old_ed_fan = self._sh_fan_ed(old_pp, duration)
         old_ed_light = self._sh_led_ed(old_pp, duration)
-
-        base_ed = calc_energy_wh(SH_BASE_POWER, duration)
 
         # Gradient descent iteration
         for i in range(max_iters):
@@ -1380,7 +1381,7 @@ class SmartHub(Agent):
             new_ed_fan = self._sh_fan_ed(new_pp, duration)
             new_ed_light = self._sh_led_ed(new_pp, duration)
 
-            new_ed = base_ed + new_ed_fan + new_ed_light
+            new_ed = new_ed_fan + new_ed_light
 
             _log.debug(
                 'iter: {}'.format(i)
@@ -1394,6 +1395,8 @@ class SmartHub(Agent):
                 _log.debug('opt pp achieved !')
                 break
 
+            # TODO: Also check for new_pp is between min_pp and max_pp
+
             old_pp = new_pp
             old_ed_fan = new_ed_fan
             old_ed_light = new_ed_light
@@ -1401,7 +1404,7 @@ class SmartHub(Agent):
         _log.debug(
             'iter count: {}'.format(i)
             + ', new_pp: {0.2f}'.format(new_pp)
-            + ', expected_ed: {0.4f}'.format(new_ed)
+            + ', expected_ed: {0.4f}'.format(new_ed + base_ed)
             + ' expected_ed_fan: {0.2f}'.format(new_ed_fan)
             + ' expected_ed_light: {0.2f}'.format(new_ed_light)
         )

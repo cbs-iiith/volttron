@@ -543,7 +543,7 @@ class ZoneController(Agent):
             bd_msg_type = True
             pass
         else:
-            return False
+            return
 
         valid_senders_list = self._valid_senders_list_pp
         minimum_fields = ['msg_type', 'value', 'value_data_type', 'units',

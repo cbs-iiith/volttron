@@ -22,13 +22,13 @@ import gevent
 import gevent.event
 
 from applications.iiit.Utils.ispace_msg import (MessageType, EnergyCategory,
-                                                ISPACE_Msg)
+                                                ISPACE_Msg, ISPACE_Msg_Budget)
 from applications.iiit.Utils.ispace_msg_utils import (check_msg_type,
                                                       tap_helper,
                                                       ted_helper,
                                                       get_default_pp_msg,
                                                       valid_bustopic_msg)
-from applications.iiit.Utils.ispace_utils import (calc_energy_wh,
+from applications.iiit.Utils.ispace_utils import (calc_energy_wh, isclose,
                                                   get_task_schdl,
                                                   cancel_task_schdl,
                                                   publish_to_bus,
@@ -119,6 +119,10 @@ class SmartStrip(Agent):
     _opt_pp_msg_latest = None  # type: ISPACE_Msg
     _bid_pp_msg_latest = None  # type: ISPACE_Msg
 
+    _bud_msg_latest = None  # type: ISPACE_Msg_Budget
+
+    _gd_params = None
+
     def __init__(self, config_path, **kwargs):
         super(SmartStrip, self).__init__(**kwargs)
         _log.debug('vip_identity: ' + self.core.identity)
@@ -133,6 +137,22 @@ class SmartStrip(Agent):
     @Core.receiver('onsetup')
     def setup(self, sender, **kwargs):
         _log.info(self.config['message'])
+
+        self._gd_params = self.config.get(
+            'gd_params', {
+                "max_iterations": 1000,
+                "epsilon": 100,
+                "gamma": {
+                    "fan": 0.1786,
+                    "light": 0.1429
+                },
+                "weight_factors": {
+                    "fan": 0.50,
+                    "light": 0.50
+                }
+            }
+        )
+
         return
 
     @Core.receiver('onstart')
@@ -899,9 +919,17 @@ class SmartStrip(Agent):
         if sender not in self._valid_senders_list_pp:
             return
 
+        pp_msg_type = False
+        bd_msg_type = False
         # check message type before parsing
         if not check_msg_type(message, MessageType.price_point):
-            return False
+            pp_msg_type = True
+            pass
+        elif check_msg_type(message, MessageType.budget):
+            bd_msg_type = True
+            pass
+        else:
+            return
 
         valid_senders_list = self._valid_senders_list_pp
         minimum_fields = ['msg_type', 'value', 'value_data_type', 'units',
@@ -923,22 +951,30 @@ class SmartStrip(Agent):
         else:
             _log.debug('New pp msg on the local-bus, topic: {}'.format(topic))
 
-        if pp_msg.get_isoptimal():
+        if pp_msg_type and pp_msg.get_isoptimal():
             _log.debug('***** New optimal price point from pca: {:0.2f}'.format(
                 pp_msg.get_value())
                        + ' , price_id: {}'.format(pp_msg.get_price_id()))
             self._process_opt_pp(pp_msg)
-        else:
+        elif pp_msg_type and not pp_msg.get_isoptimal():
             _log.debug('***** New bid price point from pca: {:0.2f}'.format(
                 pp_msg.get_value())
                        + ' , price_id: {}'.format(pp_msg.get_price_id()))
             self._process_bid_pp(pp_msg)
+        elif bd_msg_type:
+            _log.debug('***** New budget from pca: {:0.4f}'.format(
+                pp_msg.get_value())
+                       + ' , price_id: {}'.format(pp_msg.get_price_id()))
+            self._process_opt_pp(pp_msg)
 
         return
 
     def _process_opt_pp(self, pp_msg):
-        self._opt_pp_msg_latest = copy(pp_msg)
-        self._price_point_latest = pp_msg.get_value()
+        if pp_msg.get_msg_type() == MessageType.price_point:
+            self._opt_pp_msg_latest = copy(pp_msg)
+            self._price_point_latest = pp_msg.get_value()
+        elif pp_msg.get_msg_type() == MessageType.budget:
+            self._bud_msg_latest = copy(pp_msg)
 
         # any process that failed to apply pp sets this flag False
         self._process_opt_pp_success = False
@@ -954,6 +990,15 @@ class SmartStrip(Agent):
 
         # any process that failed to apply pp sets this flag False
         self._process_opt_pp_success = True
+
+        if self._opt_pp_msg_latest.get_msg_type() == MessageType.budget:
+            # compute new_pp for the budget and then apply pricing policy
+            new_pp = self._compute_new_opt_pp()
+            self._opt_pp_msg_latest = copy(self._bud_msg_latest)
+            self._opt_pp_msg_latest.set_msg_type(MessageType.price_point)
+            self._opt_pp_msg_latest.set_value(new_pp)
+            self._opt_pp_msg_latest.set_isoptimal(True)
+            self._price_point_latest = new_pp
 
         task_id = str(randint(0, 99999999))
         success = get_task_schdl(self, task_id, 'iiit/cbs/smartstrip', 1000)
@@ -1112,7 +1157,6 @@ class SmartStrip(Agent):
     # the bid energy is for self._bid_pp_duration (default 1hr)
     # and this msg is valid for self._period_read_data (ttl - default 30s)
     def _calc_total_energy_demand(self):
-        # TODO: ted should be computed based on some  predictive modeling
         pp_msg = self._bid_pp_msg_latest
         bid_pp = pp_msg.get_value()
         duration = pp_msg.get_duration()
@@ -1129,6 +1173,110 @@ class SmartStrip(Agent):
             ted += calc_energy_wh(self._plugs_active_pwr[plug_id], duration)
 
         return ted
+
+    # compute new opt pp for a given budget using gradient descent
+    def _compute_new_opt_pp(self):
+        _log.debug('_compute_new_opt_pp()...')
+
+        # configuration
+        gamma = self._gd_params['gamma']
+        epsilon = self._gd_params['epsilon']
+        max_iters = self._gd_params['max_iterations']
+        wt_factors = self._gd_params['weight_factors']
+
+        sum_wt_factors = 0
+        for k, v in wt_factors.items():
+            if k == 'plug4':
+                continue
+            sum_wt_factors += v
+
+        c = {}
+        for k, v in wt_factors.items():
+            if k == 'plug4':
+                continue
+            c[k] = v / sum_wt_factors
+
+        budget = self._bud_msg_latest.get_value()
+        duration = self._bud_msg_latest.get_duration()
+
+        _log.debug(
+            '***** New budget: {:0.4f}'.format(budget)
+            + ' , price_id: {}'.format(self._bud_msg_latest.get_price_id())
+        )
+
+        base_ed = calc_energy_wh(SMARTSTRIP_BASE_ENERGY, duration)
+        budget = budget - base_ed
+
+        # Starting point
+        i = 0
+        new_pp = 0
+        new_ed = 0
+
+        # this is need to convert [] to {}
+        plugs_th_pp = {}
+        plugs_active_pwr = {}
+        index = 0
+        for k, v in wt_factors.items():
+            if index != self._sh_plug_id:
+                plugs_th_pp[k] = self._plugs_th_pp[index]
+                plugs_active_pwr[k] = self._plugs_active_pwr[index]
+            index = index + 1
+
+        old_pp = self._price_point_latest
+        new_ed_plugs = {}
+        old_ed_plugs = {}
+        for k, v in plugs_active_pwr.items():
+            new_ed_plugs[k] = c[k] * budget
+
+            plug_pwr = (
+                plugs_active_pwr[k]
+                if old_pp <= plugs_th_pp[k]
+                else 0
+            )
+            old_ed_plugs[k] = calc_energy_wh(plug_pwr, duration)
+
+        # Gradient descent iteration
+        for i in range(max_iters):
+
+            new_pp = old_pp
+            for k, v in new_ed_plugs.items():
+                new_pp += (
+                        c[k]
+                        * gamma[k]
+                        * (new_ed_plugs[k] - old_ed_plugs[k])
+                )
+
+            new_ed = 0
+            for k, v in new_ed_plugs.items():
+                plug_pwr = (
+                    plugs_active_pwr[k]
+                    if new_pp <= plugs_th_pp[k]
+                    else 0
+                )
+                new_ed_plugs[k] = calc_energy_wh(plug_pwr, duration)
+                new_ed += new_ed_plugs[k]
+
+            _log.debug(
+                'iter: {}'.format(i)
+                + ', bid_pp: {0.2f}'.format(new_pp)
+                + ', new_ed: {0.4f}'.format(new_ed + base_ed)
+            )
+
+            if isclose(budget, new_ed, epsilon):
+                _log.debug('opt pp achieved !')
+                break
+
+            old_pp = new_pp
+            old_ed_plugs = copy(new_ed_plugs)
+
+        _log.debug(
+            'iter count: {}'.format(i)
+            + ', new_pp: {0.2f}'.format(new_pp)
+            + ', expected_ed: {0.4f}'.format(new_ed + base_ed)
+        )
+
+        _log.debug('...done')
+        return new_pp
 
 
 def main(argv=sys.argv):
