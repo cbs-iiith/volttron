@@ -1105,7 +1105,7 @@ class VolttronBridge(Agent):
         index = self._ds_register.index(discovery_addr)
         return (
             True
-            if(
+            if (
                     discovery_addr in self._ds_register
                     and device_id == self._ds_device_ids[index]
             )

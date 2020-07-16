@@ -15,7 +15,7 @@ import logging
 import sys
 import time
 from copy import copy
-from random import random, randint
+from random import randint
 
 import gevent
 import gevent.event
@@ -34,7 +34,8 @@ from applications.iiit.Utils.ispace_utils import (isclose, get_task_schdl,
                                                   register_with_bridge,
                                                   register_rpc_route,
                                                   unregister_with_bridge,
-                                                  running_stats_multi_dict)
+                                                  running_stats_multi_dict,
+                                                  calc_energy_wh)
 from volttron.platform import jsonrpc
 from volttron.platform.agent import utils
 from volttron.platform.agent.known_identities import (MASTER_WEB)
@@ -680,12 +681,12 @@ class RadiantCubicle(Agent):
     def _calc_total_act_pwr(self):
         # active pwr should be measured in realtime from the connected plug
         rc_active_power = self._rpcget_rc_active_power()
-        rc_ap = rc_active_power if rc_active_power != E_UNKNOWN_CCE else 0
+        ap_rc = rc_active_power if rc_active_power != E_UNKNOWN_CCE else 0
 
         # update running stats
-        self._rs['rc'][EnergyCategory.mixed].push(rc_ap)
+        self._rs['rc'][EnergyCategory.mixed].push(ap_rc)
 
-        tap = rc_ap
+        tap = ap_rc
 
         return tap
 
@@ -753,7 +754,6 @@ class RadiantCubicle(Agent):
         gamma = self._gd_params['gamma']
         epsilon = self._gd_params['epsilon']
         max_iters = self._gd_params['max_iterations']
-        wt_factors = self._gd_params['weight_factors']
 
         budget = self._bud_msg_latest.get_value()
         duration = self._bud_msg_latest.get_duration()
@@ -770,8 +770,13 @@ class RadiantCubicle(Agent):
 
         old_pp = self._price_point_latest
 
-        rc_ap = self._rs['rc'][EnergyCategory.mixed].exp_wt_mv_avg()
-        old_ed = rc_ap * duration / 3600
+        ap_rc = self._rs['rc'][EnergyCategory.mixed].exp_wt_mv_avg()
+        old_ed = calc_energy_wh(ap_rc, duration)
+
+        _log.debug(
+            'current pp: {0.2f}'.format(old_pp)
+            + ', current ed_rc: {0.4f}'.format(old_ed)
+        )
 
         # Gradient descent iteration
         for i in range(max_iters):
@@ -779,9 +784,14 @@ class RadiantCubicle(Agent):
                     old_pp
                     + gamma['rc'] * (new_ed - old_ed)
             )
+            new_pp = (
+                0 if new_pp < 0 else 1 if new_pp > 1 else new_pp
+            )
 
             bid_tsp = self._compute_rc_new_tsp(new_pp)
-            new_ed = self._compute_ed_rc(bid_tsp) * duration / 3600
+            new_ed = calc_energy_wh(self._compute_ed_rc(bid_tsp),
+                                    duration
+                                    )
 
             _log.debug(
                 'iter: {}'.format(i)
@@ -790,10 +800,14 @@ class RadiantCubicle(Agent):
             )
 
             if isclose(budget, new_ed, epsilon):
-                _log.debug('opt pp achieved !')
+                _log.debug('|budget - new_ed| < epsilon')
+                break
+            elif isclose(old_ed, new_ed, epsilon):
+                _log.debug('|old_ed - new_ed| < epsilon')
                 break
 
             old_pp = new_pp
+            old_ed = new_ed
 
         _log.debug(
             'iter count: {}'.format(i)

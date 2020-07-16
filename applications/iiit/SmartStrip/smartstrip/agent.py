@@ -35,7 +35,8 @@ from applications.iiit.Utils.ispace_utils import (calc_energy_wh, isclose,
                                                   retrieve_details_from_vb,
                                                   register_with_bridge,
                                                   register_rpc_route,
-                                                  unregister_with_bridge)
+                                                  unregister_with_bridge,
+                                                  running_stats_multi_dict)
 from volttron.platform import jsonrpc
 from volttron.platform.agent import utils
 from volttron.platform.agent.known_identities import (MASTER_WEB)
@@ -123,6 +124,16 @@ class SmartStrip(Agent):
 
     _gd_params = None
 
+    # running stats factor (window)
+    _rc_factor = None  # type: int
+
+    # Multi dimensional dictionary for RunningStats
+    # _rs[DEVICE_ID][ENERGY_CATEGORY]
+    _rs = {}
+
+    # Exponential weighted moving average
+    # _rs[DEVICE_ID][ENERGY_CATEGORY].exp_wt_mv_avg()
+
     def __init__(self, config_path, **kwargs):
         super(SmartStrip, self).__init__(**kwargs)
         _log.debug('vip_identity: ' + self.core.identity)
@@ -152,6 +163,9 @@ class SmartStrip(Agent):
                 }
             }
         )
+
+        self._rc_factor = self.config.get('rc_factor', 120)
+        self._rs = running_stats_multi_dict(3, list, self._rc_factor)
 
         return
 
@@ -1108,7 +1122,10 @@ class SmartStrip(Agent):
                     or plug_id == self._sh_plug_id  # exclude sh power
                     or False):
                 continue
-            tap += self._plugs_active_pwr[plug_id]
+            ap_plug = self._plugs_active_pwr[plug_id]
+            self._rs['plug' + str(plug_id + 1)][EnergyCategory.mixed].push(
+                ap_plug)
+            tap += ap_plug
 
         return tap
 
@@ -1206,6 +1223,10 @@ class SmartStrip(Agent):
 
         base_ed = calc_energy_wh(SMARTSTRIP_BASE_ENERGY, duration)
         budget = budget - base_ed
+        _log.debug(
+            '***** New base adjusted budget: {:0.4f}'.format(budget)
+            + ' , price_id: {}'.format(self._bud_msg_latest.get_price_id())
+        )
 
         # Starting point
         i = 0
@@ -1223,17 +1244,21 @@ class SmartStrip(Agent):
             index = index + 1
 
         old_pp = self._price_point_latest
+        _log.debug(
+            'current pp: {0.2f}'.format(old_pp)
+        )
         new_ed_plugs = {}
         old_ed_plugs = {}
+        old_ed = 0
         for k, v in plugs_active_pwr.items():
             new_ed_plugs[k] = c[k] * budget
 
-            plug_pwr = (
-                plugs_active_pwr[k]
-                if old_pp <= plugs_th_pp[k]
-                else 0
-            )
+            plug_pwr = self._rs[k][EnergyCategory.mixed].exp_wt_mv_avg()
             old_ed_plugs[k] = calc_energy_wh(plug_pwr, duration)
+            _log.debug(
+                'current ed_{0}: {0.4f}'.format(k, old_ed_plugs[k])
+            )
+            old_ed += old_ed_plugs[k]
 
         # Gradient descent iteration
         for i in range(max_iters):
@@ -1245,6 +1270,9 @@ class SmartStrip(Agent):
                         * gamma[k]
                         * (new_ed_plugs[k] - old_ed_plugs[k])
                 )
+            new_pp = (
+                0 if new_pp < 0 else 1 if new_pp > 1 else new_pp
+            )
 
             new_ed = 0
             for k, v in new_ed_plugs.items():
@@ -1254,6 +1282,9 @@ class SmartStrip(Agent):
                     else 0
                 )
                 new_ed_plugs[k] = calc_energy_wh(plug_pwr, duration)
+                _log.debug(
+                    'new ed_{0}: {0.4f}'.format(k, new_ed_plugs[k])
+                )
                 new_ed += new_ed_plugs[k]
 
             _log.debug(
@@ -1263,11 +1294,15 @@ class SmartStrip(Agent):
             )
 
             if isclose(budget, new_ed, epsilon):
-                _log.debug('opt pp achieved !')
+                _log.debug('|budget - new_ed| < epsilon')
+                break
+            elif isclose(old_ed, new_ed, epsilon):
+                _log.debug('|old_ed - new_ed| < epsilon')
                 break
 
             old_pp = new_pp
             old_ed_plugs = copy(new_ed_plugs)
+            old_ed = new_ed
 
         _log.debug(
             'iter count: {}'.format(i)

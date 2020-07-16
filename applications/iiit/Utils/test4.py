@@ -10,8 +10,9 @@
 # }}}
 
 # Sam
-
-from applications.iiit.Utils.ispace_utils import Runningstats
+from applications.iiit.Utils.ispace_msg import EnergyCategory
+from applications.iiit.Utils.ispace_utils import Runningstats, \
+    running_stats_multi_dict
 
 rs = Runningstats(120)
 # D:\Sam NotExtreme\FDD_LAB_VOLT_LOGS\Analysis\Book2.xlsx Sheet3
@@ -296,3 +297,38 @@ print('    std_dev: {}'.format(combined.std_dev()))
 print('    skewness: {}'.format(combined.skewness()))
 print('    kurtosis: {}'.format(combined.kurtosis()))
 print('    exp_wt_mv_avg: {}'.format(combined.exp_wt_mv_avg()))
+
+# Test multi dimension RS
+rs_3_dim = running_stats_multi_dict(3, list, 10)
+
+rs_3_dim['zn1'][EnergyCategory.thermal].push(1)
+rs_3_dim['zn1'][EnergyCategory.thermal].push(2)
+rs_3_dim['zn1'][EnergyCategory.thermal].push(3)
+rs_3_dim['zn1'][EnergyCategory.thermal].push(4)
+rs_3_dim['zn1'][EnergyCategory.thermal].push(5)
+
+rs_3_dim['zn1'][EnergyCategory.lighting].push(10)
+rs_3_dim['zn1'][EnergyCategory.lighting].push(20)
+rs_3_dim['zn1'][EnergyCategory.lighting].push(30)
+rs_3_dim['zn1'][EnergyCategory.lighting].push(40)
+rs_3_dim['zn1'][EnergyCategory.lighting].push(50)
+
+rs_3_dim['zn2'][EnergyCategory.thermal].push(21)
+rs_3_dim['zn2'][EnergyCategory.thermal].push(22)
+rs_3_dim['zn2'][EnergyCategory.thermal].push(23)
+rs_3_dim['zn2'][EnergyCategory.thermal].push(24)
+rs_3_dim['zn2'][EnergyCategory.thermal].push(25)
+
+rs_3_dim['zn2'][EnergyCategory.lighting].push(31)
+rs_3_dim['zn2'][EnergyCategory.lighting].push(32)
+rs_3_dim['zn2'][EnergyCategory.lighting].push(33)
+rs_3_dim['zn2'][EnergyCategory.lighting].push(34)
+rs_3_dim['zn2'][EnergyCategory.lighting].push(35)
+
+print(str(rs_3_dim['zn1'][EnergyCategory.thermal].exp_wt_mv_avg()))
+print(str(rs_3_dim['zn1'][EnergyCategory.lighting].exp_wt_mv_avg()))
+print(str(rs_3_dim['zn2'][EnergyCategory.thermal].exp_wt_mv_avg()))
+print(str(rs_3_dim['zn2'][EnergyCategory.lighting].exp_wt_mv_avg()))
+
+print(type(rs_3_dim))
+print(rs_3_dim)

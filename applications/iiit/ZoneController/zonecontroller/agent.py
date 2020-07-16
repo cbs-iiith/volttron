@@ -33,7 +33,9 @@ from applications.iiit.Utils.ispace_utils import (isclose, get_task_schdl,
                                                   retrieve_details_from_vb,
                                                   register_with_bridge,
                                                   register_rpc_route,
-                                                  unregister_with_bridge)
+                                                  unregister_with_bridge,
+                                                  running_stats_multi_dict,
+                                                  calc_energy_wh)
 from volttron.platform import jsonrpc
 from volttron.platform.agent import utils
 from volttron.platform.agent.known_identities import (
@@ -106,6 +108,16 @@ class ZoneController(Agent):
 
     _gd_params = None
 
+    # running stats factor (window)
+    _rc_factor = None  # type: int
+
+    # Multi dimensional dictionary for RunningStats
+    # _rs[DEVICE_ID][ENERGY_CATEGORY]
+    _rs = {}
+
+    # Exponential weighted moving average
+    # _rs[DEVICE_ID][ENERGY_CATEGORY].exp_wt_mv_avg()
+
     def __init__(self, config_path, **kwargs):
         super(ZoneController, self).__init__(**kwargs)
         _log.debug('vip_identity: ' + self.core.identity)
@@ -136,6 +148,9 @@ class ZoneController(Agent):
                 }
             }
         )
+
+        self._rc_factor = self.config.get('rc_factor', 120)
+        self._rs = running_stats_multi_dict(3, list, self._rc_factor)
 
         return
 
@@ -739,8 +754,15 @@ class ZoneController(Agent):
         # zone lighting + ac
         cooling_ap = self._rpcget_zone_cooling_power()
         lighting_ap = self._rpcget_zone_lighting_power()
-        tap += (0 if cooling_ap == E_UNKNOWN_CCE else cooling_ap)
-        tap += (0 if lighting_ap == E_UNKNOWN_CLE else lighting_ap)
+        ap_ac = (0 if cooling_ap == E_UNKNOWN_CCE else cooling_ap)
+        ap_light = (0 if lighting_ap == E_UNKNOWN_CLE else lighting_ap)
+
+        # update running stats
+        self._rs['ac'][EnergyCategory.mixed].push(ap_ac)
+        self._rs['light'][EnergyCategory.mixed].push(ap_light)
+
+        tap = ap_ac + ap_light
+
         return tap
 
     def _process_bid_pp(self, pp_msg):
@@ -792,10 +814,14 @@ class ZoneController(Agent):
         duration = pp_msg.get_duration()
 
         bid_tsp = self._compute_new_tsp(bid_pp)
-        bid_lsp = self._compute_new_lsp(bid_pp)
+        ed_ac = calc_energy_wh(self._compute_ed_ac(bid_tsp),
+                               duration
+                               )
 
-        ed_ac = self._compute_ed_ac(bid_tsp) * duration / 3600
-        ed_light = self._compute_ed_light(bid_lsp) * duration / 3600
+        bid_lsp = self._compute_new_lsp(bid_pp)
+        ed_light = calc_energy_wh(self._compute_ed_light(bid_lsp),
+                                  duration
+                                  )
 
         ted = ed_ac + ed_light
         return ted
@@ -832,11 +858,21 @@ class ZoneController(Agent):
         new_ed_light = c_light * budget
 
         old_pp = self._price_point_latest
-        bid_tsp = self._compute_new_tsp(old_pp)
-        bid_lsp = self._compute_new_lsp(old_pp)
 
-        old_ed_ac = self._compute_ed_ac(bid_tsp) * duration / 3600
-        old_ed_light = self._compute_ed_light(bid_lsp) * duration / 3600
+        ap_ac = self._rs['ac'][EnergyCategory.mixed].exp_wt_mv_avg()
+        old_ed_ac = calc_energy_wh(ap_ac, duration)
+
+        ap_light = self._rs['light'][EnergyCategory.mixed].exp_wt_mv_avg()
+        old_ed_light = calc_energy_wh(ap_light, duration)
+
+        old_ed = old_ed_ac + old_ed_light
+
+        _log.debug(
+            'current pp: {0.2f}'.format(old_pp)
+            + ', current ed: {0.4f}'.format(old_ed)
+            + ', current ed_ac: {0.4f}'.format(old_ed_ac)
+            + ', current ed_light: {0.4f}'.format(old_ed_light)
+        )
 
         # Gradient descent iteration
         for i in range(max_iters):
@@ -845,12 +881,19 @@ class ZoneController(Agent):
                     + c_ac * gamma['ac'] * (new_ed_ac - old_ed_ac)
                     + c_light * gamma['light'] * (new_ed_light - old_ed_light)
             )
+            new_pp = (
+                0 if new_pp < 0 else 1 if new_pp > 1 else new_pp
+            )
 
             new_tsp = self._compute_new_tsp(new_pp)
-            new_lsp = self._compute_new_lsp(new_pp)
+            new_ed_ac = calc_energy_wh(self._compute_ed_ac(new_tsp),
+                                       duration
+                                       )
 
-            new_ed_ac = self._compute_ed_ac(new_tsp) * duration / 3600
-            new_ed_light = self._compute_ed_light(new_lsp) * duration / 3600
+            new_lsp = self._compute_new_lsp(new_pp)
+            new_ed_light = calc_energy_wh(self._compute_ed_light(new_lsp),
+                                          duration
+                                          )
 
             new_ed = new_ed_ac + new_ed_light
 
@@ -865,12 +908,16 @@ class ZoneController(Agent):
             )
 
             if isclose(budget, new_ed, epsilon):
-                _log.debug('opt pp achieved !')
+                _log.debug('|budget - new_ed| < epsilon')
+                break
+            elif isclose(old_ed, new_ed, epsilon):
+                _log.debug('|old_ed - new_ed| < epsilon')
                 break
 
             old_pp = new_pp
             old_ed_ac = new_ed_ac
             old_ed_light = new_ed_light
+            old_ed = new_ed
 
         _log.debug(
             'iter count: {}'.format(i)

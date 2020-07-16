@@ -14,7 +14,6 @@
 import datetime
 import logging
 import sys
-from collections import defaultdict
 from copy import copy
 from random import randint
 
@@ -38,7 +37,7 @@ from applications.iiit.Utils.ispace_msg_utils import (get_default_pp_msg,
 from applications.iiit.Utils.ispace_utils import (publish_to_bus,
                                                   retrieve_details_from_vb,
                                                   register_rpc_route,
-                                                  Runningstats, isclose,
+                                                  isclose,
                                                   calc_energy_wh,
                                                   running_stats_multi_dict)
 from volttron.platform import jsonrpc
@@ -766,6 +765,7 @@ class PriceController(Agent):
         return
 
     def _init_bidding_process(self, new_pp_msg):
+        _log.debug('_init_bidding_process()')
 
         self._iter_count = 0
         pp_old = {}
@@ -812,6 +812,7 @@ class PriceController(Agent):
 
         # activate process_loop(), iterate for new bids from ds devices
         self._run_process_loop = True
+        _log.debug('...done')
         return
 
     def _default_opt_init_msg(
@@ -823,6 +824,8 @@ class PriceController(Agent):
             index=0
     ):
         _log.debug('_default_opt_init_msg()...')
+        _log.debug('device_id: {}'.format(device_id))
+
         old_pp_msg = copy(pp_msg)  # type: ISPACE_Msg_OptPricePoint
         old_ap_msg = copy(ap_msg)  # type: ISPACE_Msg_ActivePower
         # noinspection PyTypeChecker
@@ -837,12 +840,21 @@ class PriceController(Agent):
         new_dur_sec = new_pp_msg.get_duration()
         old_energy_demand = calc_energy_wh(old_act_pwr, old_dur_sec)
 
+        _log.debug(
+            'current pp: {0.2f}'.format(old_price)
+            + ', current ed: {0.4f}'.format(old_energy_demand)
+        )
+
         new_energy_demand = 0
         if check_msg_type(new_pp_msg, MessageType.price_point):
             # received new price point
             new_price = new_pp_msg.get_value()
             new_act_pwr = old_act_pwr * old_price / new_price
             new_energy_demand = calc_energy_wh(new_act_pwr, new_dur_sec)
+            _log.debug(
+                'new pp: {0.2f}'.format(new_price)
+                + ', computed new ed target: {0.4f}'.format(new_energy_demand)
+            )
         elif check_msg_type(new_pp_msg, MessageType.budget):
             # received new budget
             wt_factors = self._mode_pass_on_params['weight_factors']
@@ -850,6 +862,9 @@ class PriceController(Agent):
 
             c = wt_factors[index] / sum_wt_factors
             new_energy_demand = c * new_pp_msg.get_value()
+            _log.debug(
+                'new ed target: {0.4f}'.format(new_energy_demand)
+            )
 
         old_ed_msg.set_msg_type(MessageType.energy_demand)
         old_ed_msg.set_value(old_energy_demand)
@@ -1033,6 +1048,8 @@ class PriceController(Agent):
         for device_id, _pp_old in enumerate(
                 pp_old.items()):  # type: (str, ISPACE_Msg_BidPricePoint)
 
+            _log.debug('device_id: {}'.format(device_id))
+
             index = (local_device_ids + ds_device_ids).index(device_id)
 
             c = wt_factors[index] / sum_wt_factors
@@ -1047,17 +1064,24 @@ class PriceController(Agent):
             delta = _ed_current - _ed_prev
 
             if delta < epsilon[index]:
+                _log.debug('delta < epsilon')
                 continue
 
-            new_pricepoint = (
+            new_pp = (
                     _pp_old.get_value()
                     + c * gamma[index] * delta
                     + alpha[index] * self._delta_omega[device_id]
             )
+            new_pp = (
+                0 if new_pp < 0 else 1 if new_pp > 1 else new_pp
+            )
+            _log.debug(
+                'new pp: {0.2f}'.format(new_pp)
+            )
 
             pp_msg = ISPACE_Msg_BidPricePoint(
                 msg_type, one_to_one, isoptimal,
-                new_pricepoint, value_data_type, units,
+                new_pp, value_data_type, units,
                 price_id,
                 src_ip, src_device_id,
                 ed_current_msg.get_src_ip(), ed_current_msg.get_src_device_id(),

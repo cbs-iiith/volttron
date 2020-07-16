@@ -34,7 +34,8 @@ from applications.iiit.Utils.ispace_utils import (calc_energy_wh, isclose,
                                                   retrieve_details_from_vb,
                                                   register_with_bridge,
                                                   register_rpc_route,
-                                                  unregister_with_bridge)
+                                                  unregister_with_bridge,
+                                                  running_stats_multi_dict)
 from volttron.platform import jsonrpc
 from volttron.platform.agent import utils
 from volttron.platform.agent.known_identities import (MASTER_WEB)
@@ -138,6 +139,16 @@ class SmartHub(Agent):
 
     _gd_params = None
 
+    # running stats factor (window)
+    _rc_factor = None  # type: int
+
+    # Multi dimensional dictionary for RunningStats
+    # _rs[DEVICE_ID][ENERGY_CATEGORY]
+    _rs = {}
+
+    # Exponential weighted moving average
+    # _rs[DEVICE_ID][ENERGY_CATEGORY].exp_wt_mv_avg()
+
     def __init__(self, config_path, **kwargs):
         super(SmartHub, self).__init__(**kwargs)
         _log.debug('vip_identity: ' + self.core.identity)
@@ -168,6 +179,9 @@ class SmartHub(Agent):
                 }
             }
         )
+
+        self._rc_factor = self.config.get('rc_factor', 120)
+        self._rs = running_stats_multi_dict(3, list, self._rc_factor)
 
         return
 
@@ -1236,21 +1250,27 @@ class SmartHub(Agent):
         # experimental data
 
         # sh base energy demand
-        tap = SH_BASE_POWER
+        ap_base = SH_BASE_POWER
+        ap_light = 0
+        ap_fan = 0
 
         # sh led active power
         if self._sh_devices_state[SH_DEVICE_LED] == SH_DEVICE_STATE_ON:
             led_level = self._sh_devices_level[SH_DEVICE_LED]
-            tap += ((SH_LED_POWER * SH_LED_THRESHOLD_PCT)
-                    if led_level <= SH_LED_THRESHOLD_PCT
-                    else (SH_LED_POWER * led_level))
+            ap_light = ((SH_LED_POWER * SH_LED_THRESHOLD_PCT)
+                        if led_level <= SH_LED_THRESHOLD_PCT
+                        else (SH_LED_POWER * led_level))
+            self._rs['light'][EnergyCategory.mixed].push(ap_light)
 
         # sh fan active power
         if self._sh_devices_state[SH_DEVICE_FAN] == SH_DEVICE_STATE_ON:
             fan_speed = self._sh_devices_level[SH_DEVICE_FAN]
-            tap += ((SH_FAN_POWER * SH_LED_THRESHOLD_PCT)
-                    if fan_speed <= SH_LED_THRESHOLD_PCT
-                    else (SH_FAN_POWER * fan_speed))
+            ap_fan = ((SH_FAN_POWER * SH_LED_THRESHOLD_PCT)
+                      if fan_speed <= SH_LED_THRESHOLD_PCT
+                      else (SH_FAN_POWER * fan_speed))
+            self._rs['fan'][EnergyCategory.mixed].push(ap_fan)
+
+        tap = ap_base + ap_light + ap_fan
         return tap
 
     def _process_bid_pp(self, pp_msg):
@@ -1358,6 +1378,10 @@ class SmartHub(Agent):
 
         base_ed = calc_energy_wh(SH_BASE_POWER, duration)
         budget = budget - base_ed
+        _log.debug(
+            '***** New base adjusted budget: {:0.4f}'.format(budget)
+            + ' , price_id: {}'.format(self._bud_msg_latest.get_price_id())
+        )
 
         # Starting point
         i = 0
@@ -1367,8 +1391,20 @@ class SmartHub(Agent):
         new_ed_light = c_light * budget
 
         old_pp = self._price_point_latest
-        old_ed_fan = self._sh_fan_ed(old_pp, duration)
-        old_ed_light = self._sh_led_ed(old_pp, duration)
+        ap_fan = self._rs['light'][EnergyCategory.mixed].exp_wt_mv_avg()
+        old_ed_fan = calc_energy_wh(ap_fan, duration)
+
+        ap_light = self._rs['light'][EnergyCategory.mixed].exp_wt_mv_avg()
+        old_ed_light = calc_energy_wh(ap_light, duration)
+
+        old_ed = old_ed_fan + old_ed_light
+
+        _log.debug(
+            'current pp: {0.2f}'.format(old_pp)
+            + ', current ed: {0.4f}'.format(old_ed)
+            + ', current ed_fan: {0.4f}'.format(old_ed_fan)
+            + ', current ed_light: {0.4f}'.format(old_ed_light)
+        )
 
         # Gradient descent iteration
         for i in range(max_iters):
@@ -1376,6 +1412,9 @@ class SmartHub(Agent):
                     old_pp
                     + c_ac * gamma['ac'] * (new_ed_fan - old_ed_fan)
                     + c_light * gamma['light'] * (new_ed_light - old_ed_light)
+            )
+            new_pp = (
+                0 if new_pp < 0 else 1 if new_pp > 1 else new_pp
             )
 
             new_ed_fan = self._sh_fan_ed(new_pp, duration)
@@ -1392,14 +1431,16 @@ class SmartHub(Agent):
             )
 
             if isclose(budget, new_ed, epsilon):
-                _log.debug('opt pp achieved !')
+                _log.debug('|budget - new_ed| < epsilon')
                 break
-
-            # TODO: Also check for new_pp is between min_pp and max_pp
+            elif isclose(old_ed, new_ed, epsilon):
+                _log.debug('|old_ed - new_ed| < epsilon')
+                break
 
             old_pp = new_pp
             old_ed_fan = new_ed_fan
             old_ed_light = new_ed_light
+            old_ed = new_ed
 
         _log.debug(
             'iter count: {}'.format(i)
