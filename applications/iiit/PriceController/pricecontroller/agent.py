@@ -147,7 +147,7 @@ class PriceController(Agent):
 
     external_vip_identity = None
 
-    _run__local_bidding_process = False
+    _run_local_bidding_process = False
     _run_process_loop = False
     _target_achieved = False
     _us_bid_ready = False
