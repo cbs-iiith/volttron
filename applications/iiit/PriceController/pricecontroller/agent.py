@@ -1041,7 +1041,7 @@ class PriceController(Agent):
             self._us_ds_opt_ap, self._us_local_opt_ap)
 
         for device_id, _pp_old in enumerate(
-                pp_old):  # type: (str, ISPACE_Msg_BidPricePoint)
+                pp_old.items()):  # type: (str, ISPACE_Msg_BidPricePoint)
 
             index = (local_device_ids + ds_device_ids).index(device_id)
 
