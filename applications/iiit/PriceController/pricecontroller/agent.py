@@ -39,7 +39,8 @@ from applications.iiit.Utils.ispace_utils import (publish_to_bus,
                                                   retrieve_details_from_vb,
                                                   register_rpc_route,
                                                   Runningstats, isclose,
-                                                  calc_energy_wh)
+                                                  calc_energy_wh,
+                                                  running_stats_multi_dict)
 from volttron.platform import jsonrpc
 from volttron.platform.agent import utils
 from volttron.platform.agent.known_identities import MASTER_WEB
@@ -48,17 +49,6 @@ from volttron.platform.vip.agent import Agent, Core, RPC
 utils.setup_logging()
 _log = logging.getLogger(__name__)
 __version__ = '0.4'
-
-
-# https://www.geeksforgeeks.org/python-creating-multidimensional-dictionary/
-# Multi dimensional dictionary for RunningStats
-def running_stats_multi_dict(dimensions, data_type, factor=120):
-    if dimensions == 1:
-        d = Runningstats(factor)
-    else:
-        d = defaultdict(
-            lambda: running_stats_multi_dict(dimensions - 1, data_type))
-    return d
 
 
 def pricecontroller(config_path, **kwargs):

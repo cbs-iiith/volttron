@@ -33,7 +33,8 @@ from applications.iiit.Utils.ispace_utils import (isclose, get_task_schdl,
                                                   retrieve_details_from_vb,
                                                   register_with_bridge,
                                                   register_rpc_route,
-                                                  unregister_with_bridge)
+                                                  unregister_with_bridge,
+                                                  running_stats_multi_dict)
 from volttron.platform import jsonrpc
 from volttron.platform.agent import utils
 from volttron.platform.agent.known_identities import (MASTER_WEB)
@@ -105,6 +106,16 @@ class RadiantCubicle(Agent):
 
     _gd_params = None
 
+    # running stats factor (window)
+    _rc_factor = None  # type: int
+
+    # Multi dimensional dictionary for RunningStats
+    # _rs[DEVICE_ID][ENERGY_CATEGORY]
+    _rs = {}
+
+    # Exponential weighted moving average
+    # _rs[DEVICE_ID][ENERGY_CATEGORY].exp_wt_mv_avg()
+
     def __init__(self, config_path, **kwargs):
         super(RadiantCubicle, self).__init__(**kwargs)
         _log.debug('vip_identity: ' + self.core.identity)
@@ -135,6 +146,9 @@ class RadiantCubicle(Agent):
                 }
             }
         )
+
+        self._rc_factor = self.config.get('rc_factor', 120)
+        self._rs = running_stats_multi_dict(3, list, self._rc_factor)
 
         return
 
@@ -666,7 +680,13 @@ class RadiantCubicle(Agent):
     def _calc_total_act_pwr(self):
         # active pwr should be measured in realtime from the connected plug
         rc_active_power = self._rpcget_rc_active_power()
-        tap = rc_active_power if rc_active_power != E_UNKNOWN_CCE else 0
+        rc_ap = rc_active_power if rc_active_power != E_UNKNOWN_CCE else 0
+
+        # update running stats
+        self._rs['rc'][EnergyCategory.mixed].push(rc_ap)
+
+        tap = rc_ap
+
         return tap
 
     def _process_bid_pp(self, pp_msg):
@@ -750,8 +770,8 @@ class RadiantCubicle(Agent):
 
         old_pp = self._price_point_latest
 
-        bid_tsp = self._compute_rc_new_tsp(old_pp)
-        old_ed = self._compute_ed_rc(bid_tsp) * duration / 3600
+        rc_ap = self._rs['rc'][EnergyCategory.mixed].exp_wt_mv_avg()
+        old_ed = rc_ap * duration / 3600
 
         # Gradient descent iteration
         for i in range(max_iters):
