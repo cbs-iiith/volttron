@@ -22,7 +22,7 @@ import gevent
 import gevent.event
 
 from applications.iiit.Utils.ispace_msg import (MessageType, EnergyCategory,
-                                                ISPACE_Msg)
+                                                ISPACE_Msg, ISPACE_Msg_Budget)
 from applications.iiit.Utils.ispace_msg_utils import (check_msg_type,
                                                       tap_helper, ted_helper,
                                                       get_default_pp_msg,
@@ -70,10 +70,6 @@ class BuildingController(Agent):
     """
     Building Controller
     """
-    _opt_pp_msg_current = None  # type: ISPACE_Msg
-    _opt_pp_msg_latest = None  # type: ISPACE_Msg
-    _bid_pp_msg_latest = None  # type: ISPACE_Msg
-    _valid_senders_list_pp = None  # type: list
     # initialized  during __init__ from config
     _period_read_data = None
     _period_process_pp = None
@@ -89,6 +85,14 @@ class BuildingController(Agent):
 
     # any process that failed to apply pp sets this flag False
     _process_opt_pp_success = False
+
+    _valid_senders_list_pp = None  # type: list
+    _opt_pp_msg_current = None  # type: ISPACE_Msg
+    _opt_pp_msg_latest = None  # type: ISPACE_Msg
+    _bid_pp_msg_latest = None  # type: ISPACE_Msg
+
+    _bud_msg_latest = None  # type: ISPACE_Msg_Budget
+    _latest_msg_type = None     # type: MessageType
 
     def __init__(self, config_path, **kwargs):
         super(BuildingController, self).__init__(**kwargs)
@@ -143,6 +147,7 @@ class BuildingController(Agent):
 
         self._bid_pp_msg_latest = get_default_pp_msg(self._discovery_address,
                                                      self._device_id)
+        self._latest_msg_type = MessageType.price_point
 
         # self._run_bms_test()
 
@@ -365,9 +370,17 @@ class BuildingController(Agent):
         if sender not in self._valid_senders_list_pp:
             return
 
+        pp_msg_type = False
+        bd_msg_type = False
         # check message type before parsing
         if not check_msg_type(message, MessageType.price_point):
-            return False
+            pp_msg_type = True
+            pass
+        elif check_msg_type(message, MessageType.budget):
+            bd_msg_type = True
+            pass
+        else:
+            return
 
         valid_senders_list = self._valid_senders_list_pp
         minimum_fields = ['msg_type', 'value', 'value_data_type', 'units',
@@ -389,22 +402,32 @@ class BuildingController(Agent):
         else:
             _log.debug('New pp msg on the local-bus, topic: {}'.format(topic))
 
-        if pp_msg.get_isoptimal():
-            _log.debug('***** New optimal price point from pca: {:0.2f}'.format(
-                pp_msg.get_value())
+        if pp_msg_type and pp_msg.get_isoptimal():
+            _log.debug('***** New optimal price point from pca:'
+                       + ' {:0.2f}'.format(pp_msg.get_value())
                        + ' , price_id: {}'.format(pp_msg.get_price_id()))
             self._process_opt_pp(pp_msg)
-        else:
-            _log.debug('***** New bid price point from pca: {:0.2f}'.format(
-                pp_msg.get_value())
+        elif pp_msg_type and not pp_msg.get_isoptimal():
+            _log.debug('***** New bid price point from pca:'
+                       + ' {:0.2f}'.format(pp_msg.get_value())
                        + ' , price_id: {}'.format(pp_msg.get_price_id()))
             self._process_bid_pp(pp_msg)
+        elif bd_msg_type:
+            _log.debug('***** New budget from pca:'
+                       + ' {:0.4f}'.format(pp_msg.get_value())
+                       + ' , price_id: {}'.format(pp_msg.get_price_id()))
+            self._process_opt_pp(pp_msg)
 
         return
 
     def _process_opt_pp(self, pp_msg):
-        self._opt_pp_msg_latest = copy(pp_msg)
-        self._price_point_latest = pp_msg.get_value()
+        if pp_msg.get_msg_type() == MessageType.price_point:
+            self._opt_pp_msg_latest = copy(pp_msg)
+            self._price_point_latest = pp_msg.get_value()
+            self._latest_msg_type = MessageType.price_point
+        elif pp_msg.get_msg_type() == MessageType.budget:
+            self._bud_msg_latest = copy(pp_msg)
+            self._latest_msg_type = MessageType.budget
 
         # any process that failed to apply pp sets this flag False
         self._process_opt_pp_success = False
@@ -420,6 +443,15 @@ class BuildingController(Agent):
 
         # any process that failed to apply pp sets this flag False
         self._process_opt_pp_success = True
+
+        if self._latest_msg_type == MessageType.budget:
+            # compute new_pp for the budget and then apply pricing policy
+            new_pp = self._compute_new_opt_pp()
+            self._opt_pp_msg_latest = copy(self._bud_msg_latest)
+            self._opt_pp_msg_latest.set_msg_type(MessageType.price_point)
+            self._opt_pp_msg_latest.set_value(new_pp)
+            self._opt_pp_msg_latest.set_isoptimal(True)
+            self._price_point_latest = new_pp
 
         self._apply_pricing_policy()
         if not self._process_opt_pp_success:
@@ -438,6 +470,12 @@ class BuildingController(Agent):
 
     def _apply_pricing_policy(self):
         _log.debug('_apply_pricing_policy()')
+        if self._latest_msg_type == MessageType.budget:
+            _log.warning(
+                '_apply_pricing_policy(), not implemented for budget'
+            )
+            return
+
         new_pp = self._opt_pp_msg_latest.get_value()
         self._rpcset_bms_pp(new_pp)
         bms_pp = self._rpcget_bms_pp()
@@ -481,10 +519,10 @@ class BuildingController(Agent):
         return
 
     # calculate total active power (tap)
-    @staticmethod
-    def _calc_total_act_pwr():
+    def _calc_total_act_pwr(self):
         # _log.debug('_calc_total_act_pwr()')
-        tap = random() * 1000
+        # tap = random() * 1000
+        tap = 0.0
         return tap
 
     def _process_bid_pp(self, pp_msg):
@@ -529,8 +567,7 @@ class BuildingController(Agent):
     # calculate the local total energy demand for bid_pp
     # the bid energy is for self._bid_pp_duration (default 1hr)
     # and this msg is valid for self._period_read_data (ttl - default 30s)
-    @staticmethod
-    def _calc_total_energy_demand():
+    def _calc_total_energy_demand(self):
         # pp_msg = self._bid_pp_msg_latest
         # bid_pp = pp_msg.get_value()  # type: float
         # duration = pp_msg.get_duration()
@@ -538,6 +575,13 @@ class BuildingController(Agent):
         # # for testing
         # bid_ted = random() * 1000
         # return bid_ted
+        return 0.0
+
+    def _compute_new_opt_pp(self):
+        _log.debug('_compute_new_opt_pp()...')
+        _log.warning(
+            '_compute_new_opt_pp(), not implemented'
+        )
         return 0.0
 
 
