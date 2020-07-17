@@ -774,8 +774,8 @@ class RadiantCubicle(Agent):
         old_ed = calc_energy_wh(ap_rc, duration)
 
         _log.debug(
-            'current pp: {0.2f}'.format(old_pp)
-            + ', current ed_rc: {0.4f}'.format(old_ed)
+            'current pp: {:0.2f}'.format(old_pp)
+            + ', current ed_rc: {:0.4f}'.format(old_ed)
         )
 
         # Gradient descent iteration
@@ -795,8 +795,8 @@ class RadiantCubicle(Agent):
 
             _log.debug(
                 'iter: {}'.format(i)
-                + ', bid_pp: {0.2f}'.format(new_pp)
-                + ', new_ed: {0.4f}'.format(new_ed)
+                + ', bid_pp: {:0.2f}'.format(new_pp)
+                + ', new_ed: {:0.4f}'.format(new_ed)
             )
 
             if isclose(budget, new_ed, epsilon):
@@ -811,8 +811,8 @@ class RadiantCubicle(Agent):
 
         _log.debug(
             'iter count: {}'.format(i)
-            + ', new_pp: {0.2f}'.format(new_pp)
-            + ', expected_ed: {0.4f}'.format(new_ed)
+            + ', new_pp: {:0.2f}'.format(new_pp)
+            + ', expected_ed: {:0.4f}'.format(new_ed)
         )
 
         _log.debug('...done')

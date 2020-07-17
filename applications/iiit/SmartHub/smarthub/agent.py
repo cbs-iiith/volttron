@@ -1400,10 +1400,10 @@ class SmartHub(Agent):
         old_ed = old_ed_fan + old_ed_light
 
         _log.debug(
-            'current pp: {0.2f}'.format(old_pp)
-            + ', current ed: {0.4f}'.format(old_ed)
-            + ', current ed_fan: {0.4f}'.format(old_ed_fan)
-            + ', current ed_light: {0.4f}'.format(old_ed_light)
+            'current pp: {:0.2f}'.format(old_pp)
+            + ', current ed: {:0.4f}'.format(old_ed)
+            + ', current ed_fan: {:0.4f}'.format(old_ed_fan)
+            + ', current ed_light: {:0.4f}'.format(old_ed_light)
         )
 
         # Gradient descent iteration
@@ -1424,10 +1424,10 @@ class SmartHub(Agent):
 
             _log.debug(
                 'iter: {}'.format(i)
-                + ', bid_pp: {0.2f}'.format(new_pp)
-                + ', new_ed: {0.4f}'.format(new_ed)
-                + ' new_ed_fan: {0.2f}'.format(new_ed_fan)
-                + ' new_ed_light: {0.2f}'.format(new_ed_light)
+                + ', bid_pp: {:0.2f}'.format(new_pp)
+                + ', new_ed: {:0.4f}'.format(new_ed)
+                + ' new_ed_fan: {:0.2f}'.format(new_ed_fan)
+                + ' new_ed_light: {:0.2f}'.format(new_ed_light)
             )
 
             if isclose(budget, new_ed, epsilon):
@@ -1444,10 +1444,10 @@ class SmartHub(Agent):
 
         _log.debug(
             'iter count: {}'.format(i)
-            + ', new_pp: {0.2f}'.format(new_pp)
-            + ', expected_ed: {0.4f}'.format(new_ed + base_ed)
-            + ' expected_ed_fan: {0.2f}'.format(new_ed_fan)
-            + ' expected_ed_light: {0.2f}'.format(new_ed_light)
+            + ', new_pp: {:0.2f}'.format(new_pp)
+            + ', expected_ed: {:0.4f}'.format(new_ed + base_ed)
+            + ' expected_ed_fan: {:0.2f}'.format(new_ed_fan)
+            + ' expected_ed_light: {:0.2f}'.format(new_ed_light)
         )
 
         _log.debug('...done')

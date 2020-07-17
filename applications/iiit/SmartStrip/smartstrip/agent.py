@@ -1245,7 +1245,7 @@ class SmartStrip(Agent):
 
         old_pp = self._price_point_latest
         _log.debug(
-            'current pp: {0.2f}'.format(old_pp)
+            'current pp: {:0.2f}'.format(old_pp)
         )
         new_ed_plugs = {}
         old_ed_plugs = {}
@@ -1256,7 +1256,7 @@ class SmartStrip(Agent):
             plug_pwr = self._rs[k][EnergyCategory.mixed].exp_wt_mv_avg()
             old_ed_plugs[k] = calc_energy_wh(plug_pwr, duration)
             _log.debug(
-                'current ed_{0}: {0.4f}'.format(k, old_ed_plugs[k])
+                'current ed_{}: {:0.4f}'.format(k, old_ed_plugs[k])
             )
             old_ed += old_ed_plugs[k]
 
@@ -1283,14 +1283,14 @@ class SmartStrip(Agent):
                 )
                 new_ed_plugs[k] = calc_energy_wh(plug_pwr, duration)
                 _log.debug(
-                    'new ed_{0}: {0.4f}'.format(k, new_ed_plugs[k])
+                    'new ed_{}: {:0.4f}'.format(k, new_ed_plugs[k])
                 )
                 new_ed += new_ed_plugs[k]
 
             _log.debug(
                 'iter: {}'.format(i)
-                + ', bid_pp: {0.2f}'.format(new_pp)
-                + ', new_ed: {0.4f}'.format(new_ed + base_ed)
+                + ', bid_pp: {:0.2f}'.format(new_pp)
+                + ', new_ed: {:0.4f}'.format(new_ed + base_ed)
             )
 
             if isclose(budget, new_ed, epsilon):
@@ -1306,8 +1306,8 @@ class SmartStrip(Agent):
 
         _log.debug(
             'iter count: {}'.format(i)
-            + ', new_pp: {0.2f}'.format(new_pp)
-            + ', expected_ed: {0.4f}'.format(new_ed + base_ed)
+            + ', new_pp: {:0.2f}'.format(new_pp)
+            + ', expected_ed: {:0.4f}'.format(new_ed + base_ed)
         )
 
         _log.debug('...done')
