@@ -105,6 +105,7 @@ class ZoneController(Agent):
     _bid_pp_msg_latest = None  # type: ISPACE_Msg
 
     _bud_msg_latest = None  # type: ISPACE_Msg_Budget
+    _latest_msg_type = None     # type: MessageType
 
     _gd_params = None
 
@@ -191,6 +192,7 @@ class ZoneController(Agent):
 
         self._bid_pp_msg_latest = get_default_pp_msg(self._discovery_address,
                                                      self._device_id)
+        self._latest_msg_type = MessageType.price_point
 
         self._run_bms_test()
 
@@ -581,18 +583,18 @@ class ZoneController(Agent):
             _log.debug('New pp msg on the local-bus, topic: {}'.format(topic))
 
         if pp_msg_type and pp_msg.get_isoptimal():
-            _log.debug('***** New optimal price point from pca: {:0.2f}'.format(
-                pp_msg.get_value())
+            _log.debug('***** New optimal price point from pca:'
+                       + ' {:0.2f}'.format(pp_msg.get_value())
                        + ' , price_id: {}'.format(pp_msg.get_price_id()))
             self._process_opt_pp(pp_msg)
         elif pp_msg_type and not pp_msg.get_isoptimal():
-            _log.debug('***** New bid price point from pca: {:0.2f}'.format(
-                pp_msg.get_value())
+            _log.debug('***** New bid price point from pca:'
+                       + ' {:0.2f}'.format(pp_msg.get_value())
                        + ' , price_id: {}'.format(pp_msg.get_price_id()))
             self._process_bid_pp(pp_msg)
         elif bd_msg_type:
-            _log.debug('***** New budget from pca: {:0.4f}'.format(
-                pp_msg.get_value())
+            _log.debug('***** New budget from pca:'
+                       + ' {:0.4f}'.format(pp_msg.get_value())
                        + ' , price_id: {}'.format(pp_msg.get_price_id()))
             self._process_opt_pp(pp_msg)
 
@@ -602,10 +604,12 @@ class ZoneController(Agent):
         if pp_msg.get_msg_type() == MessageType.price_point:
             self._opt_pp_msg_latest = copy(pp_msg)
             self._price_point_latest = pp_msg.get_value()
+            self._latest_msg_type = MessageType.price_point
         elif pp_msg.get_msg_type() == MessageType.budget:
             self._bud_msg_latest = copy(pp_msg)
+            self._latest_msg_type = MessageType.budget
 
-        # any process that failed to apply pp sets this flag False
+            # any process that failed to apply pp sets this flag False
         self._process_opt_pp_success = False
         # initiate the periodic process
         self.process_opt_pp()
@@ -620,7 +624,7 @@ class ZoneController(Agent):
         # any process that failed to apply pp sets this flag False
         self._process_opt_pp_success = True
 
-        if self._opt_pp_msg_latest.get_msg_type() == MessageType.budget:
+        if self._latest_msg_type == MessageType.budget:
             # compute new_pp for the budget and then apply pricing policy
             new_pp = self._compute_new_opt_pp()
             self._opt_pp_msg_latest = copy(self._bud_msg_latest)
