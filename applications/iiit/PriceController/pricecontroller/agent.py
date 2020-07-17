@@ -1548,7 +1548,7 @@ class PriceController(Agent):
                     + ' us_bid_timed_out: {}'.format(us_bid_timed_out)
                     + ', will try again in {} sec'.format(retry_time)
                 )
-                return False
+                return False, None
 
             else:
                 _log.warning('!!! us bid pp timed out'
@@ -1581,7 +1581,7 @@ class PriceController(Agent):
                     + ' us_bids_timeout: {}'.format(us_bids_timeout)
                     + ', will try again in {} sec'.format(retry_time)
                 )
-                return False
+                return False, None
 
             else:
                 _log.warning('!!! us bid pp timed out'
