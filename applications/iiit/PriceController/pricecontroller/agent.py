@@ -160,7 +160,7 @@ class PriceController(Agent):
     _us_ds_opt_ap = None
 
     # running stats factor (window)
-    _rc_factor = None  # type: int
+    _rs_factor = None  # type: int
 
     # Multi dimensional dictionary for RunningStats
     # _rs[DEVICE_ID][ENERGY_CATEGORY]
@@ -253,8 +253,8 @@ class PriceController(Agent):
             self._us_bid_timeout = 900
             self._lc_bid_timeout = 120
 
-        self._rc_factor = self.config.get('rc_factor', 120)
-        self._rs = running_stats_multi_dict(3, list, self._rc_factor)
+        self._rs_factor = self.config.get('rc_factor', 120)
+        self._rs = running_stats_multi_dict(3, list, self._rs_factor)
 
         self._vb_vip_identity = self.config.get(
             'vb_vip_identity',
@@ -623,7 +623,7 @@ class PriceController(Agent):
 
         if pp_msg_type and pp_msg.get_isoptimal():
             # reset running stats
-            # self._rs = running_stats_multi_dict(3, list, self._rc_factor)
+            # self._rs = running_stats_multi_dict(3, list, self._rs_factor)
             pass
         elif pp_msg_type and not pp_msg.get_isoptimal():
             # re-initialize aggregator_us_bid_ted

@@ -413,13 +413,16 @@
                     <label>Bids Timeout:</label>
                     <input id="pass_on_params_bid_timeout"
                            onchange="clearPubParamStatus()"
-                           type="number" value="20"> <br>
+                           type="number" value="20">
+                    <label>(up stream bids timeout in sec, 0 --> wait forever)</label>
+                    <br>
                 </p>
                 <p style="text-indent: 20px">
                     <label>Weight Factors: </label>
                     <input id="pass_on_params_wt_factor"
                            onchange="clearPubParamStatus()"
                            type="text" value="[0.0, 0.5, 0.5]">
+                    <label>(allocation proportions)</label>
                 </p>
                 <p style="text-indent: 20px">
                     <button class="w3-button w3-grey"
@@ -439,13 +442,17 @@
                     <label>Upstream bids timeout:</label>
                     <input id="df_opt_params_us_bid_timeout"
                            onchange="clearPubParamStatus()"
-                           type="number" value="900"> <br>
+                           type="number" value="900">
+                    <label>(in sec, 0 --> wait forever)</label>
+                    <br>
                 </p>
                 <p style="text-indent: 20px">
                     <label>Local bids timeout:</label>
                     <input id="df_opt_params_ls_bids_timeout"
                            onchange="clearPubParamStatus()"
-                           type="number" value="180"> <br>
+                           type="number" value="180">
+                    <label>(in sec, 0 --> wait forever)</label>
+                    <br>
                 </p>
                 <p style="text-indent: 20px">
                     <label>Max iterations:</label>
@@ -457,25 +464,26 @@
                     <label>Epsilon:</label>
                     <input id="df_opt_params_epsilon"
                            onchange="clearPubParamStatus()"
-                           type="number" value="[100, 100, 100]"> <br>
+                           type="text" value="[100, 100, 100]"> <br>
                 </p>
                 <p style="text-indent: 20px">
                     <label>Gamma:</label>
                     <input id="df_opt_params_gamma"
                            onchange="clearPubParamStatus()"
-                           type="number" value="[0.0, 0.0002, 0.0002]"> <br>
+                           type="text" value="[0.0, 0.0002, 0.0002]"> <br>
                 </p>
                 <p style="text-indent: 20px">
                     <label>Alpha:</label>
                     <input id="df_opt_params_alpha"
                            onchange="clearPubParamStatus()"
-                           type="number" value="[0.0, 0.0035, 0.0035]"> <br>
+                           type="text" value="[0.0, 0.0035, 0.0035]"> <br>
                 </p>
                 <p style="text-indent: 20px">
                     <label>Weight Factors: </label>
                     <input id="df_opt_params_weight_factors"
                            onchange="clearPubParamStatus()"
                            type="text" value="[0.0, 0.5, 0.5]">
+                    <label>(allocation proportions)</label>
                 </p>
                 <p style="text-indent: 20px">
                     <button class="w3-button w3-grey"
@@ -524,16 +532,40 @@
                     <h5>Other Params:</h5>
                 </div>
                 <p style="text-indent: 20px">
-                    <label>Read Data Period:</label>
-                    <input id="others_period_read_data"
-                           onchange="clearPubParamStatus()"
-                           type="number" value="30"> <br>
-                </p>
-                <p style="text-indent: 20px">
                     <label>Process Loop Period:</label>
                     <input id="others_period_process_loop"
                            onchange="clearPubParamStatus()"
-                           type="number" value="1"> <br>
+                           type="number" value="1">
+                    (in sec)
+                    <p style="margin-left: 40px">
+                        Retry interval to apply pricing policy till success.
+                        Also, used for optimization routines like
+                        aggregator & iterator functions.
+                        These fns need to be
+                        completed as soon as possible.
+                </p>
+                <p style="text-indent: 20px">
+                    <label>Read Data Period:</label>
+                    <input id="others_period_read_data"
+                           onchange="clearPubParamStatus()"
+                           type="number" value="30">
+                    (in sec)
+                    <p style="margin-left: 40px">
+                        Rate at which total active power (tap) is published to
+                        local/energydemand.
+                </p>
+                <p style="text-indent: 20px">
+                    <label>Running Stats Factor:</label>
+                    <input id="others_rs_factor"
+                           onchange="clearPubParamStatus()"
+                           type="number" value="120">
+                    (1 hr, 2 reading/min)
+                    <p style="margin-left: 40px">
+                        Exponential weighted moving average factor is a
+                        constant that affects how quickly the average
+                        "catches up" to the latest trend.
+                        At 1 it's no longer an average and just becomes
+                        the latest value.
                 </p>
                 <p style="text-indent: 20px">
                     <button id="publishPcaOtherParams">Submit</button>
