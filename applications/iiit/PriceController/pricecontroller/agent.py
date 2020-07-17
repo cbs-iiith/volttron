@@ -724,13 +724,15 @@ class PriceController(Agent):
         sum_wt_factors = sum(wt_factors)
         t_budget = pp_msg.get_value()
 
-        ds_device_ids, local_device_ids = self._get_active_device_ids(
-            self._us_ds_opt_ap, self._us_local_opt_ap)
+        self._local_device_ids = self._rpcget_local_device_ids()
+        self._ds_device_ids = self._rpcget_ds_device_ids()
+        _log.debug('local_device_ids: {}'.format(self._local_device_ids))
+        _log.debug('ds_device_ids: {}'.format(self._ds_device_ids))
 
-        _log.debug('local_device_ids: {}'.format(local_device_ids))
-        _log.debug('ds_device_ids: {}'.format(ds_device_ids))
-
-        for index, device_id in enumerate(local_device_ids + ds_device_ids):
+        for index, device_id in enumerate(
+                self._local_device_ids
+                + self._ds_device_ids
+        ):
             new_bd_msg = copy(pp_msg)  # type: ISPACE_Msg_Budget
             new_bd_msg.set_one_to_one(True)
             new_bd_msg.set_dst_device_id(device_id)
