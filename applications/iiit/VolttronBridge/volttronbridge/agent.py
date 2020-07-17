@@ -523,11 +523,21 @@ class VolttronBridge(Agent):
                        )
             self.local_bid_pp_id = pp_msg.get_price_id()
 
-        if (
-                pp_msg.get_one_to_one()
-                and pp_msg.get_dst_device_id in self._local_device_ids
-        ):
+        is_msg_1_to_1 = pp_msg.get_one_to_one()
+        is_local_device = pp_msg.get_dst_device_id() in self._local_device_ids
+        '''
+        _log.debug(
+            'pp_msg.get_dst_device_id: {}'.format(pp_msg.get_dst_device_id)
+            + 'self._local_device_ids: {}'.format(self._local_device_ids)
+        )
+        _log.debug(
+            'is_msg_1_to_1: {}'.format(is_msg_1_to_1)
+            + 'is_local_device_id: {}'.format(is_local_device)
+        )
+        '''
+        if is_msg_1_to_1 and is_local_device:
             # do nothing
+            _log.debug('one-to-one msg for local device, do nothing')
             return
 
         self._us_pp_messages.append(copy(pp_msg))
@@ -716,8 +726,8 @@ class VolttronBridge(Agent):
                 _log.debug('new ttl: {}.'.format(pp_msg.get_ttl()))
                 pp_msg.update_ts()
 
-            msg_1_to_1 = pp_msg.get_one_to_one()
-            if msg_1_to_1:
+            is_msg_1_to_1 = pp_msg.get_one_to_one()
+            if is_msg_1_to_1:
                 self._ds_rpc_1_to_1(pp_msg)
             else:
                 self._ds_rpc_1_to_m(pp_msg)
@@ -725,7 +735,7 @@ class VolttronBridge(Agent):
             if self._all_ds_posts_success:
                 # remove msg from the queue
                 _log.debug('msg successfully posted to'
-                           + (' ds' if msg_1_to_1 else ' all ds')
+                           + (' ds' if is_msg_1_to_1 else ' all ds')
                            + ', removing it from the queue')
                 del self._us_pp_messages[idx - del_count]
                 del_count += 1
