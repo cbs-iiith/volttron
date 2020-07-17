@@ -57,7 +57,7 @@
         "coefficients":[
             {"a": 50, "b": 20, "c": 68}
         ]
-    }
+    },
 
     # gradient descent params to compute new pp from a budget
     "gd_params": {

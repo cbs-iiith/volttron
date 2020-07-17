@@ -26,7 +26,7 @@
             {"a": 60, "b": 10, "c": 30},
             {"a": 35, "b": 29.75, "c": 40}
         ]
-    }
+    },
 
     # gradient descent params to compute new pp from a budget
     "gd_params": {

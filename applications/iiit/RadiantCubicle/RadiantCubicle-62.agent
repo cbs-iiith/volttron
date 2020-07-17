@@ -40,7 +40,7 @@
         "coefficients": [
             {"a": 7.5, "b": -1.5, "c": 24}
         ]
-    }
+    },
 
     # gradient descent params to compute new pp from a budget
     "gd_params": {
