@@ -71,23 +71,27 @@ def valid_bustopic_msg(
                                           e))
         return False, pp_msg
 
-    hint = (
-        'Price Point'
-        if pp_msg.get_msg_type() == MessageType.price_point
-        else 'Active Power'
-        if pp_msg.get_msg_type() == MessageType.active_power
-        else 'Energy Demand'
-        if pp_msg.get_msg_type() == MessageType.energy_demand
-        else 'Budget'
-        if pp_msg.get_msg_type() == MessageType.budget
-        else 'Unknown Msg Type'
-    )
+    hint = get_msg_hint(pp_msg.get_msg_type())
 
     # sanity measure like, valid fields, valid pp ids, ttl expiry, etc.,
     if not pp_msg.sanity_check_ok(hint, validate_fields, valid_price_ids):
         _log.warning('Msg sanity checks failed!!!')
         return False, pp_msg
     return True, pp_msg
+
+
+def get_msg_hint(pp_msg_type):
+    return (
+        'Price Point'
+        if pp_msg_type == MessageType.price_point
+        else 'Active Power'
+        if pp_msg_type == MessageType.active_power
+        else 'Energy Demand'
+        if pp_msg_type == MessageType.energy_demand
+        else 'Budget'
+        if pp_msg_type == MessageType.budget
+        else 'Unknown Msg Type'
+    )
 
 
 # a default pricepoint message

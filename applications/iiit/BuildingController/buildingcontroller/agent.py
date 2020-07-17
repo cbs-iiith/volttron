@@ -373,7 +373,7 @@ class BuildingController(Agent):
         pp_msg_type = False
         bd_msg_type = False
         # check message type before parsing
-        if not check_msg_type(message, MessageType.price_point):
+        if check_msg_type(message, MessageType.price_point):
             pp_msg_type = True
             pass
         elif check_msg_type(message, MessageType.budget):
