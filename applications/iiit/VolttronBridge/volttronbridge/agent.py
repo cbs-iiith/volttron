@@ -506,18 +506,34 @@ class VolttronBridge(Agent):
             )
             return
         else:
-            hint = 'New price point (pp)'
+            hint = (
+                'New price point (pp)'
+                if pp_msg_type
+                else 'New budget (bd)'
+            )
             _log.debug('{} msg on the local-bus'.format(hint)
                        + ', topic: {} ...'.format(topic))
 
-        if pp_msg.get_isoptimal():
+        if pp_msg_type and pp_msg.get_isoptimal():
             _log.debug('***** New optimal price point from local:'
                        + ' {:0.2f}'.format(pp_msg.get_value())
                        + ' price_id: {}'.format(pp_msg.get_price_id())
                        )
             self.local_opt_pp_id = pp_msg.get_price_id()
-        else:
+        elif pp_msg_type and not pp_msg.get_isoptimal():
             _log.debug('***** New bid price point from local:'
+                       + ' {:0.2f}'.format(pp_msg.get_value())
+                       + ' price_id: {}'.format(pp_msg.get_price_id())
+                       )
+            self.local_bid_pp_id = pp_msg.get_price_id()
+        elif bd_msg_type and pp_msg.get_isoptimal():
+            _log.debug('***** New optimal budget from local:'
+                       + ' {:0.2f}'.format(pp_msg.get_value())
+                       + ' price_id: {}'.format(pp_msg.get_price_id())
+                       )
+            self.local_opt_pp_id = pp_msg.get_price_id()
+        elif bd_msg_type and not pp_msg.get_isoptimal():
+            _log.debug('***** New bid budget from local:'
                        + ' {:0.2f}'.format(pp_msg.get_value())
                        + ' price_id: {}'.format(pp_msg.get_price_id())
                        )
@@ -958,7 +974,13 @@ class VolttronBridge(Agent):
 
         # Note: this is on a rpc message do the check here ONLY
         # check message for MessageType.price_point
+        pp_msg_type = False
+        bd_msg_type = False
         if check_msg_type(message, MessageType.price_point):
+            pp_msg_type = True
+            pass
+        elif check_msg_type(message, MessageType.budget):
+            bd_msg_type = True
             pass
         else:
             msg = 'Invalid params {}'.format(rpcdata.params)
@@ -979,7 +1001,7 @@ class VolttronBridge(Agent):
             return error
 
         # sanity measure like, valid fields, valid pp ids, ttl expiry, etc.,
-        hint = 'Price Point'
+        hint = 'Price Point' if pp_msg_type else 'Budget' if bd_msg_type else ''
         validate_fields = ['value', 'price_id', 'isoptimal', 'ttl']
         valid_price_ids = []  # accept all pp_ids from us
         if pp_msg.sanity_check_ok(hint, validate_fields, valid_price_ids):
@@ -992,13 +1014,23 @@ class VolttronBridge(Agent):
 
         # keep a track of us pp_ids
         if pp_msg.get_src_device_id() != self._device_id:
-            if pp_msg.get_isoptimal():
+            if pp_msg_type and pp_msg.get_isoptimal():
                 _log.debug('***** New optimal price point from us:'
                            + ' {:0.2f}'.format(pp_msg.get_value()))
                 self.us_opt_pp_id = pp_msg.get_price_id()
-            else:
+            elif pp_msg_type and not pp_msg.get_isoptimal():
                 _log.debug('***** New bid price point from us:'
                            + ' {:0.2f}'.format(pp_msg.get_value()))
+                self.us_bid_pp_id = pp_msg.get_price_id()
+            elif bd_msg_type and pp_msg.get_isoptimal():
+                _log.debug('***** New optimal budget from us:'
+                           + '{:0.4f}'.format(pp_msg.get_value())
+                           + ' , price_id: {}'.format(pp_msg.get_price_id()))
+                self.us_opt_pp_id = pp_msg.get_price_id()
+            elif bd_msg_type and not pp_msg.get_isoptimal():
+                _log.debug('***** New bid budget from us:'
+                           + '{:0.4f}'.format(pp_msg.get_value())
+                           + ' , price_id: {}'.format(pp_msg.get_price_id()))
                 self.us_bid_pp_id = pp_msg.get_price_id()
 
         # publish the new price point to the local us message bus

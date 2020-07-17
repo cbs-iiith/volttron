@@ -273,6 +273,7 @@ class ISPACE_Msg:
             if (    # check for price id and value
                 self.price_id == other.price_id
                 and isclose(self.value, other.value, EPSILON)
+                and self.dst_device_id == other.dst_device_id
             )
             else False
         )
