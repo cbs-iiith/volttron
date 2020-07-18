@@ -1332,7 +1332,6 @@ class PriceController(Agent):
             valid_senders_list = (
                     self._ds_senders_list
                     + self._local_ed_agents
-                    + self.core.identity
             )
         elif self._pca_mode == PcaMode.extern_opt:
             valid_senders_list = (
