@@ -19,8 +19,8 @@
     #                   roundup --> roundup, and 
     #                   idx --> default pf coefficients
     "pf_rc": {
-        "roundup":0.5,
-        "idx":0,
+        "roundup": 0.5,
+        "idx": 0,
         "coefficients": [
             {"a": 1, "b": -3.5, "c": 23},
             {"a": 1, "b": -3.5, "c": 24},
@@ -35,10 +35,10 @@
     #                   roundup --> roundup, and 
     #                   idx --> default edf coefficients
     "edf_rc": {
-        "roundup":0.5,
-        "idx":0,
+        "roundup": 0.5,
+        "idx": 0,
         "coefficients": [
-            {"a": 7.5, "b": -1.5, "c": 24}
+            {"a": 0, "b": -100, "c": 2550}
         ]
     },
 

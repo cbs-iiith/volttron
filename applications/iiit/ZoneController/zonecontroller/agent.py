@@ -822,7 +822,7 @@ class ZoneController(Agent):
                                duration
                                )
 
-        bid_lsp = self._compute_new_lsp(bid_pp)
+        bid_lsp = self._compute_new_lsp(bid_pp) / 100
         ed_light = calc_energy_wh(self._compute_ed_light(bid_lsp),
                                   duration
                                   )
@@ -894,7 +894,7 @@ class ZoneController(Agent):
                                        duration
                                        )
 
-            new_lsp = self._compute_new_lsp(new_pp)
+            new_lsp = self._compute_new_lsp(new_pp) / 100
             new_ed_light = calc_energy_wh(self._compute_ed_light(new_lsp),
                                           duration
                                           )

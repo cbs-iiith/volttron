@@ -1265,8 +1265,8 @@ class SmartHub(Agent):
         # sh fan active power
         if self._sh_devices_state[SH_DEVICE_FAN] == SH_DEVICE_STATE_ON:
             fan_speed = self._sh_devices_level[SH_DEVICE_FAN]
-            ap_fan = ((SH_FAN_POWER * SH_LED_THRESHOLD_PCT)
-                      if fan_speed <= SH_LED_THRESHOLD_PCT
+            ap_fan = ((SH_FAN_POWER * SH_FAN_THRESHOLD_PCT)
+                      if fan_speed <= SH_FAN_THRESHOLD_PCT
                       else (SH_FAN_POWER * fan_speed))
             self._rs['fan'][EnergyCategory.mixed].push(ap_fan)
 
@@ -1337,7 +1337,7 @@ class SmartHub(Agent):
     def _sh_fan_ed(self, bid_pp, duration):
         ed = 0
         if bid_pp <= self._sh_devices_th_pp[SH_DEVICE_FAN]:
-            fan_speed = self._compute_new_fan_speed(bid_pp)
+            fan_speed = self._compute_new_fan_speed(bid_pp) / 100
             fan_energy = calc_energy_wh(SH_FAN_POWER, duration)
             ed = ((fan_energy * SH_FAN_THRESHOLD_PCT)
                   if fan_speed <= SH_FAN_THRESHOLD_PCT

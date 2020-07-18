@@ -18,15 +18,15 @@
     #                   roundup --> roundup, and 
     #                   idx --> default pf coefficients
     "pf_zn_ac": {
-        "roundup":0.5,
-        "idx":0,
+        "roundup": 0.5,
+        "idx": 0,
         "coefficients": [
             {"a": 7.5, "b": -1.5, "c": 24}
         ]
     },
     "pf_zn_light": {
-        "roundup":5,
-        "idx":0,
+        "roundup": 5,
+        "idx": 0,
         "coefficients":[
             {"a": -35, "b": -35, "c": 100}
         ]
@@ -42,8 +42,8 @@
     # file name: "Book2.xlsx"
     # sheet name: 'Zone-SP-ED'
     "edf_zn_ac": {
-        "roundup":0.5,
-        "idx":0,
+        "roundup": 0.5,
+        "idx": 0,
         "coefficients": [
             {"a": 102.94, "b": -6128, "c": 91699}
         ]
@@ -52,8 +52,8 @@
     # file name: "rm lighting energy.xlsx"
     # sheet name: 'RM_LightingEnergy'
     "edf_zn_light": {
-        "roundup":5,
-        "idx":0,
+        "roundup": 5,
+        "idx": 0,
         "coefficients":[
             {"a": 50, "b": 20, "c": 68}
         ]
