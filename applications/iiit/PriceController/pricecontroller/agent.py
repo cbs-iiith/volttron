@@ -22,7 +22,7 @@ import gevent
 import gevent.event
 from enum import IntEnum
 
-from applications.iiit.Utils.ispace_msg import (ISPACE_Msg, MessageType,
+from applications.iiit.Utils.ispace_msg import (MessageType,
                                                 EnergyCategory,
                                                 ISPACE_Msg_BidPricePoint,
                                                 ISPACE_Msg_Energy,
@@ -119,7 +119,7 @@ class PriceController(Agent):
     device_id = None
 
     us_opt_pp_msg = None  # type: ISPACE_Msg_OptPricePoint
-    us_bid_pp_msg = None  # type: ISPACE_Msg_OptPricePoint
+    us_bid_pp_msg = None  # type: ISPACE_Msg_BidPricePoint
 
     lc_opt_pp_msg = None  # type: ISPACE_Msg_OptPricePoint
     lc_bid_pp_msg = None  # type: ISPACE_Msg_BidPricePoint
@@ -129,7 +129,7 @@ class PriceController(Agent):
 
     # bd -- budget
     us_opt_bd_msg = None  # type: ISPACE_Msg_OptPricePoint
-    us_bid_bd_msg = None  # type: ISPACE_Msg_OptPricePoint
+    us_bid_bd_msg = None  # type: ISPACE_Msg_BidPricePoint
 
     lc_opt_bd_msg = None  # type: ISPACE_Msg_OptPricePoint
     lc_bid_bd_msg = None  # type: ISPACE_Msg_BidPricePoint
@@ -304,7 +304,9 @@ class PriceController(Agent):
 
         discovery_address = self._discovery_address
         device_id = self._device_id
+        # noinspection PyTypeChecker
         self.us_opt_pp_msg = get_default_pp_msg(discovery_address, device_id)
+        # noinspection PyTypeChecker
         self.us_bid_pp_msg = get_default_pp_msg(discovery_address, device_id)
 
         self.external_vip_identity = None
@@ -1526,7 +1528,7 @@ class PriceController(Agent):
         # vb pushes(RPC) this value to the next level
         self._publish_bid_ted(self.us_bid_pp_msg, bid_ted)
 
-        self.us_bid_pp_msg = ISPACE_Msg(MessageType.price_point)
+        self.us_bid_pp_msg = ISPACE_Msg_BidPricePoint(MessageType.price_point)
         self._published_us_bid_ted = True
         return
 
