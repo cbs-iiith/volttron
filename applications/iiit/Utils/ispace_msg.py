@@ -738,7 +738,7 @@ class ISPACE_Msg_BidPricePoint(ISPACE_Msg_PricePoint):
 
 
 class ISPACE_Msg_ActivePower(ISPACE_Msg):
-    energy_category = None
+    energy_category = EnergyCategory.mixed
 
     def __init__(self,
                  msg_type=MessageType.active_power,
@@ -837,7 +837,7 @@ class ISPACE_Msg_Budget(ISPACE_Msg_Energy):
                  src_ip=None, src_device_id=None,
                  dst_ip=None, dst_device_id=None,
                  duration=None, ttl=None, ts=None, tz=None,
-                 energy_category=None
+                 energy_category=EnergyCategory.mixed
                  ):
         ISPACE_Msg_Energy.__init__(self,
                                    msg_type, one_to_one, isoptimal,
