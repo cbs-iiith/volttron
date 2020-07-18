@@ -134,6 +134,8 @@ class PriceController(Agent):
     lc_opt_bd_msg = None  # type: ISPACE_Msg_OptPricePoint
     lc_bid_bd_msg = None  # type: ISPACE_Msg_BidPricePoint
 
+    us_latest_msg_type = None  # type: MessageType
+
     external_vip_identity = None
 
     _run_local_bidding_process = False
@@ -581,9 +583,11 @@ class PriceController(Agent):
         # check message type before parsing
         if check_msg_type(message, MessageType.price_point):
             pp_msg_type = True
+            self.us_latest_msg_type = MessageType.price_point
             pass
         elif check_msg_type(message, MessageType.budget):
             bd_msg_type = True
+            self.us_latest_msg_type = MessageType.budget
             pass
         else:
             return
@@ -1706,7 +1710,11 @@ class PriceController(Agent):
         # create a ISPACE_Msg with MessageType.active_power
         # in response to us_opt_pp_msg
         tap_msg = tap_helper(
-            self.us_opt_pp_msg,
+            (
+                self.us_opt_pp_msg
+                if self.us_latest_msg_type == MessageType.price_point
+                else self.us_opt_bd_msg
+            ),
             self._device_id,
             self._discovery_address,
             opt_tap,
