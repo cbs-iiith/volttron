@@ -813,7 +813,7 @@ class PriceController(Agent):
                                                                     ed_prev
                                                                     )
 
-        self.lc_bid_pp_msg_list = new_pp_msg_list.copy()
+        self.lc_bid_pp_msg_list = copy(new_pp_msg_list)
         # _log.info('new bid pp_msg_list: {}'.format(new_pp_msg_list))
 
         self._pub_pp_messages(new_pp_msg_list)
@@ -978,8 +978,8 @@ class PriceController(Agent):
             )
 
             current_ted = self._calc_total(self._local_bid_ed, self._ds_bid_ed)
-            self._ed_prev = ed_current.copy()
-            self._pp_old = new_pricepoints.copy()
+            self._ed_prev = copy(ed_current)
+            self._pp_old = copy(new_pricepoints)
 
         # case _pca_state == PcaState.online
         if target_achieved and self._pca_state == PcaState.online:
@@ -994,7 +994,7 @@ class PriceController(Agent):
         elif self._pca_state == PcaState.standalone:
             isoptimal = True if target_achieved else False
             if new_pricepoints is None:
-                new_pricepoints = self._pp_old.copy()
+                new_pricepoints = copy(self._pp_old)
             for idx in new_pricepoints:
                 new_pricepoints[idx].set_isoptimal(isoptimal)
 
