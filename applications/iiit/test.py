@@ -14,6 +14,7 @@
 from collections import defaultdict
 from applications.iiit.Utils.ispace_utils import Runningstats
 
+
 # https://www.geeksforgeeks.org/python-creating-multidimensional-dictionary/
 def multi_dict(dimensions, data_type):
     if dimensions == 1:
@@ -58,20 +59,20 @@ h_opt_tap[d_4][ap_cat_3].push(10.0)
 # printing result
 print("Dictionary after nesting : " + str(dict(h_opt_tap)))
 
-#tmp = [v for k, v in h_opt_tap[d_1].items()]
+# tmp = [v for k, v in h_opt_tap[d_1].items()]
 for k, v in h_opt_tap.items():
     print('k: {}'.format(k))
     for k1, v1 in v.items():
         print('k1: {}, v1.mean(): {}'.format(k1,v1.mean()))
 
-#for k, v in h_opt_tap[d_1].items():
+# for k, v in h_opt_tap[d_1].items():
 #    print('k: {}, v: {}'.format(k,v))
 
-#print(" Count h_opt_tap[d_1][ap_cat_1]:" + str(tmp.mean()))
+# print(" Count h_opt_tap[d_1][ap_cat_1]:" + str(tmp.mean()))
 
-#temp = [v for k, v in h_opt_tap[d_1][ap_cat_1].items()]
-#print(" Total h_opt_tap[d_1][ap_cat_1]:" + str(sum(temp)))
-#print(" Count h_opt_tap[d_1][ap_cat_1]:" + str(len(temp)))
+# temp = [v for k, v in h_opt_tap[d_1][ap_cat_1].items()]
+# print(" Total h_opt_tap[d_1][ap_cat_1]:" + str(sum(temp)))
+# print(" Count h_opt_tap[d_1][ap_cat_1]:" + str(len(temp)))
 
 # idx = get_idx_device_id(d_1)
 # h_opt_tap[idx].append[ap_cat_1]
