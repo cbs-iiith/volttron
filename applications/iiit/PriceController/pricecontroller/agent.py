@@ -585,11 +585,9 @@ class PriceController(Agent):
         # check message type before parsing
         if check_msg_type(message, MessageType.price_point):
             pp_msg_type = True
-            self.us_latest_msg_type = MessageType.price_point
             pass
         elif check_msg_type(message, MessageType.budget):
             bd_msg_type = True
-            self.us_latest_msg_type = MessageType.budget
             pass
         else:
             return
@@ -679,6 +677,7 @@ class PriceController(Agent):
                     + ' {:0.2f}'.format(price)
                     + ' , price_id: {}'.format(price_id)
                 )
+            self.us_latest_msg_type = MessageType.price_point
         elif bd_msg_type:
             # message type budget
             if pp_msg.get_isoptimal():
@@ -695,6 +694,7 @@ class PriceController(Agent):
                     + ' {:0.2f}'.format(price)
                     + ' , price_id: {}'.format(price_id)
                 )
+            self.us_latest_msg_type = MessageType.budget
         else:
             pass
 
