@@ -98,6 +98,7 @@ class PriceController(Agent):
 
     _mode_pass_on_params = None
     _mode_default_opt_params = None
+    _is_single_pp = None    # type: bool
     _mode_extrn_opt_params = None
 
     _device_id = None
@@ -135,6 +136,7 @@ class PriceController(Agent):
     lc_bid_bd_msg = None  # type: ISPACE_Msg_BidPricePoint
 
     us_latest_msg_type = None  # type: MessageType
+    us_prev_msg_type = None  # type: MessageType
 
     external_vip_identity = None
 
@@ -222,6 +224,7 @@ class PriceController(Agent):
 
         self._mode_default_opt_params = self.config.get(
             'mode_default_opt_params', {
+                "is_single_pp": 'yes',
                 "us_bid_timeout": 900,
                 "lc_bid_timeout": 180,
                 "max_iterations": 10,
@@ -230,6 +233,11 @@ class PriceController(Agent):
                 "alpha": [0.0, 0.0035, 0.0035],
                 "weight_factors": [0.0, 0.5, 0.5]
             }
+        )
+        self._is_single_pp = (
+            True
+            if self._mode_default_opt_params['is_single_pp'].lower() == 'yes'
+            else False
         )
 
         self._mode_extrn_opt_params = self.config.get(
@@ -531,7 +539,10 @@ class PriceController(Agent):
             return
 
         # check message type before parsing
-        if not check_msg_type(message, MessageType.price_point):
+        if (
+                not check_msg_type(message, MessageType.price_point)
+                or not check_msg_type(message, MessageType.budget)
+        ):
             return
 
         valid_senders_list = [self.external_vip_identity]
@@ -644,12 +655,19 @@ class PriceController(Agent):
 
         elif self._pca_mode == PcaMode.default_opt:
             if pp_msg.get_isoptimal():
-                self._handle_pp_msg_default_opt_optimal_pp(pp_msg)
+                if pp_msg_type:
+                    self._handle_pp_msg_default_opt_optimal_pp(pp_msg)
+                elif bd_msg_type:
+                    self._handle_pp_msg_default_opt_optimal_bd(pp_msg)
             else:
-                self._handle_pp_msg_default_opt_not_optimal_pp(pp_msg)
+                if self._is_single_pp:
+                    _log.info('[LOG] PCA mode: default_opt, single_pp: true')
+                    _log.warning('not yet implemented!!!')
+                else:
+                    self._handle_pp_msg_default_opt_not_optimal_pp(pp_msg)
 
         elif self._pca_mode == PcaMode.extern_opt:
-            _log.info('[LOG] PCA mode: DEFAULT_OPT')
+            _log.info('[LOG] PCA mode: External_OPT')
             _log.warning('not yet implemented!!!')
 
         else:
@@ -659,41 +677,43 @@ class PriceController(Agent):
         return
 
     def _keep_track_msg(self, pp_msg, pp_msg_type, bd_msg_type):
-        price_id = pp_msg.get_price_id()
-        price = pp_msg.get_value()
+        msg_id = pp_msg.get_price_id()
+        value = pp_msg.get_value()
         if pp_msg_type:
             # message type price point
             if pp_msg.get_isoptimal():
                 self.us_opt_pp_msg = copy(pp_msg)
                 _log.debug(
                     '***** New optimal price point from us:'
-                    + ' {:0.2f}'.format(price)
-                    + ' , price_id: {}'.format(price_id)
+                    + ' {:0.2f}'.format(value)
+                    + ' , msg_id: {}'.format(msg_id)
                 )
             else:
                 self.us_bid_pp_msg = copy(pp_msg)
                 _log.debug(
                     '***** New bid price point from us:'
-                    + ' {:0.2f}'.format(price)
-                    + ' , price_id: {}'.format(price_id)
+                    + ' {:0.2f}'.format(value)
+                    + ' , msg_id: {}'.format(msg_id)
                 )
+            self.us_prev_msg_type = copy(self.us_latest_msg_type)
             self.us_latest_msg_type = MessageType.price_point
         elif bd_msg_type:
             # message type budget
             if pp_msg.get_isoptimal():
                 self.us_opt_bd_msg = copy(pp_msg)
                 _log.debug(
-                    '***** New optimal price point from us:'
-                    + ' {:0.2f}'.format(price)
-                    + ' , price_id: {}'.format(price_id)
+                    '***** New optimal budget from us:'
+                    + ' {:0.4f}'.format(value)
+                    + ' , msg_id: {}'.format(msg_id)
                 )
             else:
                 self.us_bid_bd_msg = copy(pp_msg)
                 _log.debug(
-                    '***** New bid price point from us:'
-                    + ' {:0.2f}'.format(price)
-                    + ' , price_id: {}'.format(price_id)
+                    '***** New bid budget from us:'
+                    + ' {:0.4f}'.format(value)
+                    + ' , msg_id: {}'.format(msg_id)
                 )
+            self.us_prev_msg_type = copy(self.us_latest_msg_type)
             self.us_latest_msg_type = MessageType.budget
         else:
             pass
@@ -704,6 +724,51 @@ class PriceController(Agent):
         _log.info('[LOG] PCA mode: DEFAULT_OPT & pp_msg is bid price')
         # init bidding process
         self._init_bidding_process(pp_msg)
+        _log.debug('done.')
+        return
+
+    def _handle_pp_msg_default_opt_optimal_bd(self, pp_msg):
+        _log.debug('_handle_bd_msg_pass_on()...')
+        # received budget
+        # compute new budgets
+        _log.info('[LOG] PCA mode: DEFAULT_OPT, Received Opt Budget')
+
+        wt_factors = self._mode_default_opt_params['weight_factors']
+        t_budget = pp_msg.get_value()
+
+        self._local_device_ids = self._rpcget_local_device_ids()
+        self._ds_device_ids = self._rpcget_ds_device_ids()
+        _log.debug('local_device_ids: {}'.format(self._local_device_ids))
+        _log.debug('ds_device_ids: {}'.format(self._ds_device_ids))
+
+        sum_wt_factors = 0
+        for index, device_id in enumerate(
+                self._local_device_ids
+                + self._ds_device_ids
+        ):
+            sum_wt_factors += wt_factors[index]
+
+        for index, device_id in enumerate(
+                self._local_device_ids
+                + self._ds_device_ids
+        ):
+            new_bd_msg = copy(pp_msg)  # type: ISPACE_Msg_Budget
+            new_bd_msg.set_one_to_one(True)
+            new_bd_msg.set_dst_device_id(device_id)
+
+            c = wt_factors[index] / sum_wt_factors
+            budget = c * t_budget
+            new_bd_msg.set_value(budget)
+
+            pub_topic = self._topic_price_point
+            pub_msg = new_bd_msg.get_json_message(self._agent_id, 'bus_topic')
+            _log.info(
+                '[LOG] Budget for device - {}'.format(device_id)
+                + ', Msg: {}'.format(pub_msg)
+            )
+            _log.debug('Publishing to local bus topic: {}'.format(pub_topic))
+            publish_to_bus(self, pub_topic, pub_msg)
+
         _log.debug('done.')
         return
 
@@ -727,13 +792,19 @@ class PriceController(Agent):
         _log.info('[LOG] PCA mode: PASS_ON_PP, Received Budget')
 
         wt_factors = self._mode_pass_on_params['weight_factors']
-        sum_wt_factors = sum(wt_factors)
         t_budget = pp_msg.get_value()
 
         self._local_device_ids = self._rpcget_local_device_ids()
         self._ds_device_ids = self._rpcget_ds_device_ids()
         _log.debug('local_device_ids: {}'.format(self._local_device_ids))
         _log.debug('ds_device_ids: {}'.format(self._ds_device_ids))
+
+        sum_wt_factors = 0
+        for index, device_id in enumerate(
+                self._local_device_ids
+                + self._ds_device_ids
+        ):
+            sum_wt_factors += wt_factors[index]
 
         for index, device_id in enumerate(
                 self._local_device_ids

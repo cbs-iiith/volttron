@@ -37,6 +37,7 @@
 
     # the following params are used if pca_mode = DEFAULT_OPT
     "mode_default_opt_params": {
+        "is_single_pp": yes,
         # time to wait for devices to submit their bids.
         # 0 --> wait-for-ever, default 900s (15min)
         "us_bid_timeout": 900,
