@@ -28,7 +28,7 @@ from applications.iiit.Utils.ispace_msg import (MessageType,
                                                 ISPACE_Msg_Energy,
                                                 ISPACE_Msg_OptPricePoint,
                                                 ISPACE_Msg_ActivePower,
-                                                ISPACE_Msg_Budget)
+                                                ISPACE_Msg_Budget, ISPACE_Msg)
 from applications.iiit.Utils.ispace_msg_utils import (get_default_pp_msg,
                                                       check_msg_type,
                                                       ted_helper,
@@ -98,7 +98,7 @@ class PriceController(Agent):
 
     _mode_pass_on_params = None
     _mode_default_opt_params = None
-    _is_single_pp = None    # type: bool
+    _is_single_pp = None  # type: bool
     _mode_extrn_opt_params = None
 
     _device_id = None
@@ -136,7 +136,8 @@ class PriceController(Agent):
     lc_bid_bd_msg = None  # type: ISPACE_Msg_BidPricePoint
 
     us_latest_msg_type = None  # type: MessageType
-    us_prev_msg_type = None  # type: MessageType
+    us_latest_msg_opt = None  # type: bool
+    old_pp_msg = None  # type: ISPACE_Msg
 
     external_vip_identity = None
 
@@ -679,9 +680,14 @@ class PriceController(Agent):
     def _keep_track_msg(self, pp_msg, pp_msg_type, bd_msg_type):
         msg_id = pp_msg.get_price_id()
         value = pp_msg.get_value()
+
+        self.old_pp_msg = copy(self._get_old_pp_msg())
+
         if pp_msg_type:
+            self.us_latest_msg_type = MessageType.price_point
             # message type price point
             if pp_msg.get_isoptimal():
+                self.us_latest_msg_opt = True
                 self.us_opt_pp_msg = copy(pp_msg)
                 _log.debug(
                     '***** New optimal price point from us:'
@@ -689,17 +695,18 @@ class PriceController(Agent):
                     + ' , msg_id: {}'.format(msg_id)
                 )
             else:
+                self.us_latest_msg_opt = False
                 self.us_bid_pp_msg = copy(pp_msg)
                 _log.debug(
                     '***** New bid price point from us:'
                     + ' {:0.2f}'.format(value)
                     + ' , msg_id: {}'.format(msg_id)
                 )
-            self.us_prev_msg_type = copy(self.us_latest_msg_type)
-            self.us_latest_msg_type = MessageType.price_point
         elif bd_msg_type:
+            self.us_latest_msg_type = MessageType.budget
             # message type budget
             if pp_msg.get_isoptimal():
+                self.us_latest_msg_opt = True
                 self.us_opt_bd_msg = copy(pp_msg)
                 _log.debug(
                     '***** New optimal budget from us:'
@@ -707,14 +714,13 @@ class PriceController(Agent):
                     + ' , msg_id: {}'.format(msg_id)
                 )
             else:
+                self.us_latest_msg_opt = False
                 self.us_bid_bd_msg = copy(pp_msg)
                 _log.debug(
                     '***** New bid budget from us:'
                     + ' {:0.4f}'.format(value)
                     + ' , msg_id: {}'.format(msg_id)
                 )
-            self.us_prev_msg_type = copy(self.us_latest_msg_type)
-            self.us_latest_msg_type = MessageType.budget
         else:
             pass
 
@@ -857,8 +863,6 @@ class PriceController(Agent):
             self._us_ds_opt_ap, self._us_local_opt_ap)
 
         for index, device_id in enumerate(local_device_ids + ds_device_ids):
-            pp_msg = self.lc_opt_pp_msg_list[device_id]
-
             if device_id in local_device_ids:
                 ap_msg = self._us_local_opt_ap[device_id]
             else:
@@ -867,14 +871,14 @@ class PriceController(Agent):
             new_ed_msg, old_ed_msg, old_pp_msg = self._default_opt_init_msg(
                 device_id,
                 new_pp_msg,
-                pp_msg,
+                self.old_pp_msg,
                 ap_msg,
                 index
             )
 
-            pp_old[device_id] = old_pp_msg
-            ed_current[device_id] = new_ed_msg
-            ed_prev[device_id] = old_ed_msg
+            pp_old[device_id] = copy(old_pp_msg)
+            ed_current[device_id] = copy(new_ed_msg)
+            ed_prev[device_id] = copy(old_ed_msg)
             self._target += new_ed_msg.get_value()
 
         # list for pp_msg
@@ -912,38 +916,16 @@ class PriceController(Agent):
         # noinspection PyTypeChecker
         new_ed_msg = copy(old_ap_msg)  # type: ISPACE_Msg_Energy
         category = new_ed_msg.get_energy_category() or EnergyCategory.mixed
-        old_price = old_pp_msg.get_value()
 
         old_act_pwr = self._rs[device_id][category].exp_wt_mv_avg()
         old_dur_sec = old_pp_msg.get_duration()
-        new_dur_sec = new_pp_msg.get_duration()
         old_energy_demand = calc_energy_wh(old_act_pwr, old_dur_sec)
 
+        new_energy_demand = self._get_new_ed(index, new_pp_msg, old_act_pwr,
+                                             old_pp_msg)
         _log.debug(
-            'current pp: {0.2f}'.format(old_price)
-            + ', current ed: {0.4f}'.format(old_energy_demand)
+            'new ed target: {0.4f}'.format(new_energy_demand)
         )
-
-        new_energy_demand = 0
-        if check_msg_type(new_pp_msg, MessageType.price_point):
-            # received new price point
-            new_price = new_pp_msg.get_value()
-            new_act_pwr = old_act_pwr * old_price / new_price
-            new_energy_demand = calc_energy_wh(new_act_pwr, new_dur_sec)
-            _log.debug(
-                'new pp: {0.2f}'.format(new_price)
-                + ', computed new ed target: {0.4f}'.format(new_energy_demand)
-            )
-        elif check_msg_type(new_pp_msg, MessageType.budget):
-            # received new budget
-            wt_factors = self._mode_pass_on_params['weight_factors']
-            sum_wt_factors = sum(wt_factors)
-
-            c = wt_factors[index] / sum_wt_factors
-            new_energy_demand = c * new_pp_msg.get_value()
-            _log.debug(
-                'new ed target: {0.4f}'.format(new_energy_demand)
-            )
 
         old_ed_msg.set_msg_type(MessageType.energy_demand)
         old_ed_msg.set_value(old_energy_demand)
@@ -952,6 +934,34 @@ class PriceController(Agent):
 
         _log.debug('...done')
         return new_ed_msg, old_ed_msg, old_pp_msg
+
+    def _get_new_ed(self, index, new_pp_msg, old_act_pwr, old_pp_msg):
+        new_energy_demand = 0
+        if check_msg_type(new_pp_msg, MessageType.price_point):
+            # received new price point
+
+            if old_pp_msg.get_msg_type() == MessageType.price_point:
+                new_act_pwr = (
+                        old_act_pwr
+                        * (old_pp_msg.get_duration() / new_pp_msg.get_duration)
+                        * (old_pp_msg.get_value() / new_pp_msg.get_value())
+                )
+                new_dur_sec = new_pp_msg.get_duration()
+                new_energy_demand = calc_energy_wh(new_act_pwr, new_dur_sec)
+            elif old_pp_msg.get_msg_type() == MessageType.budget:
+                new_energy_demand = (
+                        old_pp_msg.get_value()
+                        * (old_pp_msg.get_duration() / new_pp_msg.get_duration)
+                )
+
+        elif check_msg_type(new_pp_msg, MessageType.budget):
+            # received new budget
+            wt_factors = self._mode_pass_on_params['weight_factors']
+            sum_wt_factors = sum(wt_factors)
+
+            c = wt_factors[index] / sum_wt_factors
+            new_energy_demand = c * new_pp_msg.get_value()
+        return new_energy_demand
 
     def _pub_pp_messages(self, pp_messages):
         _log.debug('_pub_pp_messages()...')
@@ -1038,6 +1048,11 @@ class PriceController(Agent):
 
         current_ted = self._calc_total(self._local_bid_ed, self._ds_bid_ed)
         deadband = self._mode_default_opt_params['deadband']
+        _log.debug(
+            'current_ted: {0:0.4f}'.format(current_ted)
+            + ', target: {0:0.4f}'.format(self._target)
+            + ', deadband: {0:0.4f}'.format(deadband)
+        )
         if isclose(current_ted, self._target, deadband):
             target_achieved = True
             new_pricepoints = {}
@@ -1046,6 +1061,10 @@ class PriceController(Agent):
                 pp_old,
                 ed_current,
                 ed_prev,
+            )
+            _log.debug(
+                'target_achieved: {}'.format(target_achieved)
+                + ', new_pricepoints: {}'.format(new_pricepoints)
             )
 
             current_ted = self._calc_total(self._local_bid_ed, self._ds_bid_ed)
@@ -1059,7 +1078,6 @@ class PriceController(Agent):
             self._us_ds_bid_ed.clear()
 
             self._us_bid_ready = True
-            return True, []
 
         # case _pca_state == PcaState.standalone
         elif self._pca_state == PcaState.standalone:
@@ -1176,6 +1194,10 @@ class PriceController(Agent):
         #   if us bid timed out
         #       or self._iter_count > max_iters
         us_bid_timed_out = self._us_bid_timed_out()
+        _log.debug(
+            'us_bid_timed_out: {}'.format(us_bid_timed_out)
+            + ', iter_count: {}/{}'.format(self._iter_count, max_iters)
+        )
         target_achieved = (
             True
             if (
@@ -1183,6 +1205,11 @@ class PriceController(Agent):
                     or self._iter_count > max_iters
             )
             else False
+        )
+        _log.debug(
+            'target_achieved: {}'.format(target_achieved)
+            + ', us_bid_timed_out: {}'.format(us_bid_timed_out)
+            + ', iter_count: {}/{}'.format(self._iter_count, max_iters)
         )
 
         _log.debug('...done')
@@ -1197,7 +1224,7 @@ class PriceController(Agent):
         if not self._run_process_loop:
             return
 
-        new_pp_msg_list = []
+        new_pp_msg_list = {}
 
         # check if all the bids are received from both local & ds devices
         # rcvd_all_lc = local(lc) bids for local(lc) bid price
@@ -1881,6 +1908,24 @@ class PriceController(Agent):
             elif device_id in ds_bucket:
                 ed_current[device_id] = copy(ds_bucket[device_id])
         return ed_current
+
+    def _get_old_pp_msg(self):
+        if self._pca_state != PcaState.online:
+            return
+        if self._pca_mode != PcaMode.default_opt:
+            return
+
+        if self.us_latest_msg_type == MessageType.price_point:
+            if self.us_latest_msg_opt:
+                return self.us_opt_pp_msg
+            else:
+                return self.us_bid_pp_msg
+        elif self.us_latest_msg_type == MessageType.budget:
+            if self.us_latest_msg_opt:
+                return self.us_opt_bd_msg
+            else:
+                return self.us_bid_bd_msg
+        return
 
 
 def main(argv=None):
