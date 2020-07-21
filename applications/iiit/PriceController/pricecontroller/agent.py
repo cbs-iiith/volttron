@@ -159,10 +159,15 @@ class PriceController(Agent):
     # downstream devices bid energy demands for upstream bid pp
     _us_ds_bid_ed = None
 
-    # local devices active power for upstream opt pp
+    # local devices active power value for upstream opt pp
     _us_local_opt_ap = None
-    # downstream devices active power for upstream opt pp
+    # downstream devices active power value for upstream opt pp
     _us_ds_opt_ap = None
+
+    # local devices active power msg for upstream opt pp
+    _us_local_opt_ap_msg = None
+    # downstream devices active power msg for upstream opt pp
+    _us_ds_opt_ap_msg = None
 
     # running stats factor (window)
     _rs_factor = None  # type: int
@@ -188,12 +193,14 @@ class PriceController(Agent):
 
         # local device_ids
         self._us_local_opt_ap = {}
+        self._us_local_opt_ap_msg = {}
         self._us_local_bid_ed = {}
         self._local_bid_ed = {}
 
         # ds device ids
         #   opt_ap --> act_pwr@opt_pp, bid_ed --> bid_energy_demand@bid_pp
         self._us_ds_opt_ap = {}
+        self._us_ds_opt_ap_msg = {}
         self._us_ds_bid_ed = {}
         self._ds_bid_ed = {}
 
@@ -383,10 +390,12 @@ class PriceController(Agent):
         _log.debug('onstop()')
 
         self._us_local_opt_ap.clear()
+        self._us_local_opt_ap_msg.clear()
         self._us_local_bid_ed.clear()
         self._local_bid_ed.clear()
 
         self._us_ds_opt_ap.clear()
+        self._us_ds_opt_ap_msg.clear()
         self._us_ds_bid_ed.clear()
         self._ds_bid_ed.clear()
 
@@ -867,9 +876,9 @@ class PriceController(Agent):
 
         for index, device_id in enumerate(local_device_ids + ds_device_ids):
             if device_id in local_device_ids:
-                ap_msg = self._us_local_opt_ap[device_id]
+                ap_msg = self._us_local_opt_ap_msg[device_id]
             else:
-                ap_msg = self._us_ds_opt_ap[device_id]
+                ap_msg = self._us_ds_opt_ap_msg[device_id]
 
             new_ed_msg, old_ed_msg, old_pp_msg = self._default_opt_init_msg(
                 device_id,
@@ -918,7 +927,7 @@ class PriceController(Agent):
         old_ed_msg = old_ap_msg  # type: ISPACE_Msg_Energy
         # noinspection PyTypeChecker
         new_ed_msg = copy(old_ap_msg)  # type: ISPACE_Msg_Energy
-        category = new_ed_msg.get_energy_category() or EnergyCategory.mixed
+        category = new_ed_msg.get_energy_category()
 
         old_act_pwr = self._rs[device_id][category].exp_wt_mv_avg()
         old_dur_sec = old_pp_msg.get_duration()
@@ -1481,7 +1490,10 @@ class PriceController(Agent):
         # aggregator publishes this data to local/energydemand
         if success_ap and price_id == self.us_opt_pp_msg.get_price_id():
 
-            energy_cat = ed_msg.get_energy_category() or EnergyCategory.mixed
+            energy_cat = ed_msg.get_energy_category()
+            if energy_cat is None:
+                ed_msg.set_energy_category(EnergyCategory.mixed)
+                energy_cat = ed_msg.get_energy_category()
 
             # put data to local_tap bucket
             if device_id in self._local_device_ids:
@@ -1492,6 +1504,7 @@ class PriceController(Agent):
                     + ' {:0.4f}'.format(opt_tap)
                 )
                 self._us_local_opt_ap[device_id] = opt_tap
+                self._us_local_opt_ap_msg[device_id] = copy(ed_msg)
                 # update running stats
                 self._rs[device_id][energy_cat].push(opt_tap)
                 return
@@ -1504,6 +1517,7 @@ class PriceController(Agent):
                     + ' {:0.4f}'.format(opt_tap)
                 )
                 self._us_ds_opt_ap[device_id] = opt_tap
+                self._us_ds_opt_ap_msg[device_id] = copy(ed_msg)
                 # update running stats
                 self._rs[device_id][energy_cat].push(opt_tap)
                 return
