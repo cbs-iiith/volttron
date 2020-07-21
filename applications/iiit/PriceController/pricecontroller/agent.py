@@ -899,15 +899,30 @@ class PriceController(Agent):
                                                                     ed_current,
                                                                     ed_prev
                                                                     )
-        first_msg = list(new_pp_msg_list.values())[0]
-        self.lc_bid_pp_msg = copy(first_msg)
-        self.lc_bid_pp_msg_list = copy(new_pp_msg_list)
-        # _log.info('new bid pp_msg_list: {}'.format(new_pp_msg_list))
+        if target_achieved and self._pca_state == PcaState.online:
+            # local optimal reached, publish this as bid to the us pp_msg
+            self._us_bid_ready = True
+        elif target_achieved and self._pca_state == PcaState.standalone:
+            self.lc_opt_pp_msg_list = copy(new_pp_msg_list)
+            self.lc_opt_pp_msg = copy(new_pp_msg_list[self._device_id])
+        else:
+            first_msg = list(new_pp_msg_list.values())[0]
+            self.lc_bid_pp_msg = copy(first_msg)
+            self.lc_bid_pp_msg_list = copy(new_pp_msg_list)
+            # _log.info('new bid pp_msg_list: {}'.format(new_pp_msg_list))
 
-        self._pub_pp_messages(new_pp_msg_list)
+            self._pub_pp_messages(new_pp_msg_list)
 
-        # activate process_loop(), iterate for new bids from ds devices
-        self._run_process_loop = True
+        # clear corresponding buckets
+        self._local_bid_ed.clear()
+        self._ds_bid_ed.clear()
+
+        if target_achieved:
+            # do not start the process loop
+            self._run_process_loop = False
+        else:
+            # activate process_loop(), iterate for new bids from ds devices
+            self._run_process_loop = True
         _log.debug('...done')
         return
 
