@@ -882,8 +882,14 @@ class ZoneController(Agent):
         for i in range(max_iters):
             new_pp = (
                     old_pp
-                    + c_ac * gamma['ac'] * (new_ed_ac - old_ed_ac)
-                    + c_light * gamma['light'] * (new_ed_light - old_ed_light)
+                    - (
+                            c_ac * gamma['ac'] * (
+                                new_ed_ac - old_ed_ac
+                            )
+                            + c_light * gamma['light'] * (
+                                new_ed_light - old_ed_light
+                            )
+                    )
             )
             new_pp = (
                 0 if new_pp < 0 else 1 if new_pp > 1 else new_pp

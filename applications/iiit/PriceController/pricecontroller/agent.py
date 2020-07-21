@@ -1194,8 +1194,10 @@ class PriceController(Agent):
 
             new_pp = (
                     _pp_old.get_value()
-                    + c * gamma[index] * delta
-                    + alpha[index] * self._delta_omega[device_id]
+                    - (
+                            c * gamma[index] * delta
+                            + alpha[index] * self._delta_omega[device_id]
+                    )
             )
             new_pp = (
                 0 if new_pp < 0 else 1 if new_pp > 1 else new_pp

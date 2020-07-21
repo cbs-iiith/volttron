@@ -1263,13 +1263,14 @@ class SmartStrip(Agent):
         # Gradient descent iteration
         for i in range(max_iters):
 
-            new_pp = old_pp
+            sum_new_pp = 0
             for k, v in new_ed_plugs.items():
-                new_pp += (
+                sum_new_pp += (
                         c[k]
                         * gamma[k]
                         * (new_ed_plugs[k] - old_ed_plugs[k])
                 )
+            new_pp = old_pp - sum_new_pp
             new_pp = (
                 0 if new_pp < 0 else 1 if new_pp > 1 else new_pp
             )

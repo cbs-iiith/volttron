@@ -782,7 +782,7 @@ class RadiantCubicle(Agent):
         for i in range(max_iters):
             new_pp = (
                     old_pp
-                    + gamma['rc'] * (new_ed - old_ed)
+                    - gamma['rc'] * (new_ed - old_ed)
             )
             new_pp = (
                 0 if new_pp < 0 else 1 if new_pp > 1 else new_pp
