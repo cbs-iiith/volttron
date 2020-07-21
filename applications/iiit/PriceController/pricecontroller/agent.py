@@ -235,11 +235,14 @@ class PriceController(Agent):
                 "weight_factors": [0.0, 0.5, 0.5]
             }
         )
+        '''
         self._is_single_pp = (
             True
             if self._mode_default_opt_params['is_single_pp'].lower() == 'yes'
             else False
         )
+        '''
+        self._is_single_pp = self._mode_default_opt_params['is_single_pp']
 
         self._mode_extrn_opt_params = self.config.get(
             'mode_extrn_opt_params', {

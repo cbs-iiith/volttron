@@ -36,7 +36,7 @@
 
     # the following params are used if pca_mode = DEFAULT_OPT
     "mode_default_opt_params": {
-        "is_single_pp": yes,
+        "is_single_pp": false,
         "us_bid_timeout": 5,
         "lc_bid_timeout": 2,
         "max_iterations": 10,
