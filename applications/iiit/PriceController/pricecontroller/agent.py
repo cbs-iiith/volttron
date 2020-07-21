@@ -498,7 +498,7 @@ class PriceController(Agent):
     # noinspection PyArgumentList
     @RPC.export
     def set_pca_mode(self, str_mode):
-        if str_mode not in PcaMode.__dict__.keys():
+        if str_mode.lower() not in PcaMode.__dict__.keys():
             return False
         self._pca_mode = PcaMode[str_mode.lower()]
         return True
@@ -899,7 +899,8 @@ class PriceController(Agent):
                                                                     ed_current,
                                                                     ed_prev
                                                                     )
-
+        first_msg = list(new_pp_msg_list.values())[0]
+        self.lc_bid_pp_msg = copy(first_msg)
         self.lc_bid_pp_msg_list = copy(new_pp_msg_list)
         # _log.info('new bid pp_msg_list: {}'.format(new_pp_msg_list))
 
@@ -1284,8 +1285,9 @@ class PriceController(Agent):
             self.lc_opt_pp_msg_list = copy(new_pp_msg_list)
             self.lc_opt_pp_msg = copy(new_pp_msg_list[self._device_id])
         else:
+            first_msg = list(new_pp_msg_list.values())[0]
+            self.lc_bid_pp_msg = copy(first_msg)
             self.lc_bid_pp_msg_list = copy(new_pp_msg_list)
-            self.lc_bid_pp_msg = copy(new_pp_msg_list[self._device_id])
             # publish these pp_messages
             self._pub_pp_messages(new_pp_msg_list)
 
