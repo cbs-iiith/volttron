@@ -956,6 +956,9 @@ class SmartStrip(Agent):
                                                valid_price_ids, message)
         if not success or pp_msg is None:
             return
+        elif (pp_msg.get_one_to_one()
+              and pp_msg.get_dst_device_id() != self._device_id):
+            return
         elif pp_msg in [self._bid_pp_msg_latest, self._opt_pp_msg_latest]:
             _log.warning(
                 'received a duplicate pp_msg'
@@ -1013,6 +1016,12 @@ class SmartStrip(Agent):
             self._opt_pp_msg_latest.set_value(new_pp)
             self._opt_pp_msg_latest.set_isoptimal(True)
             self._price_point_latest = new_pp
+            _log.debug(
+                '***** New optimal price point:'
+                + ' {:0.2f}'.format(self._opt_pp_msg_latest.get_value())
+                + ' , price_id: {}'.format(
+                    self._opt_pp_msg_latest.get_price_id())
+            )
 
         task_id = str(randint(0, 99999999))
         success = get_task_schdl(self, task_id, 'iiit/cbs/smartstrip', 1000)

@@ -1507,7 +1507,11 @@ class PriceController(Agent):
        '''
         # MessageType.active_power
         # aggregator publishes this data to local/energydemand
-        if success_ap and price_id == self.us_opt_pp_msg.get_price_id():
+        if success_ap and price_id in [self.us_opt_pp_msg.get_price_id(),
+                                       self.us_opt_bd_msg.get_price_id(),
+                                       self.lc_opt_pp_msg.get_price_id(),
+                                       self.lc_opt_bd_msg.get_price_id()
+                                       ]:
 
             energy_cat = ed_msg.get_energy_category()
             if energy_cat is None:
@@ -1543,7 +1547,8 @@ class PriceController(Agent):
 
         # MessageType.energy_demand
         # aggregator publishes this data to local/energydemand
-        elif success_ed and price_id == self.us_bid_pp_msg.get_price_id():
+        elif success_ed and price_id in [self.us_bid_pp_msg.get_price_id(),
+                                         self.us_bid_bd_msg.get_price_id()]:
             # put data to ds_tap bucket
             if device_id in self._local_device_ids:
                 bid_ted = ed_msg.get_value()
@@ -1567,7 +1572,8 @@ class PriceController(Agent):
 
         # MessageType.energy_demand
         # process_loop() initiates _compute_new_price()
-        elif success_ed and price_id == self.lc_bid_pp_msg.get_price_id():
+        elif success_ed and price_id in [self.lc_bid_pp_msg.get_price_id(),
+                                         self.lc_bid_bd_msg.get_price_id()]:
             # put data to local_tap bucket
             if device_id in self._local_device_ids:
                 bid_ted = ed_msg.get_value()
