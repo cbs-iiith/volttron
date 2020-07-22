@@ -31,7 +31,7 @@
     # gradient descent params to compute new pp from a budget
     "gd_params": {
         "max_iterations": 1000,
-        "epsilon": 5,
+        "deadband": 5,
         "gamma": {
             "fan": 0.1786,
             "light": 0.1429

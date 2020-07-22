@@ -152,14 +152,18 @@ class SmartStrip(Agent):
         self._gd_params = self.config.get(
             'gd_params', {
                 "max_iterations": 1000,
-                "epsilon": 100,
+                "deadband": 5,
                 "gamma": {
-                    "fan": 0.1786,
-                    "light": 0.1429
+                    "plug1": 0.0333,
+                    "plug2": 0.0067,
+                    "plug3": 0.0067,
+                    "plug4": 1.0000
                 },
                 "weight_factors": {
-                    "fan": 0.50,
-                    "light": 0.50
+                    "plug1": 0.25,
+                    "plug2": 0.25,
+                    "plug3": 0.25,
+                    "plug4": 0.25
                 }
             }
         )
@@ -1206,7 +1210,7 @@ class SmartStrip(Agent):
 
         # configuration
         gamma = self._gd_params['gamma']
-        epsilon = self._gd_params['epsilon']
+        deadband = self._gd_params['deadband']
         max_iters = self._gd_params['max_iterations']
         wt_factors = self._gd_params['weight_factors']
 
@@ -1304,18 +1308,18 @@ class SmartStrip(Agent):
                 + ', new_ed: {:0.4f}'.format(new_ed + base_ed)
             )
 
-            if isclose(budget, new_ed, epsilon):
+            if isclose(budget, new_ed, EPSILON, deadband):
                 _log.debug(
                     '|budget({:0.2f})'.format(budget)
                     + ' - new_ed({:0.2f})|'.format(new_ed)
-                    + ' < epsilon({:0.4f})'.format(epsilon)
+                    + ' < deadband({:0.4f})'.format(deadband)
                 )
                 break
-            elif isclose(old_ed, new_ed, epsilon):
+            elif isclose(old_ed, new_ed, EPSILON, deadband):
                 _log.debug(
                     '|old_ed({:0.2f})'.format(old_ed)
                     + ' - new_ed({:0.2f})|'.format(new_ed)
-                    + ' < epsilon({:0.4f})'.format(epsilon)
+                    + ' < deadband({:0.4f})'.format(deadband)
                 )
                 break
 

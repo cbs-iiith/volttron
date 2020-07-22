@@ -28,7 +28,8 @@ from applications.iiit.Utils.ispace_msg import (MessageType,
                                                 ISPACE_Msg_Energy,
                                                 ISPACE_Msg_OptPricePoint,
                                                 ISPACE_Msg_ActivePower,
-                                                ISPACE_Msg_Budget, ISPACE_Msg)
+                                                ISPACE_Msg_Budget, ISPACE_Msg,
+                                                EPSILON)
 from applications.iiit.Utils.ispace_msg_utils import (get_default_pp_msg,
                                                       check_msg_type,
                                                       ted_helper,
@@ -237,7 +238,7 @@ class PriceController(Agent):
                 "us_bid_timeout": 900,
                 "lc_bid_timeout": 180,
                 "max_iterations": 10,
-                "epsilon": [100, 100, 100],
+                "deadband": [100, 100, 100],
                 "gamma": [0.0, 0.0001, 0.0001],
                 "alpha": [0.0, 0.0035, 0.0035],
                 "weight_factors": [0.0, 0.5, 0.5]
@@ -1057,7 +1058,7 @@ class PriceController(Agent):
         
         optimization algorithm
           ed_target = r% x ed_optimal
-          EPSILON = 10       # deadband
+          deadband = 10       # deadband
           gamma = stepsize
           max_iter = 900 (assuming each iter is 30sec and max time spent
             is 10 min)
@@ -1065,7 +1066,7 @@ class PriceController(Agent):
           count_iter = 0
           pp_old = pp_opt
           pp_new = pp_old
-          do while (ed_target - ed_current > EPSILON)
+          do while (ed_target - ed_current > deadband)
               if (count_iter < max_iter)
                    pp_new = pp_old + gamma(ed_current - ed_previous)
                    pp_old = pp_new
@@ -1090,15 +1091,19 @@ class PriceController(Agent):
             ed_prev = self._ed_prev
 
         current_ted = self._calc_total(self._local_bid_ed, self._ds_bid_ed)
-        deadband = self._mode_default_opt_params['deadband']
+        deadband = self._mode_default_opt_params['deadband'][0]
         _log.debug(
             'current_ted: {0:0.4f}'.format(current_ted)
             + ', target: {0:0.4f}'.format(self._target)
             + ', deadband: {0:0.4f}'.format(deadband)
         )
-        if isclose(current_ted, self._target, deadband):
+        if isclose(current_ted, self._target, EPSILON, deadband):
             target_achieved = True
             new_pricepoints = {}
+            _log.debug(
+                'target_achieved: {}'.format(target_achieved)
+                + ', new_pricepoints: {}'.format(new_pricepoints)
+            )
         else:
             target_achieved, new_pricepoints = self._gradient_descent(
                 pp_old,
@@ -1144,16 +1149,16 @@ class PriceController(Agent):
 
         alpha = self._mode_default_opt_params['alpha']
         gamma = self._mode_default_opt_params['gamma']
-        epsilon = self._mode_default_opt_params['epsilon']
+        deadband = self._mode_default_opt_params['deadband']
         max_iters = self._mode_default_opt_params['max_iterations']
         uc_bid_timeout = self._mode_default_opt_params['uc_bid_timeout']
         lc_bid_timeout = self._mode_default_opt_params['lc_bid_timeout']
         wt_factors = self._mode_default_opt_params['weight_factors']
 
         _log.debug(
-            'alpha: {}, gamma: {}, epsilon: {}, max_iters: {}, ' +
+            'alpha: {}, gamma: {}, deadband: {}, max_iters: {}, ' +
             'us_bid_timeout: {}, lc_bid_timeout: {}, wt_factors: {}'.format(
-                alpha, gamma, epsilon, max_iters, uc_bid_timeout,
+                alpha, gamma, deadband, max_iters, uc_bid_timeout,
                 lc_bid_timeout, wt_factors
             )
         )
@@ -1203,14 +1208,19 @@ class PriceController(Agent):
 
             delta = _ed_current - _ed_prev
 
-            if delta < epsilon[index]:
-                _log.debug('delta < epsilon')
+            if isclose(_ed_current, _ed_prev, EPSILON, deadband[index]):
+                _log.debug(
+                    '|_ed_current({:0.2f})'.format(_ed_current)
+                    + ' - _ed_prev({:0.2f})|'.format(_ed_prev)
+                    + ' < deadband({:0.4f})'.format(deadband[index])
+                )
+                _log.debug('do nothing')
                 continue
 
             new_pp = (
                     _pp_old.get_value()
                     - (
-                            c * gamma[index] * delta
+                            c * gamma[index] * (_ed_current - _ed_prev)
                             + alpha[index] * self._delta_omega[device_id]
                     )
             )

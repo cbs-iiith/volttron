@@ -40,8 +40,7 @@
         "us_bid_timeout": 30,
         "lc_bid_timeout": 6,
         "max_iterations": 10,
-        "deadband": 10,
-        "epsilon": [10, 10, 10],
+        "deadband": [10, 10, 10],
         "gamma": [0.0794, 0.0040, 0.0030],
         "alpha": [0.0035, 0.0035, 0.0035],
         "weight_factors": [0.3, 0.3, 0.3]
