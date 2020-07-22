@@ -15,21 +15,21 @@ class MyTestCase(unittest.TestCase):
     def test_something(self):
         budget = 1785.71
         new_ed = 4060.50
-        epsilon = 100
+        deadband = 100
 
-        if isclose(budget, new_ed, EPSILON, epsilon):
+        if isclose(budget, new_ed, EPSILON, deadband):
             print(
                 'is close'
                 + ' |budget({:0.2f})'.format(budget)
                 + ' - new_ed({:0.2f})|'.format(new_ed)
-                + ' < epsilon({:0.4f})'.format(epsilon)
+                + ' < deadband({:0.4f})'.format(deadband)
             )
         else:
             print(
                 'not close'
                 + ' |budget({:0.2f})'.format(budget)
                 + ' - new_ed({:0.2f})|'.format(new_ed)
-                + ' < epsilon({:0.4f})'.format(epsilon)
+                + ' < deadband({:0.4f})'.format(deadband)
             )
 
         self.assertEqual(True, True)
