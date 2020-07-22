@@ -1270,6 +1270,7 @@ class SmartStrip(Agent):
             old_ed += old_ed_plugs[k]
 
         # Gradient descent iteration
+        _log.debug('Gradient descent iteration')
         for i in range(max_iters):
 
             sum_new_pp = 0
@@ -1293,7 +1294,7 @@ class SmartStrip(Agent):
                 )
                 new_ed_plugs[k] = calc_energy_wh(plug_pwr, duration)
                 _log.debug(
-                    'new ed_{}: {:0.4f}'.format(k, new_ed_plugs[k])
+                    '...new ed_{}: {:0.4f}'.format(k, new_ed_plugs[k])
                 )
                 new_ed += new_ed_plugs[k]
 
@@ -1304,10 +1305,18 @@ class SmartStrip(Agent):
             )
 
             if isclose(budget, new_ed, epsilon):
-                _log.debug('|budget - new_ed| < epsilon')
+                _log.debug(
+                    '|budget({:0.2f})'.format(budget)
+                    + ' - new_ed({:0.2f})|'.format(new_ed)
+                    + ' < epsilon({:0.4f})'.format(epsilon)
+                )
                 break
             elif isclose(old_ed, new_ed, epsilon):
-                _log.debug('|old_ed - new_ed| < epsilon')
+                _log.debug(
+                    '|old_ed({:0.2f})'.format(old_ed)
+                    + ' - new_ed({:0.2f})|'.format(new_ed)
+                    + ' < epsilon({:0.4f})'.format(epsilon)
+                )
                 break
 
             old_pp = new_pp

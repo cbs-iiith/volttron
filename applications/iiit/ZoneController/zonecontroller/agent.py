@@ -888,6 +888,7 @@ class ZoneController(Agent):
         )
 
         # Gradient descent iteration
+        _log.debug('Gradient descent iteration')
         for i in range(max_iters):
             new_pp = (
                     old_pp
@@ -927,10 +928,18 @@ class ZoneController(Agent):
             )
 
             if isclose(budget, new_ed, epsilon):
-                _log.debug('|budget - new_ed| < epsilon')
+                _log.debug(
+                    '|budget({:0.2f})'.format(budget)
+                    + ' - new_ed({:0.2f})|'.format(new_ed)
+                    + ' < epsilon({:0.4f})'.format(epsilon)
+                )
                 break
             elif isclose(old_ed, new_ed, epsilon):
-                _log.debug('|old_ed - new_ed| < epsilon')
+                _log.debug(
+                    '|old_ed({:0.2f})'.format(old_ed)
+                    + ' - new_ed({:0.2f})|'.format(new_ed)
+                    + ' < epsilon({:0.4f})'.format(epsilon)
+                )
                 break
 
             old_pp = new_pp
