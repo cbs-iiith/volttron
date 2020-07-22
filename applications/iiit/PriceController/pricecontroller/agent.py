@@ -33,7 +33,8 @@ from applications.iiit.Utils.ispace_msg_utils import (get_default_pp_msg,
                                                       check_msg_type,
                                                       ted_helper,
                                                       valid_bustopic_msg,
-                                                      tap_helper)
+                                                      tap_helper,
+                                                      get_default_bd_msg)
 from applications.iiit.Utils.ispace_utils import (publish_to_bus,
                                                   retrieve_details_from_vb,
                                                   register_rpc_route,
@@ -129,11 +130,11 @@ class PriceController(Agent):
     lc_bid_pp_msg_list = None  # type: dict
 
     # bd -- budget
-    us_opt_bd_msg = None  # type: ISPACE_Msg_OptPricePoint
-    us_bid_bd_msg = None  # type: ISPACE_Msg_BidPricePoint
+    us_opt_bd_msg = None  # type: ISPACE_Msg_Budget
+    us_bid_bd_msg = None  # type: ISPACE_Msg_Budget
 
-    lc_opt_bd_msg = None  # type: ISPACE_Msg_OptPricePoint
-    lc_bid_bd_msg = None  # type: ISPACE_Msg_BidPricePoint
+    lc_opt_bd_msg = None  # type: ISPACE_Msg_Budget
+    lc_bid_bd_msg = None  # type: ISPACE_Msg_Budget
 
     us_latest_msg_type = None  # type: MessageType
     us_latest_msg_opt = None  # type: bool
@@ -321,12 +322,7 @@ class PriceController(Agent):
         self._local_device_ids = []
         self._ds_device_ids = []
 
-        discovery_address = self._discovery_address
-        device_id = self._device_id
-        # noinspection PyTypeChecker
-        self.us_opt_pp_msg = get_default_pp_msg(discovery_address, device_id)
-        # noinspection PyTypeChecker
-        self.us_bid_pp_msg = get_default_pp_msg(discovery_address, device_id)
+        self.init_default_pp_msgs()
 
         self.external_vip_identity = None
 
@@ -383,6 +379,25 @@ class PriceController(Agent):
         )
 
         _log.info('startup() - Done. Agent is ready')
+        return
+
+    def init_default_pp_msgs(self):
+        discovery_address = self._discovery_address
+        device_id = self._device_id
+
+        self.us_opt_pp_msg = get_default_pp_msg(discovery_address, device_id)
+        self.us_bid_pp_msg = get_default_pp_msg(discovery_address, device_id)
+
+        self.lc_opt_pp_msg = get_default_pp_msg(discovery_address, device_id)
+        self.lc_bid_pp_msg = get_default_pp_msg(discovery_address, device_id)
+
+        self.us_opt_bd_msg = get_default_bd_msg(discovery_address, device_id)
+        self.us_bid_bd_msg = get_default_bd_msg(discovery_address, device_id)
+
+        self.lc_opt_bd_msg = get_default_bd_msg(discovery_address, device_id)
+        self.lc_bid_bd_msg = get_default_bd_msg(discovery_address, device_id)
+
+        self.old_pp_msg = get_default_pp_msg(discovery_address, device_id)
         return
 
     @Core.receiver('onstop')

@@ -107,6 +107,20 @@ def get_default_pp_msg(discovery_address, device_id):
     )
 
 
+# a default budget message
+def get_default_bd_msg(discovery_address, device_id):
+    # type: (str, str) -> ISPACE_Msg_Budget
+    return ISPACE_Msg_Budget(
+        MessageType.budget, False, True,
+        0, 'float', '%',
+        None,
+        discovery_address, device_id,
+        None, None,
+        3600, 3600, 60, 'UTC',
+        EnergyCategory.mixed
+    )
+
+
 # a default active power message
 def get_default_ap_msg(
         discovery_address,
