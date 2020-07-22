@@ -932,6 +932,12 @@ class VolttronBridge(Agent):
             self._ds_pp_msg_retry_count[index] = 0
             self._ds_ed_msg_retry_count[index] = 0
             _log.debug('already registered!!!')
+            if device_id not in self._ds_device_ids:
+                _log.warning(
+                    'problem with ds register!!!'
+                    + ', ds_register: {}'.format(self._ds_register)
+                    + ', ds_device_ids: {}'.format(self._ds_device_ids)
+                )
             return True
 
         self._ds_register.append(discovery_address)
@@ -952,10 +958,15 @@ class VolttronBridge(Agent):
 
         if discovery_address not in self._ds_register:
             _log.debug('already unregistered')
+            if device_id in self._ds_device_ids:
+                _log.warning(
+                    'problem with ds register!!!'
+                    + ', ds_register: {}'.format(self._ds_register)
+                    + ', ds_device_ids: {}'.format(self._ds_device_ids)
+                )
             return True
 
         index = self._ds_register.index(discovery_address)
-        self._ds_register.remove(discovery_address)
         self._unregister_ds_device(index)
         _log.debug('unregistered!!!')
         return True
