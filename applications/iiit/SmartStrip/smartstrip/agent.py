@@ -1224,7 +1224,7 @@ class SmartStrip(Agent):
         for k, v in wt_factors.items():
             if k == 'plug4':
                 continue
-            c[k] = v / sum_wt_factors
+            c[k] = v / sum_wt_factors if sum_wt_factors != 0 else 0
 
         budget = self._bud_msg_latest.get_value()
         duration = self._bud_msg_latest.get_duration()

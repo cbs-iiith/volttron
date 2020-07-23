@@ -105,7 +105,7 @@ class ZoneController(Agent):
     _bid_pp_msg_latest = None  # type: ISPACE_Msg
 
     _bud_msg_latest = None  # type: ISPACE_Msg_Budget
-    _latest_msg_type = None     # type: MessageType
+    _latest_msg_type = None  # type: MessageType
 
     _gd_params = None
 
@@ -850,8 +850,9 @@ class ZoneController(Agent):
         wt_factors = self._gd_params['weight_factors']
 
         sum_wt_factors = wt_factors['ac'] + wt_factors['light']
-        c_ac = wt_factors['ac'] / sum_wt_factors
-        c_light = wt_factors['light'] / sum_wt_factors
+        c_ac = wt_factors['ac'] / sum_wt_factors if sum_wt_factors != 0 else 0
+        c_light = wt_factors[
+                      'light'] / sum_wt_factors if sum_wt_factors != 0 else 0
 
         budget = self._bud_msg_latest.get_value()
         duration = self._bud_msg_latest.get_duration()
@@ -894,10 +895,10 @@ class ZoneController(Agent):
                     old_pp
                     - (
                             c_ac * gamma['ac'] * (
-                                new_ed_ac - old_ed_ac
-                            )
+                            new_ed_ac - old_ed_ac
+                    )
                             + c_light * gamma['light'] * (
-                                new_ed_light - old_ed_light
+                                    new_ed_light - old_ed_light
                             )
                     )
             )

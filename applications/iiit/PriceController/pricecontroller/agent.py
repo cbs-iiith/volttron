@@ -790,7 +790,7 @@ class PriceController(Agent):
             new_bd_msg.set_one_to_one(True)
             new_bd_msg.set_dst_device_id(device_id)
 
-            c = wt_factors[index] / sum_wt_factors
+            c = wt_factors[index] / sum_wt_factors if sum_wt_factors != 0 else 0
             budget = c * t_budget
             new_bd_msg.set_value(budget)
 
@@ -848,7 +848,7 @@ class PriceController(Agent):
             new_bd_msg.set_one_to_one(True)
             new_bd_msg.set_dst_device_id(device_id)
 
-            c = wt_factors[index] / sum_wt_factors
+            c = wt_factors[index] / sum_wt_factors if sum_wt_factors != 0 else 0
             budget = c * t_budget
             new_bd_msg.set_value(budget)
 
@@ -1016,7 +1016,7 @@ class PriceController(Agent):
             wt_factors = self._mode_pass_on_params['weight_factors']
             sum_wt_factors = sum(wt_factors)
 
-            c = wt_factors[index] / sum_wt_factors
+            c = wt_factors[index] / sum_wt_factors if sum_wt_factors != 0 else 0
             new_energy_demand = c * new_pp_msg.get_value()
         return new_energy_demand
 
@@ -1222,7 +1222,7 @@ class PriceController(Agent):
 
             _log.debug('device_id: {}'.format(device_id))
 
-            c = wt_factors[index] / sum_wt_factors
+            c = wt_factors[index] / sum_wt_factors if sum_wt_factors != 0 else 0
 
             ed_current_msg = ed_current[device_id]  # type: ISPACE_Msg_Energy
             _ed_current = ed_current_msg.get_value()
@@ -1343,7 +1343,7 @@ class PriceController(Agent):
 
             index = (local_device_ids + ds_device_ids).index(device_id)
 
-            c = wt_factors[index] / sum_wt_factors
+            c = wt_factors[index] / sum_wt_factors if sum_wt_factors != 0 else 0
 
             ed_current_msg = ed_current[device_id]  # type: ISPACE_Msg_Energy
             _ed_current = ed_current_msg.get_value()

@@ -1374,8 +1374,9 @@ class SmartHub(Agent):
         wt_factors = self._gd_params['weight_factors']
 
         sum_wt_factors = wt_factors['fan'] + wt_factors['light']
-        c_ac = wt_factors['fan'] / sum_wt_factors
-        c_light = wt_factors['light'] / sum_wt_factors
+        c_ac = wt_factors['fan'] / sum_wt_factors if sum_wt_factors != 0 else 0
+        c_light = wt_factors[
+                      'light'] / sum_wt_factors if sum_wt_factors != 0 else 0
 
         budget = self._bud_msg_latest.get_value()
         duration = self._bud_msg_latest.get_duration()
@@ -1421,12 +1422,12 @@ class SmartHub(Agent):
             new_pp = (
                     old_pp
                     - (
-                        c_ac * gamma['ac'] * (
+                            c_ac * gamma['ac'] * (
                             new_ed_fan - old_ed_fan
-                        )
-                        + c_light * gamma['light'] * (
-                            new_ed_light - old_ed_light
-                        )
+                    )
+                            + c_light * gamma['light'] * (
+                                    new_ed_light - old_ed_light
+                            )
                     )
             )
             new_pp = (
