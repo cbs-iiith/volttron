@@ -676,6 +676,10 @@ class PriceController(Agent):
         else:
             pass
 
+        self._local_ed_agents = self._rpcget_local_ed_agents()
+        self._local_device_ids = self._rpcget_local_device_ids()
+        self._ds_device_ids = self._rpcget_ds_device_ids()
+
         if self._pca_mode == PcaMode.pass_on_pp:
             if pp_msg_type:
                 self._handle_pp_msg_pass_on(pp_msg)
