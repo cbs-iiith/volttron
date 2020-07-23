@@ -1002,6 +1002,11 @@ class PriceController(Agent):
 
     def _get_new_ed(self, index, new_pp_msg, old_act_pwr, old_pp_msg):
         new_energy_demand = 0
+        _log.debug(
+            'new_pp_msg: {}'.format(new_pp_msg)
+            + ', old_act_pwr: {}'.format(old_act_pwr)
+            + ', old_pp_msg: {}'.format(old_pp_msg)
+        )
         if new_pp_msg.get_msg_type() == MessageType.price_point:
             # received new price point
 
@@ -1076,14 +1081,14 @@ class PriceController(Agent):
               based on some initial condition like ed, us_new_pp, etc, 
               compute new_pp
               publish to bus
-        
+
         optimization algorithm
           ed_target = r% x ed_optimal
           deadband = 10       # deadband
           gamma = stepsize
           max_iter = 900 (assuming each iter is 30sec and max time spent
             is 10 min)
-          
+
           count_iter = 0
           pp_old = pp_opt
           pp_new = pp_old
@@ -1091,9 +1096,9 @@ class PriceController(Agent):
               if (count_iter < max_iter)
                    pp_new = pp_old + gamma(ed_current - ed_previous)
                    pp_old = pp_new
-           
+
           pp_opt = pp_new
-        
+
               iterate till optimization condition satisfied
               when new pp is published, the new ed for all devices is 
                 accumulated by on_new_ed()
@@ -1227,7 +1232,6 @@ class PriceController(Agent):
         sum_alpha_component = 0
 
         for index, device_id in enumerate(local_device_ids, ds_device_ids):
-
             _log.debug('device_id: {}'.format(device_id))
 
             c = wt_factors[index] / sum_wt_factors if sum_wt_factors != 0 else 0
@@ -1574,7 +1578,7 @@ class PriceController(Agent):
         #    else
         #               ds_bid_ted
         # 9.      if opt_pp
-        # post ed to us only if pp_id corresponds to these ids 
+        # post ed to us only if pp_id corresponds to these ids
         #      (i.e., ed for either us opt_pp_id or bid_pp_id)
 
         # handle only ap or ed type messages
@@ -1663,7 +1667,7 @@ class PriceController(Agent):
 
         '''
         sort energy packet to respective buckets 
-            
+
                            |--> _us_local_opt_ap    |
         us_opt_tap---------|                        |--> aggregator publishes 
         tap to us/energydemand
@@ -1798,7 +1802,7 @@ class PriceController(Agent):
         # compute total active power (tap)
         opt_tap = self._calc_total(self._us_local_opt_ap, self._us_ds_opt_ap)
 
-        # publish to local/energyDemand 
+        # publish to local/energyDemand
         # vb pushes(RPC) this value to the next level
         self._publish_opt_tap(opt_tap)
 
@@ -2133,6 +2137,7 @@ class PriceController(Agent):
         return ed_current
 
     def _get_old_pp_msg(self):
+        _log.debug('_get_old_pp_msg()')
         if self._pca_state != PcaState.online:
             return
         if self._pca_mode != PcaMode.default_opt:
