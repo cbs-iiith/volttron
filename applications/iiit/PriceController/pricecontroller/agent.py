@@ -896,7 +896,7 @@ class PriceController(Agent):
                                                                     )
         _log.debug(
             'target_achieved: {}'.format(target_achieved)
-            + ', new_pp_msg_list'.format(new_pp_msg_list)
+            + ', new_pp_msg_list: {}'.format(new_pp_msg_list)
         )
 
         if target_achieved and self._pca_state == PcaState.online:
