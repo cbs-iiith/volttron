@@ -200,7 +200,7 @@ class ISPACE_Msg:
     # overload += operator
     def __iadd__(self, other):
         new_msg = copy(self)
-        if isinstance(other, float):
+        if isinstance(other, float) or isinstance(other, int):
             new_msg.value += other
         elif isinstance(other, ISPACE_Msg):
             new_msg.value += other.value

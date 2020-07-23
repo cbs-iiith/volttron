@@ -19,3 +19,5 @@ for v in my_list:
 print('i, v')
 for i, v in enumerate(my_list):
     print(str(i), str(v))
+
+print('\nfirst item value: {}'.format(list(wt_factors.values())[0]))
