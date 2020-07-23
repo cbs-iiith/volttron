@@ -234,7 +234,7 @@ class PriceController(Agent):
 
         self._mode_default_opt_params = self.config.get(
             'mode_default_opt_params', {
-                "is_single_pp": 'yes',
+                "is_single_pp": True,
                 "us_bid_timeout": 900,
                 "lc_bid_timeout": 180,
                 "max_iterations": 10,
@@ -706,6 +706,9 @@ class PriceController(Agent):
         value = pp_msg.get_value()
 
         self.old_pp_msg = copy(self._get_old_pp_msg())
+        _log.debug(
+            'old_pp_msg: {}'.format(self.old_pp_msg)
+        )
 
         if pp_msg_type:
             self.us_latest_msg_type = MessageType.price_point
@@ -915,7 +918,7 @@ class PriceController(Agent):
         return
 
     def _init_bidding(self, new_pp_msg):
-        _log.debug('_init_bidding_multi_pp()')
+        _log.debug('_init_bidding()')
         pp_old = {}
         ed_current = {}
         ed_prev = {}
@@ -924,6 +927,9 @@ class PriceController(Agent):
         ds_device_ids, local_device_ids = self._get_active_device_ids(
             self._us_ds_opt_ap, self._us_local_opt_ap)
 
+        _log.debug(
+            'old_pp_msg: {}'.format(self.old_pp_msg)
+        )
         for index, device_id in enumerate(local_device_ids + ds_device_ids):
             if device_id in local_device_ids:
                 ap_msg = self._us_local_opt_ap_msg[device_id]
@@ -942,6 +948,12 @@ class PriceController(Agent):
             ed_current[device_id] = copy(new_ed_msg)
             ed_prev[device_id] = copy(old_ed_msg)
             self._target += new_ed_msg.get_value()
+
+        _log.debug(
+            'ed_current: {}'.format(ed_current)
+            + ', ed_prev: {}'.format(ed_prev)
+            + ', pp_old: {}'.format(pp_old)
+        )
 
         if self._is_single_pp:
             first_pp_msg = copy(list(pp_old.values())[0])
@@ -990,7 +1002,7 @@ class PriceController(Agent):
 
     def _get_new_ed(self, index, new_pp_msg, old_act_pwr, old_pp_msg):
         new_energy_demand = 0
-        if check_msg_type(new_pp_msg, MessageType.price_point):
+        if new_pp_msg.get_msg_type() == MessageType.price_point:
             # received new price point
 
             if old_pp_msg.get_msg_type() == MessageType.price_point:
@@ -998,7 +1010,7 @@ class PriceController(Agent):
                         old_act_pwr
                         * (old_pp_msg.get_duration() / new_pp_msg.get_duration)
                         * (old_pp_msg.get_value() / new_pp_msg.get_value())
-                )
+                ) if new_pp_msg.get_value() != 0 else 0
                 new_dur_sec = new_pp_msg.get_duration()
                 new_energy_demand = calc_energy_wh(new_act_pwr, new_dur_sec)
             elif old_pp_msg.get_msg_type() == MessageType.budget:
@@ -1007,7 +1019,7 @@ class PriceController(Agent):
                         * (old_pp_msg.get_duration() / new_pp_msg.get_duration)
                 )
 
-        elif check_msg_type(new_pp_msg, MessageType.budget):
+        elif new_pp_msg.get_msg_type() == MessageType.budget:
             # received new budget
             wt_factors = self._mode_pass_on_params['weight_factors']
             sum_wt_factors = sum(wt_factors)
@@ -2126,6 +2138,10 @@ class PriceController(Agent):
         if self._pca_mode != PcaMode.default_opt:
             return
 
+        _log.debug(
+            'us_latest_msg_type: {}'.format(self.us_latest_msg_type)
+            + ', us_latest_msg_opt: {}'.format(self.us_latest_msg_opt)
+        )
         if self.us_latest_msg_type == MessageType.price_point:
             if self.us_latest_msg_opt:
                 return self.us_opt_pp_msg
@@ -2136,7 +2152,9 @@ class PriceController(Agent):
                 return self.us_opt_bd_msg
             else:
                 return self.us_bid_bd_msg
-        return
+        else:
+            _log.warning('unknown old_pp_msg!!!')
+        return get_default_pp_msg(self._discovery_address, self._device_id)
 
 
 def main(argv=None):
