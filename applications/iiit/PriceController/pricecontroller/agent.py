@@ -689,15 +689,11 @@ class PriceController(Agent):
                 elif bd_msg_type:
                     self._handle_pp_msg_default_opt_optimal_bd(pp_msg)
             else:
-                if self._is_single_pp:
-                    _log.info('[LOG] PCA mode: default_opt, single_pp: true')
-                    _log.warning('not yet implemented!!!')
-                else:
-                    self._handle_pp_msg_default_opt_not_optimal_pp(pp_msg)
+                self._handle_pp_msg_default_opt_not_optimal_pp(pp_msg)
 
         elif self._pca_mode == PcaMode.extern_opt:
             _log.info('[LOG] PCA mode: External_OPT')
-            _log.warning('not yet implemented!!!')
+            _log.warning('not yet full implemented!!!')
 
         else:
             _log.info('[LOG] PCA mode: %s'.format(self._pca_mode))
