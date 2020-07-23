@@ -890,6 +890,11 @@ class PriceController(Agent):
                                                                     ed_current,
                                                                     ed_prev
                                                                     )
+        _log.debug(
+            'target_achieved: {}'.format(target_achieved)
+            + ', new_pp_msg_list'.format(new_pp_msg_list)
+        )
+
         if target_achieved and self._pca_state == PcaState.online:
             # local optimal reached, publish this as bid to the us pp_msg
             self._us_bid_ready = True
@@ -900,8 +905,7 @@ class PriceController(Agent):
             first_msg = list(new_pp_msg_list.values())[0]
             self.lc_bid_pp_msg = copy(first_msg)
             self.lc_bid_pp_msg_list = copy(new_pp_msg_list)
-
-            _log.info('new bid pp_msg_list: {}'.format(new_pp_msg_list))
+            # publish these pp_messages
             self._pub_pp_messages(new_pp_msg_list)
 
         # clear corresponding buckets
@@ -926,11 +930,13 @@ class PriceController(Agent):
         # get latest device ids (both local & ds)
         ds_device_ids, local_device_ids = self._get_active_device_ids(
             self._us_ds_opt_ap, self._us_local_opt_ap)
+        _log.debug('active devices: {}'.format(local_device_ids, ds_device_ids))
 
         _log.debug(
             'old_pp_msg: {}'.format(self.old_pp_msg)
         )
         for index, device_id in enumerate(local_device_ids + ds_device_ids):
+            _log.debug('device_id: {}'.format(device_id))
             if device_id in local_device_ids:
                 ap_msg = self._us_local_opt_ap_msg[device_id]
             else:
@@ -942,6 +948,11 @@ class PriceController(Agent):
                 self.old_pp_msg,
                 ap_msg,
                 index
+            )
+            _log.debug(
+                'new_ed_msg: {}'.format(new_ed_msg)
+                + ', old_ed_msg: {}'.format(old_ed_msg)
+                + ', old_pp_msg: {}'.format(old_pp_msg)
             )
 
             pp_old[device_id] = copy(old_pp_msg)
@@ -1435,6 +1446,8 @@ class PriceController(Agent):
         if not self._run_process_loop:
             return
 
+        _log.debug('process_loop()')
+
         new_pp_msg_list = {}
 
         # check if all the bids are received from both local & ds devices
@@ -1468,13 +1481,10 @@ class PriceController(Agent):
             _log.debug('Compute new price points...')
             target_achieved, new_pp_msg_list = self._compute_new_prices()
 
-        #       if new_pp_isopt
-        #           # local optimal reached
-        #           publish_ed(local/ed, _ed, us_bid_pp_id)
-        #           # if next level accepts this bid, the new target is this ed
-        #       based on opt condition _computeNewPrice can publish new bid_pp
-        #       or
-        # and save data to self._ds_bid_ed
+        _log.debug(
+            'target_achieved: {}'.format(target_achieved)
+            + ', new_pp_msg_list'.format(new_pp_msg_list)
+        )
 
         if target_achieved and self._pca_state == PcaState.online:
             # local optimal reached, publish this as bid to the us pp_msg
@@ -1496,6 +1506,8 @@ class PriceController(Agent):
         if target_achieved:
             # stop the process loop
             self._run_process_loop = False
+
+        _log.debug('...done')
         return
 
     def _lc_bid_timed_out(self):
