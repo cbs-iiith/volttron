@@ -1020,20 +1020,21 @@ class PriceController(Agent):
         )
         if new_pp_msg.get_msg_type() == MessageType.price_point:
             # received new price point
+            dur_factor = (
+                    old_pp_msg.get_duration() / new_pp_msg.get_duration()
+            )
 
             if old_pp_msg.get_msg_type() == MessageType.price_point:
-                new_act_pwr = (
-                        old_act_pwr
-                        * (old_pp_msg.get_duration() / new_pp_msg.get_duration)
-                        * (old_pp_msg.get_value() / new_pp_msg.get_value())
-                ) if new_pp_msg.get_value() != 0 else 0
+                pp_factor = (
+                    (old_pp_msg.get_value() / new_pp_msg.get_value())
+                    if new_pp_msg.get_value() != 0 else 0
+                )
+                new_act_pwr = old_act_pwr * dur_factor * pp_factor
                 new_dur_sec = new_pp_msg.get_duration()
                 new_energy_demand = calc_energy_wh(new_act_pwr, new_dur_sec)
+
             elif old_pp_msg.get_msg_type() == MessageType.budget:
-                new_energy_demand = (
-                        old_pp_msg.get_value()
-                        * (old_pp_msg.get_duration() / new_pp_msg.get_duration)
-                )
+                new_energy_demand = old_pp_msg.get_value() * dur_factor
 
         elif new_pp_msg.get_msg_type() == MessageType.budget:
             # received new budget

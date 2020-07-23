@@ -449,7 +449,7 @@ class SmartStrip(Agent):
         
     '''
 
-    # perodic function to publish h/w data to msg bus
+    # periodic function to publish h/w data to msg bus
     def publish_hw_data(self):
 
         self.process_plugs_tag_id()
@@ -1224,7 +1224,10 @@ class SmartStrip(Agent):
         for k, v in wt_factors.items():
             if k == 'plug4':
                 continue
-            c[k] = v / sum_wt_factors if sum_wt_factors != 0 else 0
+            c[k] = (
+                (v / sum_wt_factors)
+                if sum_wt_factors != 0 else 0
+            )
 
         budget = self._bud_msg_latest.get_value()
         duration = self._bud_msg_latest.get_duration()

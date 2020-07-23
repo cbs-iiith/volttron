@@ -850,9 +850,14 @@ class ZoneController(Agent):
         wt_factors = self._gd_params['weight_factors']
 
         sum_wt_factors = wt_factors['ac'] + wt_factors['light']
-        c_ac = wt_factors['ac'] / sum_wt_factors if sum_wt_factors != 0 else 0
-        c_light = wt_factors[
-                      'light'] / sum_wt_factors if sum_wt_factors != 0 else 0
+        c_ac = (
+            (wt_factors['ac'] / sum_wt_factors)
+            if sum_wt_factors != 0 else 0
+        )
+        c_light = (
+            (wt_factors['light'] / sum_wt_factors)
+            if sum_wt_factors != 0 else 0
+        )
 
         budget = self._bud_msg_latest.get_value()
         duration = self._bud_msg_latest.get_duration()
