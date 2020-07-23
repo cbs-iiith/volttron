@@ -1000,7 +1000,7 @@ class PriceController(Agent):
         new_energy_demand = self._get_new_ed(index, new_pp_msg, old_act_pwr,
                                              old_pp_msg)
         _log.debug(
-            'new ed target: {0.4f}'.format(new_energy_demand)
+            'new ed target: {:0.4f}'.format(new_energy_demand)
         )
 
         old_ed_msg.set_msg_type(MessageType.energy_demand)
@@ -1269,7 +1269,7 @@ class PriceController(Agent):
             0 if new_pp < 0 else 1 if new_pp > 1 else new_pp
         )
         _log.debug(
-            'new pp: {0.2f}'.format(new_pp)
+            'new pp: {:0.2f}'.format(new_pp)
         )
 
         pp_msg = ISPACE_Msg_BidPricePoint(
@@ -1396,7 +1396,7 @@ class PriceController(Agent):
                 0 if new_pp < 0 else 1 if new_pp > 1 else new_pp
             )
             _log.debug(
-                'new pp: {0.2f}'.format(new_pp)
+                'new pp: {:0.2f}'.format(new_pp)
             )
 
             pp_msg = ISPACE_Msg_BidPricePoint(
