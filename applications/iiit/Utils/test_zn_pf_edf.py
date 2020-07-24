@@ -154,6 +154,37 @@ class MyTestCase(unittest.TestCase):
 
         self.assertEqual(True, True)
 
+    def test_zn_ac_light(self):
+        duration = 3600
+        i = 1
+        print('SL_NO, PP_AC, PP_LI, TSP, ED_AC, LSP, ED_LI, TED')
+        for bid_pp_ac in [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]:
+            for bid_pp_li in [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]:
+
+                bid_tsp = self._compute_new_tsp(bid_pp_ac)
+                ed_ac = calc_energy_wh(
+                    self._compute_ed_ac(bid_tsp),
+                    duration
+                )
+
+                bid_lsp = self._compute_new_lsp(bid_pp_li)
+                ed_light = calc_energy_wh(
+                    self._compute_ed_light(bid_lsp / 100),
+                    duration
+                )
+
+                ted = ed_ac + ed_light
+                print(
+                    '{:d}, {:0.2f}, {:0.2f}'.format(i, bid_pp_ac, bid_pp_li)
+                    + ', {:0.2f}, {:0.2f}'.format(bid_tsp, ed_ac)
+                    + ', {:0.2f}, {:0.2f}'.format(bid_lsp, ed_light)
+                    + ', {:0.2f}'.format(ted)
+                )
+
+                i += 1
+
+        self.assertEqual(True, True)
+
 
 if __name__ == '__main__':
     unittest.main()

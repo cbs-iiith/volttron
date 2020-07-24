@@ -63,10 +63,7 @@
     "gd_params": {
         "max_iterations": 1000,
         "deadband": 100,
-        "gamma": {
-            "ac": 0.0002,
-            "light": 0.0125
-        },
+        "gamma": 0.0002,
         "weight_factors": {
             "ac": 30,
             "light": 1

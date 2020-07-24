@@ -884,7 +884,7 @@ class ZoneController(Agent):
         # Starting point
         i = 0
         new_pp = 0
-        new_ed = 0
+        new_ed = budget
         new_tsp = 0
         new_lsp = 0
         new_ed_ac = c_ac * budget
@@ -918,17 +918,7 @@ class ZoneController(Agent):
                 + ', old ed_light: {:0.2f}'.format(old_ed_light)
             )
 
-            tmp_pp = (
-                    old_pp
-                    - (
-                            c_ac * gamma['ac'] * (
-                                new_ed_ac - old_ed_ac
-                            )
-                            + c_light * gamma['light'] * (
-                                    new_ed_light - old_ed_light
-                            )
-                    )
-            )
+            tmp_pp = old_pp - (float(gamma) * (new_ed - old_ed))
 
             _log.debug('new_pp: {}'.format(tmp_pp))
             tmp_pp = self.round_off_pp(tmp_pp)
@@ -963,11 +953,11 @@ class ZoneController(Agent):
                     + ' < deadband({:0.2f})'.format(deadband)
                 )
                 break
-            elif isclose(old_ed, tmp_ed, EPSILON, deadband):
+            elif isclose(new_ed, tmp_ed, EPSILON, 1):
                 _log.debug(
-                    '|old_ed({:0.2f})'.format(old_ed)
+                    '|prev tmp_ed({:0.2f})'.format(new_ed)
                     + ' - tmp_ed({:0.2f})|'.format(tmp_ed)
-                    + ' < deadband({:0.2f})'.format(deadband)
+                    + ' < deadband({:0.2f})'.format(1)
                 )
                 break
 
