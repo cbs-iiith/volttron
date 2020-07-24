@@ -852,7 +852,8 @@ class ZoneController(Agent):
         # configuration
         gamma = self._gd_params['gamma']
         deadband = self._gd_params['deadband']
-        max_iters = self._gd_params['max_iterations']
+        # max_iters = self._gd_params['max_iterations']
+        max_iters = 50
         wt_factors = self._gd_params['weight_factors']
 
         sum_wt_factors = float(wt_factors['ac'] + wt_factors['light'])
@@ -925,7 +926,7 @@ class ZoneController(Agent):
             _log.debug('new_pp: {}'.format(tmp_pp))
 
             tmp_tsp = self._compute_new_tsp(tmp_pp)
-            tmp_ed_ac = calc_energy_wh(self._compute_ed_ac(tmp_pp),
+            tmp_ed_ac = calc_energy_wh(self._compute_ed_ac(tmp_tsp),
                                        duration
                                        )
 
@@ -946,7 +947,7 @@ class ZoneController(Agent):
                 + ', tmp_ed_light: {:0.2f}'.format(tmp_ed_light)
             )
 
-            if isclose(budget, new_ed, EPSILON, deadband):
+            if isclose(budget, tmp_ed, EPSILON, deadband):
                 _log.debug(
                     '|budget({:0.2f})'.format(budget)
                     + ' - tmp_ed({:0.2f})|'.format(tmp_ed)
