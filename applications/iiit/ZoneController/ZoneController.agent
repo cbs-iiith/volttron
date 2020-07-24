@@ -68,8 +68,8 @@
             "light": 0.0125
         },
         "weight_factors": {
-            "ac": 0.5,
-            "light": 0.5
+            "ac": 30,
+            "light": 1
         }
     }
 

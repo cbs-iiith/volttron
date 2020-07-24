@@ -21,7 +21,9 @@ import gevent
 import gevent.event
 
 from applications.iiit.Utils.ispace_msg import (MessageType, EnergyCategory,
-                                                ISPACE_Msg, ISPACE_Msg_Budget)
+                                                ISPACE_Msg, ISPACE_Msg_Budget,
+                                                ROUNDOFF_PRICE_POINT,
+                                                PP_DECIMAL_DIGITS)
 from applications.iiit.Utils.ispace_msg_utils import (check_msg_type,
                                                       tap_helper,
                                                       ted_helper,
@@ -843,20 +845,30 @@ class ZoneController(Agent):
     def _compute_new_opt_pp(self):
         _log.debug('_compute_new_opt_pp()...')
 
+        _log.debug('gd_params: {}'.format(self._gd_params))
         # configuration
         gamma = self._gd_params['gamma']
         deadband = self._gd_params['deadband']
-        max_iters = self._gd_params['max_iterations']
+        #max_iters = self._gd_params['max_iterations']
+        max_iters = 200
         wt_factors = self._gd_params['weight_factors']
 
-        sum_wt_factors = wt_factors['ac'] + wt_factors['light']
-        c_ac = (
-            (wt_factors['ac'] / sum_wt_factors)
-            if sum_wt_factors != 0 else 0
-        )
-        c_light = (
-            (wt_factors['light'] / sum_wt_factors)
-            if sum_wt_factors != 0 else 0
+        sum_wt_factors = float(wt_factors['ac'] + wt_factors['light'])
+        if sum_wt_factors == 0:
+            _log.debug('sum_wt_factors is zero')
+            c_ac = 0.0
+            c_light = 0.0
+        else:
+            _log.debug('sum_wt_factors is not zero')
+            c_ac = float(wt_factors['ac']) / sum_wt_factors
+            c_light = float(wt_factors['light']) / sum_wt_factors
+
+        _log.debug(
+            'wt_factors[\'ac\']: {:0.2f}'.format(wt_factors['ac'])
+            + ', wt_factors[\'light\']: {:0.2f}'.format(wt_factors['light'])
+            + ', sum_wt_factors: {:0.2f}'.format(sum_wt_factors)
+            + ', c_ac: {:0.4f}'.format(c_ac)
+            + ', c_light: {:0.4f}'.format(c_light)
         )
 
         budget = self._bud_msg_latest.get_value()
@@ -877,6 +889,8 @@ class ZoneController(Agent):
         new_ed_light = c_light * budget
 
         old_pp = self._price_point_latest
+        old_tsp = self._compute_new_tsp(old_pp)
+        old_lsp = self._compute_new_lsp(old_pp) / 100
 
         ap_ac = self._rs['ac'][EnergyCategory.mixed].exp_wt_mv_avg()
         old_ed_ac = calc_energy_wh(ap_ac, duration)
@@ -886,30 +900,37 @@ class ZoneController(Agent):
 
         old_ed = old_ed_ac + old_ed_light
 
-        _log.debug(
-            'current pp: {:0.2f}'.format(old_pp)
-            + ', current ed: {:0.4f}'.format(old_ed)
-            + ', current ed_ac: {:0.4f}'.format(old_ed_ac)
-            + ', current ed_light: {:0.4f}'.format(old_ed_light)
-        )
-
         # Gradient descent iteration
         _log.debug('Gradient descent iteration')
         for i in range(max_iters):
+
+            _log.debug(
+                '........iter: {}/{}'.format(i, max_iters)
+                + ', old pp: {:0.2f}'.format(old_pp)
+                + ', old ed: {:0.2f}'.format(old_ed)
+                + ', new ed_ac: {:0.2f}'.format(new_ed_ac)
+                + ', old tsp: {:0.1f}'.format(old_tsp)
+                + ', old ed_ac: {:0.2f}'.format(old_ed_ac)
+                + ', new ed_light: {:0.2f}'.format(new_ed_light)
+                + ' old lsp: {:0.1f}'.format(old_lsp)
+                + ', old ed_light: {:0.2f}'.format(old_ed_light)
+            )
+
             new_pp = (
                     old_pp
                     - (
                             c_ac * gamma['ac'] * (
-                            new_ed_ac - old_ed_ac
-                    )
+                                new_ed_ac - old_ed_ac
+                            )
                             + c_light * gamma['light'] * (
                                     new_ed_light - old_ed_light
                             )
                     )
             )
-            new_pp = (
-                0 if new_pp < 0 else 1 if new_pp > 1 else new_pp
-            )
+
+            _log.debug('new_pp: {}'.format(new_pp))
+            new_pp = self.round_off_pp(new_pp)
+            _log.debug('new_pp: {}'.format(new_pp))
 
             new_tsp = self._compute_new_tsp(new_pp)
             new_ed_ac = calc_energy_wh(self._compute_ed_ac(new_tsp),
@@ -924,47 +945,57 @@ class ZoneController(Agent):
             new_ed = new_ed_ac + new_ed_light
 
             _log.debug(
-                'iter: {}'.format(i)
-                + ', bid_pp: {:0.2f}'.format(new_pp)
-                + ', new_ed: {:0.4f}'.format(new_ed)
+                '........iter: {}/{}'.format(i, max_iters)
+                + ', new_pp: {:0.2f}'.format(new_pp)
+                + ', new_ed: {:0.2f}'.format(new_ed)
                 + ', new_tsp: {:0.1f}'.format(new_tsp)
-                + ' new_ed_ac: {:0.2f}'.format(new_ed_ac)
-                + ' new_lsp: {:0.1f}'.format(new_lsp)
-                + ' new_ed_light: {:0.2f}'.format(new_ed_light)
+                + ', new_ed_ac: {:0.2f}'.format(new_ed_ac)
+                + ', new_lsp: {:0.1f}'.format(new_lsp)
+                + ', new_ed_light: {:0.2f}'.format(new_ed_light)
             )
 
             if isclose(budget, new_ed, EPSILON, deadband):
                 _log.debug(
                     '|budget({:0.2f})'.format(budget)
                     + ' - new_ed({:0.2f})|'.format(new_ed)
-                    + ' < deadband({:0.4f})'.format(deadband)
+                    + ' < deadband({:0.2f})'.format(deadband)
                 )
                 break
             elif isclose(old_ed, new_ed, EPSILON, deadband):
                 _log.debug(
                     '|old_ed({:0.2f})'.format(old_ed)
                     + ' - new_ed({:0.2f})|'.format(new_ed)
-                    + ' < deadband({:0.4f})'.format(deadband)
+                    + ' < deadband({:0.2f})'.format(deadband)
                 )
                 break
 
+            old_tsp = new_tsp
+            old_lsp = new_lsp
             old_pp = new_pp
             old_ed_ac = new_ed_ac
             old_ed_light = new_ed_light
             old_ed = new_ed
 
         _log.debug(
-            'iter count: {}'.format(i)
-            + ', new_pp: {:0.2f}'.format(new_pp)
-            + ', expected_ed: {:0.4f}'.format(new_ed)
-            + ', new_tsp: {:0.1f}'.format(new_tsp)
-            + ' expected_ed_ac: {:0.2f}'.format(new_ed_ac)
-            + ' new_lsp: {:0.1f}'.format(new_lsp)
-            + ' expected_ed_light: {:0.2f}'.format(new_ed_light)
+            'final iter count: {}'.format(i)
+            + ', new pp: {:0.2f}'.format(new_pp)
+            + ', expected ted: {:0.2f}'.format(new_ed)
+            + ', new tsp: {:0.1f}'.format(new_tsp)
+            + ', expected ed_ac: {:0.2f}'.format(new_ed_ac)
+            + ', new lsp: {:0.1f}'.format(new_lsp)
+            + ', expected ed_light: {:0.2f}'.format(new_ed_light)
         )
 
         _log.debug('...done')
         return new_pp
+
+        def round_off_pp(self, value):
+            tmp_value = round(mround(value, ROUNDOFF_PRICE_POINT),
+                              PP_DECIMAL_DIGITS)
+            new_value = 0 if tmp_value <= 0 else 1 if tmp_value >= 1 else \
+                tmp_value
+            return new_value
+
 
 
 def main(argv=sys.argv):
