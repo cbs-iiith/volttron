@@ -989,12 +989,13 @@ class ZoneController(Agent):
         _log.debug('...done')
         return new_pp
 
-        def round_off_pp(self, value):
-            tmp_value = round(mround(value, ROUNDOFF_PRICE_POINT),
-                              PP_DECIMAL_DIGITS)
-            new_value = 0 if tmp_value <= 0 else 1 if tmp_value >= 1 else \
-                tmp_value
-            return new_value
+    @staticmethod
+    def round_off_pp(value):
+        tmp_value = round(mround(value, ROUNDOFF_PRICE_POINT),
+                          PP_DECIMAL_DIGITS)
+        new_value = 0 if tmp_value <= 0 else 1 if tmp_value >= 1 else \
+            tmp_value
+        return new_value
 
 
 
