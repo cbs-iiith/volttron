@@ -849,8 +849,7 @@ class ZoneController(Agent):
         # configuration
         gamma = self._gd_params['gamma']
         deadband = self._gd_params['deadband']
-        #max_iters = self._gd_params['max_iterations']
-        max_iters = 200
+        max_iters = self._gd_params['max_iterations']
         wt_factors = self._gd_params['weight_factors']
 
         sum_wt_factors = float(wt_factors['ac'] + wt_factors['light'])
@@ -905,7 +904,7 @@ class ZoneController(Agent):
         for i in range(max_iters):
 
             _log.debug(
-                '........iter: {}/{}'.format(i, max_iters)
+                '...iter: {}/{}'.format(i, max_iters)
                 + ', old pp: {:0.2f}'.format(old_pp)
                 + ', old ed: {:0.2f}'.format(old_ed)
                 + ', new ed_ac: {:0.2f}'.format(new_ed_ac)
@@ -916,7 +915,7 @@ class ZoneController(Agent):
                 + ', old ed_light: {:0.2f}'.format(old_ed_light)
             )
 
-            new_pp = (
+            tmp_pp = (
                     old_pp
                     - (
                             c_ac * gamma['ac'] * (
@@ -928,43 +927,43 @@ class ZoneController(Agent):
                     )
             )
 
-            _log.debug('new_pp: {}'.format(new_pp))
-            new_pp = self.round_off_pp(new_pp)
-            _log.debug('new_pp: {}'.format(new_pp))
+            _log.debug('new_pp: {}'.format(tmp_pp))
+            tmp_pp = self.round_off_pp(tmp_pp)
+            _log.debug('new_pp: {}'.format(tmp_pp))
 
-            new_tsp = self._compute_new_tsp(new_pp)
-            new_ed_ac = calc_energy_wh(self._compute_ed_ac(new_tsp),
+            tmp_tsp = self._compute_new_tsp(tmp_pp)
+            tmp_ed_ac = calc_energy_wh(self._compute_ed_ac(tmp_pp),
                                        duration
                                        )
 
-            new_lsp = self._compute_new_lsp(new_pp) / 100
-            new_ed_light = calc_energy_wh(self._compute_ed_light(new_lsp),
+            tmp_lsp = self._compute_new_lsp(tmp_pp) / 100
+            tmp_ed_light = calc_energy_wh(self._compute_ed_light(tmp_lsp),
                                           duration
                                           )
 
-            new_ed = new_ed_ac + new_ed_light
+            tmp_ed = tmp_ed_ac + tmp_ed_light
 
             _log.debug(
-                '........iter: {}/{}'.format(i, max_iters)
-                + ', new_pp: {:0.2f}'.format(new_pp)
-                + ', new_ed: {:0.2f}'.format(new_ed)
-                + ', new_tsp: {:0.1f}'.format(new_tsp)
-                + ', new_ed_ac: {:0.2f}'.format(new_ed_ac)
-                + ', new_lsp: {:0.1f}'.format(new_lsp)
-                + ', new_ed_light: {:0.2f}'.format(new_ed_light)
+                '......iter: {}/{}'.format(i, max_iters)
+                + ', tmp_pp: {:0.2f}'.format(tmp_pp)
+                + ', tmp_ed: {:0.2f}'.format(tmp_ed)
+                + ', tmp_tsp: {:0.1f}'.format(tmp_tsp)
+                + ', tmp_ed_ac: {:0.2f}'.format(tmp_ed_ac)
+                + ', tmp_lsp: {:0.1f}'.format(tmp_lsp)
+                + ', tmp_ed_light: {:0.2f}'.format(tmp_ed_light)
             )
 
             if isclose(budget, new_ed, EPSILON, deadband):
                 _log.debug(
                     '|budget({:0.2f})'.format(budget)
-                    + ' - new_ed({:0.2f})|'.format(new_ed)
+                    + ' - tmp_ed({:0.2f})|'.format(tmp_ed)
                     + ' < deadband({:0.2f})'.format(deadband)
                 )
                 break
-            elif isclose(old_ed, new_ed, EPSILON, deadband):
+            elif isclose(old_ed, tmp_ed, EPSILON, deadband):
                 _log.debug(
                     '|old_ed({:0.2f})'.format(old_ed)
-                    + ' - new_ed({:0.2f})|'.format(new_ed)
+                    + ' - tmp_ed({:0.2f})|'.format(tmp_ed)
                     + ' < deadband({:0.2f})'.format(deadband)
                 )
                 break
@@ -976,8 +975,15 @@ class ZoneController(Agent):
             old_ed_light = new_ed_light
             old_ed = new_ed
 
+            new_tsp = tmp_tsp
+            new_lsp = tmp_lsp
+            new_pp = tmp_pp
+            new_ed_ac = tmp_ed_ac
+            new_ed_light = tmp_ed_light
+            new_ed = tmp_ed
+
         _log.debug(
-            'final iter count: {}'.format(i)
+            'final iter count: {}/{}'.format(i, max_iters)
             + ', new pp: {:0.2f}'.format(new_pp)
             + ', expected ted: {:0.2f}'.format(new_ed)
             + ', new tsp: {:0.1f}'.format(new_tsp)
