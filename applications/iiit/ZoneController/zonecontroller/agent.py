@@ -679,43 +679,46 @@ class ZoneController(Agent):
 
     # compute new zone temperature set point from price functions
     def _compute_new_tsp(self, pp):
+        # type: (float) -> float
         pp = 0 if pp < 0 else 1 if pp > 1 else pp
 
         idx = self._pf_zn_ac['idx']
         roundup = self._pf_zn_ac['roundup']
         coefficients = self._pf_zn_ac['coefficients']
 
-        a = coefficients[idx]['a']
-        b = coefficients[idx]['b']
-        c = coefficients[idx]['c']
+        a = float(coefficients[idx]['a'])
+        b = float(coefficients[idx]['b'])
+        c = float(coefficients[idx]['c'])
 
         tsp = a * pp ** 2 + b * pp + c
         return mround(tsp, roundup)
 
     # compute new zone lighting setpoint (0-100%) from price functions
     def _compute_new_lsp(self, pp):
+        # type: (float) -> float
         pp = 0 if pp < 0 else 1 if pp > 1 else pp
 
         idx = self._pf_zn_light['idx']
         roundup = self._pf_zn_light['roundup']
         coefficients = self._pf_zn_light['coefficients']
 
-        a = coefficients[idx]['a']
-        b = coefficients[idx]['b']
-        c = coefficients[idx]['c']
+        a = float(coefficients[idx]['a'])
+        b = float(coefficients[idx]['b'])
+        c = float(coefficients[idx]['c'])
 
         lsp = a * pp ** 2 + b * pp + c
         return mround(lsp, roundup)
 
     # compute ed ac from ed functions given tsp
     def _compute_ed_ac(self, bid_tsp):
+        # type: (float) -> float
         idx = self._edf_zn_ac['idx']
         roundup = self._edf_zn_ac['roundup']
         coefficients = self._edf_zn_ac['coefficients']
 
-        a = coefficients[idx]['a']
-        b = coefficients[idx]['b']
-        c = coefficients[idx]['c']
+        a = float(coefficients[idx]['a'])
+        b = float(coefficients[idx]['b'])
+        c = float(coefficients[idx]['c'])
 
         ed_ac = a * bid_tsp ** 2 + b * bid_tsp + c
         return mround(ed_ac, roundup)
@@ -726,9 +729,9 @@ class ZoneController(Agent):
         roundup = self._edf_zn_light['roundup']
         coefficients = self._edf_zn_light['coefficients']
 
-        a = coefficients[idx]['a']
-        b = coefficients[idx]['b']
-        c = coefficients[idx]['c']
+        a = float(coefficients[idx]['a'])
+        b = float(coefficients[idx]['b'])
+        c = float(coefficients[idx]['c'])
 
         ed_light = a * bid_lsp ** 2 + b * bid_lsp + c
         return mround(ed_light, roundup)
