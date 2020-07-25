@@ -883,7 +883,9 @@ class ZoneController(Agent):
         )
 
         # Starting point
-        i = 0
+        i = 0               # iterations count
+        j = 0               # repeats count
+        max_j = 10
         new_pp = 0
         new_tsp = 0
         new_lsp = 0
@@ -919,48 +921,53 @@ class ZoneController(Agent):
                 + ', old ed_light: {:0.2f}'.format(old_ed_light)
             )
 
-            tmp_pp = old_pp - (float(gamma) * (new_ed - old_ed))
+            new_pp = old_pp - gamma * (new_ed - old_ed)
 
-            _log.debug('new_pp: {}'.format(tmp_pp))
-            tmp_pp = self.round_off_pp(tmp_pp)
-            _log.debug('new_pp: {}'.format(tmp_pp))
+            _log.debug('new_pp: {}'.format(new_pp))
+            new_pp = self.round_off_pp(new_pp)
+            _log.debug('new_pp: {}'.format(new_pp))
 
-            tmp_tsp = self._compute_new_tsp(tmp_pp)
-            tmp_ed_ac = calc_energy_wh(self._compute_ed_ac(tmp_tsp),
+            new_tsp = self._compute_new_tsp(new_pp)
+            new_ed_ac = calc_energy_wh(self._compute_ed_ac(new_tsp),
                                        duration
                                        )
 
-            tmp_lsp = self._compute_new_lsp(tmp_pp) / 100
-            tmp_ed_light = calc_energy_wh(self._compute_ed_light(tmp_lsp),
+            new_lsp = self._compute_new_lsp(new_pp) / 100
+            new_ed_light = calc_energy_wh(self._compute_ed_light(new_lsp),
                                           duration
                                           )
 
-            tmp_ed = tmp_ed_ac + tmp_ed_light
+            new_ed = new_ed_ac + new_ed_light
 
             _log.debug(
                 '......iter: {}/{}'.format(i, max_iters)
-                + ', tmp_pp: {:0.2f}'.format(tmp_pp)
-                + ', tmp_ed: {:0.2f}'.format(tmp_ed)
-                + ', tmp_tsp: {:0.1f}'.format(tmp_tsp)
-                + ', tmp_ed_ac: {:0.2f}'.format(tmp_ed_ac)
-                + ', tmp_lsp: {:0.1f}'.format(tmp_lsp)
-                + ', tmp_ed_light: {:0.2f}'.format(tmp_ed_light)
+                + ', tmp_pp: {:0.2f}'.format(new_pp)
+                + ', tmp_ed: {:0.2f}'.format(new_ed)
+                + ', tmp_tsp: {:0.1f}'.format(new_tsp)
+                + ', tmp_ed_ac: {:0.2f}'.format(new_ed_ac)
+                + ', tmp_lsp: {:0.1f}'.format(new_lsp)
+                + ', tmp_ed_light: {:0.2f}'.format(new_ed_light)
             )
 
-            if isclose(budget, tmp_ed, EPSILON, deadband):
+            if isclose(budget, new_ed, EPSILON, deadband):
                 _log.debug(
                     '|budget({:0.2f})'.format(budget)
-                    + ' - tmp_ed({:0.2f})|'.format(tmp_ed)
+                    + ' - tmp_ed({:0.2f})|'.format(new_ed)
                     + ' < deadband({:0.2f})'.format(deadband)
                 )
                 break
-            elif isclose(new_ed, tmp_ed, EPSILON, 1):
+            if isclose(old_ed, new_ed, EPSILON, 1):
                 _log.debug(
-                    '|prev tmp_ed({:0.2f})'.format(new_ed)
-                    + ' - tmp_ed({:0.2f})|'.format(tmp_ed)
+                    '|prev new_ed({:0.2f})'.format(old_ed)
+                    + ' - new_ed({:0.2f})|'.format(new_ed)
                     + ' < deadband({:0.2f})'.format(1)
+                    + ' repeat count: {:d}/{:d}'.format(i, max_j)
                 )
-                break
+                if j > max_j:
+                    break
+                j += 1
+            else:
+                j = 0       # reset repeat count
 
             old_tsp = new_tsp
             old_lsp = new_lsp
@@ -968,13 +975,6 @@ class ZoneController(Agent):
             old_ed_ac = new_ed_ac
             old_ed_light = new_ed_light
             old_ed = new_ed
-
-            new_tsp = tmp_tsp
-            new_lsp = tmp_lsp
-            new_pp = tmp_pp
-            new_ed_ac = tmp_ed_ac
-            new_ed_light = tmp_ed_light
-            new_ed = tmp_ed
 
         _log.debug(
             'final iter count: {}/{}'.format(i, max_iters)
