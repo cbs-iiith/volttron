@@ -885,21 +885,21 @@ class ZoneController(Agent):
         # Starting point
         i = 0
         new_pp = 0
-        new_ed = budget
         new_tsp = 0
         new_lsp = 0
         new_ed_ac = c_ac * budget
         new_ed_light = c_light * budget
+        new_ed = budget
 
         old_pp = self._price_point_latest
         old_tsp = self._compute_new_tsp(old_pp)
         old_lsp = self._compute_new_lsp(old_pp) / 100
 
-        ap_ac = self._rs['ac'][EnergyCategory.mixed].exp_wt_mv_avg()
-        old_ed_ac = calc_energy_wh(ap_ac, duration)
+        old_ap_ac = self._rs['ac'][EnergyCategory.mixed].exp_wt_mv_avg()
+        old_ed_ac = calc_energy_wh(old_ap_ac, duration)
 
-        ap_light = self._rs['light'][EnergyCategory.mixed].exp_wt_mv_avg()
-        old_ed_light = calc_energy_wh(ap_light, duration)
+        old_ap_light = self._rs['light'][EnergyCategory.mixed].exp_wt_mv_avg()
+        old_ed_light = calc_energy_wh(old_ap_light, duration)
 
         old_ed = old_ed_ac + old_ed_light
 
