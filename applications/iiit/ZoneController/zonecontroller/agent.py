@@ -11,6 +11,7 @@
 
 # Sam
 
+import decimal
 import logging
 import sys
 import time
@@ -21,9 +22,7 @@ import gevent
 import gevent.event
 
 from applications.iiit.Utils.ispace_msg import (MessageType, EnergyCategory,
-                                                ISPACE_Msg, ISPACE_Msg_Budget,
-                                                ROUNDOFF_PRICE_POINT,
-                                                PP_DECIMAL_DIGITS)
+                                                ISPACE_Msg, ISPACE_Msg_Budget)
 from applications.iiit.Utils.ispace_msg_utils import (check_msg_type,
                                                       tap_helper,
                                                       ted_helper,
@@ -59,6 +58,11 @@ E_UNKNOWN_CCE = -4
 E_UNKNOWN_TSP = -5
 E_UNKNOWN_LSP = -6
 E_UNKNOWN_CLE = -9
+
+ROUNDOFF_PRICE_POINT = 0.1
+PP_DECIMAL_DIGITS = decimal.Decimal(
+    str(ROUNDOFF_PRICE_POINT)).as_tuple().exponent * -1
+
 
 
 def zonecontroller(config_path, **kwargs):
@@ -140,10 +144,11 @@ class ZoneController(Agent):
         self._gd_params = self.config.get(
             'gd_params', {
                 "max_iterations": 1000,
+                "max_repeats": 10,
                 "deadband": 100,
                 "gamma": {
-                    "ac": 0.0001,
-                    "light": 0.0001
+                    "ac": 0.0002,
+                    "light": 0.0125
                 },
                 "weight_factors": {
                     "ac": 0.50,
@@ -854,6 +859,7 @@ class ZoneController(Agent):
         deadband = self._gd_params['deadband']
         # max_iters = self._gd_params['max_iterations']
         max_iters = 50
+        max_repeats = 10
         wt_factors = self._gd_params['weight_factors']
 
         sum_wt_factors = float(wt_factors['ac'] + wt_factors['light'])
@@ -885,17 +891,14 @@ class ZoneController(Agent):
         # Starting point
         i = 0               # iterations count
         j = 0               # repeats count
-        max_j = 10
         new_pp = 0
         new_tsp = 0
         new_lsp = 0
-        new_ed_ac = c_ac * budget
-        new_ed_light = c_light * budget
+        new_ed_ac = 0
+        new_ed_light = 0
         new_ed = budget
 
         old_pp = self._price_point_latest
-        old_tsp = self._compute_new_tsp(old_pp)
-        old_lsp = self._compute_new_lsp(old_pp) / 100
 
         old_ap_ac = self._rs['ac'][EnergyCategory.mixed].exp_wt_mv_avg()
         old_ed_ac = calc_energy_wh(old_ap_ac, duration)
@@ -911,17 +914,19 @@ class ZoneController(Agent):
 
             _log.debug(
                 '...iter: {}/{}'.format(i, max_iters)
+                + ', new pp: {:0.2f}'.format(new_pp)
+                + ', new ed: {:0.2f}'.format(new_ed)
                 + ', old pp: {:0.2f}'.format(old_pp)
                 + ', old ed: {:0.2f}'.format(old_ed)
-                + ', new ed_ac: {:0.2f}'.format(new_ed_ac)
-                + ', old tsp: {:0.1f}'.format(old_tsp)
-                + ', old ed_ac: {:0.2f}'.format(old_ed_ac)
-                + ', new ed_light: {:0.2f}'.format(new_ed_light)
-                + ' old lsp: {:0.1f}'.format(old_lsp)
-                + ', old ed_light: {:0.2f}'.format(old_ed_light)
             )
 
-            new_pp = old_pp - gamma * (new_ed - old_ed)
+            delta = budget - old_ed
+            gamma_delta = gamma * delta
+            new_pp = old_pp - gamma_delta
+            _log.debug(
+                'delta: {:0.2f}'.format(delta)
+                + ', gamma_delta: {:0.2f}'.format(gamma_delta)
+            )
 
             _log.debug('new_pp: {}'.format(new_pp))
             new_pp = self.round_off_pp(new_pp)
@@ -943,10 +948,6 @@ class ZoneController(Agent):
                 '......iter: {}/{}'.format(i, max_iters)
                 + ', tmp_pp: {:0.2f}'.format(new_pp)
                 + ', tmp_ed: {:0.2f}'.format(new_ed)
-                + ', tmp_tsp: {:0.1f}'.format(new_tsp)
-                + ', tmp_ed_ac: {:0.2f}'.format(new_ed_ac)
-                + ', tmp_lsp: {:0.1f}'.format(new_lsp)
-                + ', tmp_ed_light: {:0.2f}'.format(new_ed_light)
             )
 
             if isclose(budget, new_ed, EPSILON, deadband):
@@ -956,24 +957,21 @@ class ZoneController(Agent):
                     + ' < deadband({:0.2f})'.format(deadband)
                 )
                 break
+
             if isclose(old_ed, new_ed, EPSILON, 1):
+                j += 1
                 _log.debug(
                     '|prev new_ed({:0.2f})'.format(old_ed)
                     + ' - new_ed({:0.2f})|'.format(new_ed)
                     + ' < deadband({:0.2f})'.format(1)
-                    + ' repeat count: {:d}/{:d}'.format(i, max_j)
+                    + ' repeat count: {:d}/{:d}'.format(j, max_repeats)
                 )
-                if j > max_j:
+                if j >= max_repeats:
                     break
-                j += 1
             else:
                 j = 0       # reset repeat count
 
-            old_tsp = new_tsp
-            old_lsp = new_lsp
             old_pp = new_pp
-            old_ed_ac = new_ed_ac
-            old_ed_light = new_ed_light
             old_ed = new_ed
 
         _log.debug(
