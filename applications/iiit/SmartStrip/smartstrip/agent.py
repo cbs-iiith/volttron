@@ -22,7 +22,8 @@ import gevent
 import gevent.event
 
 from applications.iiit.Utils.ispace_msg import (MessageType, EnergyCategory,
-                                                ISPACE_Msg, ISPACE_Msg_Budget)
+                                                ISPACE_Msg, ISPACE_Msg_Budget,
+                                                round_off_pp)
 from applications.iiit.Utils.ispace_msg_utils import (check_msg_type,
                                                       tap_helper,
                                                       ted_helper,
@@ -1209,46 +1210,47 @@ class SmartStrip(Agent):
     def _compute_new_opt_pp(self):
         _log.debug('_compute_new_opt_pp()...')
 
+        _log.debug('gd_params: {}'.format(self._gd_params))
         # configuration
-        gamma = self._gd_params['gamma']
+        gammas = self._gd_params['gammas']
         deadband = self._gd_params['deadband']
         max_iters = self._gd_params['max_iterations']
+        max_repeats = self._gd_params['max_repeats']
         wt_factors = self._gd_params['weight_factors']
 
         sum_wt_factors = 0
         for k, v in wt_factors.items():
             if k == 'plug4':
                 continue
-            sum_wt_factors += v
+            sum_wt_factors += float(v)
 
         c = {}
         for k, v in wt_factors.items():
             if k == 'plug4':
                 continue
             c[k] = (
-                (v / sum_wt_factors)
+                float(v) / sum_wt_factors
                 if sum_wt_factors != 0 else 0
             )
 
         budget = self._bud_msg_latest.get_value()
         duration = self._bud_msg_latest.get_duration()
-
         _log.debug(
-            '***** New budget: {:0.4f}'.format(budget)
+            '***** New budget: {:0.2f}'.format(budget)
             + ' , price_id: {}'.format(self._bud_msg_latest.get_price_id())
         )
-
         base_ed = calc_energy_wh(SMARTSTRIP_BASE_ENERGY, duration)
         budget = budget - base_ed
         _log.debug(
-            '***** New base adjusted budget: {:0.4f}'.format(budget)
+            '***** New base adjusted budget: {:0.2f}'.format(budget)
             + ' , price_id: {}'.format(self._bud_msg_latest.get_price_id())
         )
 
         # Starting point
-        i = 0
+        i = 0  # iterations count
+        j = 0  # repeats count
         new_pp = 0
-        new_ed = 0
+        new_ed = budget
 
         # this is need to convert [] to {}
         plugs_th_pp = {}
@@ -1264,77 +1266,102 @@ class SmartStrip(Agent):
         _log.debug(
             'current pp: {:0.2f}'.format(old_pp)
         )
-        new_ed_plugs = {}
+
         old_ed_plugs = {}
         old_ed = 0
+        budget_plugs = {}
         for k, v in plugs_active_pwr.items():
-            new_ed_plugs[k] = c[k] * budget
-
+            budget_plugs[k] = c[k] * budget
             plug_pwr = self._rs[k][EnergyCategory.mixed].exp_wt_mv_avg()
             old_ed_plugs[k] = calc_energy_wh(plug_pwr, duration)
-            _log.debug(
-                'current ed_{}: {:0.4f}'.format(k, old_ed_plugs[k])
-            )
             old_ed += old_ed_plugs[k]
+
+        d_s = ''  # debug str
 
         # Gradient descent iteration
         _log.debug('Gradient descent iteration')
         for i in range(max_iters):
 
-            sum_new_pp = 0
-            for k, v in new_ed_plugs.items():
-                sum_new_pp += (
-                        c[k]
-                        * gamma[k]
-                        * (new_ed_plugs[k] - old_ed_plugs[k])
-                )
-            new_pp = old_pp - sum_new_pp
-            new_pp = (
-                0 if new_pp < 0 else 1 if new_pp > 1 else new_pp
+            _log.debug(
+                '...iter: {}/{}'.format(i + 1, max_iters)
+                + ', new pp: {:0.2f}'.format(new_pp)
+                + ', new ed: {:0.2f}'.format(new_ed)
+                + ', old pp: {:0.2f}'.format(old_pp)
+                + ', old ed: {:0.2f}'.format(old_ed)
+                + ', old ed plug1: {:0.2f}'.format(old_ed_plugs['plug1'])
+                + ', old ed plug2: {:0.2f}'.format(old_ed_plugs['plug2'])
+                + ', old ed plug3: {:0.2f}'.format(old_ed_plugs['plug3'])
             )
 
+            sum_new_pp = 0
+            delta = {}
+            gamma_delta = {}
+            c_gamma_delta = {}
+            d_s = ''    # debug str
+            index = 0
+            for k, v in budget_plugs.items():
+                delta[k] = budget_plugs[k] - old_ed_plugs[k]
+                gamma_delta[k] = float(gammas[k]) * delta[k]
+                c_gamma_delta[k] = c[k] * gamma_delta[k]
+                sum_new_pp += c_gamma_delta[k]
+                d_s += '' if index == 0 else ', '
+                d_s += 'delta[{}]: {:0.2f}'.format(k, delta[k])
+                d_s += ', gamma_delta[{}]: {:0.2f}'.format(k, gamma_delta[k])
+                d_s += ', c_gamma_delta[{}]: {:.2f}'.format(k, c_gamma_delta[k])
+                index += 1
+
+            new_pp = old_pp - sum_new_pp
+            _log.debug(d_s)
+
+            d_s = 'new_pp: {:0.4f}'.format(new_pp)
+            new_pp = round_off_pp(new_pp)
+            _log.debug(d_s + ', round off new_pp: {:0.2f}'.format(new_pp))
+
             new_ed = 0
-            for k, v in new_ed_plugs.items():
-                plug_pwr = (
-                    plugs_active_pwr[k]
-                    if new_pp <= plugs_th_pp[k]
-                    else 0
-                )
+            new_ed_plugs = {}
+            d_s = ''  # debug str
+            for k, v in delta.items():
+                plug_pwr = plugs_active_pwr[k]
                 new_ed_plugs[k] = calc_energy_wh(plug_pwr, duration)
-                _log.debug(
-                    '...new ed_{}: {:0.4f}'.format(k, new_ed_plugs[k])
-                )
+                d_s += ', expected ed[{}]: {:0.2f}'.format(k, new_ed_plugs[k])
                 new_ed += new_ed_plugs[k]
 
             _log.debug(
-                'iter: {}'.format(i)
-                + ', bid_pp: {:0.2f}'.format(new_pp)
-                + ', new_ed: {:0.4f}'.format(new_ed + base_ed)
+                '......iter: {}/{}'.format(i, max_iters)
+                + ', tmp_pp: {:0.2f}'.format(new_pp)
+                + ', tmp_ed: {:0.2f}'.format(new_ed)
             )
 
             if isclose(budget, new_ed, EPSILON, deadband):
                 _log.debug(
                     '|budget({:0.2f})'.format(budget)
-                    + ' - new_ed({:0.2f})|'.format(new_ed)
-                    + ' < deadband({:0.4f})'.format(deadband)
+                    + ' - tmp_ed({:0.2f})|'.format(new_ed)
+                    + ' < deadband({:0.2f})'.format(deadband)
                 )
                 break
-            elif isclose(old_ed, new_ed, EPSILON, deadband):
+
+            if isclose(old_ed, new_ed, EPSILON, 1):
+                j += 1
                 _log.debug(
-                    '|old_ed({:0.2f})'.format(old_ed)
+                    '|prev new_ed({:0.2f})'.format(old_ed)
                     + ' - new_ed({:0.2f})|'.format(new_ed)
-                    + ' < deadband({:0.4f})'.format(deadband)
+                    + ' < deadband({:0.2f})'.format(1)
+                    + ' repeat count: {:d}/{:d}'.format(j, max_repeats)
                 )
-                break
+                if j >= max_repeats:
+                    break
+            else:
+                j = 0  # reset repeat count
 
             old_pp = new_pp
-            old_ed_plugs = copy(new_ed_plugs)
             old_ed = new_ed
+            old_ed_plugs = copy(new_ed_plugs)
 
         _log.debug(
-            'iter count: {}'.format(i)
-            + ', new_pp: {:0.2f}'.format(new_pp)
-            + ', expected_ed: {:0.4f}'.format(new_ed + base_ed)
+            'final iter count: {}/{}'.format(i, max_iters)
+            + ', new pp: {:0.2f}'.format(new_pp)
+            + ', expected ted: {:0.2f}'.format(new_ed + base_ed)
+            + d_s
         )
 
         _log.debug('...done')
