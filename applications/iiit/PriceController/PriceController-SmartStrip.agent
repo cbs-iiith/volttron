@@ -16,6 +16,12 @@
     "pricePoint_topic": "smartstrip/pricepoint",
     "vb_vip_identity": "iiit.volttronbridge",
 
+    # Exponential weighted moving average factor is a constant that affects how
+    # quickly the average "catches up" to the latest trend. At 1 it's no longer
+    # an average and just becomes the latest value.
+    # 120 --> 1 hr, 2 reading/min)
+    "rc_factor" = 120,
+
     # pca state -->  ONLINE, STANDALONE, STANDBY
     #   ONLINE --> actively receive pp_msg from us and submit bids
     #   STANDALONE --> move to this condition if pp_msg_opt_durations elapsed
@@ -40,8 +46,9 @@
         "us_bid_timeout": 5,
         "lc_bid_timeout": 2,
         "max_iterations": 10,
+        "max_repeats": 10,
         "deadband": [5, 5, 5, 5],
-        "gamma": [0.0333, 0.0067, 0.0067, 1.0000],
+        "gammas": [0.0333, 0.0067, 0.0067, 1.0000],
         "alpha": [0.0035, 0.0035, 0.0035, 0.0035],
         "weight_factors": [0.25, 0.25, 0.25, 0.25]
     },

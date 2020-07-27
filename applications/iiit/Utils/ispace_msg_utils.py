@@ -27,11 +27,6 @@ from volttron.platform.agent import utils
 utils.setup_logging()
 _log = logging.getLogger(__name__)
 
-ROUNDOFF_PRICE_POINT = 0.01
-ROUNDOFF_BUDGET = 0.0001
-ROUNDOFF_ACTIVE_POWER = 0.0001
-ROUNDOFF_ENERGY = 0.0001
-
 
 # validate incoming bus topic message
 def valid_bustopic_msg(

@@ -22,7 +22,8 @@ import gevent
 import gevent.event
 
 from applications.iiit.Utils.ispace_msg import (MessageType, EnergyCategory,
-                                                ISPACE_Msg, ISPACE_Msg_Budget)
+                                                ISPACE_Msg, ISPACE_Msg_Budget,
+                                                round_off_pp)
 from applications.iiit.Utils.ispace_msg_utils import (check_msg_type,
                                                       tap_helper,
                                                       ted_helper,
@@ -58,11 +59,6 @@ E_UNKNOWN_CCE = -4
 E_UNKNOWN_TSP = -5
 E_UNKNOWN_LSP = -6
 E_UNKNOWN_CLE = -9
-
-ROUNDOFF_PRICE_POINT = 0.1
-PP_DECIMAL_DIGITS = decimal.Decimal(
-    str(ROUNDOFF_PRICE_POINT)).as_tuple().exponent * -1
-
 
 
 def zonecontroller(config_path, **kwargs):
@@ -942,7 +938,7 @@ class ZoneController(Agent):
             )
 
             _log.debug('new_pp: {}'.format(new_pp))
-            new_pp = self.round_off_pp(new_pp)
+            new_pp = round_off_pp(new_pp)
             _log.debug('new_pp: {}'.format(new_pp))
 
             new_tsp = self._compute_new_tsp(new_pp)
@@ -1001,15 +997,6 @@ class ZoneController(Agent):
 
         _log.debug('...done')
         return new_pp
-
-    @staticmethod
-    def round_off_pp(value):
-        tmp_value = round(mround(value, ROUNDOFF_PRICE_POINT),
-                          PP_DECIMAL_DIGITS)
-        new_value = 0 if tmp_value <= 0 else 1 if tmp_value >= 1 else \
-            tmp_value
-        return new_value
-
 
 
 def main(argv=sys.argv):

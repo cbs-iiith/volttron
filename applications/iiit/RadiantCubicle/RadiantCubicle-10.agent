@@ -11,7 +11,9 @@
     "vb_vip_identity": "iiit.volttronbridge",
     "default_base_price": 0.1,
     "price_point_latest": 0.2,
-    
+
+    "rc_factor" = 120,
+
     #price functions(pf), quadratic functions of the form f(x) = ax2 + bx + c, 
     #             where a,b,c are coefficients of the quadratic function,
     #                   f(x) --> setpoint,
@@ -44,9 +46,10 @@
 
     # gradient descent params to compute new pp from a budget
     "gd_params": {
-        "max_iterations": 1000,
+        "max_iterations": 100,
+        "max_repeats": 10,
         "deadband": 10,
-        "gamma": {
+        "gammas": {
             "rc": 0.0040
         },
         "weight_factors": {

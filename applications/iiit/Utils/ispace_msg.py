@@ -27,6 +27,9 @@ from volttron.platform.agent import utils
 utils.setup_logging()
 _log = logging.getLogger(__name__)
 
+MIN_PRICE = 0.0
+MAX_PRICE = 1.0
+
 ROUNDOFF_PRICE_POINT = 0.01
 ROUNDOFF_BUDGET = 0.0001
 ROUNDOFF_ACTIVE_POWER = 0.0001
@@ -48,6 +51,22 @@ ISPACE_MSG_ATTRIB_LIST = ['msg_type', 'one_to_one', 'isoptimal',
                           'dst_ip', 'dst_device_id',
                           'duration', 'ttl', 'ts', 'tz'
                           ]
+
+
+# round off and clamp value
+def round_off_pp(value):
+    tmp_value = round(mround(value, ROUNDOFF_PRICE_POINT),
+                      PP_DECIMAL_DIGITS)
+    new_value = (
+        MIN_PRICE
+        if tmp_value <= MIN_PRICE
+        else (
+            MAX_PRICE
+            if tmp_value >= MAX_PRICE
+            else tmp_value
+        )
+    )
+    return new_value
 
 
 # https://www.oreilly.com/library/view/python-cookbook/0596001673/ch05s12.html
@@ -606,10 +625,7 @@ class ISPACE_Msg:
         # _log.debug('self.msg_type: {}, MessageType.price_point: {}'.format(
         # self.msg_type, MessageType.price_point))
         if self.msg_type == MessageType.price_point:
-            tmp_value = round(mround(value, ROUNDOFF_PRICE_POINT),
-                              PP_DECIMAL_DIGITS)
-            self.value = 0 if tmp_value <= 0 else 1 if tmp_value >= 1 else \
-                tmp_value
+            self.value = round_off_pp(value)
         elif self.msg_type == MessageType.budget:
             self.value = round(mround(value, ROUNDOFF_BUDGET),
                                BD_DECIMAL_DIGITS)

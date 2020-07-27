@@ -16,6 +16,12 @@
     "pricePoint_topic": "building/pricepoint",
     "vb_vip_identity": "iiit.volttronbridge",
 
+    # Exponential weighted moving average factor is a constant that affects how
+    # quickly the average "catches up" to the latest trend. At 1 it's no longer
+    # an average and just becomes the latest value.
+    # 120 --> 1 hr, 2 reading/min)
+    "rc_factor" = 120,
+
     # pca state -->  ONLINE, STANDALONE, STANDBY
     #   ONLINE --> actively receive pp_msg from us and submit bids
     #   STANDALONE --> move to this condition if pp_msg_opt_durations elapsed
@@ -43,6 +49,7 @@
         "us_bid_timeout": 900,
         "lc_bid_timeout": 180,
         "max_iterations": 10,
+        "max_repeats": 10,
         #deadband (Wh)
         "deadband": [100, 100, 100],
         # step size, gamma = (pp_max - pp_min) / (ed_max - ed_min)
@@ -50,7 +57,7 @@
         # Google Drive IIIT\FDD_LAB_VOLT_LOGS\Analysis\Book2.xlsx
         # sheet "both rms random pp"
         # https://drive.google.com/open?id=1KdbZ0ZLO7jDwyRhpAlOMzddSiJOYtL-6
-        "gamma": [0.0, 0.0002, 0.0002],
+        "gammas": [0.0, 0.0002, 0.0002],
         # momentum factor
         "alpha": [0.0, 0.0035, 0.0035],
         # weight factors >= 0 that may be different for each zone
