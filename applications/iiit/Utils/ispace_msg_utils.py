@@ -345,7 +345,7 @@ def _parse_data(data, minimum_fields=None):
         new_msg = ISPACE_Msg(msg_type)
         _update_value(new_msg, 'msg_type', msg_type)
 
-        # if list is empty, parse for all attributes,
+    # if list is empty, parse for all attributes,
     # if any attrib not found throw key not found error
     if not minimum_fields:
         # if the attrib is not found in the data, throws a keyerror exception
