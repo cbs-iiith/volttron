@@ -21,7 +21,8 @@ import gevent
 import gevent.event
 
 from applications.iiit.Utils.ispace_msg import (MessageType, EnergyCategory,
-                                                ISPACE_Msg, ISPACE_Msg_Budget)
+                                                ISPACE_Msg, ISPACE_Msg_Budget,
+                                                round_off_pp)
 from applications.iiit.Utils.ispace_msg_utils import (check_msg_type,
                                                       tap_helper,
                                                       ted_helper,
@@ -1367,77 +1368,101 @@ class SmartHub(Agent):
     def _compute_new_opt_pp(self):
         _log.debug('_compute_new_opt_pp()...')
 
+        _log.debug('gd_params: {}'.format(self._gd_params))
         # configuration
-        gamma = self._gd_params['gamma']
+        gammas = self._gd_params['gammas']
+        gamma_fan = float(gammas['fan'])
+        gamma_light = float(gammas['light'])
         deadband = self._gd_params['deadband']
         max_iters = self._gd_params['max_iterations']
+        max_repeats = self._gd_params['max_repeats']
         wt_factors = self._gd_params['weight_factors']
 
         sum_wt_factors = wt_factors['fan'] + wt_factors['light']
-        c_ac = (
-            (wt_factors['fan'] / sum_wt_factors)
+        c_fan = (
+            float(wt_factors['fan']) / sum_wt_factors
             if sum_wt_factors != 0 else 0
         )
         c_light = (
-            (wt_factors['light'] / sum_wt_factors)
+            float(wt_factors['light']) / sum_wt_factors
             if sum_wt_factors != 0 else 0
+        )
+        _log.debug(
+            'wt_factors[\'fan\']: {:0.2f}'.format(wt_factors['fan'])
+            + ', wt_factors[\'light\']: {:0.2f}'.format(wt_factors['light'])
+            + ', sum_wt_factors: {:0.2f}'.format(sum_wt_factors)
+            + ', c_fan: {:0.4f}'.format(c_fan)
+            + ', c_light: {:0.4f}'.format(c_light)
         )
 
         budget = self._bud_msg_latest.get_value()
         duration = self._bud_msg_latest.get_duration()
-
         _log.debug(
-            '***** New budget: {:0.4f}'.format(budget)
+            '***** New budget: {:0.2f}'.format(budget)
             + ' , price_id: {}'.format(self._bud_msg_latest.get_price_id())
         )
-
         base_ed = calc_energy_wh(SH_BASE_POWER, duration)
         budget = budget - base_ed
         _log.debug(
-            '***** New base adjusted budget: {:0.4f}'.format(budget)
+            '***** New base adjusted budget: {:0.2f}'.format(budget)
             + ' , price_id: {}'.format(self._bud_msg_latest.get_price_id())
         )
 
         # Starting point
-        i = 0
+        i = 0               # iterations count
+        j = 0               # repeats count
         new_pp = 0
-        new_ed = 0
-        new_ed_fan = c_ac * budget
-        new_ed_light = c_light * budget
+        new_ed = budget
+        budget_fan = c_fan * budget
+        budget_light = c_light * budget
+        new_ed_fan = budget_fan
+        new_ed_light = budget_light
 
         old_pp = self._price_point_latest
-        ap_fan = self._rs['light'][EnergyCategory.mixed].exp_wt_mv_avg()
-        old_ed_fan = calc_energy_wh(ap_fan, duration)
 
-        ap_light = self._rs['light'][EnergyCategory.mixed].exp_wt_mv_avg()
-        old_ed_light = calc_energy_wh(ap_light, duration)
+        old_ap_fan = self._rs['light'][EnergyCategory.mixed].exp_wt_mv_avg()
+        old_ed_fan = calc_energy_wh(old_ap_fan, duration)
+
+        old_ap_light = self._rs['light'][EnergyCategory.mixed].exp_wt_mv_avg()
+        old_ed_light = calc_energy_wh(old_ap_light, duration)
 
         old_ed = old_ed_fan + old_ed_light
-
-        _log.debug(
-            'current pp: {:0.2f}'.format(old_pp)
-            + ', current ed: {:0.4f}'.format(old_ed)
-            + ', current ed_fan: {:0.4f}'.format(old_ed_fan)
-            + ', current ed_light: {:0.4f}'.format(old_ed_light)
-        )
 
         # Gradient descent iteration
         _log.debug('Gradient descent iteration')
         for i in range(max_iters):
-            new_pp = (
-                    old_pp
-                    - (
-                            c_ac * gamma['ac'] * (
-                            new_ed_fan - old_ed_fan
-                    )
-                            + c_light * gamma['light'] * (
-                                    new_ed_light - old_ed_light
-                            )
-                    )
+
+            _log.debug(
+                '...iter: {}/{}'.format(i+1, max_iters)
+                + ', new pp: {:0.2f}'.format(new_pp)
+                + ', new ed: {:0.2f}'.format(new_ed)
+                + ', old pp: {:0.2f}'.format(old_pp)
+                + ', old ed: {:0.2f}'.format(old_ed)
+                + ', old ed fan: {:0.2f}'.format(old_ed_fan)
+                + ', old ed light: {:0.2f}'.format(old_ed_light)
             )
-            new_pp = (
-                0 if new_pp < 0 else 1 if new_pp > 1 else new_pp
+
+            delta_fan = budget_fan - old_ed_fan
+            gamma_delta_fan = gamma_fan * delta_fan
+            c_gamma_delta_fan = c_fan * gamma_delta_fan
+
+            delta_light = budget_light - old_ed_light
+            gamma_delta_light = gamma_light * delta_light
+            c_gamma_delta_light = c_light * gamma_delta_light
+
+            new_pp = old_pp - (c_gamma_delta_fan + c_gamma_delta_light)
+            _log.debug(
+                'delta_fan: {:0.2f}'.format(delta_fan)
+                + ', gamma_delta_fan: {:0.2f}'.format(gamma_delta_fan)
+                + ', c_gamma_delta_fan: {:0.2f}'.format(c_gamma_delta_fan)
+                + ', delta_light: {:0.2f}'.format(delta_light)
+                + ', gamma_delta_light: {:0.2f}'.format(gamma_delta_light)
+                + ', c_gamma_delta_light: {:0.2f}'.format(c_gamma_delta_light)
             )
+
+            _log.debug('new_pp: {}'.format(new_pp))
+            new_pp = round_off_pp(new_pp)
+            _log.debug('new_pp: {}'.format(new_pp))
 
             new_ed_fan = self._sh_fan_ed(new_pp, duration)
             new_ed_light = self._sh_led_ed(new_pp, duration)
@@ -1445,39 +1470,47 @@ class SmartHub(Agent):
             new_ed = new_ed_fan + new_ed_light
 
             _log.debug(
-                'iter: {}'.format(i)
-                + ', bid_pp: {:0.2f}'.format(new_pp)
-                + ', new_ed: {:0.4f}'.format(new_ed)
-                + ' new_ed_fan: {:0.2f}'.format(new_ed_fan)
-                + ' new_ed_light: {:0.2f}'.format(new_ed_light)
+                '......iter: {}/{}'.format(i, max_iters)
+                + ', tmp_pp: {:0.2f}'.format(new_pp)
+                + ', tmp_ed: {:0.2f}'.format(new_ed)
             )
 
             if isclose(budget, new_ed, EPSILON, deadband):
                 _log.debug(
                     '|budget({:0.2f})'.format(budget)
-                    + ' - new_ed({:0.2f})|'.format(new_ed)
-                    + ' < deadband({:0.4f})'.format(deadband)
+                    + ' - tmp_ed({:0.2f})|'.format(new_ed)
+                    + ' < deadband({:0.2f})'.format(deadband)
                 )
                 break
-            elif isclose(old_ed, new_ed, EPSILON, deadband):
+
+            if isclose(old_ed, new_ed, EPSILON, 1):
+                j += 1
                 _log.debug(
-                    '|old_ed({:0.2f})'.format(old_ed)
+                    '|prev new_ed({:0.2f})'.format(old_ed)
                     + ' - new_ed({:0.2f})|'.format(new_ed)
-                    + ' < deadband({:0.4f})'.format(deadband)
+                    + ' < deadband({:0.2f})'.format(1)
+                    + ' repeat count: {:d}/{:d}'.format(j, max_repeats)
                 )
-                break
+                if j >= max_repeats:
+                    break
+            else:
+                j = 0       # reset repeat count
 
             old_pp = new_pp
+            old_ed = new_ed
             old_ed_fan = new_ed_fan
             old_ed_light = new_ed_light
-            old_ed = new_ed
 
+        fan_speed = self._compute_new_fan_speed(new_pp) / 100
+        led_level = self._sh_devices_level[SH_DEVICE_LED]
         _log.debug(
-            'iter count: {}'.format(i)
-            + ', new_pp: {:0.2f}'.format(new_pp)
-            + ', expected_ed: {:0.4f}'.format(new_ed + base_ed)
-            + ' expected_ed_fan: {:0.2f}'.format(new_ed_fan)
-            + ' expected_ed_light: {:0.2f}'.format(new_ed_light)
+            'final iter count: {}/{}'.format(i, max_iters)
+            + ', new pp: {:0.2f}'.format(new_pp)
+            + ', expected ted: {:0.2f}'.format(new_ed + base_ed)
+            + ', new fan_speed: {:0.1f}'.format(fan_speed)
+            + ', expected ed_fan: {:0.2f}'.format(new_ed_fan)
+            + ', new led_level: {:0.1f}'.format(led_level)
+            + ', expected ed_light: {:0.2f}'.format(new_ed_light)
         )
 
         _log.debug('...done')

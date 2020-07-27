@@ -879,7 +879,7 @@ class ZoneController(Agent):
         budget = self._bud_msg_latest.get_value()
         duration = self._bud_msg_latest.get_duration()
         _log.debug(
-            '***** New budget: {:0.4f}'.format(budget)
+            '***** New budget: {:0.2f}'.format(budget)
             + ' , price_id: {}'.format(self._bud_msg_latest.get_price_id())
         )
 
