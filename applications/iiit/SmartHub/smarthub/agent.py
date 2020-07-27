@@ -1409,8 +1409,8 @@ class SmartHub(Agent):
         )
 
         # Starting point
-        i = 0               # iterations count
-        j = 0               # repeats count
+        i = 0  # iterations count
+        j = 0  # repeats count
         new_pp = 0
         new_ed = budget
         budget_fan = c_fan * budget
@@ -1433,7 +1433,7 @@ class SmartHub(Agent):
         for i in range(max_iters):
 
             _log.debug(
-                '...iter: {}/{}'.format(i+1, max_iters)
+                '...iter: {}/{}'.format(i + 1, max_iters)
                 + ', new pp: {:0.2f}'.format(new_pp)
                 + ', new ed: {:0.2f}'.format(new_ed)
                 + ', old pp: {:0.2f}'.format(old_pp)
@@ -1494,7 +1494,7 @@ class SmartHub(Agent):
                 if j >= max_repeats:
                     break
             else:
-                j = 0       # reset repeat count
+                j = 0  # reset repeat count
 
             old_pp = new_pp
             old_ed = new_ed

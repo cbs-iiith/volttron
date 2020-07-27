@@ -777,8 +777,8 @@ class RadiantCubicle(Agent):
         )
 
         # Starting point
-        i = 0               # iterations count
-        j = 0               # repeats count
+        i = 0  # iterations count
+        j = 0  # repeats count
         new_pp = 0
         new_tsp = 0
         new_ed = budget
@@ -793,7 +793,7 @@ class RadiantCubicle(Agent):
         for i in range(max_iters):
 
             _log.debug(
-                '...iter: {}/{}'.format(i+1, max_iters)
+                '...iter: {}/{}'.format(i + 1, max_iters)
                 + ', new pp: {:0.2f}'.format(new_pp)
                 + ', new ed: {:0.2f}'.format(new_ed)
                 + ', old pp: {:0.2f}'.format(old_pp)

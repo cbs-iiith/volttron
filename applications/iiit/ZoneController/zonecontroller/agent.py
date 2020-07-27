@@ -11,7 +11,6 @@
 
 # Sam
 
-import decimal
 import logging
 import sys
 import time
@@ -861,12 +860,12 @@ class ZoneController(Agent):
 
         sum_wt_factors = float(wt_factors['ac'] + wt_factors['light'])
         c_ac = (
-                float(wt_factors['ac']) / sum_wt_factors
-                if sum_wt_factors != 0 else 0
+            float(wt_factors['ac']) / sum_wt_factors
+            if sum_wt_factors != 0 else 0
         )
         c_light = (
-                float(wt_factors['light']) / sum_wt_factors
-                if sum_wt_factors != 0 else 0
+            float(wt_factors['light']) / sum_wt_factors
+            if sum_wt_factors != 0 else 0
         )
         _log.debug(
             'wt_factors[\'ac\']: {:0.2f}'.format(wt_factors['ac'])
@@ -884,8 +883,8 @@ class ZoneController(Agent):
         )
 
         # Starting point
-        i = 0               # iterations count
-        j = 0               # repeats count
+        i = 0  # iterations count
+        j = 0  # repeats count
         new_pp = 0
         new_tsp = 0
         new_lsp = 0
@@ -910,7 +909,7 @@ class ZoneController(Agent):
         for i in range(max_iters):
 
             _log.debug(
-                '...iter: {}/{}'.format(i+1, max_iters)
+                '...iter: {}/{}'.format(i + 1, max_iters)
                 + ', new pp: {:0.2f}'.format(new_pp)
                 + ', new ed: {:0.2f}'.format(new_ed)
                 + ', old pp: {:0.2f}'.format(old_pp)
@@ -978,7 +977,7 @@ class ZoneController(Agent):
                 if j >= max_repeats:
                     break
             else:
-                j = 0       # reset repeat count
+                j = 0  # reset repeat count
 
             old_pp = new_pp
             old_ed = new_ed
