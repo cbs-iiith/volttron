@@ -855,23 +855,23 @@ class ZoneController(Agent):
 
         _log.debug('gd_params: {}'.format(self._gd_params))
         # configuration
-        gamma = self._gd_params['gamma']
+        gammas = self._gd_params['gammas']
+        gamma_ac = float(gammas['ac'])
+        gamma_light = float(gammas['light'])
         deadband = self._gd_params['deadband']
-        # max_iters = self._gd_params['max_iterations']
-        max_iters = 50
-        max_repeats = 10
+        max_iters = self._gd_params['max_iterations']
+        max_repeats = self._gd_params['max_repeats']
         wt_factors = self._gd_params['weight_factors']
 
         sum_wt_factors = float(wt_factors['ac'] + wt_factors['light'])
-        if sum_wt_factors == 0:
-            _log.debug('sum_wt_factors is zero')
-            c_ac = 0.0
-            c_light = 0.0
-        else:
-            _log.debug('sum_wt_factors is not zero')
-            c_ac = float(wt_factors['ac']) / sum_wt_factors
-            c_light = float(wt_factors['light']) / sum_wt_factors
-
+        c_ac = (
+                float(wt_factors['ac']) / sum_wt_factors
+                if sum_wt_factors != 0 else 0
+        )
+        c_light = (
+                float(wt_factors['light']) / sum_wt_factors
+                if sum_wt_factors != 0 else 0
+        )
         _log.debug(
             'wt_factors[\'ac\']: {:0.2f}'.format(wt_factors['ac'])
             + ', wt_factors[\'light\']: {:0.2f}'.format(wt_factors['light'])
@@ -882,7 +882,6 @@ class ZoneController(Agent):
 
         budget = self._bud_msg_latest.get_value()
         duration = self._bud_msg_latest.get_duration()
-
         _log.debug(
             '***** New budget: {:0.4f}'.format(budget)
             + ' , price_id: {}'.format(self._bud_msg_latest.get_price_id())
@@ -894,9 +893,11 @@ class ZoneController(Agent):
         new_pp = 0
         new_tsp = 0
         new_lsp = 0
-        new_ed_ac = 0
-        new_ed_light = 0
         new_ed = budget
+        budget_ac = c_ac * budget
+        budget_light = c_light * budget
+        new_ed_ac = budget_ac
+        new_ed_light = budget_light
 
         old_pp = self._price_point_latest
 
@@ -918,14 +919,26 @@ class ZoneController(Agent):
                 + ', new ed: {:0.2f}'.format(new_ed)
                 + ', old pp: {:0.2f}'.format(old_pp)
                 + ', old ed: {:0.2f}'.format(old_ed)
+                + ', old ed ac: {:0.2f}'.format(old_ed_ac)
+                + ', old ed light: {:0.2f}'.format(old_ed_light)
             )
 
-            delta = budget - old_ed
-            gamma_delta = gamma * delta
-            new_pp = old_pp - gamma_delta
+            delta_ac = budget_ac - old_ed_ac
+            gamma_delta_ac = gamma_ac * delta_ac
+            c_gamma_delta_ac = c_ac * gamma_delta_ac
+
+            delta_light = budget_light - old_ed_light
+            gamma_delta_light = gamma_light * delta_light
+            c_gamma_delta_light = c_ac * gamma_delta_light
+
+            new_pp = old_pp - (c_gamma_delta_ac + c_gamma_delta_light)
             _log.debug(
-                'delta: {:0.2f}'.format(delta)
-                + ', gamma_delta: {:0.2f}'.format(gamma_delta)
+                'delta_ac: {:0.2f}'.format(delta_ac)
+                + ', gamma_delta_ac: {:0.2f}'.format(gamma_delta_ac)
+                + ', c_gamma_delta_ac: {:0.2f}'.format(c_gamma_delta_ac)
+                + ', delta_light: {:0.2f}'.format(delta_light)
+                + ', gamma_delta_light: {:0.2f}'.format(gamma_delta_light)
+                + ', c_gamma_delta_light: {:0.2f}'.format(c_gamma_delta_light)
             )
 
             _log.debug('new_pp: {}'.format(new_pp))
@@ -973,6 +986,8 @@ class ZoneController(Agent):
 
             old_pp = new_pp
             old_ed = new_ed
+            old_ed_ac = new_ed_ac
+            old_ed_light = new_ed_light
 
         _log.debug(
             'final iter count: {}/{}'.format(i, max_iters)
