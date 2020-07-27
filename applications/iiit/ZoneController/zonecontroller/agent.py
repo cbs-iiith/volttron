@@ -138,10 +138,10 @@ class ZoneController(Agent):
 
         self._gd_params = self.config.get(
             'gd_params', {
-                "max_iterations": 1000,
+                "max_iterations": 100,
                 "max_repeats": 10,
                 "deadband": 100,
-                "gamma": {
+                "gammas": {
                     "ac": 0.0002,
                     "light": 0.0125
                 },

@@ -136,9 +136,10 @@ class RadiantCubicle(Agent):
 
         self._gd_params = self.config.get(
             'gd_params', {
-                "max_iterations": 1000,
+                "max_iterations": 100,
+                "max_repeats": 10,
                 "deadband": 100,
-                "gamma": {
+                "gammas": {
                     "fan": 0.1786,
                     "light": 0.1429
                 },

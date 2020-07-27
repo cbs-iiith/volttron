@@ -151,9 +151,10 @@ class SmartStrip(Agent):
 
         self._gd_params = self.config.get(
             'gd_params', {
-                "max_iterations": 1000,
+                "max_iterations": 100,
+                "max_repeats": 10,
                 "deadband": 5,
-                "gamma": {
+                "gammas": {
                     "plug1": 0.0333,
                     "plug2": 0.0067,
                     "plug3": 0.0067,
