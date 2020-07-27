@@ -914,7 +914,7 @@ class ZoneController(Agent):
         for i in range(max_iters):
 
             _log.debug(
-                '...iter: {}/{}'.format(i, max_iters)
+                '...iter: {}/{}'.format(i+1, max_iters)
                 + ', new pp: {:0.2f}'.format(new_pp)
                 + ', new ed: {:0.2f}'.format(new_ed)
                 + ', old pp: {:0.2f}'.format(old_pp)
@@ -929,7 +929,7 @@ class ZoneController(Agent):
 
             delta_light = budget_light - old_ed_light
             gamma_delta_light = gamma_light * delta_light
-            c_gamma_delta_light = c_ac * gamma_delta_light
+            c_gamma_delta_light = c_light * gamma_delta_light
 
             new_pp = old_pp - (c_gamma_delta_ac + c_gamma_delta_light)
             _log.debug(
