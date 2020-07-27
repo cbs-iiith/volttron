@@ -15,7 +15,7 @@
     # quickly the average "catches up" to the latest trend. At 1 it's no longer
     # an average and just becomes the latest value.
     # 120 --> 1 hr, 2 reading/min)
-    "rc_factor" = 120,
+    "rc_factor": 120,
     
     #price functions(pf), quadratic functions of the form f(x) = ax2 + bx + c, 
     #             where a,b,c are coefficients of the quadratic function,

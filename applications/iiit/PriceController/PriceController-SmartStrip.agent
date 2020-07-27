@@ -20,7 +20,7 @@
     # quickly the average "catches up" to the latest trend. At 1 it's no longer
     # an average and just becomes the latest value.
     # 120 --> 1 hr, 2 reading/min)
-    "rc_factor" = 120,
+    "rc_factor": 120,
 
     # pca state -->  ONLINE, STANDALONE, STANDBY
     #   ONLINE --> actively receive pp_msg from us and submit bids
