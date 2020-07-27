@@ -1461,9 +1461,9 @@ class SmartHub(Agent):
                 + ', c_gamma_delta_light: {:0.2f}'.format(c_gamma_delta_light)
             )
 
-            _log.debug('new_pp: {}'.format(new_pp))
+            d_s = 'new_pp: {:0.4f}'.format(new_pp)
             new_pp = round_off_pp(new_pp)
-            _log.debug('new_pp: {}'.format(new_pp))
+            _log.debug(d_s + ', round off new_pp: {:0.2f}'.format(new_pp))
 
             new_ed_fan = self._sh_fan_ed(new_pp, duration)
             new_ed_light = self._sh_led_ed(new_pp, duration)

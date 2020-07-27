@@ -810,9 +810,9 @@ class RadiantCubicle(Agent):
                 + ', gamma_delta_rc: {:0.2f}'.format(gamma_delta_rc)
             )
 
-            _log.debug('new_pp: {}'.format(new_pp))
+            d_s = 'new_pp: {:0.4f}'.format(new_pp)
             new_pp = round_off_pp(new_pp)
-            _log.debug('new_pp: {}'.format(new_pp))
+            _log.debug(d_s + ', round off new_pp: {:0.2f}'.format(new_pp))
 
             new_tsp = self._compute_rc_new_tsp(new_pp)
             new_ed = calc_energy_wh(self._compute_ed_rc(new_tsp),
