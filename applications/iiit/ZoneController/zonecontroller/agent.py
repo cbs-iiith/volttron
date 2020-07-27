@@ -194,6 +194,7 @@ class ZoneController(Agent):
 
         self._bid_pp_msg_latest = get_default_pp_msg(self._discovery_address,
                                                      self._device_id)
+
         self._latest_msg_type = MessageType.price_point
 
         self._run_bms_test()
