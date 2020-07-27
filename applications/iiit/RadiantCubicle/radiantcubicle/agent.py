@@ -21,7 +21,8 @@ import gevent
 import gevent.event
 
 from applications.iiit.Utils.ispace_msg import (MessageType, EnergyCategory,
-                                                ISPACE_Msg, ISPACE_Msg_Budget)
+                                                ISPACE_Msg, ISPACE_Msg_Budget,
+                                                round_off_pp)
 from applications.iiit.Utils.ispace_msg_utils import (check_msg_type,
                                                       tap_helper,
                                                       ted_helper,
@@ -759,10 +760,13 @@ class RadiantCubicle(Agent):
     def _compute_new_opt_pp(self):
         _log.debug('_compute_new_opt_pp()...')
 
+        _log.debug('gd_params: {}'.format(self._gd_params))
         # configuration
-        gamma = self._gd_params['gamma']
+        gammas = self._gd_params['gammas']
+        gamma_rc = float(gammas['rc'])
         deadband = self._gd_params['deadband']
         max_iters = self._gd_params['max_iterations']
+        max_repeats = self._gd_params['max_repeats']
 
         budget = self._bud_msg_latest.get_value()
         duration = self._bud_msg_latest.get_duration()
@@ -773,64 +777,83 @@ class RadiantCubicle(Agent):
         )
 
         # Starting point
-        i = 0
+        i = 0               # iterations count
+        j = 0               # repeats count
         new_pp = 0
+        new_tsp = 0
         new_ed = budget
 
         old_pp = self._price_point_latest
 
-        ap_rc = self._rs['rc'][EnergyCategory.mixed].exp_wt_mv_avg()
-        old_ed = calc_energy_wh(ap_rc, duration)
-
-        _log.debug(
-            'current pp: {:0.2f}'.format(old_pp)
-            + ', current ed_rc: {:0.4f}'.format(old_ed)
-        )
+        old_ap = self._rs['rc'][EnergyCategory.mixed].exp_wt_mv_avg()
+        old_ed = calc_energy_wh(old_ap, duration)
 
         # Gradient descent iteration
         _log.debug('Gradient descent iteration')
         for i in range(max_iters):
-            new_pp = (
-                    old_pp
-                    - gamma['rc'] * (new_ed - old_ed)
-            )
-            new_pp = (
-                0 if new_pp < 0 else 1 if new_pp > 1 else new_pp
+
+            _log.debug(
+                '...iter: {}/{}'.format(i+1, max_iters)
+                + ', new pp: {:0.2f}'.format(new_pp)
+                + ', new ed: {:0.2f}'.format(new_ed)
+                + ', old pp: {:0.2f}'.format(old_pp)
+                + ', old ed: {:0.2f}'.format(old_ed)
             )
 
-            bid_tsp = self._compute_rc_new_tsp(new_pp)
-            new_ed = calc_energy_wh(self._compute_ed_rc(bid_tsp),
+            delta_rc = budget - old_ed
+            gamma_delta_rc = gamma_rc * delta_rc
+
+            new_pp = old_pp - gamma_delta_rc
+            _log.debug(
+                'delta_rc: {:0.2f}'.format(delta_rc)
+                + ', gamma_delta_rc: {:0.2f}'.format(gamma_delta_rc)
+            )
+
+            _log.debug('new_pp: {}'.format(new_pp))
+            new_pp = round_off_pp(new_pp)
+            _log.debug('new_pp: {}'.format(new_pp))
+
+            new_tsp = self._compute_rc_new_tsp(new_pp)
+            new_ed = calc_energy_wh(self._compute_ed_rc(new_tsp),
                                     duration
                                     )
 
             _log.debug(
-                'iter: {}'.format(i)
-                + ', bid_pp: {:0.2f}'.format(new_pp)
-                + ', new_ed: {:0.4f}'.format(new_ed)
+                '......iter: {}/{}'.format(i, max_iters)
+                + ', tmp_pp: {:0.2f}'.format(new_pp)
+                + ', tmp_ed: {:0.2f}'.format(new_ed)
             )
 
             if isclose(budget, new_ed, EPSILON, deadband):
                 _log.debug(
                     '|budget({:0.2f})'.format(budget)
-                    + ' - new_ed({:0.2f})|'.format(new_ed)
-                    + ' < deadband({:0.4f})'.format(deadband)
+                    + ' - tmp_ed({:0.2f})|'.format(new_ed)
+                    + ' < deadband({:0.2f})'.format(deadband)
                 )
                 break
-            elif isclose(old_ed, new_ed, EPSILON, deadband):
+
+            if isclose(old_ed, new_ed, EPSILON, 1):
+                j += 1
                 _log.debug(
-                    '|old_ed({:0.2f})'.format(old_ed)
+                    '|prev new_ed({:0.2f})'.format(old_ed)
                     + ' - new_ed({:0.2f})|'.format(new_ed)
-                    + ' < deadband({:0.4f})'.format(deadband)
+                    + ' < deadband({:0.2f})'.format(1)
+                    + ' repeat count: {:d}/{:d}'.format(j, max_repeats)
                 )
-                break
+                if j >= max_repeats:
+                    break
+            else:
+                j = 0  # reset repeat count
 
             old_pp = new_pp
             old_ed = new_ed
 
         _log.debug(
-            'iter count: {}'.format(i)
-            + ', new_pp: {:0.2f}'.format(new_pp)
-            + ', expected_ed: {:0.4f}'.format(new_ed)
+            'final iter count: {}/{}'.format(i, max_iters)
+            + ', new pp: {:0.2f}'.format(new_pp)
+            + ', expected ted: {:0.2f}'.format(new_ed)
+            + ', new tsp: {:0.1f}'.format(new_tsp)
+            + ', expected ed_rc: {:0.2f}'.format(new_ed)
         )
 
         _log.debug('...done')
