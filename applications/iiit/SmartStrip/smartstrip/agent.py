@@ -1264,7 +1264,7 @@ class SmartStrip(Agent):
         for k, v in wt_factors.items():
             if index != self._sh_plug_id:
                 plugs_th_pp[k] = self._plugs_th_pp[index]
-                plugs_active_pwr[k] = self._plugs_active_pwr[index]
+                plugs_active_pwr[k] = self._rs[k][EnergyCategory.mixed].exp_wt_mv_avg()
             index = index + 1
 
         old_pp = self._price_point_latest
@@ -1275,9 +1275,13 @@ class SmartStrip(Agent):
         old_ed_plugs = {}
         old_ed = 0
         budget_plugs = {}
-        for k, v in plugs_active_pwr.items():
+        for k, v in plugs_th_pp.items():
             budget_plugs[k] = c[k] * budget
-            plug_pwr = self._rs[k][EnergyCategory.mixed].exp_wt_mv_avg()
+            plug_pwr = (
+                0
+                if old_pp > plugs_th_pp[k]
+                else self._rs[k][EnergyCategory.mixed].exp_wt_mv_avg()
+            )
             old_ed_plugs[k] = calc_energy_wh(plug_pwr, duration)
             old_ed += old_ed_plugs[k]
 
@@ -1326,7 +1330,11 @@ class SmartStrip(Agent):
             new_ed_plugs = {}
             d_s = ''  # debug str
             for k, v in delta.items():
-                plug_pwr = plugs_active_pwr[k]
+                plug_pwr = (
+                    0
+                    if new_pp > plugs_th_pp[k]
+                    else self._rs[k][EnergyCategory.mixed].exp_wt_mv_avg()
+                )
                 new_ed_plugs[k] = calc_energy_wh(plug_pwr, duration)
                 d_s += ', expected ed[{}]: {:0.2f}'.format(k, new_ed_plugs[k])
                 new_ed += new_ed_plugs[k]
