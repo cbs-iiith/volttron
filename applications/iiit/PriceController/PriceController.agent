@@ -59,7 +59,7 @@
         # https://drive.google.com/open?id=1KdbZ0ZLO7jDwyRhpAlOMzddSiJOYtL-6
         "gammas": [0.0, 0.0002, 0.0002],
         # momentum factor
-        "alpha": [0.0, 0.0035, 0.0035],
+        "alphas": [0.0, 0.0035, 0.0035],
         # weight factors >= 0 that may be different for each zone
         "weight_factors": [0.0, 0.5, 0.5]
     },

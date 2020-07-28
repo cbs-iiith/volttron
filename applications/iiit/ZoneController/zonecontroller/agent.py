@@ -581,7 +581,7 @@ class ZoneController(Agent):
             return
         elif pp_msg in [self._bid_pp_msg_latest, self._opt_pp_msg_latest]:
             _log.warning(
-                'received a duplicate pp_msg'
+                'received a duplicate prev_pp_msg'
                 + ', price_id: {}!!!'.format(pp_msg.get_price_id())
             )
             return
@@ -755,7 +755,7 @@ class ZoneController(Agent):
             EnergyCategory.mixed
         )
         _log.debug('***** Total Active Power(TAP) opt'
-                   + ' for us opt pp_msg({})'.format(price_id)
+                   + ' for us opt prev_pp_msg({})'.format(price_id)
                    + ': {:0.4f}'.format(opt_tap))
         # publish the new price point to the local message bus
         pub_topic = self._topic_energy_demand
@@ -811,7 +811,7 @@ class ZoneController(Agent):
             EnergyCategory.mixed
         )
         _log.debug('***** Total Energy Demand(TED) bid'
-                   + ' for us bid pp_msg({})'.format(price_id)
+                   + ' for us bid prev_pp_msg({})'.format(price_id)
                    + ': {:0.4f}'.format(bid_ted))
 
         # publish the new price point to the local message bus

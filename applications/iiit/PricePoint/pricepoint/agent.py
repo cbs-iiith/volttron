@@ -192,7 +192,7 @@ class PricePoint(Agent):
         try:
             minimum_fields = ['value', 'value_data_type', 'units', 'price_id']
             pp_msg = parse_jsonrpc_msg(message, minimum_fields)
-            # _log.info('pp_msg: {}'.format(pp_msg))
+            # _log.info('prev_pp_msg: {}'.format(prev_pp_msg))
         except KeyError:
             # print(ke)
             _log.error(

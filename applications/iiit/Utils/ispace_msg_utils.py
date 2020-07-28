@@ -48,7 +48,7 @@ def valid_bustopic_msg(
         # _log.debug('message: {}'.format(message))
         # minimum_fields = ['value', 'value_data_type', 'units', 'price_id']
         pp_msg = parse_bustopic_msg(message, minimum_fields)
-        # _log.info('pp_msg: {}'.format(pp_msg))
+        # _log.info('prev_pp_msg: {}'.format(prev_pp_msg))
     except KeyError as ke:
         _log.exception(ke.message)
         _log.exception(

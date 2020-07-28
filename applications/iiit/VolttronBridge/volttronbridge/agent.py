@@ -501,7 +501,7 @@ class VolttronBridge(Agent):
             return
         elif pp_msg in self._us_pp_messages:
             _log.warning(
-                'received a duplicate pp_msg'
+                'received a duplicate prev_pp_msg'
                 + ', price_id: {}!!!'.format(pp_msg.get_price_id())
             )
             return
@@ -543,7 +543,7 @@ class VolttronBridge(Agent):
         is_local_device = pp_msg.get_dst_device_id() in self._local_device_ids
         '''
         _log.debug(
-            'pp_msg.get_dst_device_id: {}'.format(pp_msg.get_dst_device_id)
+            'prev_pp_msg.get_dst_device_id: {}'.format(prev_pp_msg.get_dst_device_id)
             + 'self._local_device_ids: {}'.format(self._local_device_ids)
         )
         _log.debug(
@@ -833,8 +833,8 @@ class VolttronBridge(Agent):
 
     def _ds_rpc_1_to_m(self, pp_msg):
         _log.debug('_ds_rpc_1_to_m()...')
-        # case pp_msg one-to-many(i.e., one_to_one is not True)
-        # create list of ds devices to which pp_msg need to be posted
+        # case prev_pp_msg one-to-many(i.e., one_to_one is not True)
+        # create list of ds devices to which prev_pp_msg need to be posted
         url_roots = []
         main_idx = []
         for discovery_address in self._ds_register:

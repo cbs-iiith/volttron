@@ -398,7 +398,7 @@ class BuildingController(Agent):
             return
         elif pp_msg in [self._bid_pp_msg_latest, self._opt_pp_msg_latest]:
             _log.warning(
-                'received a duplicate pp_msg'
+                'received a duplicate prev_pp_msg'
                 + ', price_id: {}!!!'.format(pp_msg.get_price_id())
             )
             return
@@ -516,7 +516,7 @@ class BuildingController(Agent):
             EnergyCategory.mixed
         )
         _log.debug('***** Total Active Power(TAP) opt'
-                   + ' for us opt pp_msg({})'.format(price_id)
+                   + ' for us opt prev_pp_msg({})'.format(price_id)
                    + ': {:0.4f}'.format(opt_tap))
         # publish the new price point to the local message bus
         pub_topic = self._topic_energy_demand
@@ -561,7 +561,7 @@ class BuildingController(Agent):
             EnergyCategory.mixed
         )
         _log.debug('***** Total Energy Demand(TED) bid'
-                   + ' for us bid pp_msg({})'.format(price_id)
+                   + ' for us bid prev_pp_msg({})'.format(price_id)
                    + ': {:0.4f}'.format(bid_ted))
 
         # publish the new price point to the local message bus
@@ -577,9 +577,9 @@ class BuildingController(Agent):
     # the bid energy is for self._bid_pp_duration (default 1hr)
     # and this msg is valid for self._period_read_data (ttl - default 30s)
     def _calc_total_energy_demand(self):
-        # pp_msg = self._bid_pp_msg_latest
-        # bid_pp = pp_msg.get_value()  # type: float
-        # duration = pp_msg.get_duration()
+        # prev_pp_msg = self._bid_pp_msg_latest
+        # bid_pp = prev_pp_msg.get_value()  # type: float
+        # duration = prev_pp_msg.get_duration()
         #
         # # for testing
         # bid_ted = random() * 1000
