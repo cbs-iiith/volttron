@@ -29,7 +29,7 @@ from applications.iiit.Utils.ispace_msg import (MessageType,
                                                 ISPACE_Msg_OptPricePoint,
                                                 ISPACE_Msg_ActivePower,
                                                 ISPACE_Msg_Budget, ISPACE_Msg,
-                                                EPSILON)
+                                                EPSILON, round_off_pp)
 from applications.iiit.Utils.ispace_msg_utils import (get_default_pp_msg,
                                                       check_msg_type,
                                                       ted_helper,
@@ -183,8 +183,9 @@ class PriceController(Agent):
 
     _target = 0  # type: float
     _delta_omega = None  # type: dict
-    _ed_prev = None  # type: dict
+    _ed_old = None  # type: dict
     _pp_old = None  # type: dict
+    _budget = None  # type: dict
 
     def __init__(self, config_path, **kwargs):
         super(PriceController, self).__init__(**kwargs)
@@ -886,11 +887,12 @@ class PriceController(Agent):
         self._iter_count = 0
         self._target = 0
 
-        ed_current, ed_prev, pp_old = self._init_bidding(new_pp_msg)
+        budget, ed_current, ed_prev, pp_old = self._init_bidding(new_pp_msg)
 
         # list for pp_msg
         _log.debug('Compute new price points...')
-        target_achieved, new_pp_msg_list = self._compute_new_prices(pp_old,
+        target_achieved, new_pp_msg_list = self._compute_new_prices(budget,
+                                                                    pp_old,
                                                                     ed_current,
                                                                     ed_prev
                                                                     )
@@ -906,11 +908,19 @@ class PriceController(Agent):
             self.lc_opt_pp_msg_list = copy(new_pp_msg_list)
             self.lc_opt_pp_msg = copy(new_pp_msg_list[self._device_id])
         else:
-            first_msg = list(new_pp_msg_list.values())[0]
-            self.lc_bid_pp_msg = copy(first_msg)
-            self.lc_bid_pp_msg_list = copy(new_pp_msg_list)
-            # publish these pp_messages
-            self._pub_pp_messages(new_pp_msg_list)
+            if len(new_pp_msg_list) > 0:
+                first_msg = list(new_pp_msg_list.values())[0]
+                self.lc_bid_pp_msg = copy(first_msg)
+                self.lc_bid_pp_msg_list = copy(new_pp_msg_list)
+                # publish these pp_messages
+                self._pub_pp_messages(new_pp_msg_list)
+            else:
+                cf = logging.currentframe()
+                _log.warning(
+                    'new_pp_msg_list is empty!!!'
+                    + ' (code line no.: {})'.format(cf.f_back.f_lineno)
+                )
+                self._run_process_loop = False
 
         # clear corresponding buckets
         self._local_bid_ed.clear()
@@ -930,43 +940,52 @@ class PriceController(Agent):
         pp_old = {}
         ed_current = {}
         ed_prev = {}
+        budget = {}     # type: (str, float)
 
         # get latest device ids (both local & ds)
-        ds_device_ids, local_device_ids = self._get_active_device_ids(
-            self._us_ds_opt_ap, self._us_local_opt_ap)
+        local_device_ids = self._rpcget_local_device_ids()
+        ds_device_ids = self._rpcget_ds_device_ids()
         _log.debug('active devices: {}'.format(local_device_ids, ds_device_ids))
 
         _log.debug(
             'old_pp_msg: {}'.format(self.old_pp_msg)
         )
+
         for index, device_id in enumerate(local_device_ids + ds_device_ids):
             _log.debug('device_id: {}'.format(device_id))
+
             if device_id in local_device_ids:
                 ap_msg = self._us_local_opt_ap_msg[device_id]
             else:
                 ap_msg = self._us_ds_opt_ap_msg[device_id]
 
-            new_ed_msg, old_ed_msg, old_pp_msg = self._default_opt_init_msg(
-                device_id,
-                new_pp_msg,
-                self.old_pp_msg,
-                ap_msg,
-                index
-            )
+            (
+                tmp_budget,
+                new_ed_msg,
+                old_ed_msg,
+                old_pp_msg
+            ) = self._default_opt_init_msg(device_id,
+                                           new_pp_msg,
+                                           self.old_pp_msg,
+                                           ap_msg,
+                                           index
+                                           )
             _log.debug(
-                'new_ed_msg: {}'.format(new_ed_msg)
+                'budget[{}]: {:0.2f}'.format(device_id, tmp_budget)
+                + ', new_ed_msg: {}'.format(new_ed_msg)
                 + ', old_ed_msg: {}'.format(old_ed_msg)
                 + ', old_pp_msg: {}'.format(old_pp_msg)
             )
 
+            budget[device_id] = tmp_budget
             pp_old[device_id] = copy(old_pp_msg)
             ed_current[device_id] = copy(new_ed_msg)
             ed_prev[device_id] = copy(old_ed_msg)
-            self._target += new_ed_msg.get_value()
+            self._target += tmp_budget
 
         _log.debug(
             'ed_current: {}'.format(ed_current)
-            + ', ed_prev: {}'.format(ed_prev)
+            + ', ed_old: {}'.format(ed_prev)
             + ', pp_old: {}'.format(pp_old)
         )
 
@@ -976,7 +995,7 @@ class PriceController(Agent):
             pp_old[self._device_id] = copy(first_pp_msg)
 
         _log.debug('...done')
-        return ed_current, ed_prev, pp_old
+        return budget, ed_current, ed_prev, pp_old
 
     def _default_opt_init_msg(
             self,
@@ -1013,7 +1032,7 @@ class PriceController(Agent):
         new_ed_msg.set_value(new_energy_demand)
 
         _log.debug('...done')
-        return new_ed_msg, old_ed_msg, old_pp_msg
+        return new_energy_demand, new_ed_msg, old_ed_msg, old_pp_msg
 
     def _get_new_ed(self, index, new_pp_msg, old_act_pwr, old_pp_msg):
         new_energy_demand = 0
@@ -1079,7 +1098,11 @@ class PriceController(Agent):
 
     # compute new bid price point for every local device and ds devices
     # return list for pp_msg
-    def _compute_new_prices(self, pp_old=None, ed_current=None, ed_prev=None):
+    def _compute_new_prices(self,
+                            budget=None,
+                            pp_old=None,
+                            ed_current=None,
+                            ed_old=None):
         _log.debug('_computeNewPrice()...')
         '''
         computes the new prices
@@ -1122,6 +1145,8 @@ class PriceController(Agent):
               publish the new optimal pp
         '''
 
+        if budget is None:
+            budget = copy(self._budget)
         if pp_old is None:
             pp_old = self._pp_old
         if ed_current is None:
@@ -1129,8 +1154,8 @@ class PriceController(Agent):
                 self._local_bid_ed,
                 self._ds_bid_ed
             )
-        if ed_prev is None:
-            ed_prev = self._ed_prev
+        if ed_old is None:
+            ed_old = self._ed_old
 
         current_ted = self._calc_total(self._local_bid_ed, self._ds_bid_ed)
         deadband = self._mode_default_opt_params['deadband'][0]
@@ -1152,18 +1177,20 @@ class PriceController(Agent):
                     target_achieved,
                     new_pricepoints
                 ) = self._gradient_descent_single_pp(
+                    budget,
                     pp_old,
                     ed_current,
-                    ed_prev,
+                    ed_old
                 )
             else:
                 (
                     target_achieved,
                     new_pricepoints
                 ) = self._gradient_descent_multi_pp(
+                    budget,
                     pp_old,
                     ed_current,
-                    ed_prev,
+                    ed_old,
                 )
             _log.debug(
                 'target_achieved: {}'.format(target_achieved)
@@ -1171,7 +1198,7 @@ class PriceController(Agent):
             )
 
             current_ted = self._calc_total(self._local_bid_ed, self._ds_bid_ed)
-            self._ed_prev = copy(ed_current)
+            self._ed_old = copy(ed_current)
             self._pp_old = copy(new_pricepoints)
 
         # case _pca_state == PcaState.online
@@ -1193,7 +1220,7 @@ class PriceController(Agent):
         _log.debug('...done')
         return target_achieved, new_pricepoints
 
-    def _gradient_descent_single_pp(self, pp_old, ed_current, ed_prev):
+    def _gradient_descent_single_pp(self, budget, pp_old, ed_current, ed_prev):
         """
 
         :type pp_old: dict (str, ISPACE_Msg_BidPricePoint)
@@ -1255,11 +1282,12 @@ class PriceController(Agent):
             ed_current_msg = ed_current[device_id]  # type: ISPACE_Msg_Energy
             _ed_current = ed_current_msg.get_value()
 
-            # bug: the device may have just joined and ed_prev not available
+            # bug: the device may have just joined and ed_old not available
             ed_prev_msg = ed_prev[device_id]  # type: ISPACE_Msg_Energy
             _ed_prev = ed_prev_msg.get_value()
 
-            sum_gamma_component += c * gamma[index] * (_ed_current - _ed_prev)
+            sum_gamma_component += c * gamma[index] * (budget[device_id]
+                                                       - _ed_prev)
             sum_alpha_component += alpha[index] * self._delta_omega[device_id]
             # remember the update delta_omega
             self._delta_omega[device_id] = _ed_current - _ed_prev
@@ -1269,12 +1297,10 @@ class PriceController(Agent):
                 - sum_gamma_component
                 + sum_alpha_component
         )
-        new_pp = (
-            0 if new_pp < 0 else 1 if new_pp > 1 else new_pp
-        )
-        _log.debug(
-            'new pp: {:0.2f}'.format(new_pp)
-        )
+
+        d_s = 'new_pp: {:0.4f}'.format(new_pp)
+        new_pp = round_off_pp(new_pp)
+        _log.debug(d_s + ', round off new_pp: {:0.2f}'.format(new_pp))
 
         pp_msg = ISPACE_Msg_BidPricePoint(
             msg_type, one_to_one, isoptimal,
@@ -1312,7 +1338,7 @@ class PriceController(Agent):
         _log.debug('...done')
         return target_achieved, pp_new
 
-    def _gradient_descent_multi_pp(self, pp_old, ed_current, ed_prev):
+    def _gradient_descent_multi_pp(self, budget, pp_old, ed_current, ed_prev):
         """
 
         :type pp_old: dict (str, ISPACE_Msg_BidPricePoint)
@@ -1376,14 +1402,14 @@ class PriceController(Agent):
             ed_current_msg = ed_current[device_id]  # type: ISPACE_Msg_Energy
             _ed_current = ed_current_msg.get_value()
 
-            # bug: the device may have just joined and ed_prev not available
+            # bug: the device may have just joined and ed_old not available
             ed_prev_msg = ed_prev[device_id]  # type: ISPACE_Msg_Energy
             _ed_prev = ed_prev_msg.get_value()
 
-            if isclose(_ed_current, _ed_prev, EPSILON, deadband[index]):
+            if isclose(budget[device_id], _ed_prev, EPSILON, deadband[index]):
                 _log.warning(
-                    '|_ed_current({:0.2f})'.format(_ed_current)
-                    + ' - _ed_prev({:0.2f})|'.format(_ed_prev)
+                    '|budget({:0.2f})'.format(budget[device_id])
+                    + ' - _ed_old({:0.2f})|'.format(_ed_prev)
                     + ' < deadband({:0.4f})'.format(deadband[index])
                 )
                 # _log.debug('do nothing')
@@ -1392,16 +1418,13 @@ class PriceController(Agent):
             new_pp = (
                     _pp_old.get_value()
                     - (
-                            c * gamma[index] * (_ed_current - _ed_prev)
+                            c * gamma[index] * (budget[device_id] - _ed_prev)
                             + alpha[index] * self._delta_omega[device_id]
                     )
             )
-            new_pp = (
-                0 if new_pp < 0 else 1 if new_pp > 1 else new_pp
-            )
-            _log.debug(
-                'new pp: {:0.2f}'.format(new_pp)
-            )
+            d_s = 'new_pp: {:0.4f}'.format(new_pp)
+            new_pp = round_off_pp(new_pp)
+            _log.debug(d_s + ', round off new_pp: {:0.2f}'.format(new_pp))
 
             pp_msg = ISPACE_Msg_BidPricePoint(
                 msg_type, one_to_one, isoptimal,
@@ -1498,11 +1521,19 @@ class PriceController(Agent):
             self.lc_opt_pp_msg_list = copy(new_pp_msg_list)
             self.lc_opt_pp_msg = copy(new_pp_msg_list[self._device_id])
         else:
-            first_msg = list(new_pp_msg_list.values())[0]
-            self.lc_bid_pp_msg = copy(first_msg)
-            self.lc_bid_pp_msg_list = copy(new_pp_msg_list)
-            # publish these pp_messages
-            self._pub_pp_messages(new_pp_msg_list)
+            if len(new_pp_msg_list) > 0:
+                first_msg = list(new_pp_msg_list.values())[0]
+                self.lc_bid_pp_msg = copy(first_msg)
+                self.lc_bid_pp_msg_list = copy(new_pp_msg_list)
+                # publish these pp_messages
+                self._pub_pp_messages(new_pp_msg_list)
+            else:
+                cf = logging.currentframe()
+                _log.warning(
+                    'new_pp_msg_list is empty!!!'
+                    + ' (code line no.: {})'.format(cf.f_back.f_lineno)
+                )
+                self._run_process_loop = False
 
         # clear corresponding buckets
         self._local_bid_ed.clear()
