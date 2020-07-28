@@ -1440,8 +1440,9 @@ class SmartHub(Agent):
 
             _log.debug(
                 '...iter: {}/{}'.format(i + 1, max_iters)
-                + ', new pp: {:0.2f}'.format(new_pp)
-                + ', new ed: {:0.2f}'.format(new_ed)
+                + ', budget: {:0.2f}'.format(budget)
+                + ', budget_fan: {:0.2f}'.format(budget_fan)
+                + ', budget_light: {:0.2f}'.format(budget_light)
                 + ', old pp: {:0.2f}'.format(old_pp)
                 + ', old ed: {:0.2f}'.format(old_ed)
                 + ', old ed fan: {:0.2f}'.format(old_ed_fan)
@@ -1511,6 +1512,9 @@ class SmartHub(Agent):
         led_level = self._sh_devices_level[SH_DEVICE_LED]
         _log.debug(
             'final iter count: {}/{}'.format(i, max_iters)
+            + ', budget: {:0.2f}'.format(budget)
+            + ', budget_fan: {:0.2f}'.format(budget_fan)
+            + ', budget_light: {:0.2f}'.format(budget_light)
             + ', new pp: {:0.2f}'.format(new_pp)
             + ', expected ted: {:0.2f}'.format(new_ed + base_ed)
             + ', new fan_speed: {:0.1f}'.format(fan_speed)

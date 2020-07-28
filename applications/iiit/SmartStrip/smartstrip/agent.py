@@ -1293,8 +1293,10 @@ class SmartStrip(Agent):
 
             _log.debug(
                 '...iter: {}/{}'.format(i + 1, max_iters)
-                + ', new pp: {:0.2f}'.format(new_pp)
-                + ', new ed: {:0.2f}'.format(new_ed)
+                + ', budget: {:0.2f}'.format(budget)
+                + ', budget plug1: {:0.2f}'.format(budget_plugs['plug1'])
+                + ', budget plug2: {:0.2f}'.format(budget_plugs['plug2'])
+                + ', budget plug3: {:0.2f}'.format(budget_plugs['plug3'])
                 + ', old pp: {:0.2f}'.format(old_pp)
                 + ', old ed: {:0.2f}'.format(old_ed)
                 + ', old ed plug1: {:0.2f}'.format(old_ed_plugs['plug1'])
@@ -1372,6 +1374,10 @@ class SmartStrip(Agent):
 
         _log.debug(
             'final iter count: {}/{}'.format(i, max_iters)
+            + ', budget: {:0.2f}'.format(budget)
+            + ', budget plug1: {:0.2f}'.format(budget_plugs['plug1'])
+            + ', budget plug2: {:0.2f}'.format(budget_plugs['plug2'])
+            + ', budget plug3: {:0.2f}'.format(budget_plugs['plug3'])
             + ', new pp: {:0.2f}'.format(new_pp)
             + ', expected ted: {:0.2f}'.format(new_ed + base_ed)
             + d_s

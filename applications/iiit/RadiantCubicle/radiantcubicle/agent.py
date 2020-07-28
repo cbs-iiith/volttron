@@ -800,8 +800,7 @@ class RadiantCubicle(Agent):
 
             _log.debug(
                 '...iter: {}/{}'.format(i + 1, max_iters)
-                + ', new pp: {:0.2f}'.format(new_pp)
-                + ', new ed: {:0.2f}'.format(new_ed)
+                + ', budget: {:0.2f}'.format(budget)
                 + ', old pp: {:0.2f}'.format(old_pp)
                 + ', old ed: {:0.2f}'.format(old_ed)
             )
@@ -856,6 +855,7 @@ class RadiantCubicle(Agent):
 
         _log.debug(
             'final iter count: {}/{}'.format(i, max_iters)
+            + ', budget: {:0.2f}'.format(budget)
             + ', new pp: {:0.2f}'.format(new_pp)
             + ', expected ted: {:0.2f}'.format(new_ed)
             + ', new tsp: {:0.1f}'.format(new_tsp)
