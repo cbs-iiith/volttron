@@ -1338,7 +1338,7 @@ class SmartStrip(Agent):
                     else self._rs[k][EnergyCategory.mixed].exp_wt_mv_avg()
                 )
                 new_ed_plugs[k] = calc_energy_wh(plug_pwr, duration)
-                d_s += ', expected ed[{}]: {:0.2f}'.format(k, new_ed_plugs[k])
+                d_s += ', expected ed {}: {:0.2f}'.format(k, new_ed_plugs[k])
                 new_ed += new_ed_plugs[k]
 
             _log.debug(
