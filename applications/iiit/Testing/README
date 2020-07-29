@@ -1,7 +1,13 @@
 
 cd applications/iiit/Testing
 sudo python Test_001_RandomPP/Test_001_RandomPP.py > log//Test_001_RandomPP.log
+
 sudo python Final_Experiments/Exp_001_OptPP.py > logs//Exp_001_OptPP-20200729-01.log
+sudo python Final_Experiments/Exp_002_OptPP.py > logs//Exp_002_OptPP-20200730-01.log
+sudo python Final_Experiments/Exp_003_OptBD.py > logs//Exp_003_OptBD-20200801-01.log
+sudo python Final_Experiments/Exp_004_OptBD.py > logs//Exp_004_OptBD-20200803-01.log
+sudo python Final_Experiments/Exp_005_OptBD.py > logs//Exp_005_OptBD-20200803-01.log
+sudo python Final_Experiments/Exp_006_RandomOptAndBidPP.py > logs//Exp_006_RandomOptAndBidPP-20200801-01.log
 
 
 
