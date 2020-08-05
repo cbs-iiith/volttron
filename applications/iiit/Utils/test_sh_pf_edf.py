@@ -58,9 +58,11 @@ class MyTestCase(unittest.TestCase):
 
     _edf_rc = {
         "roundup": 0.5,
-        "idx": 0,
+        "idx": 2,
         "coefficients": [
-            {"a": 0, "b": -100, "c": 2550}
+            {"a": 0, "b": -100, "c": 2350},
+            {"a": 0, "b": -100, "c": 2400},
+            {"a": 0, "b": -100, "c": 2450}
         ]
     }
 
