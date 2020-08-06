@@ -1274,7 +1274,7 @@ class PriceController(Agent):
         sum_gamma_component = 0
         sum_alpha_component = 0
 
-        for index, device_id in enumerate(local_device_ids, ds_device_ids):
+        for index, device_id in enumerate(local_device_ids + ds_device_ids):
             _log.debug('device_id: {}'.format(device_id))
 
             c = wt_factors[index] / sum_wt_factors if sum_wt_factors != 0 else 0
