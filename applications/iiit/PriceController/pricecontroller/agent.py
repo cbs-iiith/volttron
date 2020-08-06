@@ -1577,7 +1577,12 @@ class PriceController(Agent):
             return False
         s_now = datetime.datetime.utcnow().isoformat(' ') + 'Z'
         now = dateutil.parser.parse(s_now)
-        ts = dateutil.parser.parse(self.us_bid_pp_msg.get_ts())
+        us_bid_msg = (
+            self.us_bid_pp_msg
+            if self.us_latest_msg_type == MessageType.price_point
+            else self.us_bid_bd_msg
+        )
+        ts = dateutil.parser.parse(us_bid_msg.get_ts())
         return (True
                 if (now - ts).total_seconds() > self._us_bid_timeout
                 else False
