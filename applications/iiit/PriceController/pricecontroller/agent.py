@@ -184,7 +184,7 @@ class PriceController(Agent):
     _target = 0  # type: float
     _delta_omega = None  # type: dict
     _ed_prev = None  # type: dict
-    _pp_old = None  # type: dict
+    _pp_old = None  # type: (str, ISPACE_Msg_BidPricePoint)
     _budget = None  # type: dict
 
     def __init__(self, config_path, **kwargs):
@@ -888,6 +888,8 @@ class PriceController(Agent):
         self._target = 0
         self._delta_omega = {}
 
+        new_pp_msg_list = {}    # type: (str, ISPACE_Msg_BidPricePoint)
+
         budget, ed_current, ed_prev, pp_old = self._init_bidding(new_pp_msg)
 
         # list for prev_pp_msg
@@ -1075,8 +1077,8 @@ class PriceController(Agent):
         _log.debug('_pub_pp_messages()...')
         # maybe publish a list of the pp messages
         # and let the bridge do_rpc concurrently
-        for pp_msg in pp_messages:
-            # _log.info('new msg: {}'.format(msg))
+        for device_id, pp_msg in pp_messages.items():
+            _log.info('device_id: {}, new msg: {}'.format(device_id, pp_msg))
             pub_topic = self._topic_price_point
             pub_msg = pp_msg.get_json_message(
                 self._agent_id,
@@ -1169,7 +1171,7 @@ class PriceController(Agent):
         )
         if isclose(current_ted, self._target, EPSILON, deadband):
             target_achieved = True
-            new_pricepoints = {}
+            new_pricepoints = {}    # type: (str, ISPACE_Msg_BidPricePoint)
             _log.debug(
                 'target_achieved: {}'.format(target_achieved)
                 + ', new_pricepoints: {}'.format(new_pricepoints)
@@ -1252,7 +1254,7 @@ class PriceController(Agent):
             + ', old_ted: {}'.format(ed_prev)
         )
 
-        pp_new = {}  # type: dict
+        pp_new = {}  # type: (str, ISPACE_Msg_BidPricePoint)
         # new msg
         msg_type = MessageType.price_point
         one_to_one = False
@@ -1373,7 +1375,7 @@ class PriceController(Agent):
             + ', old_ted: {}'.format(ed_prev)
         )
 
-        pp_new = {}  # type: dict
+        pp_new = {}  # type: (str, ISPACE_Msg_BidPricePoint)
         # new msg
         msg_type = MessageType.price_point
         one_to_one = True
