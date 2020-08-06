@@ -35,7 +35,8 @@ from applications.iiit.Utils.ispace_msg_utils import (get_default_pp_msg,
                                                       ted_helper,
                                                       valid_bustopic_msg,
                                                       tap_helper,
-                                                      get_default_bd_msg)
+                                                      get_default_bd_msg,
+                                                      get_default_ed_msg)
 from applications.iiit.Utils.ispace_utils import (publish_to_bus,
                                                   retrieve_details_from_vb,
                                                   register_rpc_route,
@@ -182,10 +183,10 @@ class PriceController(Agent):
     # _rs[DEVICE_ID][ENERGY_CATEGORY].exp_wt_mv_avg()
 
     _target = 0  # type: float
-    _delta_omega = None  # type: dict
-    _ed_prev = None  # type: dict
+    _delta_omega = None  # type: (str, float)
+    _ed_prev = None  # type: (str, ISPACE_Msg_Energy)
     _pp_old = None  # type: (str, ISPACE_Msg_BidPricePoint)
-    _budget = None  # type: dict
+    _budget = None  # type: (str, ISPACE_Msg_Budget)
 
     def __init__(self, config_path, **kwargs):
         super(PriceController, self).__init__(**kwargs)
@@ -195,21 +196,26 @@ class PriceController(Agent):
         self._agent_id = self.config['agentid']
 
         # local device_ids
-        self._us_local_opt_ap = {}
-        self._us_local_opt_ap_msg = {}
-        self._us_local_bid_ed = {}
-        self._local_bid_ed = {}
+        self._us_local_opt_ap = {}      # type: (str, float)
+        self._us_local_opt_ap_msg = {}  # type: (str, ISPACE_Msg_ActivePower)
+        self._us_local_bid_ed = {}      # type: (str, float)
+        self._local_bid_ed = {}         # type: (str, float)
 
         # ds device ids
         #   opt_ap --> act_pwr@opt_pp, bid_ed --> bid_energy_demand@bid_pp
-        self._us_ds_opt_ap = {}
-        self._us_ds_opt_ap_msg = {}
-        self._us_ds_bid_ed = {}
-        self._ds_bid_ed = {}
+        self._us_ds_opt_ap = {}         # type: (str, float)
+        self._us_ds_opt_ap_msg = {}     # type: (str, ISPACE_Msg_ActivePower)
+        self._us_ds_bid_ed = {}         # type: (str, float)
+        self._ds_bid_ed = {}            # type: (str, float)
 
-        self._device_id = None
-        self._ip_addr = None
-        self._discovery_address = None
+        self._device_id = None          # type: str
+        self._ip_addr = None            # type: str
+        self._discovery_address = None  # type: str
+
+        self._delta_omega = {}          # type: (str, float)
+        self._ed_prev = {}              # type: (str, ISPACE_Msg_Energy)
+        self._pp_old = {}               # type: (str, ISPACE_Msg_BidPricePoint)
+        self._budget = {}               # type: (str, ISPACE_Msg_Budget)
 
         return
 
@@ -894,7 +900,7 @@ class PriceController(Agent):
         self._target = 0
         self._delta_omega = {}
 
-        new_pp_msg_list = {}    # type: (str, ISPACE_Msg_BidPricePoint)
+        new_pp_msg_list = None    # type: (str, ISPACE_Msg_BidPricePoint)
 
         budget, ed_current, ed_prev, pp_old = self._init_bidding(new_pp_msg)
 
@@ -1052,7 +1058,7 @@ class PriceController(Agent):
         prev_pp_msg = copy(prev_pp_msg)  # type: ISPACE_Msg_OptPricePoint
         prev_ap_msg = copy(prev_ap_msg)  # type: ISPACE_Msg_ActivePower
         # noinspection PyTypeChecker
-        prev_ed_msg = prev_ap_msg  # type: ISPACE_Msg_Energy
+        prev_ed_msg = copy(prev_ap_msg)  # type: ISPACE_Msg_Energy
         # noinspection PyTypeChecker
         new_ed_msg = copy(prev_ap_msg)  # type: ISPACE_Msg_Energy
         category = new_ed_msg.get_energy_category()
@@ -1144,6 +1150,7 @@ class PriceController(Agent):
                             pp_old=None,
                             ed_current=None,
                             ed_prev=None):
+        # type: (dict, dict, dict, dict) -> (bool, ISPACE_Msg_BidPricePoint)
         _log.debug('_computeNewPrice()...')
         '''
         computes the new prices
@@ -1187,7 +1194,7 @@ class PriceController(Agent):
         '''
 
         if budget is None:
-            budget = copy(self._budget)
+            budget = copy(self._budget)     # type: (str, ISPACE_Msg_Budget)
         if pp_old is None:
             pp_old = self._pp_old
         if ed_current is None:
@@ -2243,10 +2250,15 @@ class PriceController(Agent):
         ed_current = {}  # type: (str, ISPACE_Msg_Energy)
 
         for device_id in (local_device_ids + ds_device_ids):
+            ed_msg = get_default_ed_msg(self._discovery_address,
+                                        self._device_id)
+            ed = 0
             if device_id in local_bucket:
-                ed_current[device_id] = copy(local_bucket[device_id])
+                ed = local_bucket[device_id]
             elif device_id in ds_bucket:
-                ed_current[device_id] = copy(ds_bucket[device_id])
+                ed = ds_bucket[device_id]
+            ed_msg.set_value(ed)
+            ed_current[device_id] = copy(ed_msg)
 
         _log.debug('...done')
         return ed_current
