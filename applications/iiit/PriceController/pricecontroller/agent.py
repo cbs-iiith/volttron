@@ -262,20 +262,7 @@ class PriceController(Agent):
             }
         )
 
-        if self._pca_mode == PcaMode.pass_on_pp:
-            self._us_bid_timeout = self._mode_pass_on_params[
-                'bid_timeout'
-            ]
-        elif self._pca_mode == PcaMode.default_opt:
-            self._us_bid_timeout = self._mode_default_opt_params[
-                'us_bid_timeout'
-            ]
-            self._lc_bid_timeout = self._mode_default_opt_params[
-                'lc_bid_timeout'
-            ]
-        else:
-            self._us_bid_timeout = 900
-            self._lc_bid_timeout = 120
+        self._set_bids_timeout()
 
         self._rs_factor = self.config.get('rc_factor', 120)
         self._rs = running_stats_multi_dict(3, list, self._rs_factor)
@@ -300,6 +287,23 @@ class PriceController(Agent):
             'energyDemand_topic',
             'building/energydemand'
         )
+        return
+
+    def _set_bids_timeout(self):
+        if self._pca_mode == PcaMode.pass_on_pp:
+            self._us_bid_timeout = self._mode_pass_on_params[
+                'bid_timeout'
+            ]
+        elif self._pca_mode == PcaMode.default_opt:
+            self._us_bid_timeout = self._mode_default_opt_params[
+                'us_bid_timeout'
+            ]
+            self._lc_bid_timeout = self._mode_default_opt_params[
+                'lc_bid_timeout'
+            ]
+        else:
+            self._us_bid_timeout = 900
+            self._lc_bid_timeout = 120
         return
 
     @Core.receiver('onstart')
@@ -518,6 +522,7 @@ class PriceController(Agent):
         if str_mode.lower() not in PcaMode.__dict__.keys():
             return False
         self._pca_mode = PcaMode[str_mode.lower()]
+        self._set_bids_timeout()
         return True
 
     def _set_pca_state(self, rpcdata_id, message):
@@ -1264,14 +1269,13 @@ class PriceController(Agent):
         msg_type = MessageType.price_point
         one_to_one = False
         isoptimal = False
-        value_data_type = current_msg.get_value_data_type()
-        units = current_msg.get_units()
-        # explore if need to use same price_id or different ones
+        value_data_type = 'float'
+        units = 'cents'
         price_id = current_msg.get_price_id()
         src_ip = self._discovery_address
         src_device_id = self._device_id
-        duration = self.us_bid_pp_msg.get_duration()
-        ttl = current_msg.get_ttl()
+        duration = current_msg.get_duration()
+        ttl = lc_bid_timeout
         ts = datetime.datetime.utcnow().isoformat(' ') + 'Z'
         tz = 'UTC'
 
@@ -1380,6 +1384,11 @@ class PriceController(Agent):
             + ', old_ted: {}'.format(ed_prev)
         )
 
+        current_msg = (
+            self.us_bid_pp_msg
+            if self.us_latest_msg_type == MessageType.price_point
+            else self.us_bid_bd_msg
+        )
         pp_new = {}  # type: (str, ISPACE_Msg_BidPricePoint)
         # new msg
         msg_type = MessageType.price_point
@@ -1387,12 +1396,11 @@ class PriceController(Agent):
         isoptimal = False
         value_data_type = 'float'
         units = 'cents'
-        # explore if need to use same price_id or different ones
-        price_id = randint(0, 99999999)
-        src_ip = None
-        src_device_id = None
-        duration = self.us_bid_pp_msg.get_duration()
-        ttl = 10
+        price_id = current_msg.get_price_id()
+        src_ip = self._discovery_address
+        src_device_id = self._device_id
+        duration = current_msg.get_duration()
+        ttl = lc_bid_timeout
         ts = datetime.datetime.utcnow().isoformat(' ') + 'Z'
         tz = 'UTC'
 
