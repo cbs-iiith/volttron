@@ -1040,7 +1040,7 @@ class PriceController(Agent):
         return new_energy_demand, new_ed_msg, prev_ed_msg, prev_pp_msg
 
     def _get_new_ed(self, index, new_pp_msg, old_act_pwr, old_pp_msg):
-        new_energy_demand = 0
+        new_energy_demand = 0.0
         _log.debug(
             'new_pp_msg: {}'.format(new_pp_msg)
             + ', old_act_pwr: {}'.format(old_act_pwr)
@@ -1254,19 +1254,24 @@ class PriceController(Agent):
             + ', old_ted: {}'.format(ed_prev)
         )
 
+        current_msg = (
+            self.us_bid_pp_msg
+            if self.us_latest_msg_type == MessageType.price_point
+            else self.us_bid_bd_msg
+        )
         pp_new = {}  # type: (str, ISPACE_Msg_BidPricePoint)
         # new msg
         msg_type = MessageType.price_point
         one_to_one = False
         isoptimal = False
-        value_data_type = 'float'
-        units = 'cents'
+        value_data_type = current_msg.get_value_data_type()
+        units = current_msg.get_units()
         # explore if need to use same price_id or different ones
-        price_id = randint(0, 99999999)
-        src_ip = None
-        src_device_id = None
+        price_id = current_msg.get_price_id()
+        src_ip = self._discovery_address
+        src_device_id = self._device_id
         duration = self.us_bid_pp_msg.get_duration()
-        ttl = 10
+        ttl = current_msg.get_ttl()
         ts = datetime.datetime.utcnow().isoformat(' ') + 'Z'
         tz = 'UTC'
 
