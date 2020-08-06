@@ -886,6 +886,7 @@ class PriceController(Agent):
 
         self._iter_count = 0
         self._target = 0
+        self._delta_omega = {}
 
         budget, ed_current, ed_prev, pp_old = self._init_bidding(new_pp_msg)
 
@@ -981,6 +982,8 @@ class PriceController(Agent):
             pp_old[device_id] = copy(old_pp_msg)
             ed_current[device_id] = copy(new_ed_msg)
             ed_prev[device_id] = copy(prev_ed_msg)
+            self._delta_omega[device_id] = (new_ed_msg.get_value()
+                                            - prev_ed_msg.get_value())
             self._target += tmp_budget
 
         _log.debug(
