@@ -1232,14 +1232,14 @@ class PriceController(Agent):
         gammas = self._mode_default_opt_params['gammas']
         deadbands = self._mode_default_opt_params['deadbands']
         max_iters = self._mode_default_opt_params['max_iterations']
-        uc_bid_timeout = self._mode_default_opt_params['uc_bid_timeout']
+        us_bid_timeout = self._mode_default_opt_params['us_bid_timeout']
         lc_bid_timeout = self._mode_default_opt_params['lc_bid_timeout']
         wt_factors = self._mode_default_opt_params['weight_factors']
 
         _log.debug(
             'alphas: {}, gammas: {}, deadbands: {}, max_iters: {}, ' +
             'us_bid_timeout: {}, lc_bid_timeout: {}, wt_factors: {}'.format(
-                alphas, gammas, deadbands, max_iters, uc_bid_timeout,
+                alphas, gammas, deadbands, max_iters, us_bid_timeout,
                 lc_bid_timeout, wt_factors
             )
         )
@@ -1353,14 +1353,14 @@ class PriceController(Agent):
         gammas = self._mode_default_opt_params['gammas']
         deadbands = self._mode_default_opt_params['deadbands']
         max_iters = self._mode_default_opt_params['max_iterations']
-        uc_bid_timeout = self._mode_default_opt_params['uc_bid_timeout']
+        us_bid_timeout = self._mode_default_opt_params['us_bid_timeout']
         lc_bid_timeout = self._mode_default_opt_params['lc_bid_timeout']
         wt_factors = self._mode_default_opt_params['weight_factors']
 
         _log.debug(
             'alphas: {}, gammas: {}, deadbands: {}, max_iters: {}, ' +
             'us_bid_timeout: {}, lc_bid_timeout: {}, wt_factors: {}'.format(
-                alphas, gammas, deadbands, max_iters, uc_bid_timeout,
+                alphas, gammas, deadbands, max_iters, us_bid_timeout,
                 lc_bid_timeout, wt_factors
             )
         )
