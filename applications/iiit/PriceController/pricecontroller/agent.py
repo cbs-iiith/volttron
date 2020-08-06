@@ -235,6 +235,7 @@ class PriceController(Agent):
 
         self._mode_default_opt_params = self.config.get(
             'mode_default_opt_params', {
+                "enable_publish_opt_authority": True,
                 "is_single_pp": True,
                 "us_bid_timeout": 900,
                 "lc_bid_timeout": 180,
@@ -910,11 +911,31 @@ class PriceController(Agent):
         )
 
         if target_achieved and self._pca_state == PcaState.online:
-            # local optimal reached, publish this as bid to the us prev_pp_msg
-            self._us_bid_ready = True
+
+            authorised = self._mode_default_opt_params[
+                'enable_publish_opt_authority']
+            if not authorised:
+                # local optimal reached,
+                # aggr_mode_default_opt() publishes bid energy demand to the us
+                # by enabling the flag
+                self._us_bid_ready = True
+            else:
+                for device_id in new_pp_msg_list.keys():
+                    new_pp_msg_list[device_id].set_isoptimal(True)
+
+                self.us_opt_pp_msg = copy(new_pp_msg_list[self._device_id])
+                self.us_latest_msg_opt = True
+                self.us_latest_msg_type = MessageType.price_point
+
+                self._pub_pp_messages(new_pp_msg_list)
+
         elif target_achieved and self._pca_state == PcaState.standalone:
             self.lc_opt_pp_msg_list = copy(new_pp_msg_list)
             self.lc_opt_pp_msg = copy(new_pp_msg_list[self._device_id])
+            for device_id, pp_msg in new_pp_msg_list.items():
+                new_pp_msg_list[device_id].set_isoptimal(True)
+            self._pub_pp_messages(new_pp_msg_list)
+
         else:
             if len(new_pp_msg_list) > 0:
                 first_msg = list(new_pp_msg_list.values())[0]

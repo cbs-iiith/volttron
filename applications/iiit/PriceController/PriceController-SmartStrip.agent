@@ -42,6 +42,7 @@
 
     # the following params are used if pca_mode = DEFAULT_OPT
     "mode_default_opt_params": {
+        "enable_publish_opt_authority": false,
         "is_single_pp": true,
         "us_bid_timeout": 5,
         "lc_bid_timeout": 2,

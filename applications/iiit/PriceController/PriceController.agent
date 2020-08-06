@@ -43,6 +43,8 @@
 
     # the following params are used if pca_mode = DEFAULT_OPT
     "mode_default_opt_params": {
+        # whether current pca agent can publish opt pp if target achieved
+        "enable_publish_opt_authority": true,
         "is_single_pp": true,
         # time to wait for devices to submit their bids.
         # 0 --> wait-for-ever, default 900s (15min)
