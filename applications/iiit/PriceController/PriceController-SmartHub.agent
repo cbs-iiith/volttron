@@ -47,7 +47,7 @@
         "lc_bid_timeout": 6,
         "max_iterations": 10,
         "max_repeats": 10,
-        "deadband": [10, 10, 10],
+        "deadbands": [10, 10, 10],
         "gammas": [0.0794, 0.0040, 0.0030],
         "alphas": [0.0035, 0.0035, 0.0035],
         "weight_factors": [0.3, 0.3, 0.3]

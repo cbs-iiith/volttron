@@ -51,7 +51,7 @@
         "max_iterations": 10,
         "max_repeats": 10,
         #deadband (Wh)
-        "deadband": [100, 100, 100],
+        "deadbands": [100, 100, 100],
         # step size, gamma = (pp_max - pp_min) / (ed_max - ed_min)
         # assume pp_max = 1, pp_min = 0, ed_max = 10000, ed_min = 1000
         # Google Drive IIIT\FDD_LAB_VOLT_LOGS\Analysis\Book2.xlsx
