@@ -2067,22 +2067,27 @@ class PriceController(Agent):
                 and (self._pca_mode == PcaMode.pass_on_pp
                      or self._pca_mode == PcaMode.default_opt)
         ):
-            opt_price_id = (
+            opt_pp_id = (
                 self.us_opt_pp_msg.get_price_id()
                 if self.us_opt_pp_msg is not None
                 else ''
             )
-            bid_price_id = (
+            bid_pp_id = (
                 self.us_bid_pp_msg.get_price_id()
                 if self.us_bid_pp_msg is not None
                 else ''
             )
-            bd_msg_id = (
+            opt_bd_id = (
                 self.us_opt_bd_msg.get_price_id()
                 if self.us_opt_bd_msg is not None
                 else ''
             )
-            price_ids = [opt_price_id, bid_price_id, bd_msg_id]
+            bid_bd_id = (
+                self.us_bid_bd_msg.get_price_id()
+                if self.us_bid_bd_msg is not None
+                else ''
+            )
+            price_ids = [opt_pp_id, bid_pp_id, opt_bd_id, bid_bd_id]
         else:
             _log.error(
                 '_get_valid_price_ids() for mode {} not implemented'
