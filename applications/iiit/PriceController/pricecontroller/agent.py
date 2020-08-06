@@ -1371,7 +1371,7 @@ class PriceController(Agent):
 
         # target achieved is true,
         #   if us bid timed out
-        #       or self._iter_count > max_iters
+        #       or self._iter_count >= max_iters
         us_bid_timed_out = self._us_bid_timed_out()
         _log.debug(
             'us_bid_timed_out: {}'.format(us_bid_timed_out)
@@ -1381,7 +1381,7 @@ class PriceController(Agent):
             True
             if (
                     us_bid_timed_out
-                    or self._iter_count > max_iters
+                    or self._iter_count >= max_iters
             )
             else False
         )

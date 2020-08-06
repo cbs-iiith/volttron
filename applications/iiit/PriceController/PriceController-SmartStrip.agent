@@ -46,7 +46,7 @@
         "is_single_pp": true,
         "us_bid_timeout": 5,
         "lc_bid_timeout": 2,
-        "max_iterations": 10,
+        "max_iterations": 30,
         "max_repeats": 10,
         "deadbands": [5, 5, 5, 5],
         "gammas": [0.0333, 0.0067, 0.0067, 1.0000],

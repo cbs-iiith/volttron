@@ -50,7 +50,7 @@
         # 0 --> wait-for-ever, default 900s (15min)
         "us_bid_timeout": 900,
         "lc_bid_timeout": 180,
-        "max_iterations": 10,
+        "max_iterations": 30,
         "max_repeats": 10,
         #deadband (Wh)
         "deadbands": [100, 100, 100],
