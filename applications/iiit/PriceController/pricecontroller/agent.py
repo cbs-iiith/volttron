@@ -1195,6 +1195,8 @@ class PriceController(Agent):
 
         if budget is None:
             budget = copy(self._budget)     # type: (str, ISPACE_Msg_Budget)
+        else:
+            self._budget = copy(budget)
         if pp_old is None:
             pp_old = self._pp_old
         if ed_current is None:
