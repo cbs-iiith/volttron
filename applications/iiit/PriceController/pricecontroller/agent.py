@@ -936,8 +936,15 @@ class PriceController(Agent):
                 # by enabling the flag
                 self._us_bid_ready = True
             else:
+                us_bid_msg = (
+                    self.us_bid_pp_msg
+                    if self.us_latest_msg_type == MessageType.price_point
+                    else self.us_bid_bd_msg
+                )
+                price_id = copy(us_bid_msg.get_price_id())
                 for device_id in new_pp_msg_list.keys():
                     new_pp_msg_list[device_id].set_isoptimal(True)
+                    new_pp_msg_list[device_id].set_price_id(price_id)
 
                 self.us_opt_pp_msg = copy(new_pp_msg_list[self._device_id])
                 self.us_latest_msg_opt = True
@@ -1295,7 +1302,7 @@ class PriceController(Agent):
         isoptimal = False
         value_data_type = 'float'
         units = 'cents'
-        price_id = current_msg.get_price_id()
+        price_id = randint(0, 99999999)
         src_ip = self._discovery_address
         src_device_id = self._device_id
         duration = current_msg.get_duration()
@@ -1420,7 +1427,7 @@ class PriceController(Agent):
         isoptimal = False
         value_data_type = 'float'
         units = 'cents'
-        price_id = current_msg.get_price_id()
+        price_id = randint(0, 99999999)
         src_ip = self._discovery_address
         src_device_id = self._device_id
         duration = current_msg.get_duration()
@@ -1926,9 +1933,19 @@ class PriceController(Agent):
 
         # publish to local/energyDemand
         # vb pushes(RPC) this value to the next level
-        self._publish_bid_ted(self.us_bid_pp_msg, bid_ted)
+        us_bid_msg = (
+            self.us_bid_pp_msg
+            if self.us_latest_msg_type == MessageType.price_point
+            else self.us_bid_bd_msg
+        )
+        self._publish_bid_ted(us_bid_msg, bid_ted)
 
-        self.us_bid_pp_msg = ISPACE_Msg_BidPricePoint(MessageType.price_point)
+        if self.us_latest_msg_type == MessageType.price_point:
+            self.us_bid_pp_msg = ISPACE_Msg_BidPricePoint(
+                MessageType.price_point)
+        else:
+            self.us_bid_bd_msg = ISPACE_Msg_BidPricePoint(
+                MessageType.budget)
         self._published_us_bid_ted = True
         return
 
@@ -1945,7 +1962,11 @@ class PriceController(Agent):
         us_bid_timed_out = self._us_bid_timed_out()
 
         if not (rcvd_all_lc and rcvd_all_ds):
-            price_id = self.us_bid_pp_msg.get_price_id()
+            price_id = (
+                self.us_bid_pp_msg.get_price_id()
+                if self.us_latest_msg_type == MessageType.price_point
+                else self.us_bid_bd_msg.get_price_id()
+            )
             if not us_bid_timed_out:
                 retry_time = self._period_process_loop
                 _log.debug(
@@ -1979,7 +2000,11 @@ class PriceController(Agent):
         us_bids_timeout = self._us_bid_timed_out()
 
         if not self._us_bid_ready:
-            price_id = self.us_bid_pp_msg.get_price_id()
+            price_id = (
+                self.us_bid_pp_msg.get_price_id()
+                if self.us_latest_msg_type == MessageType.price_point
+                else self.us_bid_bd_msg.get_price_id()
+            )
             if not us_bids_timeout:
                 retry_time = self._period_process_loop
                 _log.debug(
@@ -2105,7 +2130,12 @@ class PriceController(Agent):
                 if self.us_bid_bd_msg is not None
                 else ''
             )
-            price_ids = [opt_pp_id, bid_pp_id, opt_bd_id, bid_bd_id]
+            lc_bid_id = (
+                self.lc_bid_pp_msg.get_price_id()
+                if self.lc_bid_pp_msg is not None
+                else ''
+            )
+            price_ids = [opt_pp_id, bid_pp_id, opt_bd_id, bid_bd_id, lc_bid_id]
         else:
             _log.error(
                 '_get_valid_price_ids() for mode {} not implemented'
