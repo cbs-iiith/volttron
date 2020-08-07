@@ -916,11 +916,15 @@ class PriceController(Agent):
             + ', new_pp_msg_list: {}'.format(new_pp_msg_list)
         )
 
-        self._handle_new_pps_list(target_achieved, new_pp_msg_list)
+        publish_pps = self._handle_new_pps_list(target_achieved,
+                                                new_pp_msg_list)
 
         # clear corresponding buckets
         self._local_bid_ed.clear()
         self._ds_bid_ed.clear()
+
+        if publish_pps:
+            self._pub_pp_messages(new_pp_msg_list)
 
         if target_achieved:
             # do not start the process loop
@@ -932,6 +936,7 @@ class PriceController(Agent):
         return
 
     def _handle_new_pps_list(self, target_achieved, new_pp_msg_list):
+        publish_pps = False
         if target_achieved and self._pca_state == PcaState.online:
 
             authorised = self._mode_default_opt_params[
@@ -956,7 +961,7 @@ class PriceController(Agent):
                 self.us_latest_msg_opt = True
                 self.us_latest_msg_type = MessageType.price_point
 
-                self._pub_pp_messages(new_pp_msg_list)
+                publish_pps = True
 
         elif target_achieved and self._pca_state == PcaState.standalone:
             self.lc_opt_pp_msg_list = copy(new_pp_msg_list)
@@ -971,7 +976,7 @@ class PriceController(Agent):
                 self.lc_bid_pp_msg = copy(first_msg)
                 self.lc_bid_pp_msg_list = copy(new_pp_msg_list)
                 # publish these pp_messages
-                self._pub_pp_messages(new_pp_msg_list)
+                publish_pps = True
             else:
                 cf = logging.currentframe()
                 _log.warning(
@@ -979,6 +984,8 @@ class PriceController(Agent):
                     + ' (code line no.: {})'.format(cf.f_back.f_lineno)
                 )
                 self._run_process_loop = False
+
+        return publish_pps
 
     def _init_bidding(self, new_pp_msg):
         _log.debug('_init_bidding()')
