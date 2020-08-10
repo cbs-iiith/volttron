@@ -923,6 +923,7 @@ class PriceController(Agent):
         self._local_bid_ed.clear()
         self._ds_bid_ed.clear()
 
+        _log.debug('...publish_pps: {}'.format(publish_pps))
         if publish_pps:
             self._pub_pp_messages(new_pp_msg_list)
 
@@ -968,7 +969,7 @@ class PriceController(Agent):
             self.lc_opt_pp_msg = copy(new_pp_msg_list[self._device_id])
             for device_id, pp_msg in new_pp_msg_list.items():
                 new_pp_msg_list[device_id].set_isoptimal(True)
-            self._pub_pp_messages(new_pp_msg_list)
+            publish_pps = True
 
         else:
             if len(new_pp_msg_list) > 0:
@@ -1223,7 +1224,8 @@ class PriceController(Agent):
         )
         if isclose(current_ted, self._target, EPSILON, deadband):
             target_achieved = True
-            new_pricepoints = {}    # type: (str, ISPACE_Msg_BidPricePoint)
+            # new_pricepoints = {}    # type: (str, ISPACE_Msg_BidPricePoint)
+            new_pricepoints = copy(self._pp_old)
             _log.debug(
                 'target_achieved: {}'.format(target_achieved)
                 + ', new_pricepoints: {}'.format(new_pricepoints)
@@ -1583,11 +1585,16 @@ class PriceController(Agent):
             + ', new_pp_msg_list'.format(new_pp_msg_list)
         )
 
-        self._handle_new_pps_list(target_achieved, new_pp_msg_list)
+        publish_pps = self._handle_new_pps_list(target_achieved,
+                                                new_pp_msg_list)
 
         # clear corresponding buckets
         self._local_bid_ed.clear()
         self._ds_bid_ed.clear()
+
+        _log.debug('...publish_pps: {}'.format(publish_pps))
+        if publish_pps:
+            self._pub_pp_messages(new_pp_msg_list)
 
         if target_achieved:
             # stop the process loop
