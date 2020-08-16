@@ -65,5 +65,31 @@
     "default_base_price": 0.1,
     "price_point_latest": 0.2,
     "plug_pricepoint_th": [0.35, 0.5, 0.75, 0.95],
-    "smarthub_plug": 4
+    "smarthub_plug": 4,
+
+    # Exponential weighted moving average factor is a constant that affects how
+    # quickly the average "catches up" to the latest trend. At 1 it's no longer
+    # an average and just becomes the latest value.
+    # 120 --> 1 hr, 2 reading/min)
+    "rc_factor": 120,
+
+    # gradient descent params to compute new pp from a budget
+    "gd_params": {
+        "max_iterations": 100,
+        "max_repeats": 10,
+        "deadband": 5,
+        "gammas": {
+            "plug1": 0.0333,
+            "plug2": 0.0067,
+            "plug3": 0.0067,
+            "plug4": 1.0000
+        },
+        "weight_factors": {
+            "plug1": 0.25,
+            "plug2": 0.25,
+            "plug3": 0.25,
+            "plug4": 0.25
+        }
+    }
+
 }

@@ -187,7 +187,7 @@ if __name__ == '__main__':
         args=(False, BID_DUR_TIME_SEC, 30,)
     )
 
-    print get_timestamp() + ' ROOT_URL: ' + str(ROOT_URL),
+    print get_timestamp() + ' ...ROOT_URL: ' + str(ROOT_URL),
     print ', OPT_WAIT_TIME_SEC: ' + str(OPT_WAIT_TIME_SEC),
     print ', BID_WAIT_TIME_SEC: ' + str(BID_WAIT_TIME_SEC)
     sys.stdout.flush()
