@@ -11,6 +11,8 @@
     "vb_vip_identity": "iiit.volttronbridge",
     "default_base_price": 0.1,
     "price_point_latest": 0.2,
+
+    "rc_factor": 120,
     
     #price functions(pf), quadratic functions of the form f(x) = ax2 + bx + c, 
     #             where a,b,c are coefficients of the quadratic function,
@@ -20,7 +22,7 @@
     #                   idx --> default pf coefficients
     "pf_rc": {
         "roundup":0.5,
-        "idx":0,
+        "idx":1,
         "coefficients": [
             {"a": 1, "b": -3.5, "c": 23},
             {"a": 1, "b": -3.5, "c": 24},
@@ -36,9 +38,25 @@
     #                   idx --> default edf coefficients
     "edf_rc": {
         "roundup":0.5,
-        "idx":0,
+        "idx":1,
         "coefficients": [
-            {"a": 7.5, "b": -1.5, "c": 24}
+            {"a": 0, "b": -100, "c": 2350},
+            {"a": 0, "b": -100, "c": 2400},
+            {"a": 0, "b": -100, "c": 2450}
         ]
+    },
+
+    # gradient descent params to compute new pp from a budget
+    "gd_params": {
+        "max_iterations": 100,
+        "max_repeats": 10,
+        "deadband": 10,
+        "gammas": {
+            "rc": 0.0040
+        },
+        "weight_factors": {
+            "rc": 1.0
+        }
     }
+
 }

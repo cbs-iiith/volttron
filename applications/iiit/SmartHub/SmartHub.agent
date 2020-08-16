@@ -11,7 +11,13 @@
     
     "default_base_price": 0.1,
     "price_point_latest": 0.2,
-    
+
+    # Exponential weighted moving average factor is a constant that affects how
+    # quickly the average "catches up" to the latest trend. At 1 it's no longer
+    # an average and just becomes the latest value.
+    # 120 --> 1 hr, 2 reading/min)
+    "rc_factor": 120,
+
     #price functions(pf), quadratic functions of the form f(x) = ax2 + bx + c, 
     #             where a,b,c are coefficients of the quadratic function,
     #                   f(x) --> setpoint,
@@ -19,12 +25,28 @@
     #                   pf_roundup --> roundup, and 
     #                   pf_idx --> default pf_coefficients
     "pf_sh_fan": {
-        "roundup":10,
-        "idx":0,
+        "roundup": 10,
+        "idx": 0,
         "coefficients": [
             {"a": 70, "b": 5, "c": 20},
             {"a": 60, "b": 10, "c": 30},
             {"a": 35, "b": 29.75, "c": 40}
         ]
+    },
+
+    # gradient descent params to compute new pp from a budget
+    "gd_params": {
+        "max_iterations": 100,
+        "max_repeats": 10,
+        "deadband": 5,
+        "gammas": {
+            "fan": 0.1786,
+            "light": 0.1429
+        },
+        "weight_factors": {
+            "fan": 0.5,
+            "light": 0.5
+        }
     }
+
 }

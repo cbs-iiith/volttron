@@ -27,6 +27,9 @@ from volttron.platform.agent import utils
 utils.setup_logging()
 _log = logging.getLogger(__name__)
 
+MIN_PRICE = 0.0
+MAX_PRICE = 1.0
+
 ROUNDOFF_PRICE_POINT = 0.01
 ROUNDOFF_BUDGET = 0.0001
 ROUNDOFF_ACTIVE_POWER = 0.0001
@@ -48,6 +51,22 @@ ISPACE_MSG_ATTRIB_LIST = ['msg_type', 'one_to_one', 'isoptimal',
                           'dst_ip', 'dst_device_id',
                           'duration', 'ttl', 'ts', 'tz'
                           ]
+
+
+# round off and clamp value
+def round_off_pp(value):
+    tmp_value = round(mround(value, ROUNDOFF_PRICE_POINT),
+                      PP_DECIMAL_DIGITS)
+    new_value = (
+        MIN_PRICE
+        if tmp_value <= MIN_PRICE
+        else (
+            MAX_PRICE
+            if tmp_value >= MAX_PRICE
+            else tmp_value
+        )
+    )
+    return new_value
 
 
 # https://www.oreilly.com/library/view/python-cookbook/0596001673/ch05s12.html
@@ -107,9 +126,9 @@ class ISPACE_Msg:
     # TODO: enhancement - need to add a msg uuid,
     # also convert price_id to use uuid instead of radint
     msg_type = None
-    one_to_one = None
-    isoptimal = None
-    value = None
+    one_to_one = None   # type: bool
+    isoptimal = None    # type: bool
+    value = None        # type: float
     value_data_type = None
     units = None
     price_id = None
@@ -200,7 +219,7 @@ class ISPACE_Msg:
     # overload += operator
     def __iadd__(self, other):
         new_msg = copy(self)
-        if isinstance(other, float):
+        if isinstance(other, float) or isinstance(other, int):
             new_msg.value += other
         elif isinstance(other, ISPACE_Msg):
             new_msg.value += other.value
@@ -273,6 +292,7 @@ class ISPACE_Msg:
             if (    # check for price id and value
                 self.price_id == other.price_id
                 and isclose(self.value, other.value, EPSILON)
+                and self.dst_device_id == other.dst_device_id
             )
             else False
         )
@@ -605,10 +625,7 @@ class ISPACE_Msg:
         # _log.debug('self.msg_type: {}, MessageType.price_point: {}'.format(
         # self.msg_type, MessageType.price_point))
         if self.msg_type == MessageType.price_point:
-            tmp_value = round(mround(value, ROUNDOFF_PRICE_POINT),
-                              PP_DECIMAL_DIGITS)
-            self.value = 0 if tmp_value <= 0 else 1 if tmp_value >= 1 else \
-                tmp_value
+            self.value = round_off_pp(value)
         elif self.msg_type == MessageType.budget:
             self.value = round(mround(value, ROUNDOFF_BUDGET),
                                BD_DECIMAL_DIGITS)
@@ -747,7 +764,7 @@ class ISPACE_Msg_ActivePower(ISPACE_Msg):
                  src_ip=None, src_device_id=None,
                  dst_ip=None, dst_device_id=None,
                  duration=None, ttl=None, ts=None, tz=None,
-                 energy_category=None
+                 energy_category=EnergyCategory.mixed
                  ):
         ISPACE_Msg.__init__(self,
                             msg_type, one_to_one, isoptimal,
@@ -810,7 +827,7 @@ class ISPACE_Msg_Energy(ISPACE_Msg_ActivePower):
                  src_ip=None, src_device_id=None,
                  dst_ip=None, dst_device_id=None,
                  duration=None, ttl=None, ts=None, tz=None,
-                 energy_category=None
+                 energy_category=EnergyCategory.mixed
                  ):
         ISPACE_Msg_ActivePower.__init__(self,
                                         msg_type, one_to_one, isoptimal,
@@ -829,14 +846,14 @@ class ISPACE_Msg_Energy(ISPACE_Msg_ActivePower):
 class ISPACE_Msg_Budget(ISPACE_Msg_Energy):
 
     def __init__(self,
-                 msg_type=MessageType.energy_demand,
+                 msg_type=MessageType.budget,
                  one_to_one=False, isoptimal=False,
                  value=None, value_data_type=None, units=None,
                  price_id=None,
                  src_ip=None, src_device_id=None,
                  dst_ip=None, dst_device_id=None,
                  duration=None, ttl=None, ts=None, tz=None,
-                 energy_category=None
+                 energy_category=EnergyCategory.mixed
                  ):
         ISPACE_Msg_Energy.__init__(self,
                                    msg_type, one_to_one, isoptimal,

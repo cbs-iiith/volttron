@@ -11,29 +11,56 @@
 
 # Sam
 
+"""
+Test script to send increasing opt prices at regular interval
+"""
 import datetime
 import json
-import math
+import os
 import signal
 import sys
 import threading
 import time
 from os.path import basename
-from random import random, randint
+from random import randint
 
 import requests
 
-
 authentication = None
 
-# WAIT_TIME_SECONDS = 2             # 2 sec
-# WAIT_TIME_SECONDS = 10             # 10 sec
-# WAIT_TIME_SECONDS = 5 * 60         # 5 min
-# WAIT_TIME_SECONDS = 15 * 60        # 15 min
-# WAIT_TIME_SECONDS = 30 * 60        # 30 min
-WAIT_TIME_SECONDS = 1 * 60 * 60  # 1 hour
+# OPT_WAIT_TIME_SEC = 2  # 2 sec
+# OPT_WAIT_TIME_SEC = 10             # 10 sec
+# OPT_WAIT_TIME_SEC = 2 * 60         # 2 min
+# OPT_WAIT_TIME_SEC = 5 * 60         # 5 min
+# OPT_WAIT_TIME_SEC = 15 * 60        # 15 min
+# OPT_WAIT_TIME_SEC = 30 * 60        # 30 min
+OPT_WAIT_TIME_SEC = 1 * 60 * 60  # 1 hour
+
+# OPT_DUR_TIME_SEC = 2             # 2 sec
+# OPT_DUR_TIME_SEC = 10             # 10 sec
+# OPT_DUR_TIME_SEC = 2 * 60         # 2 min
+# OPT_DUR_TIME_SEC = 5 * 60         # 5 min
+# OPT_DUR_TIME_SEC = 15 * 60        # 15 min
+# OPT_DUR_TIME_SEC = 30 * 60        # 30 min
+OPT_DUR_TIME_SEC = 1 * 60 * 60  # 1 hour
 
 ROOT_URL = 'http://192.168.1.11:8080/pricepoint'
+
+price_point_inc = [
+    0.94,
+    0.94,
+    0.80,
+    0.60,
+    0.40,
+    0.20,
+    0.20,
+    0.40,
+    0.60,
+    0.80,
+    0.94,
+    0.20,
+]
+index = 0
 
 
 class ProgramKilled(Exception):
@@ -70,23 +97,29 @@ def do_rpc(method, params=None):
     return requests.post(url_root, data=json.dumps(json_package))
 
 
-def post_random_price():
-    # random price between 0-1
-    no_digit = 2
-    pp = math.floor(random() * 10 ** no_digit) / 10 ** no_digit
-    pp = .94 if pp > .94 else pp
-    print get_timestamp() + ' PricePoint: ' + str(pp) + ',',
+def post_random_price(isoptimal=True, duration=3600, ttl=10):
+    global index
+    if index == len(price_point_inc):
+        print get_timestamp() + ' End of Program.'
+        os.kill(os.getpid(), signal.SIGTERM)
+
+    pp = price_point_inc[index]
+    price_id = randint(0, 99999999)
+
+    print get_timestamp() + ' OPT PricePoint: {:0.2f}'.format(
+        pp) + ', price_id: ' + str(price_id) + ', index: ' + str(index) + '.',
+
     now = datetime.datetime.utcnow().isoformat(' ') + 'Z'
     try:
         response = do_rpc(
             'new-pp',
             {
-                'msg_type': 0, 'one_to_one': False, 'isoptimal': True,
+                'msg_type': 0, 'one_to_one': False, 'isoptimal': isoptimal,
                 'value': pp, 'value_data_type': 'float', 'units': 'cents',
-                'price_id': randint(0, 99999999),
+                'price_id': price_id,
                 'src_ip': None, 'src_device_id': None,
                 'dst_ip': None, 'dst_device_id': None,
-                'duration': WAIT_TIME_SECONDS, 'ttl': 10, 'ts': now, 'tz': 'UTC'
+                'duration': duration, 'ttl': ttl, 'ts': now, 'tz': 'UTC'
             }
         )
         # print "response: " +str(response),
@@ -99,20 +132,21 @@ def post_random_price():
             elif 'error' in response.json().keys():
                 print response.json()['error']
         else:
-            print 'do_rpc pricepoint response NOT OK, response: {}'.format(
-                response)
+            print 'do_rpc response NOT OK, response: {}'.format(response)
     except KeyError as ke:
         print ke
     except Exception as e:
         print e
         print 'do_rpc() unhandled exception, most likely server is down'
     sys.stdout.flush()
+    index = index + 1
     return
 
 
 class Job(threading.Thread):
+    index = 0.0
 
-    def __init__(self, interval, execute, *args, **kwargs):
+    def __init__(self, interval, execute, args, **kwargs):
         threading.Thread.__init__(self)
         self.daemon = False
         self.stopped = threading.Event()
@@ -126,32 +160,39 @@ class Job(threading.Thread):
         self.join()
 
     def run(self):
-        self.execute(*self.args, **self.kwargs)  # execute once
+        # execute once
+        self.execute(*self.args, **self.kwargs)
+
         while not self.stopped.wait(self.interval.total_seconds()):
             self.execute(*self.args, **self.kwargs)
 
 
 if __name__ == '__main__':
-    print get_timestamp() + ' Initialising test - ' + basename(
-        __file__) + ' ...'
+    print get_timestamp() + ' Initialising test ' + basename(__file__) + '...'
     signal.signal(signal.SIGTERM, signal_handler)
     signal.signal(signal.SIGINT, signal_handler)
-    job = Job(
-        interval=datetime.timedelta(seconds=WAIT_TIME_SECONDS),
-        execute=post_random_price
+
+    # job to post opt prices at regular interval
+    job_opt = Job(
+        interval=datetime.timedelta(seconds=OPT_WAIT_TIME_SEC),
+        execute=post_random_price,
+        args=(True, OPT_DUR_TIME_SEC, 30,)
     )
-    print get_timestamp() + ' ROOT_URL: ' + str(
-        ROOT_URL) + ', WAIT_TIME_SECONDS: ' + str(WAIT_TIME_SECONDS)
-    print get_timestamp() + ' Starting a repetitive job...'
+
+    print get_timestamp() + ' ...ROOT_URL: ' + str(ROOT_URL),
+    print ', OPT_WAIT_TIME_SEC: ' + str(OPT_WAIT_TIME_SEC)
+    print get_timestamp() + ' ...price point: ' + str(price_point_inc)
     sys.stdout.flush()
-    job.start()
+
+    print get_timestamp() + ' Starting a repetitive jobs opt prices...'
+    job_opt.start()
+    time.sleep(2)
 
     while True:
         try:
             time.sleep(1)
         except ProgramKilled:
-            print '\n' + get_timestamp() + ' Program killed: running cleanup ' \
-                                           'code'
-            job.stop()
+            print '\n' + get_timestamp() + ' Program killed: cleanup'
+            job_opt.stop()
             print get_timestamp() + ' End of Program.'
             break
