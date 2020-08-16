@@ -22,22 +22,20 @@ import gevent
 import gevent.event
 
 from applications.iiit.Utils.ispace_msg import (MessageType, EnergyCategory,
-                                                ISPACE_Msg, ISPACE_Msg_Budget,
-                                                round_off_pp)
+                                                ISPACE_Msg)
 from applications.iiit.Utils.ispace_msg_utils import (check_msg_type,
                                                       tap_helper,
                                                       ted_helper,
                                                       get_default_pp_msg,
                                                       valid_bustopic_msg)
-from applications.iiit.Utils.ispace_utils import (calc_energy_wh, isclose,
+from applications.iiit.Utils.ispace_utils import (calc_energy_wh,
                                                   get_task_schdl,
                                                   cancel_task_schdl,
                                                   publish_to_bus,
                                                   retrieve_details_from_vb,
                                                   register_with_bridge,
                                                   register_rpc_route,
-                                                  unregister_with_bridge,
-                                                  running_stats_multi_dict)
+                                                  unregister_with_bridge)
 from volttron.platform import jsonrpc
 from volttron.platform.agent import utils
 from volttron.platform.agent.known_identities import (MASTER_WEB)
@@ -121,21 +119,6 @@ class SmartStrip(Agent):
     _opt_pp_msg_latest = None  # type: ISPACE_Msg
     _bid_pp_msg_latest = None  # type: ISPACE_Msg
 
-    _bud_msg_latest = None  # type: ISPACE_Msg_Budget
-    _latest_msg_type = None  # type: MessageType
-
-    _gd_params = None
-
-    # running stats factor (window)
-    _rc_factor = None  # type: int
-
-    # Multi dimensional dictionary for RunningStats
-    # _rs[DEVICE_ID][ENERGY_CATEGORY]
-    _rs = {}
-
-    # Exponential weighted moving average
-    # _rs[DEVICE_ID][ENERGY_CATEGORY].exp_wt_mv_avg()
-
     def __init__(self, config_path, **kwargs):
         super(SmartStrip, self).__init__(**kwargs)
         _log.debug('vip_identity: ' + self.core.identity)
@@ -150,30 +133,6 @@ class SmartStrip(Agent):
     @Core.receiver('onsetup')
     def setup(self, sender, **kwargs):
         _log.info(self.config['message'])
-
-        self._gd_params = self.config.get(
-            'gd_params', {
-                "max_iterations": 100,
-                "max_repeats": 10,
-                "deadband": 5,
-                "gammas": {
-                    "plug1": 0.0333,
-                    "plug2": 0.0067,
-                    "plug3": 0.0067,
-                    "plug4": 1.0000
-                },
-                "weight_factors": {
-                    "plug1": 0.25,
-                    "plug2": 0.25,
-                    "plug3": 0.25,
-                    "plug4": 0.25
-                }
-            }
-        )
-
-        self._rc_factor = self.config.get('rc_factor', 120)
-        self._rs = running_stats_multi_dict(3, list, self._rc_factor)
-
         return
 
     @Core.receiver('onstart')
@@ -213,8 +172,6 @@ class SmartStrip(Agent):
 
         self._bid_pp_msg_latest = get_default_pp_msg(self._discovery_address,
                                                      self._device_id)
-
-        self._latest_msg_type = MessageType.price_point
 
         self._run_smartstrip_test()
 
@@ -454,7 +411,7 @@ class SmartStrip(Agent):
         
     '''
 
-    # periodic function to publish h/w data to msg bus
+    # perodic function to publish h/w data to msg bus
     def publish_hw_data(self):
 
         self.process_plugs_tag_id()
@@ -942,17 +899,9 @@ class SmartStrip(Agent):
         if sender not in self._valid_senders_list_pp:
             return
 
-        pp_msg_type = False
-        bd_msg_type = False
         # check message type before parsing
-        if check_msg_type(message, MessageType.price_point):
-            pp_msg_type = True
-            pass
-        elif check_msg_type(message, MessageType.budget):
-            bd_msg_type = True
-            pass
-        else:
-            return
+        if not check_msg_type(message, MessageType.price_point):
+            return False
 
         valid_senders_list = self._valid_senders_list_pp
         minimum_fields = ['msg_type', 'value', 'value_data_type', 'units',
@@ -965,44 +914,31 @@ class SmartStrip(Agent):
                                                valid_price_ids, message)
         if not success or pp_msg is None:
             return
-        elif (pp_msg.get_one_to_one()
-              and pp_msg.get_dst_device_id() != self._device_id):
-            return
         elif pp_msg in [self._bid_pp_msg_latest, self._opt_pp_msg_latest]:
             _log.warning(
-                'received a duplicate prev_pp_msg'
+                'received a duplicate pp_msg'
                 + ', price_id: {}!!!'.format(pp_msg.get_price_id())
             )
             return
         else:
             _log.debug('New pp msg on the local-bus, topic: {}'.format(topic))
 
-        if pp_msg_type and pp_msg.get_isoptimal():
+        if pp_msg.get_isoptimal():
             _log.debug('***** New optimal price point from pca: {:0.2f}'.format(
                 pp_msg.get_value())
                        + ' , price_id: {}'.format(pp_msg.get_price_id()))
             self._process_opt_pp(pp_msg)
-        elif pp_msg_type and not pp_msg.get_isoptimal():
+        else:
             _log.debug('***** New bid price point from pca: {:0.2f}'.format(
                 pp_msg.get_value())
                        + ' , price_id: {}'.format(pp_msg.get_price_id()))
             self._process_bid_pp(pp_msg)
-        elif bd_msg_type:
-            _log.debug('***** New budget from pca: {:0.4f}'.format(
-                pp_msg.get_value())
-                       + ' , price_id: {}'.format(pp_msg.get_price_id()))
-            self._process_opt_pp(pp_msg)
 
         return
 
     def _process_opt_pp(self, pp_msg):
-        if pp_msg.get_msg_type() == MessageType.price_point:
-            self._opt_pp_msg_latest = copy(pp_msg)
-            self._price_point_latest = pp_msg.get_value()
-            self._latest_msg_type = MessageType.price_point
-        elif pp_msg.get_msg_type() == MessageType.budget:
-            self._bud_msg_latest = copy(pp_msg)
-            self._latest_msg_type = MessageType.budget
+        self._opt_pp_msg_latest = copy(pp_msg)
+        self._price_point_latest = pp_msg.get_value()
 
         # any process that failed to apply pp sets this flag False
         self._process_opt_pp_success = False
@@ -1018,21 +954,6 @@ class SmartStrip(Agent):
 
         # any process that failed to apply pp sets this flag False
         self._process_opt_pp_success = True
-
-        if self._latest_msg_type == MessageType.budget:
-            # compute new_pp for the budget and then apply pricing policy
-            new_pp = self._compute_new_opt_pp()
-            self._opt_pp_msg_latest = copy(self._bud_msg_latest)
-            self._opt_pp_msg_latest.set_msg_type(MessageType.price_point)
-            self._opt_pp_msg_latest.set_value(new_pp)
-            self._opt_pp_msg_latest.set_isoptimal(True)
-            self._price_point_latest = new_pp
-            _log.debug(
-                '***** New optimal price point:'
-                + ' {:0.2f}'.format(self._opt_pp_msg_latest.get_value())
-                + ' , price_id: {}'.format(
-                    self._opt_pp_msg_latest.get_price_id())
-            )
 
         task_id = str(randint(0, 99999999))
         success = get_task_schdl(self, task_id, 'iiit/cbs/smartstrip', 1000)
@@ -1118,7 +1039,7 @@ class SmartStrip(Agent):
             EnergyCategory.plug_load
         )
         _log.debug('***** Total Active Power(TAP) opt'
-                   + ' for us opt prev_pp_msg({})'.format(price_id)
+                   + ' for us opt pp_msg({})'.format(price_id)
                    + ': {:0.4f}'.format(opt_tap))
         # publish the new price point to the local message bus
         pub_topic = self._topic_energy_demand
@@ -1142,10 +1063,7 @@ class SmartStrip(Agent):
                     or plug_id == self._sh_plug_id  # exclude sh power
                     or False):
                 continue
-            ap_plug = self._plugs_active_pwr[plug_id]
-            self._rs['plug' + str(plug_id + 1)][EnergyCategory.mixed].push(
-                ap_plug)
-            tap += ap_plug
+            tap += self._plugs_active_pwr[plug_id]
 
         return tap
 
@@ -1178,7 +1096,7 @@ class SmartStrip(Agent):
             EnergyCategory.plug_load
         )
         _log.debug('***** Total Energy Demand(TED) bid'
-                   + ' for us bid prev_pp_msg({})'.format(price_id)
+                   + ' for us bid pp_msg({})'.format(price_id)
                    + ': {:0.4f}'.format(bid_ted))
 
         # publish the new price point to the local message bus
@@ -1194,6 +1112,7 @@ class SmartStrip(Agent):
     # the bid energy is for self._bid_pp_duration (default 1hr)
     # and this msg is valid for self._period_read_data (ttl - default 30s)
     def _calc_total_energy_demand(self):
+        # TODO: ted should be computed based on some  predictive modeling
         pp_msg = self._bid_pp_msg_latest
         bid_pp = pp_msg.get_value()
         duration = pp_msg.get_duration()
@@ -1210,181 +1129,6 @@ class SmartStrip(Agent):
             ted += calc_energy_wh(self._plugs_active_pwr[plug_id], duration)
 
         return ted
-
-    # compute new opt pp for a given budget using gradient descent
-    def _compute_new_opt_pp(self):
-        _log.debug('_compute_new_opt_pp()...')
-
-        _log.debug('gd_params: {}'.format(self._gd_params))
-        # configuration
-        gammas = self._gd_params['gammas']
-        deadband = self._gd_params['deadband']
-        max_iters = self._gd_params['max_iterations']
-        max_repeats = self._gd_params['max_repeats']
-        wt_factors = self._gd_params['weight_factors']
-
-        sum_wt_factors = 0
-        for k, v in wt_factors.items():
-            if k == 'plug4':
-                continue
-            sum_wt_factors += float(v)
-
-        c = {}
-        for k, v in wt_factors.items():
-            if k == 'plug4':
-                continue
-            c[k] = (
-                float(v) / sum_wt_factors
-                if sum_wt_factors != 0 else 0
-            )
-
-        budget = self._bud_msg_latest.get_value()
-        duration = self._bud_msg_latest.get_duration()
-        _log.debug(
-            '***** New budget: {:0.2f}'.format(budget)
-            + ' , price_id: {}'.format(self._bud_msg_latest.get_price_id())
-        )
-        base_ed = calc_energy_wh(SMARTSTRIP_BASE_ENERGY, duration)
-        budget = budget - base_ed
-        _log.debug(
-            '***** New base adjusted budget: {:0.2f}'.format(budget)
-            + ' , price_id: {}'.format(self._bud_msg_latest.get_price_id())
-        )
-
-        # Starting point
-        i = 0  # iterations count
-        j = 0  # repeats count
-        new_pp = 0
-        new_ed = budget
-
-        # this is need to convert [] to {}
-        plugs_th_pp = {}
-        plugs_active_pwr = {}
-        index = 0
-        for k, v in wt_factors.items():
-            if index != self._sh_plug_id:
-                plugs_th_pp[k] = self._plugs_th_pp[index]
-                plugs_active_pwr[k] = self._rs[k][EnergyCategory.mixed].exp_wt_mv_avg()
-            index = index + 1
-
-        old_pp = self._price_point_latest
-        _log.debug(
-            'current pp: {:0.2f}'.format(old_pp)
-        )
-
-        old_ed_plugs = {}
-        old_ed = 0
-        budget_plugs = {}
-        for k, v in plugs_th_pp.items():
-            budget_plugs[k] = c[k] * budget
-            plug_pwr = (
-                0
-                if old_pp > plugs_th_pp[k]
-                else self._rs[k][EnergyCategory.mixed].exp_wt_mv_avg()
-            )
-            old_ed_plugs[k] = calc_energy_wh(plug_pwr, duration)
-            old_ed += old_ed_plugs[k]
-
-        d_s = ''  # debug str
-
-        # Gradient descent iteration
-        _log.debug('Gradient descent iteration')
-        for i in range(max_iters):
-
-            _log.debug(
-                '...iter: {}/{}'.format(i + 1, max_iters)
-                + ', budget: {:0.2f}'.format(budget)
-                + ', budget plug1: {:0.2f}'.format(budget_plugs['plug1'])
-                + ', budget plug2: {:0.2f}'.format(budget_plugs['plug2'])
-                + ', budget plug3: {:0.2f}'.format(budget_plugs['plug3'])
-                + ', old pp: {:0.2f}'.format(old_pp)
-                + ', old ed: {:0.2f}'.format(old_ed)
-                + ', old ed plug1: {:0.2f}'.format(old_ed_plugs['plug1'])
-                + ', old ed plug2: {:0.2f}'.format(old_ed_plugs['plug2'])
-                + ', old ed plug3: {:0.2f}'.format(old_ed_plugs['plug3'])
-            )
-
-            sum_new_pp = 0
-            delta = {}
-            gamma_delta = {}
-            c_gamma_delta = {}
-            d_s = ''    # debug str
-            index = 0
-            for k, v in budget_plugs.items():
-                delta[k] = budget_plugs[k] - old_ed_plugs[k]
-                gamma_delta[k] = float(gammas[k]) * delta[k]
-                c_gamma_delta[k] = c[k] * gamma_delta[k]
-                sum_new_pp += c_gamma_delta[k]
-                d_s += '' if index == 0 else ', '
-                d_s += 'delta[{}]: {:0.2f}'.format(k, delta[k])
-                d_s += ', gamma_delta[{}]: {:0.2f}'.format(k, gamma_delta[k])
-                d_s += ', c_gamma_delta[{}]: {:.2f}'.format(k, c_gamma_delta[k])
-                index += 1
-
-            new_pp = old_pp - sum_new_pp
-            _log.debug(d_s)
-
-            d_s = 'new_pp: {:0.4f}'.format(new_pp)
-            new_pp = round_off_pp(new_pp)
-            _log.debug(d_s + ', round off new_pp: {:0.2f}'.format(new_pp))
-
-            new_ed = 0
-            new_ed_plugs = {}
-            d_s = ''  # debug str
-            for k, v in delta.items():
-                plug_pwr = (
-                    0
-                    if new_pp > plugs_th_pp[k]
-                    else self._rs[k][EnergyCategory.mixed].exp_wt_mv_avg()
-                )
-                new_ed_plugs[k] = calc_energy_wh(plug_pwr, duration)
-                d_s += ', expected ed {}: {:0.2f}'.format(k, new_ed_plugs[k])
-                new_ed += new_ed_plugs[k]
-
-            _log.debug(
-                '......iter: {}/{}'.format(i, max_iters)
-                + ', tmp_pp: {:0.2f}'.format(new_pp)
-                + ', tmp_ed: {:0.2f}'.format(new_ed)
-            )
-
-            if isclose(budget, new_ed, EPSILON, deadband):
-                _log.debug(
-                    '|budget({:0.2f})'.format(budget)
-                    + ' - tmp_ed({:0.2f})|'.format(new_ed)
-                    + ' < deadband({:0.2f})'.format(deadband)
-                )
-                break
-
-            if isclose(old_ed, new_ed, EPSILON, 1):
-                j += 1
-                _log.debug(
-                    '|prev new_ed({:0.2f})'.format(old_ed)
-                    + ' - new_ed({:0.2f})|'.format(new_ed)
-                    + ' < deadband({:0.2f})'.format(1)
-                    + ' repeat count: {:d}/{:d}'.format(j, max_repeats)
-                )
-                if j >= max_repeats:
-                    break
-            else:
-                j = 0  # reset repeat count
-
-            old_pp = new_pp
-            old_ed = new_ed
-            old_ed_plugs = copy(new_ed_plugs)
-
-        _log.debug(
-            'final iter count: {}/{}'.format(i, max_iters)
-            + ', budget: {:0.2f}'.format(budget)
-            + ', budget plug1: {:0.2f}'.format(budget_plugs['plug1'])
-            + ', budget plug2: {:0.2f}'.format(budget_plugs['plug2'])
-            + ', budget plug3: {:0.2f}'.format(budget_plugs['plug3'])
-            + ', new pp: {:0.2f}'.format(new_pp)
-            + ', expected ted: {:0.2f}'.format(new_ed + base_ed)
-            + d_s
-        )
-
-        _log.debug('...done')
-        return new_pp
 
 
 def main(argv=sys.argv):

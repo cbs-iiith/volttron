@@ -13,7 +13,6 @@
 
 import datetime
 import logging
-from collections import defaultdict
 import math
 import time
 
@@ -445,17 +444,6 @@ def do_rpc(msg_id, url_root, method, params=None, request_method='POST'):
         except:
             return response
 '''
-
-
-# https://www.geeksforgeeks.org/python-creating-multidimensional-dictionary/
-# Multi dimensional dictionary for RunningStats
-def running_stats_multi_dict(dimensions, data_type, factor=120):
-    if dimensions == 1:
-        d = Runningstats(factor)
-    else:
-        d = defaultdict(
-            lambda: running_stats_multi_dict(dimensions - 1, data_type))
-    return d
 
 
 class Runningstats:

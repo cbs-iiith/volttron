@@ -20,12 +20,17 @@ from random import randint
 from ispace_msg import (ISPACE_Msg, MessageType, ISPACE_MSG_ATTRIB_LIST,
                         ISPACE_Msg_ActivePower, EnergyCategory,
                         ISPACE_Msg_Energy, ISPACE_Msg_OptPricePoint,
-                        ISPACE_Msg_BidPricePoint, ISPACE_Msg_Budget)
+                        ISPACE_Msg_BidPricePoint)
 from volttron.platform import jsonrpc
 from volttron.platform.agent import utils
 
 utils.setup_logging()
 _log = logging.getLogger(__name__)
+
+ROUNDOFF_PRICE_POINT = 0.01
+ROUNDOFF_BUDGET = 0.0001
+ROUNDOFF_ACTIVE_POWER = 0.0001
+ROUNDOFF_ENERGY = 0.0001
 
 
 # validate incoming bus topic message
@@ -48,7 +53,7 @@ def valid_bustopic_msg(
         # _log.debug('message: {}'.format(message))
         # minimum_fields = ['value', 'value_data_type', 'units', 'price_id']
         pp_msg = parse_bustopic_msg(message, minimum_fields)
-        # _log.info('prev_pp_msg: {}'.format(prev_pp_msg))
+        # _log.info('pp_msg: {}'.format(pp_msg))
     except KeyError as ke:
         _log.exception(ke.message)
         _log.exception(
@@ -66,27 +71,21 @@ def valid_bustopic_msg(
                                           e))
         return False, pp_msg
 
-    hint = get_msg_hint(pp_msg.get_msg_type())
+    hint = (
+        'Price Point'
+        if pp_msg.get_msg_type() == MessageType.price_point
+        else 'Active Power'
+        if pp_msg.get_msg_type() == MessageType.active_power
+        else 'Energy Demand'
+        if pp_msg.get_msg_type() == MessageType.energy_demand
+        else 'Unknown Msg Type'
+    )
 
     # sanity measure like, valid fields, valid pp ids, ttl expiry, etc.,
     if not pp_msg.sanity_check_ok(hint, validate_fields, valid_price_ids):
         _log.warning('Msg sanity checks failed!!!')
         return False, pp_msg
     return True, pp_msg
-
-
-def get_msg_hint(pp_msg_type):
-    return (
-        'Price Point'
-        if pp_msg_type == MessageType.price_point
-        else 'Active Power'
-        if pp_msg_type == MessageType.active_power
-        else 'Energy Demand'
-        if pp_msg_type == MessageType.energy_demand
-        else 'Budget'
-        if pp_msg_type == MessageType.budget
-        else 'Unknown Msg Type'
-    )
 
 
 # a default pricepoint message
@@ -99,20 +98,6 @@ def get_default_pp_msg(discovery_address, device_id):
         discovery_address, device_id,
         None, None,
         3600, 3600, 60, 'UTC'
-    )
-
-
-# a default budget message
-def get_default_bd_msg(discovery_address, device_id):
-    # type: (str, str) -> ISPACE_Msg_Budget
-    return ISPACE_Msg_Budget(
-        MessageType.budget, False, True,
-        0, 'float', '%',
-        None,
-        discovery_address, device_id,
-        None, None,
-        3600, 3600, 60, 'UTC',
-        EnergyCategory.mixed
     )
 
 
@@ -339,13 +324,11 @@ def _parse_data(data, minimum_fields=None):
         new_msg = ISPACE_Msg_ActivePower()
     elif msg_type == MessageType.energy_demand:
         new_msg = ISPACE_Msg_Energy()
-    elif msg_type == MessageType.budget:
-        new_msg = ISPACE_Msg_Budget()
     else:
         new_msg = ISPACE_Msg(msg_type)
         _update_value(new_msg, 'msg_type', msg_type)
 
-    # if list is empty, parse for all attributes,
+        # if list is empty, parse for all attributes,
     # if any attrib not found throw key not found error
     if not minimum_fields:
         # if the attrib is not found in the data, throws a keyerror exception

@@ -137,12 +137,8 @@ class PricePoint(Agent):
                        )
             if rpcdata.method == 'ping':
                 result = True
-            elif (rpcdata.method == 'new-pp'
-                  and header['REQUEST_METHOD'].upper() == 'POST'):
-                result = self.publish_msg(rpcdata.id, header, message)
-            elif (rpcdata.method == 'budget'
-                  and header['REQUEST_METHOD'].upper() == 'POST'):
-                result = self.publish_msg(rpcdata.id, header, message)
+            elif rpcdata.method == 'new-pp':
+                result = self.update_price_point(rpcdata.id, header, message)
             else:
                 _log.error('method not found!!!')
                 return jsonrpc.json_error(rpcdata.id, jsonrpc.METHOD_NOT_FOUND,
@@ -172,17 +168,11 @@ class PricePoint(Agent):
     def ping(self):
         return True
 
-    def publish_msg(self, rpcdata_id, header, message):
+    def update_price_point(self, rpcdata_id, header, message):
         rpcdata = jsonrpc.JsonRpcData.parse(message)
         # Note: this is on a rpc message do the check here ONLY
         # check message for MessageType.price_point
-        pp_msg_type = False
-        bd_msg_type = False
-        if check_msg_type(message, MessageType.price_point):
-            pp_msg_type = True
-        elif check_msg_type(message, MessageType.budget):
-            bd_msg_type = True
-        else:
+        if not check_msg_type(message, MessageType.price_point):
             _log.error(
                 'id: {}, message: invalid params {}!!!'.format(rpcdata_id,
                                                                rpcdata.params))
@@ -192,7 +182,7 @@ class PricePoint(Agent):
         try:
             minimum_fields = ['value', 'value_data_type', 'units', 'price_id']
             pp_msg = parse_jsonrpc_msg(message, minimum_fields)
-            # _log.info('prev_pp_msg: {}'.format(prev_pp_msg))
+            # _log.info('pp_msg: {}'.format(pp_msg))
         except KeyError:
             # print(ke)
             _log.error(
@@ -211,7 +201,7 @@ class PricePoint(Agent):
 
         # validate various sanity measure like, valid fields, valid pp ids,
         # ttl expiry, etc.,
-        hint = 'New Price Point' if pp_msg_type else 'New Budget'
+        hint = 'New Price Point'
         validate_fields = ['value', 'units', 'price_id', 'isoptimal',
                            'duration', 'ttl']
         valid_price_ids = []
@@ -222,20 +212,12 @@ class PricePoint(Agent):
             return jsonrpc.json_error(rpcdata_id, jsonrpc.PARSE_ERROR,
                                       'Msg sanity checks failed!!!')
 
-        if pp_msg_type:
-            _log.debug('***** Price Point ({})'.format(
-                'OPT' if pp_msg.get_isoptimal() else 'BID')
-                       + ' from remote ({})'.format(header['REMOTE_ADDR'])
-                       + ': {:0.2f}'.format(pp_msg.get_value())
-                       + ' price_id: {}'.format(pp_msg.get_price_id())
-                       )
-        elif bd_msg_type:
-            _log.debug('***** Budget ({})'.format(
-                'OPT' if pp_msg.get_isoptimal() else 'BID')
-                       + ' from remote ({})'.format(header['REMOTE_ADDR'])
-                       + ': {:0.2f}'.format(pp_msg.get_value())
-                       + ' price_id: {}'.format(pp_msg.get_price_id())
-                       )
+        _log.debug('***** Price Point ({})'.format(
+            'OPT' if pp_msg.get_isoptimal() else 'BID')
+                   + ' from remote ({})'.format(header['REMOTE_ADDR'])
+                   + ': {:0.2f}'.format(pp_msg.get_value())
+                   + ' price_id: {}'.format(pp_msg.get_price_id())
+                   )
 
         pp_msg.set_src_device_id(self._device_id)
         pp_msg.set_src_ip(self._discovery_address)
@@ -243,11 +225,7 @@ class PricePoint(Agent):
         # publish the new price point to the local message bus
         pub_topic = self._topic_price_point
         pub_msg = pp_msg.get_json_message(self._agent_id, 'bus_topic')
-        if pp_msg_type:
-            _log.info('[LOG] Price Point from remote, Msg: {}'.format(pub_msg))
-        elif bd_msg_type:
-            _log.info('[LOG] Budget from remote, Msg: {}'.format(pub_msg))
-
+        _log.info('[LOG] Price Point from remote, Msg: {}'.format(pub_msg))
         _log.debug('Publishing to local bus topic: {}'.format(pub_topic))
         publish_to_bus(self, pub_topic, pub_msg)
         _log.debug('done.')

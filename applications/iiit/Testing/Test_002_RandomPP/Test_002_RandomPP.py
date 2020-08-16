@@ -26,6 +26,10 @@ from random import random, randint
 
 import requests
 
+if sys.platform == 'win32':
+    from applications.iiit.Utils.test_utils import get_timestamp
+else:
+    from test_utils import get_timestamp
 
 authentication = None
 
@@ -71,12 +75,6 @@ class ProgramKilled(Exception):
 def signal_handler(signum, frame):
     print('signum: {}, frame: {}'.format(signum, frame))
     raise ProgramKilled
-
-
-def get_timestamp():
-    ts = time.time()
-    st = datetime.datetime.fromtimestamp(ts).strftime('%Y-%m-%d %H:%M:%S')
-    return st
 
 
 def do_rpc(method, params=None):

@@ -10,12 +10,6 @@
     "vb_vip_identity": "iiit.volttronbridge",
     "default_base_price": 0.1,
     "price_point_latest": 0.2,
-
-    # Exponential weighted moving average factor is a constant that affects how
-    # quickly the average "catches up" to the latest trend. At 1 it's no longer
-    # an average and just becomes the latest value.
-    # 120 --> 1 hr, 2 reading/min)
-    "rc_factor": 120,
     
     #price functions(pf), quadratic functions of the form f(x) = ax2 + bx + c, 
     #             where a,b,c are coefficients of the quadratic function,
@@ -24,15 +18,15 @@
     #                   roundup --> roundup, and 
     #                   idx --> default pf coefficients
     "pf_zn_ac": {
-        "roundup": 0.5,
-        "idx": 0,
+        "roundup":0.5,
+        "idx":0,
         "coefficients": [
             {"a": 7.5, "b": -1.5, "c": 24}
         ]
     },
     "pf_zn_light": {
-        "roundup": 5,
-        "idx": 0,
+        "roundup":5,
+        "idx":0,
         "coefficients":[
             {"a": -35, "b": -35, "c": 100}
         ]
@@ -44,40 +38,18 @@
     #                   x --> set point,
     #                   roundup --> roundup, and 
     #                   idx --> default edf coefficients
-    # file path: "Google Drive IIIT\FDD_LAB_VOLT_LOGS\Analysis\Book2.xlsx"
-    # file name: "Book2.xlsx"
-    # sheet name: 'Zone-SP-ED'
     "edf_zn_ac": {
-        "roundup": 0.5,
-        "idx": 0,
+        "roundup":0.5,
+        "idx":0,
         "coefficients": [
-            {"a": 102.94, "b": -6128, "c": 91699}
+            {"a": 7.5, "b": -1.5, "c": 24}
         ]
     },
-    # file path: "Google Drive\PhD\FDD\20191227 - price point - setpoint - rm - rc"
-    # file name: "rm lighting energy.xlsx"
-    # sheet name: 'RM_LightingEnergy'
     "edf_zn_light": {
-        "roundup": 5,
-        "idx": 0,
+        "roundup":5,
+        "idx":0,
         "coefficients":[
             {"a": 50, "b": 20, "c": 68}
         ]
-    },
-
-    # gradient descent params to compute new pp from a budget
-    "gd_params": {
-        "max_iterations": 100,
-        "max_repeats": 10,
-        "deadband": 100,
-        "gammas": {
-            "ac": 0.0002,
-            "light": 0.0125
-        },
-        "weight_factors": {
-            "ac": 30,
-            "light": 1
-        }
     }
-
 }

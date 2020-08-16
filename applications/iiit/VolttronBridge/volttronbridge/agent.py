@@ -477,14 +477,8 @@ class VolttronBridge(Agent):
         if self._bridge_host == 'LEVEL_TAILEND':
             return
 
-        pp_msg_type = False
-        bd_msg_type = False
         # handle only pp type message
         if check_msg_type(message, MessageType.price_point):
-            pp_msg_type = True
-            pass
-        elif check_msg_type(message, MessageType.budget):
-            bd_msg_type = True
             pass
         else:
             return
@@ -501,60 +495,27 @@ class VolttronBridge(Agent):
             return
         elif pp_msg in self._us_pp_messages:
             _log.warning(
-                'received a duplicate prev_pp_msg'
+                'received a duplicate pp_msg'
                 + ', price_id: {}!!!'.format(pp_msg.get_price_id())
             )
             return
         else:
-            hint = (
-                'New price point (pp)'
-                if pp_msg_type
-                else 'New budget (bd)'
-            )
+            hint = 'New price point (pp)'
             _log.debug('{} msg on the local-bus'.format(hint)
                        + ', topic: {} ...'.format(topic))
 
-        if pp_msg_type and pp_msg.get_isoptimal():
+        if pp_msg.get_isoptimal():
             _log.debug('***** New optimal price point from local:'
                        + ' {:0.2f}'.format(pp_msg.get_value())
                        + ' price_id: {}'.format(pp_msg.get_price_id())
                        )
             self.local_opt_pp_id = pp_msg.get_price_id()
-        elif pp_msg_type and not pp_msg.get_isoptimal():
+        else:
             _log.debug('***** New bid price point from local:'
                        + ' {:0.2f}'.format(pp_msg.get_value())
                        + ' price_id: {}'.format(pp_msg.get_price_id())
                        )
             self.local_bid_pp_id = pp_msg.get_price_id()
-        elif bd_msg_type and pp_msg.get_isoptimal():
-            _log.debug('***** New optimal budget from local:'
-                       + ' {:0.2f}'.format(pp_msg.get_value())
-                       + ' price_id: {}'.format(pp_msg.get_price_id())
-                       )
-            self.local_opt_pp_id = pp_msg.get_price_id()
-        elif bd_msg_type and not pp_msg.get_isoptimal():
-            _log.debug('***** New bid budget from local:'
-                       + ' {:0.2f}'.format(pp_msg.get_value())
-                       + ' price_id: {}'.format(pp_msg.get_price_id())
-                       )
-            self.local_bid_pp_id = pp_msg.get_price_id()
-
-        is_msg_1_to_1 = pp_msg.get_one_to_one()
-        is_local_device = pp_msg.get_dst_device_id() in self._local_device_ids
-        '''
-        _log.debug(
-            'prev_pp_msg.get_dst_device_id: {}'.format(prev_pp_msg.get_dst_device_id)
-            + 'self._local_device_ids: {}'.format(self._local_device_ids)
-        )
-        _log.debug(
-            'is_msg_1_to_1: {}'.format(is_msg_1_to_1)
-            + 'is_local_device_id: {}'.format(is_local_device)
-        )
-        '''
-        if is_msg_1_to_1 and is_local_device:
-            # do nothing
-            _log.debug('one-to-one msg for local device, do nothing')
-            return
 
         self._us_pp_messages.append(copy(pp_msg))
 
@@ -742,8 +703,8 @@ class VolttronBridge(Agent):
                 _log.debug('new ttl: {}.'.format(pp_msg.get_ttl()))
                 pp_msg.update_ts()
 
-            is_msg_1_to_1 = pp_msg.get_one_to_one()
-            if is_msg_1_to_1:
+            msg_1_to_1 = pp_msg.get_one_to_one()
+            if msg_1_to_1:
                 self._ds_rpc_1_to_1(pp_msg)
             else:
                 self._ds_rpc_1_to_m(pp_msg)
@@ -751,7 +712,7 @@ class VolttronBridge(Agent):
             if self._all_ds_posts_success:
                 # remove msg from the queue
                 _log.debug('msg successfully posted to'
-                           + (' ds' if is_msg_1_to_1 else ' all ds')
+                           + (' ds' if msg_1_to_1 else ' all ds')
                            + ', removing it from the queue')
                 del self._us_pp_messages[idx - del_count]
                 del_count += 1
@@ -780,16 +741,6 @@ class VolttronBridge(Agent):
     def _ds_rpc_1_to_1(self, pp_msg):
         _log.debug('_ds_rpc_1_to_1()...')
         discovery_address = pp_msg.get_dst_ip()
-        device_id = pp_msg.get_dst_device_id()
-
-        if not discovery_address:
-            idx = self._ds_device_ids.index(device_id)
-            discovery_address = self._ds_register[idx]
-        index = self._ds_register.index(discovery_address)
-
-        if not device_id:
-            device_id = self._ds_device_ids[index]
-
         url_root = 'http://' + discovery_address + '/bridge'
         args = pp_msg.get_json_params()
         success = do_rpc(self._agent_id, url_root, 'pricepoint',
@@ -797,18 +748,17 @@ class VolttronBridge(Agent):
                          'POST'
                          )
 
-        if success:
-            # success, reset retry count
-            # no need to retry on the next run
-            self._ds_pp_msg_retry_count[index] = -1
-            _log.debug('post pp to ds ({} - {})'.format(device_id,
-                                                        discovery_address)
-                       + ', result: success!!!')
-
-        else:
+        if not success:
+            index = self._ds_register.index(discovery_address)
+            device_id = self._ds_device_ids[index]
             retry_count = self._ds_pp_msg_retry_count[index] + 1
             self._ds_pp_msg_retry_count[index] = retry_count
-
+            _log.debug('failed to post pp to ds ({})'.format(device_id)
+                       + ', failed count:'
+                       + ' {:d}'.format(self._ds_pp_msg_retry_count[index])
+                       + ', will try again in'
+                       + ' {} sec!!!'.format(self._period_process_pp)
+                       + ', result: {}'.format(success))
             if retry_count >= MAX_RETRIES:
                 # failed more than max retries, unregister the ds device
                 _log.debug('post pp to ds: {}'.format(device_id)
@@ -818,14 +768,6 @@ class VolttronBridge(Agent):
                            )
                 self._unregister_ds_device(index)
                 _log.debug('{} unregistered!!!'.format(device_id))
-                success = True
-            else:
-                _log.debug('failed to post pp to ds ({})'.format(device_id)
-                           + ', failed count:'
-                           + ' {:d}'.format(self._ds_pp_msg_retry_count[index])
-                           + ', will try again in'
-                           + ' {} sec!!!'.format(self._period_process_pp)
-                           + ', result: {}'.format(success))
 
         self._all_ds_posts_success = success
         _log.debug('_ds_rpc_1_to_1()...done')
@@ -833,8 +775,8 @@ class VolttronBridge(Agent):
 
     def _ds_rpc_1_to_m(self, pp_msg):
         _log.debug('_ds_rpc_1_to_m()...')
-        # case prev_pp_msg one-to-many(i.e., one_to_one is not True)
-        # create list of ds devices to which prev_pp_msg need to be posted
+        # case pp_msg one-to-many(i.e., one_to_one is not True)
+        # create list of ds devices to which pp_msg need to be posted
         url_roots = []
         main_idx = []
         for discovery_address in self._ds_register:
@@ -932,12 +874,6 @@ class VolttronBridge(Agent):
             self._ds_pp_msg_retry_count[index] = 0
             self._ds_ed_msg_retry_count[index] = 0
             _log.debug('already registered!!!')
-            if device_id not in self._ds_device_ids:
-                _log.warning(
-                    'problem with ds register!!!'
-                    + ', ds_register: {}'.format(self._ds_register)
-                    + ', ds_device_ids: {}'.format(self._ds_device_ids)
-                )
             return True
 
         self._ds_register.append(discovery_address)
@@ -958,15 +894,10 @@ class VolttronBridge(Agent):
 
         if discovery_address not in self._ds_register:
             _log.debug('already unregistered')
-            if device_id in self._ds_device_ids:
-                _log.warning(
-                    'problem with ds register!!!'
-                    + ', ds_register: {}'.format(self._ds_register)
-                    + ', ds_device_ids: {}'.format(self._ds_device_ids)
-                )
             return True
 
         index = self._ds_register.index(discovery_address)
+        self._ds_register.remove(discovery_address)
         self._unregister_ds_device(index)
         _log.debug('unregistered!!!')
         return True
@@ -985,13 +916,7 @@ class VolttronBridge(Agent):
 
         # Note: this is on a rpc message do the check here ONLY
         # check message for MessageType.price_point
-        pp_msg_type = False
-        bd_msg_type = False
         if check_msg_type(message, MessageType.price_point):
-            pp_msg_type = True
-            pass
-        elif check_msg_type(message, MessageType.budget):
-            bd_msg_type = True
             pass
         else:
             msg = 'Invalid params {}'.format(rpcdata.params)
@@ -1012,7 +937,7 @@ class VolttronBridge(Agent):
             return error
 
         # sanity measure like, valid fields, valid pp ids, ttl expiry, etc.,
-        hint = 'Price Point' if pp_msg_type else 'Budget' if bd_msg_type else ''
+        hint = 'Price Point'
         validate_fields = ['value', 'price_id', 'isoptimal', 'ttl']
         valid_price_ids = []  # accept all pp_ids from us
         if pp_msg.sanity_check_ok(hint, validate_fields, valid_price_ids):
@@ -1025,23 +950,13 @@ class VolttronBridge(Agent):
 
         # keep a track of us pp_ids
         if pp_msg.get_src_device_id() != self._device_id:
-            if pp_msg_type and pp_msg.get_isoptimal():
+            if pp_msg.get_isoptimal():
                 _log.debug('***** New optimal price point from us:'
                            + ' {:0.2f}'.format(pp_msg.get_value()))
                 self.us_opt_pp_id = pp_msg.get_price_id()
-            elif pp_msg_type and not pp_msg.get_isoptimal():
+            else:
                 _log.debug('***** New bid price point from us:'
                            + ' {:0.2f}'.format(pp_msg.get_value()))
-                self.us_bid_pp_id = pp_msg.get_price_id()
-            elif bd_msg_type and pp_msg.get_isoptimal():
-                _log.debug('***** New optimal budget from us:'
-                           + '{:0.4f}'.format(pp_msg.get_value())
-                           + ' , price_id: {}'.format(pp_msg.get_price_id()))
-                self.us_opt_pp_id = pp_msg.get_price_id()
-            elif bd_msg_type and not pp_msg.get_isoptimal():
-                _log.debug('***** New bid budget from us:'
-                           + '{:0.4f}'.format(pp_msg.get_value())
-                           + ' , price_id: {}'.format(pp_msg.get_price_id()))
                 self.us_bid_pp_id = pp_msg.get_price_id()
 
         # publish the new price point to the local us message bus
@@ -1158,7 +1073,7 @@ class VolttronBridge(Agent):
         index = self._ds_register.index(discovery_addr)
         return (
             True
-            if (
+            if(
                     discovery_addr in self._ds_register
                     and device_id == self._ds_device_ids[index]
             )
