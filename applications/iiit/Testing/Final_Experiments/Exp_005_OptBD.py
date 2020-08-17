@@ -35,7 +35,8 @@ authentication = None
 # OPT_WAIT_TIME_SEC = 5 * 60         # 5 min
 # OPT_WAIT_TIME_SEC = 15 * 60        # 15 min
 # OPT_WAIT_TIME_SEC = 30 * 60        # 30 min
-OPT_WAIT_TIME_SEC = 1 * 60 * 60  # 1 hour
+# OPT_WAIT_TIME_SEC = 1 * 60 * 60  # 1 hour
+OPT_WAIT_TIME_SEC = 2 * 60 * 60  # 2 hour
 
 # OPT_DUR_TIME_SEC = 2             # 2 sec
 # OPT_DUR_TIME_SEC = 10             # 10 sec
@@ -48,7 +49,6 @@ OPT_DUR_TIME_SEC = 1 * 60 * 60  # 1 hour
 ROOT_URL = 'http://192.168.1.11:8080/pricepoint'
 
 budget_inc = [
-    8000.00,
     8000.00,
     4000.00,
     8000.00,
