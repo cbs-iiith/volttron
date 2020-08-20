@@ -134,10 +134,10 @@ class MyTestCase(unittest.TestCase):
 
     print('Test SH & RC PF & EDF')
 
-    def test_sh_rc(self):
+    def _test_sh_rc(self):
         print('\ntest_sh_rc')
         duration = 3600
-        for bid_pp in [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]:
+        for bid_pp in [0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]:
             bid_tsp = self._compute_rc_new_tsp(bid_pp)
             ed_rc = calc_energy_wh(
                 self._compute_ed_rc(bid_tsp),
@@ -148,12 +148,19 @@ class MyTestCase(unittest.TestCase):
                 + ', bid_tsp: {:0.2f}'.format(bid_tsp)
                 + ', ed_rc: {:0.4f}'.format(ed_rc)
             )
+        return
+
+    def test_sh_rc(self):
+        for index in [0, 1, 2]:
+            self._pf_rc['idx'] = index
+            self._edf_rc['idx'] = index
+            self._test_sh_rc()
         self.assertEqual(True, True)
 
     def test_sh_fan(self):
         print('\ntest_sh_fan')
         duration = 3600
-        for bid_pp in [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]:
+        for bid_pp in [0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]:
             fan_speed = self._compute_new_fan_speed(bid_pp)
             ed_fan = self._sh_fan_ed(bid_pp, duration)
             print(
