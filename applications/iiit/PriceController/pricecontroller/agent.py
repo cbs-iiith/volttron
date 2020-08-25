@@ -1116,7 +1116,7 @@ class PriceController(Agent):
 
         elif new_pp_msg.get_msg_type() == MessageType.budget:
             # received new budget
-            wt_factors = self._mode_pass_on_params['weight_factors']
+            wt_factors = self._mode_default_opt_params['weight_factors']
             sum_wt_factors = sum(wt_factors)
 
             c = wt_factors[index] / sum_wt_factors if sum_wt_factors != 0 else 0
