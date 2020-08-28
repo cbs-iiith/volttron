@@ -51,7 +51,7 @@
         "deadbands": [10, 10, 10],
         "gammas": [0.0794, 0.0040, 0.0030],
         "alphas": [0.0035, 0.0035, 0.0035],
-        "weight_factors": [0.3, 0.3, 0.3]
+        "weight_factors": [0.3, 0.5, 0.2]
     },
 
     # the following params are used if pca_mode = EXTERN_OPT
