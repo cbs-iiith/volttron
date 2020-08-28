@@ -123,7 +123,7 @@ class MyTestCase(unittest.TestCase):
     def test_zn_ac(self):
         print('test_zn_ac')
         duration = 3600
-        for bid_pp in [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]:
+        for bid_pp in [0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]:
             bid_tsp = self._compute_new_tsp(bid_pp)
             ed_ac = calc_energy_wh(
                 self._compute_ed_ac(bid_tsp),
@@ -140,7 +140,7 @@ class MyTestCase(unittest.TestCase):
     def test_zn_light(self):
         print('\ntest_zn_light')
         duration = 3600
-        for bid_pp in [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]:
+        for bid_pp in [0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]:
             bid_lsp = self._compute_new_lsp(bid_pp)
             ed_light = calc_energy_wh(
                 self._compute_ed_light(bid_lsp/100),
@@ -158,8 +158,8 @@ class MyTestCase(unittest.TestCase):
         duration = 3600
         i = 1
         print('SL_NO, PP_AC, PP_LI, TSP, ED_AC, LSP, ED_LI, TED')
-        for bid_pp_ac in [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]:
-            for bid_pp_li in [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]:
+        for bid_pp_ac in [0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]:
+            for bid_pp_li in [0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]:
 
                 bid_tsp = self._compute_new_tsp(bid_pp_ac)
                 ed_ac = calc_energy_wh(
